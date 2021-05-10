@@ -9,10 +9,7 @@ import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /*
 Using the config, go through the databases and tables and collect the current states.
@@ -47,12 +44,13 @@ public class Setup {
             }
             Callable<ReturnStatus> gt = new GetTables(config, dbMirror);
             gtf.add(config.getTransferThreadPool().schedule(gt, 1, TimeUnit.MILLISECONDS));
+//            gtf.add(config.getTransferThreadPool().submit(gt));
         }
 
         // Check and Build DB's First.
         while (true) {
             boolean check = true;
-            for (ScheduledFuture<ReturnStatus> sf : gtf) {
+            for (Future<ReturnStatus> sf : gtf) {
                 if (!sf.isDone()) {
                     check = false;
                     break;
@@ -74,11 +72,12 @@ public class Setup {
 
         Callable<ReturnStatus> createDatabases = new CreateDatabases(config, conversion);
         gtf.add(config.getTransferThreadPool().schedule(createDatabases, 1, TimeUnit.MILLISECONDS));
+//        gtf.add(config.getTransferThreadPool().submit(createDatabases));
 
         // Check and Build DB's First.
         while (true) {
             boolean check = true;
-            for (ScheduledFuture<ReturnStatus> sf : gtf) {
+            for (Future<ReturnStatus> sf : gtf) {
                 if (!sf.isDone()) {
                     check = false;
                     break;
@@ -96,9 +95,10 @@ public class Setup {
             if (check)
                 break;
         }
+        gtf.clear(); // reset
 
         LOG.info(">>>>>>>>>>> Getting Table Metadata");
-        List<ScheduledFuture> tmdf = new ArrayList<ScheduledFuture>();
+//        List<Future<ReturnStatus>> tmdf = new ArrayList<Future<ReturnStatus>>();
         Set<String> collectedDbs = conversion.getDatabases().keySet();
         for (String database : collectedDbs) {
             DBMirror dbMirror = conversion.getDatabase(database);
@@ -107,14 +107,15 @@ public class Setup {
                 TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
 //                    if (!tblMirror.isTransactional()) {
                 GetTableMetadata tmd = new GetTableMetadata(config, dbMirror, tblMirror);
-                tmdf.add(config.getTransferThreadPool().schedule(tmd, 1, TimeUnit.MILLISECONDS));
+                gtf.add(config.getTransferThreadPool().schedule(tmd, 1, TimeUnit.MILLISECONDS));
+//                gtf.add(config.getTransferThreadPool().submit(tmd));
 //                    }
             }
         }
 
         while (true) {
             boolean check = true;
-            for (ScheduledFuture<ReturnStatus> sf : tmdf) {
+            for (Future<ReturnStatus> sf : gtf) {
                 if (!sf.isDone()) {
                     check = false;
                     break;
@@ -132,6 +133,7 @@ public class Setup {
             if (check)
                 break;
         }
+        gtf.clear(); // reset
 
         LOG.info("==============================");
         LOG.info(conversion.toString());
