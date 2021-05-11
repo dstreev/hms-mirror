@@ -72,7 +72,6 @@ public class Setup {
 
         Callable<ReturnStatus> createDatabases = new CreateDatabases(config, conversion);
         gtf.add(config.getTransferThreadPool().schedule(createDatabases, 1, TimeUnit.MILLISECONDS));
-//        gtf.add(config.getTransferThreadPool().submit(createDatabases));
 
         // Check and Build DB's First.
         while (true) {
@@ -98,18 +97,14 @@ public class Setup {
         gtf.clear(); // reset
 
         LOG.info(">>>>>>>>>>> Getting Table Metadata");
-//        List<Future<ReturnStatus>> tmdf = new ArrayList<Future<ReturnStatus>>();
         Set<String> collectedDbs = conversion.getDatabases().keySet();
         for (String database : collectedDbs) {
             DBMirror dbMirror = conversion.getDatabase(database);
             Set<String> tables = dbMirror.getTableMirrors().keySet();
             for (String table : tables) {
                 TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-//                    if (!tblMirror.isTransactional()) {
                 GetTableMetadata tmd = new GetTableMetadata(config, dbMirror, tblMirror);
                 gtf.add(config.getTransferThreadPool().schedule(tmd, 1, TimeUnit.MILLISECONDS));
-//                gtf.add(config.getTransferThreadPool().submit(tmd));
-//                    }
             }
         }
 

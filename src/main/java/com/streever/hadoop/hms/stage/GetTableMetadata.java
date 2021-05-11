@@ -35,6 +35,10 @@ public class GetTableMetadata implements Callable<ReturnStatus> {
 
     @Override
     public ReturnStatus call() {
+        return doit();
+    }
+
+    public ReturnStatus doit() {
         ReturnStatus rtn = new ReturnStatus();
         LOG.debug("Getting table definition for: " + dbMirror.getName() + "." + tblMirror.getName());
         try {

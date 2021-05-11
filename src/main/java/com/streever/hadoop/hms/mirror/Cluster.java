@@ -84,7 +84,7 @@ public class Cluster implements Comparable<Cluster> {
     @JsonIgnore
     public Connection getConnection() throws SQLException {
         Connection conn = null;
-        if (pools != null && pools.getEnvironmentConnection(getEnvironment()) != null)
+        if (pools != null)
             conn = pools.getEnvironmentConnection(getEnvironment());
         return conn;
     }
@@ -402,7 +402,7 @@ public class Cluster implements Comparable<Cluster> {
                             String removePurgePropSql = MessageFormat.format(MirrorConf.REMOVE_TBL_PROP, config.getResolvedDB(database), tableName, MirrorConf.EXTERNAL_TABLE_PURGE);
                             LOG.debug(getEnvironment() + ":" + removePurgePropSql);
                             try {
-                                if (config.isExecute()) {
+                                if (stmt != null && config.isExecute()) {
                                     stmt.execute(removePurgePropSql);
                                 }
                                 tblMirror.addSql(removePurgePropSql);
@@ -417,7 +417,7 @@ public class Cluster implements Comparable<Cluster> {
                         String dropTableSql = MessageFormat.format(MirrorConf.DROP_TABLE, config.getResolvedDB(database), tableName);
                         LOG.debug(getEnvironment() + ":" + dropTableSql);
                         try {
-                            if (config.isExecute()) {
+                            if (stmt != null && config.isExecute()) {
                                 stmt.execute(dropTableSql);
                             }
                             tblMirror.addSql(dropTableSql);
@@ -443,7 +443,7 @@ public class Cluster implements Comparable<Cluster> {
                     tblMirror.setMigrationStageMessage("Dropping table (overwrite)");
 
                     tblMirror.addSql(dropTable);
-                    if (config.isExecute()) {
+                    if (stmt != null && config.isExecute()) {
                         stmt.execute(dropTable);
                     } else {
                         tblMirror.addIssue("DRY-RUN: Table NOT dropped");
@@ -766,49 +766,50 @@ public class Cluster implements Comparable<Cluster> {
             ResultSet resultSet = null;
             try {
                 conn = getConnection();
-                if (conn != null) {
 
-                    String tableName = tblMirror.getName();
+                String tableName = tblMirror.getName();
 
-                    LOG.debug(getEnvironment() + ":" + database + "." + tableName + ": Build Upper Schema");
+                LOG.debug(getEnvironment() + ":" + database + "." + tableName + ": Build Upper Schema");
 
+                // Set db context;
+                String useDb = MessageFormat.format(MirrorConf.USE, database);
+
+                LOG.debug(useDb);
+                tblMirror.addSql(useDb);
+
+                if (conn != null)
                     stmt = conn.createStatement();
 
-                    // Set db context;
-                    String useDb = MessageFormat.format(MirrorConf.USE, database);
+                if (conn != null && config.isExecute())
+                    stmt.execute(useDb);
 
-                    LOG.debug(useDb);
-                    tblMirror.addSql(useDb);
-                    if (config.isExecute())
-                        stmt.execute(useDb);
+                // TODO: here. need to figure out what comparisons are needed (if any)
+                //       for non schema-only transfers.
 
-                    // TODO: here. need to figure out what comparisons are needed (if any)
-                    //       for non schema-only transfers.
+                if (!tblMirror.schemasEqual(Environment.LEFT, Environment.RIGHT) &&
+                        checkAndDoOverwrite(stmt, config, dbMirror, tblMirror)) {
+
+                    boolean readonly = (config.isReadOnly() && config.getDataStrategy() == DataStrategy.SCHEMA_ONLY) |
+                            config.getDataStrategy() == DataStrategy.LINKED |
+                            config.getDataStrategy() == DataStrategy.COMMON |
+                            config.getDataStrategy() == DataStrategy.SQL |
+                            config.getDataStrategy() == DataStrategy.HYBRID; // The SQL initial schema is a transition table and should be read-only.
+                    Boolean buildUpper = tblMirror.buildUpperSchema(config, !readonly);
 
                     String leftLocation = TableUtils.getLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.LEFT));
                     String rightLocation = config.getTranslator().translateTableLocation(dbMirror.getName(), tblMirror.getName(), leftLocation, config);
-
-                    if (!tblMirror.schemasEqual(Environment.LEFT, Environment.RIGHT) &&
-                            checkAndDoOverwrite(stmt, config, dbMirror, tblMirror)) {
-
-                        boolean readonly = (config.isReadOnly() && config.getDataStrategy() == DataStrategy.SCHEMA_ONLY) |
-                                config.getDataStrategy() == DataStrategy.LINKED |
-                                config.getDataStrategy() == DataStrategy.COMMON |
-                                config.getDataStrategy() == DataStrategy.SQL |
-                                config.getDataStrategy() == DataStrategy.HYBRID; // The SQL initial schema is a transition table and should be read-only.
-                        Boolean buildUpper = tblMirror.buildUpperSchema(config, !readonly);
-
-                        // Adjust the Location to be Relative to the RIGHT cluster.
-                        // as long as we're not using shared storage or linked
-                        if (config.getDataStrategy() != DataStrategy.SQL &&
-                                config.getDataStrategy() != DataStrategy.HYBRID) {
+                    
+                    // Adjust the Location to be Relative to the RIGHT cluster.
+                    // as long as we're not using shared storage or linked
+                    if (config.getDataStrategy() != DataStrategy.SQL &&
+                            config.getDataStrategy() != DataStrategy.HYBRID) {
 //                        String leftLocation = TableUtils.getLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.LEFT));
 //                        String rightLocation = config.getTranslator().translateTableLocation(dbMirror.getName(), tblMirror.getName(), leftLocation, config);
 
-                            if (!TableUtils.updateTableLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.RIGHT), rightLocation)) {
-                                // throw error!!
-                            }
+                        if (!TableUtils.updateTableLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.RIGHT), rightLocation)) {
+                            // throw error!!
                         }
+                    }
 //                    if (config.getDataStrategy() != DataStrategy.LINKED &&
 //                            config.getDataStrategy() != DataStrategy.COMMON &&
 //                            config.getDataStrategy() != DataStrategy.SQL &&
@@ -818,17 +819,18 @@ public class Cluster implements Comparable<Cluster> {
 //                                config.getCluster(Environment.RIGHT).getHcfsNamespace());
 //                    }
 
-                        // Get the Create State for this environment.
-                        // For READ-ONLY
-                        boolean ok2go = Boolean.TRUE;
-                        // Check for existing directories to ensure we aren't corrupting the FS for READ-ONLY.
-                        // Don't bother check FS for LINKED and COMMON
-                        if (config.isReadOnly() &&
-                                !(config.getDataStrategy() == DataStrategy.LINKED || config.getDataStrategy() == DataStrategy.COMMON)) {
-                            String tableLocation = TableUtils.getLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.RIGHT));
-                            LOG.debug("Config set to 'read-only'.  Validating FS before continuing for table: " + tblMirror.getName() +
-                                    " at location " + tableLocation);
-                            HadoopSession main = null;
+                    // Get the Create State for this environment.
+                    // For READ-ONLY
+                    boolean ok2go = Boolean.TRUE;
+                    // Check for existing directories to ensure we aren't corrupting the FS for READ-ONLY.
+                    // Don't bother check FS for LINKED and COMMON
+                    if (config.isReadOnly() &&
+                            !(config.getDataStrategy() == DataStrategy.LINKED || config.getDataStrategy() == DataStrategy.COMMON)) {
+                        String tableLocation = TableUtils.getLocation(tblMirror.getName(), tblMirror.getTableDefinition(Environment.RIGHT));
+                        LOG.debug("Config set to 'read-only'.  Validating FS before continuing for table: " + tblMirror.getName() +
+                                " at location " + tableLocation);
+                        HadoopSession main = null;
+                        if (conn != null) {
                             try {
                                 main = config.getCliPool().borrow();
                                 String[] api = {"-api"};
@@ -853,34 +855,35 @@ public class Cluster implements Comparable<Cluster> {
                                 config.getCliPool().returnSession(main);
                             }
                         }
-                        if (ok2go) {
-                            //
-                            String createTable = tblMirror.getCreateStatement(this.getEnvironment());
-                            LOG.debug(getEnvironment() + ":(SQL)" + createTable);
-                            tblMirror.setMigrationStageMessage("Creating Table in RIGHT cluster");
-                            tblMirror.addSql(createTable);
-                            if (config.isExecute()) {
-                                stmt.execute(createTable);
-                            }
-                            tblMirror.addAction("RIGHT Schema Create", Boolean.TRUE);
-                            tblMirror.setMigrationStageMessage("Table created in RIGHT cluster");
-                            rtn = Boolean.TRUE;
+                    }
+                    if (ok2go) {
+                        //
+                        String createTable = tblMirror.getCreateStatement(this.getEnvironment());
+                        LOG.debug(getEnvironment() + ":(SQL)" + createTable);
+                        tblMirror.setMigrationStageMessage("Creating Table in RIGHT cluster");
+                        tblMirror.addSql(createTable);
+                        if (stmt != null && config.isExecute()) {
+                            stmt.execute(createTable);
                         }
-                    } else if (tblMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
-                        tblMirror.addIssue("Schema Fields(name, type, and order), Row Format, and Table Format are consistent between clusters.");
-                        tblMirror.addIssue("TBLProperties were NOT considered while comparing schemas");
-                        tblMirror.addIssue("No Schema action performed");
-                        rtn = Boolean.TRUE;
-                    } else {
-                        tblMirror.addIssue("Schema Fields(name, type, and order), Row Format, and Table Format are NOT consistent between clusters.");
-                        tblMirror.addIssue("Use --sync option to overwrite table schema with changes");
-                        tblMirror.addIssue("No Schema action performed");
+                        tblMirror.addAction("RIGHT Schema Create", Boolean.TRUE);
+                        tblMirror.setMigrationStageMessage("Table created in RIGHT cluster");
                         rtn = Boolean.TRUE;
                     }
-                    if (!config.isExecute()) {
-                        tblMirror.addIssue("DRY-RUN mode");
-                    }
+                } else if (tblMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
+                    tblMirror.addIssue("Schema Fields(name, type, and order), Row Format, and Table Format are consistent between clusters.");
+                    tblMirror.addIssue("TBLProperties were NOT considered while comparing schemas");
+                    tblMirror.addIssue("No Schema action performed");
+                    rtn = Boolean.TRUE;
+                } else {
+                    tblMirror.addIssue("Schema Fields(name, type, and order), Row Format, and Table Format are NOT consistent between clusters.");
+                    tblMirror.addIssue("Use --sync option to overwrite table schema with changes");
+                    tblMirror.addIssue("No Schema action performed");
+                    rtn = Boolean.TRUE;
                 }
+                if (!config.isExecute()) {
+                    tblMirror.addIssue("DRY-RUN mode");
+                }
+
             } catch (SQLException throwables) {
                 tblMirror.addIssue(throwables.getMessage());
                 LOG.error("Issue", throwables);

@@ -30,6 +30,7 @@ Get [pdf version](./README.pdf) of this README.
   * [RETRY (WIP-NOT FULLY IMPLEMENTED YET)](#retry-wip-not-fully-implemented-yet)
 - [Running HMS Mirror](#running-hms-mirror)
   * [Assumptions](#assumptions)
+  * [Options (Help)](#options-help)
   * [Connections](#connections)
   * [Troubleshooting](#troubleshooting)
 - [Output](#output)
@@ -38,7 +39,7 @@ Get [pdf version](./README.pdf) of this README.
   * [SQL Execution Output](#sql-execution-output)
   * [Logs](#logs)
 - [Strategies](#strategies)
-  * [Schema Only](#schema-only)
+  * [Schema Only and DUMP](#schema-only-and-dump)
   * [Linked](#linked)
   * [SQL](#sql)
   * [Export Import](#export-import)
@@ -565,11 +566,23 @@ There is a running log of the process in `$HOME/.hms-mirror/logs/hms-mirror.log`
 
 ## Strategies
 
-### Schema Only
+### Schema Only and DUMP
 
 Transfer the schema only, replace the location with the RIGHT clusters location namespace and maintain the relative path.
 
 The data is transferred by an external process, like 'distcp'.
+
+The DUMP strategy is like SCHEMA_ONLY, it just doesn't require the RIGHT cluster to be connected.  Although, it does require the following settings for the RIGHT cluster to make the right adjustments:
+```
+legacyHive
+hcfsNamespace
+hiveServer2 -> partitionDiscovery 
+```
+
+With the DUMP strategy, you'll have a 'translated' (for legacy hive) table DDL that can be run on the new cluster independently.
+
+[Sample Reports - SCHEMA_ONLY](./sample_reports/schema_only)
+[Sample Reports - DUMP](./sample_reports/dump)
 
 ![schema_only](./images/schema_only.png)
 
@@ -580,6 +593,8 @@ The data is transferred by an external process, like 'distcp'.
 Assumes the clusters are LINKED.  We'll transfer the schema and leave the location as is on the new cluster.
 
 This provides a means to test Hive on the RIGHT cluster using the LEFT clusters storage.
+
+[Sample Reports - LINKED](./sample_reports/linked)
 
 ![linked](./images/linked.png)
 
