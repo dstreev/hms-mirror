@@ -582,6 +582,7 @@ hiveServer2 -> partitionDiscovery
 With the DUMP strategy, you'll have a 'translated' (for legacy hive) table DDL that can be run on the new cluster independently.
 
 [Sample Reports - SCHEMA_ONLY](./sample_reports/schema_only)
+
 [Sample Reports - DUMP](./sample_reports/dump)
 
 ![schema_only](./images/schema_only.png)
