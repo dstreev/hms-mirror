@@ -1,4 +1,4 @@
-`hms-mirror -d DUMP -db tpcds_bin_partitioned_orc_10 -o /home/dstreev/temp/hms-mirror-reports -sql`
+`hms-mirror -d COMMON -db tpcds_bin_partitioned_orc_10 -o /home/dstreev/temp/hms-mirror-reports -sql`
 
 NOTES
 - When `-e` is NOT present, `hms-mirror` runs in a DRY-RUN mode.  No actions are performed.

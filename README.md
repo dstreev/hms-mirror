@@ -34,6 +34,7 @@ Get [pdf version](./README.pdf) of this README.
   * [Connections](#connections)
   * [Troubleshooting](#troubleshooting)
 - [Output](#output)
+  * [distcp Workbook (Tech Preview)](#distcp-workbook-tech-preview)
   * [Application Report](#application-report)
   * [Action Report for LEFT and RIGHT Clusters](#action-report-for-left-and-right-clusters)
   * [SQL Execution Output](#sql-execution-output)
@@ -544,6 +545,26 @@ Check the location and references to the JDBC jar files.  General rules for Kerb
 
 ## Output
 
+### distcp Workbook (Tech Preview)
+
+We're working through some strategies to help build `distcp` jobs that can be run to migrate data from one environment to the other, based on what you've asked `hms-mirror` to do.  A sample report may look like the table below.
+
+Using [`distcp`](https://hadoop.apache.org/docs/r3.1.4/hadoop-distcp/DistCp.html) with the details below, create a `distcp` job for each 'database/target' value.  Take the contents of the 'sources' and paste them into a text file.  Copy that text file to 'hdfs' and reference it with the `-f` option in `distcp`.
+
+`hadoop distcp -f /user/dstreev/tpcds_distcp_sources.txt hdfs://HOME90/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db`
+
+This job will use the source list, copy the contents between the clusters.  Appending the 'last' directory in the 'source' line to the 'target'.
+
+NOTE: Depending on the volume of the underlying datasets, you may need to make adjustments to the `distcp` job to increase it's memory footprint.  See the [`distcp` docs](https://hadoop.apache.org/docs/r3.1.4/hadoop-distcp/DistCp.html) for details if you have issues with jobs failures.
+
+Also note that we are NOT considering sourcing the jobs from a SNAPSHOT.  We do recommend that for datasets that are changing while the 'distcp' job runs.
+
+| Database | Target | Sources |
+|:---|:---|:---|
+| tpcds_bin_partitioned_orc_10 | | |
+| | hdfs://HOME90/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db | hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/call_center<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/catalog_page<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/catalog_returns<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/catalog_sales<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/customer<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/customer_address<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/customer_demographics<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/date_dim<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/household_demographics<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/income_band<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/inventory<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/item<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/promotion<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/reason<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/ship_mode<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/store<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/store_returns<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/store_sales<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/time_dim<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/warehouse<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/web_page<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/web_returns<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/web_sales<br>hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/web_site<br> | 
+
+
 ### Application Report
 
 When the process has completed a markdown report is generated with all the work that was done.  The report location will be at the bottom of the output window.  You will need a *markdown* renderer to read the report.  Markdown is a textfile, so if you don't have a renderer you can still look at the report, it will just be harder to read.
@@ -618,6 +639,8 @@ EXPORT to a location on the LEFT cluster where the RIGHT cluster can pick it up 
 Hybrid is a strategy that select either SQL or EXPORT_IMPORT for the
 tables data strategy depending on the criteria of the table.
 
+[Sample Reports - HYBRID](./sample_reports/hybrid)
+
 ![hybrid](./images/sql_exp-imp.png)
 
 ### Intermediate
@@ -633,6 +656,8 @@ The process will EXPORT data on the LEFT cluster to the intermediate location wi
 The data storage is shared between the two clusters and no data migration is required.
 
 Schema's are transferred using the same location.
+
+[Sample Reports - COMMON](./sample_reports/common)
 
 ![common](./images/common.png)
 
