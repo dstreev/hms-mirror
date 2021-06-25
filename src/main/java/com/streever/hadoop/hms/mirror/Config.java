@@ -9,9 +9,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.streever.hadoop.HadoopSession;
 import com.streever.hadoop.HadoopSessionFactory;
 import com.streever.hadoop.HadoopSessionPool;
-import com.streever.hadoop.hms.Mirror;
 import com.streever.hadoop.hms.mirror.feature.Feature;
 import com.streever.hadoop.hms.mirror.feature.Features;
+import com.streever.hadoop.shell.command.CommandReturn;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.log4j.LogManager;
@@ -25,7 +25,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Pattern;
@@ -47,12 +46,19 @@ public class Config {
 
     private DataStrategy dataStrategy = DataStrategy.SCHEMA_ONLY;
     private HybridConfig hybrid = new HybridConfig();
-    private Boolean migrateACID = Boolean.FALSE;
+    private MigrateACID migrateACID = new MigrateACID();
+    private MigrateVIEW migrateVIEW = new MigrateVIEW();
+
+//    private Boolean migrateACID = Boolean.FALSE;
 
     @JsonIgnore
     private List<String> issues = new ArrayList<String>();
 
     private boolean execute = Boolean.FALSE;
+//    private boolean viewsOnly = Boolean.FALSE;
+
+    private boolean copyAvroSchemaUrls = Boolean.FALSE;
+
     /*
     Used when a schema is transferred and has 'purge' properties for the table.
     When this is 'true', we'll remove the 'purge' option.
@@ -122,6 +128,14 @@ public class Config {
 
     private Map<Environment, Cluster> clusters = new TreeMap<Environment, Cluster>();
 
+    public boolean convertManaged() {
+        if (getCluster(Environment.LEFT).getLegacyHive() && !getCluster(Environment.RIGHT).getLegacyHive()) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
     public Translator getTranslator() {
         return translator;
     }
@@ -138,12 +152,20 @@ public class Config {
         this.issues = issues;
     }
 
-    public Boolean getMigrateACID() {
+    public MigrateACID getMigrateACID() {
         return migrateACID;
     }
 
-    public void setMigrateACID(Boolean migrateACID) {
+    public void setMigrateACID(MigrateACID migrateACID) {
         this.migrateACID = migrateACID;
+    }
+
+    public MigrateVIEW getMigrateVIEW() {
+        return migrateVIEW;
+    }
+
+    public void setMigrateVIEW(MigrateVIEW migrateVIEW) {
+        this.migrateVIEW = migrateVIEW;
     }
 
     public DataStrategy getDataStrategy() {
@@ -167,6 +189,14 @@ public class Config {
             LOG.debug("Dry-run: ON");
         }
         return execute;
+    }
+
+    public boolean isCopyAvroSchemaUrls() {
+        return copyAvroSchemaUrls;
+    }
+
+    public void setCopyAvroSchemaUrls(boolean copyAvroSchemaUrls) {
+        this.copyAvroSchemaUrls = copyAvroSchemaUrls;
     }
 
     public boolean isReadOnly() {
@@ -307,12 +337,73 @@ public class Config {
             System.err.println(issue);
             rtn = Boolean.FALSE;
         }
-        if (migrateACID && !(dataStrategy == DataStrategy.EXPORT_IMPORT || dataStrategy == DataStrategy.HYBRID)) {
-            String issue = "Migrating ACID tables only valid for EXPORT_IMPORT and HYBRID data strategies";
+        if (migrateACID.isOn() && !(dataStrategy == DataStrategy.SCHEMA_ONLY || dataStrategy == DataStrategy.DUMP ||
+                dataStrategy == DataStrategy.EXPORT_IMPORT || dataStrategy == DataStrategy.HYBRID)) {
+            String issue = "Migrating ACID tables only valid for SCHEMA_ONLY, DUMP, EXPORT_IMPORT and HYBRID data strategies";
             issues.add(issue);
             System.err.println(issue);
             rtn = Boolean.FALSE;
         }
+        // DUMP does require Execute.
+        if (isExecute() && dataStrategy == DataStrategy.DUMP) {
+            setExecute(Boolean.FALSE);
+        }
+
+        // Test to ensure the clusters are LINKED to support underlying functions.
+        switch (dataStrategy) {
+            case LINKED:
+            case HYBRID:
+            case EXPORT_IMPORT:
+            case SQL:
+                rtn = linkTest();
+                break;
+            case SCHEMA_ONLY:
+                if (this.isCopyAvroSchemaUrls()) {
+                    LOG.info("CopyAVROSchemaUrls is TRUE, so the cluster must be linked to do this.  Testing...");
+                    rtn = linkTest();
+                }
+                break;
+            case DUMP:
+            case INTERMEDIATE:
+            case COMMON:
+
+        }
+        return rtn;
+    }
+
+    protected Boolean linkTest() {
+        Boolean rtn = Boolean.FALSE;
+        HadoopSession session = null;
+        try {
+            session = getCliPool().borrow();
+            LOG.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
+            // TODO: develop a test to copy data between clusters.
+            String leftHCFSNamespace = this.getCluster(Environment.LEFT).getHcfsNamespace();
+            String rightHCFSNamespace = this.getCluster(Environment.RIGHT).getHcfsNamespace();
+
+            // List User Directories on LEFT
+            String leftlsTestLine = "ls " + leftHCFSNamespace + "/user";
+            String rightlsTestLine = "ls " + rightHCFSNamespace + "/user";
+
+            CommandReturn lcr = session.processInput(leftlsTestLine);
+            if (lcr.isError()) {
+                throw new RuntimeException("Link to RIGHT cluster FAILED.\n " + lcr.getError() +
+                        "\nCheck configuration and hcfsNamespace value.  " +
+                        "Check the documentation about Linking clusters: https://github.com/dstreev/hms-mirror#linking-clusters-storage-layers");
+            }
+            CommandReturn rcr = session.processInput(rightlsTestLine);
+            if (rcr.isError()) {
+                throw new RuntimeException("Link to LEFT cluster FAILED.\n " + rcr.getError() +
+                        "\nCheck configuration and hcfsNamespace value.  " +
+                        "Check the documentation about Linking clusters: https://github.com/dstreev/hms-mirror#linking-clusters-storage-layers");
+            }
+            rtn = Boolean.TRUE;
+        } finally {
+            if (session != null)
+                getCliPool().returnSession(session);
+        }
+
+
         return rtn;
     }
 

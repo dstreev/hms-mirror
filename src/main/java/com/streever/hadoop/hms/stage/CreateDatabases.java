@@ -36,7 +36,6 @@ public class CreateDatabases implements Callable<ReturnStatus> {
     public ReturnStatus call() {
         ReturnStatus rtn = new ReturnStatus();
         LOG.debug("Create Databases");
-//        Boolean successful =  Boolean.TRUE;
         try {
             for (String database : config.getDatabases()) {
                 DBMirror dbMirror = conversion.getDatabase(database);

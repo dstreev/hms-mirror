@@ -64,6 +64,67 @@ For the default strategy [SCHEMA_ONLY](#schema-only-and-dump), we can migrate th
 
 <!-- tocstop -->
 
+## Features
+
+`hms-mirror` is designed to migrate schema definitions from one cluster to another or simply provide an extract of the schemas via `-d DUMP`.
+
+Under certain conditions, `hms-mirror` will 'move' data too.  Using the data strategies `-d SQL|EXPORT_IMPORT|HYBRID` well use a combination of SQL temporary tables and [Linking Clusters Storage Layers](#linking-clusters-storage-layers) to facilitate this.
+
+### VIEWS
+
+`hms-mirror` now support the migration of VIEWs between two environments.  Use the `-v|--views-only` option to execute this path.  VIEW creation requires dependent tables to exist.  
+
+Run `hms-mirror` to create all the target tables before running it with the `-v` option.  
+
+This flag is an `OR` for processing VIEW's `OR` TABLE's.  They are NOT processed together.
+
+#### Requirements
+
+- The dependent tables must exist in the RIGHT cluster
+- When using `-dbp|--db-prefix` option, VIEW definitions are NOT modified and will most likely cause VIEW creation to fail.
+
+### ACID Tables
+
+`hms-mirror` support the migration of ACID tables using the `-d HYBRID` data strategy in combination with the `-ma|--migrate-acid` or `-mao|--migrate-acid-only` flag.  The `-ma|-mao` flag takes an *optional* integer value that sets an 'Artificial Bucket Threshold'.  When no parameter is specified, the default is `2`.
+
+Use this value to set a bucket limit where we'll *remove* the bucket definition during the translation.  This is helpful for legacy ACID tables which *required* a bucket definition but wasn't a part of the intended design.  The migration provides an opportunity to correct this artificial design element.
+
+With the default value `2`, we will *remove* CLUSTERING from any ACID table definitions that have `2` or less buckets defined.  If you wish to keep ALL CLUSTERED definitions, regardless of size, set this value to `0`.
+
+#### The ACID Migration Process
+
+The ACID migration builds a 'transfer' table on the LEFT cluster that is a 'legacy' managed table (when the LEFT is a legacy cluster) or an 'EXTERNAL/PURGE' table.  Data is copied to this transfer table from the original ACID table via SQL.
+
+Since the clusters are [linked](#linking-clusters-storage-layers), we build a 'shadow' table that is 'EXTERNAL' on the 'RIGHT' cluster that uses the data in the 'LEFT' cluster.  Similar to the LINKED data strategy.  If the data is partitioned, we run `MSCK` on this 'shadow' table in the 'RIGHT' cluster to discover all the partitions.
+
+The final ACID table is created in the 'RIGHT' cluster and SQL is used to copy data from the 'LEFT' cluster via the 'shadow' table.
+
+#### Requirements
+
+- Data Strategy: `HYBRID`
+- Activate Migrate ACID: `-ma|-mao`
+- [Link Clusters](#linking-clusters-storage-layers)
+- Adequate Storage on LEFT to make an 'EXTERNAL' copy of the ACID table.
+- Partitioned tables must have data that is 'discoverable' via `MSCK`.
+- The number of partitions in the source ACID tables must be below the `partitionLimit` (default 200).  When the partition count is above this, this strategy may not be successful and we won't even attempt the conversion.
+
+### AVRO Tables
+
+AVRO tables can be design with a 'reference' to a schema file in `TBLPROPERTIES` with `avro.schema.url`.  The referenced file needs to be 'copied' to the *RIGHT* cluster BEFORE the `CREATE` statement for the AVRO table will succeed.
+
+As long as the clusters are [linked](#linking-clusters-storage-layers) and the cluster `hcfsNamespace` values are accurate, the credentials of the user running `hms-mirror` will attempt to copy the schema file to the *RIGHT* cluster BEFORE executing the `CREATE` statement.
+
+#### Requirements
+
+- [Link Clusters](#linking-clusters-storage-layers) for Data Strategies: `SCHEMA_ONLY`, `SQL`, `EXPORT_IMPORT`, and `HYBRID`
+- Running user must have 'namespace' access to the directories identified in the `TBLPROPERTIES` key `avro.schema.url`.
+
+
+### Table Translations
+
+#### Legacy Managed Tables
+`hms-mirror` will convert 'legacy' managed tables in Hive 1 or 2 to EXTERNAL tables in Hive 3.  It relies on the `legacyHive` setting in the cluster configurations to accurately make this conversion.  So make sure you've set this correctly.
+
 ## Setup
 
 ### Binary Package
@@ -86,6 +147,8 @@ On the edgenode:
 - Use the [default config template](configs/default.template.yaml) as a starting point.  Edit and place a copy here `$HOME/.hms-mirror/cfg/default.yaml`.
 
 If either or both clusters are Kerberized, please review the detailed configuration guidance [here](#running-against-a-legacy-non-cdp-kerberized-hiveserver2) and [here](#kerberized-connections).
+
+`hms-mirror` is designed to RUN from the *RIGHT* cluster.  The *RIGHT* cluster is usually the newer cluster version.  Regardless, under certain scenario's, `hms-mirror` will use an HDFS client to check directories and move small amounts of data (AVRO schema files).  `hms-mirror` will depend on the configuration of the node it's running on to locate the 'hcfs filesystem'.  This means that the `/etc/hadoop/conf` directory should contain all the environments settings to successfully connect to `hcfs`. 
 
 ### General Guidance
 
@@ -427,9 +490,30 @@ When you do need to move data, `hms-mirror` create a workbook of 'source' and 't
 
 ```
 usage: hms-mirror
-                  version:1.2.8.6-SNAPSHOT
+                  version:1.8.0_275
  -accept,--accept                                Accept ALL confirmations
                                                  and silence prompts
+ -asm,--avro-schema-migration                    Migrate AVRO Schema Files
+                                                 referenced in
+                                                 TBLPROPERTIES by
+                                                 'avro.schema.url'.
+                                                 Without migration it is
+                                                 expected that the file
+                                                 will exist on the other
+                                                 cluster and match the
+                                                 'url' defined in the
+                                                 schema DDL.
+                                                 If it's not present,
+                                                 schema creation will
+                                                 FAIL.
+                                                 Specifying this option
+                                                 REQUIRES the LEFT and
+                                                 RIGHT cluster to be
+                                                 LINKED.
+                                                 See docs:
+                                                 https://github.com/dstree
+                                                 v/hms-mirror#linking-clus
+                                                 ters-storage-layers
  -cfg,--config <filename>                        Config with details for
                                                  the HMS-Mirror.  Default:
                                                  $HOME/.hms-mirror/cfg/def
@@ -454,10 +538,30 @@ usage: hms-mirror
  -is,--intermediate-storage <storage-path>       Intermediate Storage used
                                                  with Data Strategy
                                                  INTERMEDIATE.
- -ma,--migrate-acid                              For EXPORT_IMPORT and
-                                                 HYBRID data strategies.
-                                                 Include ACID tables in
-                                                 migration.
+ -ma,--migrate-acid <arg>                        Migrate ACID tables (if
+                                                 strategy allows).
+                                                 Optional:
+                                                 ArtificialBucketThreshold
+                                                 count that will remove
+                                                 the bucket definition if
+                                                 it's below this.  Use
+                                                 this as a way to remove
+                                                 artificial bucket
+                                                 definitions that were
+                                                 added 'artificially' in
+                                                 legacy Hive.
+ -mao,--migrate-acid-only <arg>                  Migrate ACID tables ONLY
+                                                 (if strategy allows).
+                                                 Optional:
+                                                 ArtificialBucketThreshold
+                                                 count that will remove
+                                                 the bucket definition if
+                                                 it's below this.  Use
+                                                 this as a way to remove
+                                                 artificial bucket
+                                                 definitions that were
+                                                 added 'artificially' in
+                                                 legacy Hive.
  -o,--output-dir <outputdir>                     Output Directory
                                                  (default:
                                                  $HOME/.hms-mirror/reports
@@ -508,6 +612,7 @@ usage: hms-mirror
                                                  important.  Hive tables
                                                  are generally stored in
                                                  LOWERCASE.
+ -v,--views-only                                 Process VIEWs ONLY
 ```
 
 ### Running Against a LEGACY (Non-CDP) Kerberized HiveServer2
@@ -707,6 +812,8 @@ hcfsNamespace
 hiveServer2 -> partitionDiscovery 
 ```
 
+When the option `-ma` (migrate acid) is specified, the ACID schema's will be migrated/dumped as well.  It is VERY important to know that the data for ACID tables can NOT be simply copied from one clusters hive instance to another.  The data needs to be extracted to a none ACID table then use an external table definition to read and INSERT the data into the new ACID table on the RIGHT cluster.  For those that insist on trying to simply copy the data.... you've been warned ;).
+
 With the DUMP strategy, you'll have a 'translated' (for legacy hive) table DDL that can be run on the new cluster independently.
 
 [Sample Reports - SCHEMA_ONLY](./sample_reports/schema_only)
@@ -722,6 +829,8 @@ With the DUMP strategy, you'll have a 'translated' (for legacy hive) table DDL t
 Assumes the clusters are LINKED.  We'll transfer the schema and leave the location as is on the new cluster.
 
 This provides a means to test Hive on the RIGHT cluster using the LEFT clusters storage.
+
+The `-ma` (migrate acid) tables option is NOT valid in this scenario and will result in an error if specified.
 
 [Sample Reports - LINKED](./sample_reports/linked)
 
@@ -739,12 +848,16 @@ Assumes the clusters are LINKED.  We'll use EXPORT_IMPORT to get the data to the
 
 EXPORT to a location on the LEFT cluster where the RIGHT cluster can pick it up with IMPORT.
 
+When `-ma` (migrate acid) tables is specified, and the LEFT and RIGHT cluster DON'T share the same 'legacy' setting, we will NOT be able to use the EXPORT_IMPORT process due to incompatibilities between the Hive versions.  We will still attempt to migrate the table definition and data by copying the data to an EXTERNAL table on the lower cluster and expose this as the source for an INSERT INTO the ACID table on the RIGHT cluster.
+
 ![export_import](./images/sql_exp-imp.png)
 
 ### Hybrid
 
 Hybrid is a strategy that select either SQL or EXPORT_IMPORT for the
 tables data strategy depending on the criteria of the table.
+
+The `-ma` option is valid here and will use a modified version of EXPORT_IMPORT when the legacy hive settings between the clusters differ.
 
 [Sample Reports - HYBRID](./sample_reports/hybrid)
 

@@ -2,7 +2,7 @@ package com.streever.hadoop.hms.mirror;
 
 public class TransferConfig {
     private int concurrency = 4;
-    private String transferPrefix = "transfer_";
+    private String transferPrefix = "hsmm_transfer_";
     private String exportBaseDirPrefix = "/apps/hive/warehouse/export_";
     private String intermediateStorage = null;
 
