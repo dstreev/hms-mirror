@@ -112,12 +112,16 @@ The final ACID table is created in the 'RIGHT' cluster and SQL is used to copy d
 
 AVRO tables can be design with a 'reference' to a schema file in `TBLPROPERTIES` with `avro.schema.url`.  The referenced file needs to be 'copied' to the *RIGHT* cluster BEFORE the `CREATE` statement for the AVRO table will succeed.
 
+Add the `-asm|--avro-schema-move` option at the command line to *copy* the file from the LEFT cluster to the RIGHT cluster.
+
 As long as the clusters are [linked](#linking-clusters-storage-layers) and the cluster `hcfsNamespace` values are accurate, the credentials of the user running `hms-mirror` will attempt to copy the schema file to the *RIGHT* cluster BEFORE executing the `CREATE` statement.
 
 #### Requirements
 
 - [Link Clusters](#linking-clusters-storage-layers) for Data Strategies: `SCHEMA_ONLY`, `SQL`, `EXPORT_IMPORT`, and `HYBRID`
 - Running user must have 'namespace' access to the directories identified in the `TBLPROPERTIES` key `avro.schema.url`.
+- The user running `hms-mirror` will need enough storage level permissions to copy the file.
+- When hive is running with `doas=false`, `hive` will need to have access to this file.
 
 
 ### Table Translations

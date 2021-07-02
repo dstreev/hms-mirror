@@ -293,13 +293,17 @@ public class Transfer implements Callable<ReturnStatus> {
                 // Get protocol.
                 String protocolNS = matcher.group(1);
                 // Does it match the "LEFT" hcfsNamespace.
-                if (protocolNS.startsWith(config.getCluster(Environment.LEFT).getHcfsNamespace())) {
+                String leftNS = config.getCluster(Environment.LEFT).getHcfsNamespace();
+                if (leftNS.endsWith("/")) {
+                    leftNS = leftNS.substring(0, leftNS.length()-1);
+                }
+                if (protocolNS.startsWith(leftNS)) {
                     // They match, so replace with RIGHT hcfs namespace.
                     String newNS = config.getCluster(Environment.RIGHT).getHcfsNamespace();
                     if (newNS.endsWith("/")) {
                         newNS = newNS.substring(0, newNS.length()-1);
                     }
-                    rightPath = leftPath.replace(protocolNS, newNS);
+                    rightPath = leftPath.replace(leftNS, newNS);
                     TableUtils.updateAVROSchemaLocation(ret, rightPath);
                 } else {
                     // Protocol found doesn't match configured hcfs namespace for LEFT.
