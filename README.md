@@ -881,7 +881,17 @@ Schema's are transferred using the same location.
 
 ![common](./images/common.png)
 
-## Issues
+## Troubleshooting / Issues
+
+### Failed AVRO Table Creation
+
+```
+Error while compiling statement: FAILED: Execution Error, return code 40000 from org.apache.hadoop.hive.ql.ddl.DDLTask. java.lang.RuntimeException: MetaException(message:org.apache.hadoop.hive.serde2.SerDeException Encountered AvroSerdeException determining schema. Returning signal schema to indicate problem: Unable to read schema from given path: /user/dstreev/test.avsc)
+```
+
+#### Solution
+
+Validate that the 'schema' file has been copied over to the new cluster.  If that has been done, check the permissions.  In a non-impersonation environment (doas=false), the `hive` user must have access to the file.
 
 ### Table processing completed with `ERROR`
 

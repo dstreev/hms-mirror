@@ -1055,157 +1055,158 @@ public class TableMirror {
         EnvironmentTable target = getEnvironmentTable(copySpec.getTarget());
 
         // Set Table Name
-        target.setName(source.getName());
+        if (source.getExists()) {
+            target.setName(source.getName());
 
-        // Clear the target spec.
-        target.getDefinition().clear();
-        // Reset with Source
-        target.getDefinition().addAll(getTableDefinition(copySpec.getSource()));
+            // Clear the target spec.
+            target.getDefinition().clear();
+            // Reset with Source
+            target.getDefinition().addAll(getTableDefinition(copySpec.getSource()));
 
-        if (TableUtils.isHiveNative(target)) {
-            // Rules
-            // 1. Strip db from create state.  It's broken anyway with the way
-            //      the quotes are.  And we're setting the target db in the context anyways.
-            TableUtils.stripDatabase(target);
+            if (TableUtils.isHiveNative(target)) {
+                // Rules
+                // 1. Strip db from create state.  It's broken anyway with the way
+                //      the quotes are.  And we're setting the target db in the context anyways.
+                TableUtils.stripDatabase(target);
 
-            // 1. If Managed, convert to EXTERNAL
-            // When coming from legacy and going to non-legacy (Hive 3).
-            Boolean converted = Boolean.FALSE;
-            if (copySpec.getUpgrade() && TableUtils.isManaged(target) && !TableUtils.isACID(target)) {
-                converted = TableUtils.makeExternal(target);
-                if (converted) {
-                    target.addIssue("Schema 'converted' from LEGACY managed to EXTERNAL");
-                    target.addProperty(MirrorConf.HMS_MIRROR_LEGACY_MANAGED_FLAG, converted.toString());
-                    target.addProperty(MirrorConf.HMS_MIRROR_CONVERTED_FLAG, converted.toString());
-                    if (copySpec.getTakeOwnership()) {
-                        target.addProperty(MirrorConf.EXTERNAL_TABLE_PURGE, "true");
-                    } else {
-                        target.addIssue("Ownership of the data not allowed in this scenario, PURGE flag NOT set.");
+                // 1. If Managed, convert to EXTERNAL
+                // When coming from legacy and going to non-legacy (Hive 3).
+                Boolean converted = Boolean.FALSE;
+                if (copySpec.getUpgrade() && TableUtils.isManaged(target) && !TableUtils.isACID(target)) {
+                    converted = TableUtils.makeExternal(target);
+                    if (converted) {
+                        target.addIssue("Schema 'converted' from LEGACY managed to EXTERNAL");
+                        target.addProperty(MirrorConf.HMS_MIRROR_LEGACY_MANAGED_FLAG, converted.toString());
+                        target.addProperty(MirrorConf.HMS_MIRROR_CONVERTED_FLAG, converted.toString());
+                        if (copySpec.getTakeOwnership()) {
+                            target.addProperty(MirrorConf.EXTERNAL_TABLE_PURGE, "true");
+                        } else {
+                            target.addIssue("Ownership of the data not allowed in this scenario, PURGE flag NOT set.");
+                        }
                     }
                 }
-            }
 
-            if (TableUtils.isACID(source)) {
-                if (config.getMigrateACID().isOn()) {
-                    // If target isn't legacy.
-                    switch (copySpec.getTarget()) {
-                        case LEFT:
-                        case RIGHT:
-                            if (!config.getCluster(copySpec.getTarget()).getLegacyHive()) {
-                                target.addIssue("Location Stripped from ACID definition.  Location element in 'CREATE' " +
-                                        "not allowed in Hive3+");
-                                TableUtils.stripLocation(target);
-                            }
-                            break;
-                        case TRANSFER:
-                        case SHADOW:
-                            // Keep location (these tables should be either Legacy Managed or EXTERNAL
-                            // Change Location to a transition directory.
-                            String prefixedLocation = TableUtils.prefixTableNameLocation(source, config.getTransfer().getTransferPrefix());
-                            TableUtils.updateTableLocation(target, prefixedLocation);
-                            break;
+                if (TableUtils.isACID(source)) {
+                    if (config.getMigrateACID().isOn()) {
+                        // If target isn't legacy.
+                        switch (copySpec.getTarget()) {
+                            case LEFT:
+                            case RIGHT:
+                                if (!config.getCluster(copySpec.getTarget()).getLegacyHive()) {
+                                    target.addIssue("Location Stripped from ACID definition.  Location element in 'CREATE' " +
+                                            "not allowed in Hive3+");
+                                    TableUtils.stripLocation(target);
+                                }
+                                break;
+                            case TRANSFER:
+                            case SHADOW:
+                                // Keep location (these tables should be either Legacy Managed or EXTERNAL
+                                // Change Location to a transition directory.
+                                String prefixedLocation = TableUtils.prefixTableNameLocation(source, config.getTransfer().getTransferPrefix());
+                                TableUtils.updateTableLocation(target, prefixedLocation);
+                                break;
 
-                    }
+                        }
 
-                    if (TableUtils.removeBuckets(target, config.getMigrateACID().getArtificialBucketThreshold())) {
-                        target.addIssue("Bucket Definition removed (was " + TableUtils.numOfBuckets(source) + ") because it was BELOW " +
-                                "the configured 'artificialBucketThreshold' of " +
-                                config.getMigrateACID().getArtificialBucketThreshold());
+                        if (TableUtils.removeBuckets(target, config.getMigrateACID().getArtificialBucketThreshold())) {
+                            target.addIssue("Bucket Definition removed (was " + TableUtils.numOfBuckets(source) + ") because it was BELOW " +
+                                    "the configured 'artificialBucketThreshold' of " +
+                                    config.getMigrateACID().getArtificialBucketThreshold());
+                        }
                     }
                 }
-            }
 
-            if (TableUtils.isACID(source)) {
-                if (copySpec.isMakeNonTransactional()) {
-                    switch (copySpec.getTarget()) {
-                        case LEFT:
-                        case TRANSFER:
-                            if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
-                                TableUtils.makeExternal(target);
-                            }
-                            TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
-                            break;
-                        case SHADOW:
-                        case RIGHT:
-                            if (!config.getCluster(Environment.RIGHT).getLegacyHive()) {
-                                TableUtils.makeExternal(target);
-                            }
-                            TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
+                if (TableUtils.isACID(source)) {
+                    if (copySpec.isMakeNonTransactional()) {
+                        switch (copySpec.getTarget()) {
+                            case LEFT:
+                            case TRANSFER:
+                                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                                    TableUtils.makeExternal(target);
+                                }
+                                TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
+                                break;
+                            case SHADOW:
+                            case RIGHT:
+                                if (!config.getCluster(Environment.RIGHT).getLegacyHive()) {
+                                    TableUtils.makeExternal(target);
+                                }
+                                TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
+                        }
+
+                    } else if (copySpec.isMakeExternal()) {
+                        TableUtils.makeExternal(target);
+                        TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
                     }
-
-                } else if (copySpec.isMakeExternal()) {
-                    TableUtils.makeExternal(target);
-                    TableUtils.removeTblProperty(MirrorConf.TRANSACTIONAL, target);
                 }
-            }
 
-            // 2. Set mirror stage one flag
-            if (copySpec.getTarget() == Environment.RIGHT) {
-                target.addProperty(MirrorConf.HMS_MIRROR_METADATA_FLAG, df.format(new Date()));
-            }
+                // 2. Set mirror stage one flag
+                if (copySpec.getTarget() == Environment.RIGHT) {
+                    target.addProperty(MirrorConf.HMS_MIRROR_METADATA_FLAG, df.format(new Date()));
+                }
 
-            // 3. Rename table
-            if (copySpec.renameTable()) {
-                TableUtils.changeTableName(target, copySpec.getTableNamePrefix() + getName());
-            }
+                // 3. Rename table
+                if (copySpec.renameTable()) {
+                    TableUtils.changeTableName(target, copySpec.getTableNamePrefix() + getName());
+                }
 
-            // 4. identify this table as being converted by hms-mirror
+                // 4. identify this table as being converted by hms-mirror
 //        TableUtils.upsertTblProperty(MirrorConf.HMS_MIRROR_CONVERTED_FLAG, Boolean.TRUE.toString(), upperTD);
 
-            // 5. Strip stat properties
-            TableUtils.removeTblProperty("COLUMN_STATS_ACCURATE", target);
-            TableUtils.removeTblProperty("numFiles", target);
-            TableUtils.removeTblProperty("numRows", target);
-            TableUtils.removeTblProperty("rawDataSize", target);
-            TableUtils.removeTblProperty("totalSize", target);
-            TableUtils.removeTblProperty("discover.partitions", target);
+                // 5. Strip stat properties
+                TableUtils.removeTblProperty("COLUMN_STATS_ACCURATE", target);
+                TableUtils.removeTblProperty("numFiles", target);
+                TableUtils.removeTblProperty("numRows", target);
+                TableUtils.removeTblProperty("rawDataSize", target);
+                TableUtils.removeTblProperty("totalSize", target);
+                TableUtils.removeTblProperty("discover.partitions", target);
 
-            // 6. Set 'discover.partitions' if config and non-acid
-            if (config.getCluster(copySpec.getTarget()).getPartitionDiscovery().getAuto()) {
-                if (converted) {
-                    target.addProperty(MirrorConf.DISCOVER_PARTITIONS, Boolean.TRUE.toString());
-                } else if (TableUtils.isExternal(target)) {
-                    target.addProperty(MirrorConf.DISCOVER_PARTITIONS, Boolean.TRUE.toString());
+                // 6. Set 'discover.partitions' if config and non-acid
+                if (config.getCluster(copySpec.getTarget()).getPartitionDiscovery().getAuto()) {
+                    if (converted) {
+                        target.addProperty(MirrorConf.DISCOVER_PARTITIONS, Boolean.TRUE.toString());
+                    } else if (TableUtils.isExternal(target)) {
+                        target.addProperty(MirrorConf.DISCOVER_PARTITIONS, Boolean.TRUE.toString());
+                    }
                 }
-            }
 
-            // 5. Location Adjustments
-            //    Since we are looking at the same data as the original, we're not changing this now.
-            //    Any changes to data location are a part of stage-2 (STORAGE).
-            if (copySpec.getStripLocation()) {
-                TableUtils.stripLocation(target);
-            }
-
-            if (copySpec.getReplaceLocation() && !TableUtils.isACID(source)) {
-                String sourceLocation = TableUtils.getLocation(getName(), getTableDefinition(copySpec.getSource()));
-                String targetLocation = copySpec.getConfig().getTranslator().translateTableLocation(this.getDbName(), getName(), sourceLocation, copySpec.getConfig());
-                TableUtils.updateTableLocation(target, targetLocation);
-            }
-
-            // 6. Go through the features, if any.
-            if (copySpec.getConfig().getFeatureList() != null) {
-                for (Feature feature : copySpec.getConfig().getFeatureList()) {
-                    target = feature.fixSchema(target);
+                // 5. Location Adjustments
+                //    Since we are looking at the same data as the original, we're not changing this now.
+                //    Any changes to data location are a part of stage-2 (STORAGE).
+                if (copySpec.getStripLocation()) {
+                    TableUtils.stripLocation(target);
                 }
-            }
 
-            // Add props to definition.
-            if (whereTherePropsAdded(copySpec.getTarget())) {
-                Set<String> keys = target.getAddProperties().keySet();
-                for (String key : keys) {
-                    TableUtils.upsertTblProperty(key, target.getAddProperties().get(key), target);
+                if (copySpec.getReplaceLocation() && !TableUtils.isACID(source)) {
+                    String sourceLocation = TableUtils.getLocation(getName(), getTableDefinition(copySpec.getSource()));
+                    String targetLocation = copySpec.getConfig().getTranslator().translateTableLocation(this.getDbName(), getName(), sourceLocation, copySpec.getConfig());
+                    TableUtils.updateTableLocation(target, targetLocation);
                 }
-            }
 
-        } else if (TableUtils.isView(target)) {
-            source.addIssue("This is a VIEW.  It will be translated AS-IS.  View transitions will NOT honor " +
-                    "target db name changes For example: `-dbp`.  VIEW creation depends on the referenced tables existing FIRST. " +
-                    "VIEW creation failures may mean that all referenced tables don't exist yet.");
-        } else {
-            // This is a connector table.  IE: HBase, Kafka, JDBC, etc.  We just past it through.
-            source.addIssue("This is not a NATIVE Hive table.  It will be translated 'AS-IS'.  If the libraries or dependencies required for this table definition are not available on the target cluster, the 'create' statement may fail.");
+                // 6. Go through the features, if any.
+                if (copySpec.getConfig().getFeatureList() != null) {
+                    for (Feature feature : copySpec.getConfig().getFeatureList()) {
+                        target = feature.fixSchema(target);
+                    }
+                }
+
+                // Add props to definition.
+                if (whereTherePropsAdded(copySpec.getTarget())) {
+                    Set<String> keys = target.getAddProperties().keySet();
+                    for (String key : keys) {
+                        TableUtils.upsertTblProperty(key, target.getAddProperties().get(key), target);
+                    }
+                }
+
+            } else if (TableUtils.isView(target)) {
+                source.addIssue("This is a VIEW.  It will be translated AS-IS.  View transitions will NOT honor " +
+                        "target db name changes For example: `-dbp`.  VIEW creation depends on the referenced tables existing FIRST. " +
+                        "VIEW creation failures may mean that all referenced tables don't exist yet.");
+            } else {
+                // This is a connector table.  IE: HBase, Kafka, JDBC, etc.  We just past it through.
+                source.addIssue("This is not a NATIVE Hive table.  It will be translated 'AS-IS'.  If the libraries or dependencies required for this table definition are not available on the target cluster, the 'create' statement may fail.");
+            }
         }
-
         return Boolean.TRUE;
     }
 

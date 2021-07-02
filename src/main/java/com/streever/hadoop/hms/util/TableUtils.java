@@ -118,6 +118,10 @@ public class TableUtils {
                     String[] parts = line.split("=");
                     LOG.debug("Old AVRO Schema location: " + parts[1]);
                     String replacedProperty = parts[0] + "='" + newLocation + "'";
+                    // add back the comma if present before.
+                    if (parts[1].trim().endsWith(",")) {
+                        replacedProperty = replacedProperty + ",";
+                    }
                     tableDefinition.set(lineIdx, replacedProperty);
                     LOG.debug("Replaced AVRO Schema URL Property: " + replacedProperty);
                     rtn = Boolean.TRUE;
@@ -560,7 +564,7 @@ public class TableUtils {
                 try {
                     String[] parts = line.split("=");
                     // Stripe Quotes
-                    rtn = parts[1].replace("'", " ");
+                    rtn = parts[1].replace("'", " ").replace(",", "").trim();
                     break;
                 } catch (Throwable t) {
                     // Nothing, just return null.

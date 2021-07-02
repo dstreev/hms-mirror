@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 
 public class Transfer implements Callable<ReturnStatus> {
     private static Logger LOG = LogManager.getLogger(Transfer.class);
-    public static Pattern protocolNSPattern = Pattern.compile("^.*//(.*?)/");
+    public static Pattern protocolNSPattern = Pattern.compile("(^.*//.*?)/");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
@@ -101,6 +101,10 @@ public class Transfer implements Callable<ReturnStatus> {
         Boolean rtn = Boolean.FALSE;
 
         rtn = tblMirror.buildoutDefinitions(config, dbMirror);
+
+        if (rtn)
+            rtn = AVROCheck();
+
         if (rtn)
             rtn = tblMirror.buildoutSql(config, dbMirror);
 
@@ -249,15 +253,17 @@ public class Transfer implements Callable<ReturnStatus> {
         Boolean rtn = Boolean.FALSE;
 
         rtn = tblMirror.buildoutDefinitions(config, dbMirror);
-        if (rtn)
-            rtn = tblMirror.buildoutSql(config, dbMirror);
 
         if (rtn)
             rtn = AVROCheck();
 
+        if (rtn)
+            rtn = tblMirror.buildoutSql(config, dbMirror);
+
+
         // Execute the RIGHT sql if config.execute.
         if (rtn && config.isExecute()) {
-            config.getCluster(Environment.RIGHT).runSql(tblMirror);
+            rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
         }
         return rtn;
     }
@@ -290,8 +296,8 @@ public class Transfer implements Callable<ReturnStatus> {
                 if (protocolNS.startsWith(config.getCluster(Environment.LEFT).getHcfsNamespace())) {
                     // They match, so replace with RIGHT hcfs namespace.
                     String newNS = config.getCluster(Environment.RIGHT).getHcfsNamespace();
-                    if (!newNS.endsWith("/")) {
-                        newNS = newNS + "/";
+                    if (newNS.endsWith("/")) {
+                        newNS = newNS.substring(0, newNS.length()-1);
                     }
                     rightPath = leftPath.replace(protocolNS, newNS);
                     TableUtils.updateAVROSchemaLocation(ret, rightPath);
@@ -301,6 +307,7 @@ public class Transfer implements Callable<ReturnStatus> {
                             "LEFT hcfsnamespace. " + leftPath + " is NOT in the " + config.getCluster(Environment.LEFT).getHcfsNamespace() +
                             ". Can't determine change, so we'll not do anything.";
                     ret.addIssue(warning);
+                    ret.addIssue("Schema creation may fail if location isn't available to RIGHT cluster.");
                     LOG.warn(warning);
                 }
             } else {
@@ -334,9 +341,10 @@ public class Transfer implements Callable<ReturnStatus> {
                             ret.addIssue("Problem creating directory " + mkdir + ". " + cr.getError());
                             rtn = Boolean.FALSE;
                         } else {
-                            cr = session.processInput("cp " + leftPath + " " + rightPath);
+                            cr = session.processInput("cp -f " + leftPath + " " + rightPath);
                             if (cr.isError()) {
-                                ret.addIssue("Problem copying AVRO schema file from " + leftPath + " to " + mkdir);
+                                ret.addIssue("Problem copying AVRO schema file from " + leftPath + " to " +
+                                        mkdir + ".\n```" + cr.getError() + "```");
                                 rtn = Boolean.FALSE;
                             }
                         }
