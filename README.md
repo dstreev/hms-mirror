@@ -6,10 +6,21 @@ The application will migration hive metastore data (metadata) between two cluste
 
 For the default strategy [SCHEMA_ONLY](#schema-only-and-dump), we can migrate the schemas and sync metastore databases, but the DATA movement is NOT a function of this application.  The application does provide a workbook of SOURCE and TARGET locations that can be used to build a `distcp` plan for the databases you ran it against.
 
+The output reports are written in [Markdown](https://www.markdownguide.org/).  If you have a client Markdown Renderer like [Marked2](https://marked2app.com/) for the Mac or [Typora](https://typora.io/) which is cross platform, you'll find a LOT of details in the output reports about what happened.  If you can't install a render, then try some web versions [Stackedit.io](https://stackedit.io/app#).  Copy/paste the contents to the report 'md' files.
+
 ## Table of Contents
 
 <!-- toc -->
 
+- [WARNING](#warning)
+  * [Building METADATA](#building-metadata)
+  * [Partition Handling for Data Transfers](#partition-handling-for-data-transfers)
+  * [Permissions](#permissions)
+- [Features](#features)
+  * [VIEWS](#views)
+  * [ACID Tables](#acid-tables)
+  * [AVRO Tables](#avro-tables)
+  * [Table Translations](#table-translations)
 - [Setup](#setup)
   * [Binary Package](#binary-package)
   * [HMS-Mirror Setup from Binary Distribution](#hms-mirror-setup-from-binary-distribution)
@@ -26,7 +37,7 @@ For the default strategy [SCHEMA_ONLY](#schema-only-and-dump), we can migrate th
 - [Linking Clusters Storage Layers](#linking-clusters-storage-layers)
   * [Goal](#goal)
   * [Scenario #1](#scenario-%231)
-- [Permissions](#permissions)
+- [Permissions](#permissions-1)
 - [Configuration](#configuration)
   * [Secure Passwords in Configuration](#secure-passwords-in-configuration)
 - [Tips for Running `hms-miror`](#tips-for-running-hms-miror)
@@ -54,15 +65,57 @@ For the default strategy [SCHEMA_ONLY](#schema-only-and-dump), we can migrate th
   * [Hybrid](#hybrid)
   * [Intermediate](#intermediate)
   * [Common](#common)
-- [Issues](#issues)
+- [Troubleshooting / Issues](#troubleshooting--issues)
+  * [Failed AVRO Table Creation](#failed-avro-table-creation)
   * [Table processing completed with `ERROR`](#table-processing-completed-with-error)
   * [Connecting to HS2 via Kerberos](#connecting-to-hs2-via-kerberos)
   * [Auto Partition Discovery not working](#auto-partition-discovery-not-working)
-  * [HDFS Permissions Issues](#hdfs-permissions-issues)
+  * [Hive SQL Exception / HDFS Permissions Issues](#hive-sql-exception--hdfs-permissions-issues)
   * [YARN Submission stuck in ACCEPTED phase](#yarn-submission-stuck-in-accepted-phase)
   * [Spark DFS Access](#spark-dfs-access)
 
 <!-- tocstop -->
+
+## WARNING
+
+### Building METADATA
+
+Rebuilding METADATA can be an expensive scenario.  Especially when you are trying to rebuild the entire metastore in a short period of time.  Consider this in your planning.  Know the number of partitions and buckets you will be moving and account for this.  Test on smaller datasets (volume and metadata elements).  Progress to testing higher volumes / partition counts to find limits and make adjustments to your strategy.
+
+Using the SQL and EXPORT_IMPORT strategies will move metadata AND data, but the effort to rebuild the metastore elements can be quite expensive.  So consider migrating the metadata separately from the data (distcp) and use MSCK on the RIGHT cluster to discover the data.  This will be considerably more efficient.
+
+If you will be doing a lot of metadata work on the RIGHT cluster and that cluster is also serving a current user base, consider setting up a separate HS2 pods for the migration to minimize the impact to the current user community. [Isolate Migration Activities](#isolate-migration-activities)
+
+### Partition Handling for Data Transfers
+
+There are three settings in the configuration to control 'how' and 'to what extent' we'll attempt to migrate *DATA* for tables with partitions.
+
+For non-ACID/transactional tables the setting in:
+
+```yaml
+hybrid:
+  exportImportPartitionLimit: 100
+  sqlPartitionLimit: 500
+```
+
+control both the `HYBRID` strategy for selecting either `EXPORT_IMPORT` or `SQL` and the `SQL` *LIMIT* for how many partitions we'll attempt.  When the `SQL` limit is exceeded you will need to use `SCHEMA_ONLY` to migrate the schema followed by `distcp` to move the data.
+
+For ACID/transactional tables the setting in:
+
+```yaml
+migrateACID:
+  partitionLimit: 500
+```
+
+effectively draws the same limit as above.
+
+Why do we have these limits?  Mass migration of datasets via SQL and EXPORT_IMPORT with a LOT of partitions is very expensive and NOT very efficient.  It's best that when these limits are reached that you separate the METADATA and DATA migration to DDL and distcp.
+
+### Permissions
+
+We use a cross cluster technique to back metadata in the RIGHT cluster with datasets in the LEFT cluster for data strategies: LINKED, HYBRID, EXPORT_IMPORT, SQL, and SCHEMA_ONLY (with `-ams` AVRO Migrate Schema).
+
+See [Linking Clusters Storage Layers](#linking-clusters-storage-layers) for details on configuring this state.
 
 ## Features
 
@@ -85,7 +138,7 @@ This flag is an `OR` for processing VIEW's `OR` TABLE's.  They are NOT processed
 
 ### ACID Tables
 
-`hms-mirror` support the migration of ACID tables using the `-d HYBRID` data strategy in combination with the `-ma|--migrate-acid` or `-mao|--migrate-acid-only` flag.  The `-ma|-mao` flag takes an *optional* integer value that sets an 'Artificial Bucket Threshold'.  When no parameter is specified, the default is `2`.
+`hms-mirror` support the migration of ACID tables using the `-d HYBRID` data strategy in combination with the `-ma|--migrate-acid` or `-mao|--migrate-acid-only` flag.   You can also simply 'replay' the schema definition (without data) using `-d SCHEMA_ONLY -ma|-mao`.  The `-ma|-mao` flag takes an *optional* integer value that sets an 'Artificial Bucket Threshold'.  When no parameter is specified, the default is `2`.
 
 Use this value to set a bucket limit where we'll *remove* the bucket definition during the translation.  This is helpful for legacy ACID tables which *required* a bucket definition but wasn't a part of the intended design.  The migration provides an opportunity to correct this artificial design element.
 
@@ -104,9 +157,15 @@ The final ACID table is created in the 'RIGHT' cluster and SQL is used to copy d
 - Data Strategy: `HYBRID`
 - Activate Migrate ACID: `-ma|-mao`
 - [Link Clusters](#linking-clusters-storage-layers)
+- This is a 'ONE' time transfer.  It is not an incremental update process.
 - Adequate Storage on LEFT to make an 'EXTERNAL' copy of the ACID table.
+- Permissions:
+  - From the RIGHT cluster, the submitting user WILL need access to the LEFT cluster's storage layer (HDFS) to create the shadow table (with location) that points across clusters.
+  - doas will have a lot to do with the permissions requirements.
+  - The 'hive' service account on the RIGHT cluster will need elevated privileges to the LEFT storage LAYER (HDFS).  For example: If the hive service accounts on each cluster DO NOT share the same identity, like `hive`, then the RIGHT hive identity MUST also have privileged access to the LEFT clusters HDFS layer.
 - Partitioned tables must have data that is 'discoverable' via `MSCK`.
-- The number of partitions in the source ACID tables must be below the `partitionLimit` (default 200).  When the partition count is above this, this strategy may not be successful and we won't even attempt the conversion.
+- The number of partitions in the source ACID tables must be below the `partitionLimit` (default 500).  When the partition count is above this, this strategy may not be successful and we won't even attempt the conversion.  NOTE: The METADATA activity and REDUCER restrictions to the number of BUCKETs can dramatically effect this.  Check YARN for progress of jobs with a large number of partitions / buckets.  Progress many appear stalled from 'hms-mirror'.
+- ACID table migration to Hive 1/2 is NOT supported due to the lack of support for "INSERT OVERWRITE" on transactional tables.  Hive 1/2 to Hive 3 IS support and the target of this implementation.  Hive 3 to Hive 3 is also supported.
 
 ### AVRO Tables
 
@@ -861,7 +920,9 @@ When `-ma` (migrate acid) tables is specified, and the LEFT and RIGHT cluster DO
 Hybrid is a strategy that select either SQL or EXPORT_IMPORT for the
 tables data strategy depending on the criteria of the table.
 
-The `-ma` option is valid here and will use a modified version of EXPORT_IMPORT when the legacy hive settings between the clusters differ.
+The `-ma|-mao` option is valid here and will use an internal `ACID` strategy for *transactional* tables to convert them between environments, along with their data.
+
+NOTE: There are limits to the number of partitions `hms-mirror` will attempt.  See: [Partition Handling for Data Transfers](#partition-handling-for-data-transfers)
 
 [Sample Reports - HYBRID](./sample_reports/hybrid)
 
@@ -932,15 +993,28 @@ In the Hive metastore configuration in Cloudera Manager set `metastore.housekeep
 
 ![pic](./images/hms_housekeeping_thread.png)
 
-### HDFS Permissions Issues
+### Hive SQL Exception / HDFS Permissions Issues
 
+```
 Caused by: java.lang.RuntimeException: org.apache.hadoop.hive.ql.security.authorization.plugin.HiveAccessControlException:Permission denied: user [dstreev] does not have [ALL] privilege on [hdfs://HDP50/apps/hive/warehouse/tpcds_bin_partitioned_orc_10.db/web_site]
+```
+
+This error is a permission error to HDFS.  For strategies HYBRID, EXPORT_IMPORT, SQL, and SCHEMA_ONLY (with `-ams` enabled), this could be an issue with cross cluster HDFS access.
+
+Review the output report for details where this error occurred (LEFT or RIGHT cluster).
+
+When dealing with CREATE DDL statements submitted through HS2 with a `LOCATION` element in them, the submitting *user* **AND** the HS2 *service account* must have permissions to the directory.  Remember, with cross cluster access the user identity will originate on the RIGHT cluster and will be **EVALUATED** on the LEFT clusters storage layer.
+
+For migrations, the `hms-mirror` running user (JDBC) and keytab user (HDFS) should be privileged users.
+
+#### Example and Ambari Hints
 
 After checking permissions of 'dstreev': Found that the 'dstreev' user was NOT the owner of the files in these directories on the LEFT cluster. The user running the process needs to be in 'dfs.permissions.superusergroup' for the lower clusters 'hdfs' service.  Ambari 2.6 has issues setting this property: https://jira.cloudera.com/browse/EAR-7805
 
 Follow workaround above or add user to the 'hdfs' group. Or use Ranger to allow all access. On my cluster, with no Ranger, I had to use '/var/lib/ambari-server/resources/scripts/configs.py' to set it manually for Ambari.
 
 `sudo ./configs.py --host=k01.streever.local --port=8080 -u admin -p admin -n hdp50 -c hdfs-site -a set -k dfs.permissions.superusergroup -v hdfs_admin`
+
 
 ### YARN Submission stuck in ACCEPTED phase
 

@@ -38,7 +38,7 @@ public class MirrorConf {
     public static final String TRANSACTIONAL = "transactional";
     public static final String AVRO_SCHEMA_URL_KEY = "avro.schema.url";
     public static final String SQL_DATA_TRANSFER = "FROM {0} INSERT OVERWRITE TABLE {1} SELECT *";
-    public static final String SQL_DATA_TRANSFER_WITH_PARTITIONS = "FROM {0} INSERT OVERWRITE TA  BLE {1} PARTITION ({2}) SELECT *";
+    public static final String SQL_DATA_TRANSFER_WITH_PARTITIONS = "FROM {0} INSERT OVERWRITE TABLE {1} PARTITION ({2}) SELECT *";
     /*
     METADATA Transfer Flag
      */

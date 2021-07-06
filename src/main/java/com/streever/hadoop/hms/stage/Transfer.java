@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 
 public class Transfer implements Callable<ReturnStatus> {
     private static Logger LOG = LogManager.getLogger(Transfer.class);
-    public static Pattern protocolNSPattern = Pattern.compile("(^.*//.*?)/");
+    public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
@@ -133,97 +133,104 @@ public class Transfer implements Callable<ReturnStatus> {
         if (rtn)
             rtn = tblMirror.buildoutSql(config, dbMirror);
 
-        EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable tet = tblMirror.getEnvironmentTable(Environment.TRANSFER);
-        EnvironmentTable set = tblMirror.getEnvironmentTable(Environment.SHADOW);
-        EnvironmentTable ret = tblMirror.getEnvironmentTable(Environment.RIGHT);
+        if (rtn) {
+            EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
+            EnvironmentTable tet = tblMirror.getEnvironmentTable(Environment.TRANSFER);
+            EnvironmentTable set = tblMirror.getEnvironmentTable(Environment.SHADOW);
+            EnvironmentTable ret = tblMirror.getEnvironmentTable(Environment.RIGHT);
 
-        // Construct Transfer SQL
-        // Need to see if the table has partitions.
-        if (let.getPartitioned()) {
-            // Check that the partition count doesn't exceed the configuration limit.
-            if (let.getPartitions().size() <= config.getMigrateACID().getPartitionLimit()) {
+
+            // Construct Transfer SQL
+            // Need to see if the table has partitions.
+            if (let.getPartitioned()) {
+                // Check that the partition count doesn't exceed the configuration limit.
+                if (let.getPartitions().size() <= config.getMigrateACID().getPartitionLimit()) {
+                    // Build Partition Elements.
+                    String partElement = TableUtils.getPartitionElements(let);
+                    String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS,
+                            let.getName(), tet.getName(), partElement);
+                    String transferDesc = MessageFormat.format(TableUtils.STAGE_TRANSFER_PARTITION_DESC, let.getPartitions().size());
+                    let.addSql(new Pair(transferDesc, transferSql));
+                } else {
+                    // The partition limit has been exceeded.  The process will need to be done manually.
+                    let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
+                            "limit: " + config.getMigrateACID().getPartitionLimit() + ". This value is used to abort migration " +
+                            "that have a high potential for failure.  The migration will need to be done manually OR try increasing " +
+                            "the limit.");
+                    return Boolean.FALSE;
+                }
+            } else {
+                // No Partitions
+                String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER, let.getName(), tet.getName());
+                let.addSql(new Pair(TableUtils.STAGE_TRANSFER_DESC, transferSql));
+            }
+
+            // Construct the Shadow Transfer SQL
+            if (let.getPartitioned()) {
                 // Build Partition Elements.
                 String partElement = TableUtils.getPartitionElements(let);
-                String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS,
-                        let.getName(), tet.getName(), partElement);
-                let.addSql(new Pair(TableUtils.STAGE_TRANSFER_DESC, transferSql));
+                String shadowTransferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS,
+                        set.getName(), ret.getName(), partElement);
+                String transferDesc = MessageFormat.format(TableUtils.LOAD_FROM_PARTITIONED_SHADOW_DESC, let.getPartitions().size());
+                ret.addSql(new Pair(transferDesc, shadowTransferSql));
             } else {
-                // The partition limit has been exceeded.  The process will need to be done manually.
-                let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
-                        "limit: " + config.getMigrateACID().getPartitionLimit() + ". This value is used to abort migration " +
-                        "that have a high potential for failure.  The migration will need to be done manually OR try increasing " +
-                        "the limit.");
-                return Boolean.FALSE;
+                // No Partitions
+                String shadowTransferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER, set.getName(), ret.getName());
+                ret.addSql(new Pair(TableUtils.LOAD_FROM_SHADOW_DESC, shadowTransferSql));
             }
-        } else {
-            // No Partitions
-            String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER, let.getName(), tet.getName());
-            let.addSql(new Pair(TableUtils.STAGE_TRANSFER_DESC, transferSql));
+            tblMirror.addStep("ACID Transfer/Shadow SQL", "Built");
+
+            // Execute the LEFT sql if config.execute.
+            if (rtn && config.isExecute()) {
+                rtn = config.getCluster(Environment.LEFT).runSql(tblMirror);
+            }
+
+            // Execute the RIGHT sql if config.execute.
+            if (rtn && config.isExecute()) {
+                rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
+            }
+
+            // Cleanup, POST creation and TRANSFERS.
+            // LEFT TRANSFER table
+            List<Pair> leftCleanup = new ArrayList<Pair>();
+
+            String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
+            Pair leftUsePair = new Pair(TableUtils.USE_DESC, useLeftDb);
+            leftCleanup.add(leftUsePair);
+            let.addSql(leftUsePair);
+
+            String dropTransfer = MessageFormat.format(MirrorConf.DROP_TABLE, tet.getName());
+            Pair leftDropPair = new Pair(TableUtils.DROP_TRANSFER_TABLE, dropTransfer);
+            leftCleanup.add(leftDropPair);
+            let.addSql(leftDropPair);
+            tblMirror.addStep("LEFT ACID Transfer/Shadow SQL Cleanup", "Built");
+
+            if (rtn && config.isExecute()) {
+                // Run the Cleanup Scripts
+                config.getCluster(Environment.LEFT).runSql(leftCleanup, tblMirror, Environment.LEFT);
+            }
+
+            // RIGHT Shadow table
+            List<Pair> rightCleanup = new ArrayList<Pair>();
+
+            String useRightDb = MessageFormat.format(MirrorConf.USE, config.getResolvedDB(dbMirror.getName()));
+            Pair rightUsePair = new Pair(TableUtils.USE_DESC, useRightDb);
+            rightCleanup.add(rightUsePair);
+            ret.addSql(rightUsePair);
+
+            String rightDropShadow = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
+
+            Pair rightDropPair = new Pair(TableUtils.DROP_SHADOW_TABLE, rightDropShadow);
+
+            rightCleanup.add(rightDropPair);
+            ret.addSql(rightDropPair);
+            tblMirror.addStep("RIGHT ACID Shadow SQL Cleanup", "Built");
+
+            if (rtn && config.isExecute()) {
+                // Run the Cleanup Scripts
+                config.getCluster(Environment.RIGHT).runSql(rightCleanup, tblMirror, Environment.RIGHT);
+            }
         }
-
-        // Construct the Shadow Transfer SQL
-        if (let.getPartitioned()) {
-            // Build Partition Elements.
-            String partElement = TableUtils.getPartitionElements(let);
-            String shadowTransferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS,
-                    set.getName(), ret.getName(), partElement);
-            ret.addSql(new Pair(TableUtils.STAGE_TRANSFER_DESC, shadowTransferSql));
-        } else {
-            // No Partitions
-            String shadowTransferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER, set.getName(), ret.getName());
-            ret.addSql(new Pair(TableUtils.STAGE_TRANSFER_DESC, shadowTransferSql));
-        }
-
-        // Execute the LEFT sql if config.execute.
-        if (rtn && config.isExecute()) {
-            rtn = config.getCluster(Environment.LEFT).runSql(tblMirror);
-        }
-
-        // Execute the RIGHT sql if config.execute.
-        if (rtn && config.isExecute()) {
-            rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
-        }
-
-        // Cleanup, POST creation and TRANSFERS.
-        // LEFT TRANSFER table
-        List<Pair> leftCleanup = new ArrayList<Pair>();
-
-        String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
-        Pair leftUsePair = new Pair(TableUtils.USE_DESC, useLeftDb);
-        leftCleanup.add(leftUsePair);
-        let.addSql(leftUsePair);
-
-        String dropTransfer = MessageFormat.format(MirrorConf.DROP_TABLE, tet.getName());
-        Pair leftDropPair = new Pair(TableUtils.DROP_TRANSFER_TABLE, dropTransfer);
-        leftCleanup.add(leftDropPair);
-        let.addSql(leftDropPair);
-
-        if (rtn && config.isExecute()) {
-            // Run the Cleanup Scripts
-            config.getCluster(Environment.LEFT).runSql(leftCleanup, tblMirror, Environment.LEFT);
-        }
-
-        // RIGHT Shadow table
-        List<Pair> rightCleanup = new ArrayList<Pair>();
-
-        String useRightDb = MessageFormat.format(MirrorConf.USE, config.getResolvedDB(dbMirror.getName()));
-        Pair rightUsePair = new Pair(TableUtils.USE_DESC, useRightDb);
-        rightCleanup.add(rightUsePair);
-        ret.addSql(rightUsePair);
-
-        String rightDropShadow = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
-
-        Pair rightDropPair = new Pair(TableUtils.DROP_TRANSFER_TABLE, rightDropShadow);
-
-        rightCleanup.add(rightDropPair);
-        ret.addSql(rightDropPair);
-
-        if (rtn && config.isExecute()) {
-            // Run the Cleanup Scripts
-            config.getCluster(Environment.RIGHT).runSql(rightCleanup, tblMirror, Environment.RIGHT);
-        }
-
         return rtn;
     }
 
@@ -234,16 +241,31 @@ public class Transfer implements Callable<ReturnStatus> {
         EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
 
         if (TableUtils.isACID(let.getName(), let.getDefinition())) {
+            tblMirror.setStrategy(DataStrategy.ACID);
             rtn = doAcidTransfer();
         } else {
             if (let.getPartitioned()) {
-                if (let.getPartitions().size() > config.getHybrid().getSqlPartitionLimit()) {
+                if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit()) {
                     // SQL
-                    rtn = doSQL();
+                    if (let.getPartitions().size() <= config.getHybrid().getSqlPartitionLimit()) {
+                        tblMirror.setStrategy(DataStrategy.SQL);
+                        rtn = doSQL();
+                    } else {
+                        tblMirror.addIssue(Environment.RIGHT, "The Partition count (" + let.getPartitions().size() + ")" +
+                                " exceed SQL Limit (" + config.getHybrid().getSqlPartitionLimit() + ")" +
+                                " The table DATA can't reliably be migrated with SQL.  The partition count will most likely " +
+                                " cause issues in the Application Master.  Use SCHEMA_ONLY to migrate schema and follow up by " +
+                                "using 'distcp' to migrate the data.");
+                    }
                 } else {
                     // EXPORT
+                    tblMirror.setStrategy(DataStrategy.EXPORT_IMPORT);
                     rtn = doBasic();
                 }
+            } else {
+                // EXPORT
+                tblMirror.setStrategy(DataStrategy.EXPORT_IMPORT);
+                rtn = doBasic();
             }
         }
         return rtn;
@@ -252,18 +274,23 @@ public class Transfer implements Callable<ReturnStatus> {
     protected Boolean doBasic() {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = tblMirror.buildoutDefinitions(config, dbMirror);
+        EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
 
-        if (rtn)
-            rtn = AVROCheck();
+        if (TableUtils.isACID(let.getName(), let.getDefinition())) {
+            rtn = doHybrid();
+        } else {
+            rtn = tblMirror.buildoutDefinitions(config, dbMirror);
 
-        if (rtn)
-            rtn = tblMirror.buildoutSql(config, dbMirror);
+            if (rtn)
+                rtn = AVROCheck();
 
+            if (rtn)
+                rtn = tblMirror.buildoutSql(config, dbMirror);
 
-        // Execute the RIGHT sql if config.execute.
-        if (rtn && config.isExecute()) {
-            rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
+            // Execute the RIGHT sql if config.execute.
+            if (rtn && config.isExecute()) {
+                rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
+            }
         }
         return rtn;
     }
@@ -290,18 +317,19 @@ public class Transfer implements Callable<ReturnStatus> {
             // ProtocolNS Found.
             String cpCmd = null;
             if (matcher.find()) {
-                // Get protocol.
-                String protocolNS = matcher.group(1);
+                // Return the whole set of groups.
+                String lns = matcher.group(0);
+
                 // Does it match the "LEFT" hcfsNamespace.
                 String leftNS = config.getCluster(Environment.LEFT).getHcfsNamespace();
                 if (leftNS.endsWith("/")) {
-                    leftNS = leftNS.substring(0, leftNS.length()-1);
+                    leftNS = leftNS.substring(0, leftNS.length() - 1);
                 }
-                if (protocolNS.startsWith(leftNS)) {
+                if (lns.startsWith(leftNS)) {
                     // They match, so replace with RIGHT hcfs namespace.
                     String newNS = config.getCluster(Environment.RIGHT).getHcfsNamespace();
                     if (newNS.endsWith("/")) {
-                        newNS = newNS.substring(0, newNS.length()-1);
+                        newNS = newNS.substring(0, newNS.length() - 1);
                     }
                     rightPath = leftPath.replace(leftNS, newNS);
                     TableUtils.updateAVROSchemaLocation(ret, rightPath);
@@ -362,7 +390,7 @@ public class Transfer implements Callable<ReturnStatus> {
                         config.getCliPool().returnSession(session);
                 }
             }
-
+            tblMirror.addStep("AVRO", "Checked");
         } else {
             // Not AVRO, so no action (passthrough)
             rtn = Boolean.TRUE;

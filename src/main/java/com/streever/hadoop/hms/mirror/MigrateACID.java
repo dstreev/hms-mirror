@@ -31,7 +31,7 @@ public class MigrateACID {
     This value allow us to set a value that limits the size of the partitioned dataset we'll attempt to address.  When the
     number of partitions for the source table exceeds this value, we won't even try to attempt this.
      */
-    private Integer partitionLimit = 200;
+    private Integer partitionLimit = 500;
 
 //    /*
 //

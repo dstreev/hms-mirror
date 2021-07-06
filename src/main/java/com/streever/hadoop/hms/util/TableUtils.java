@@ -35,8 +35,10 @@ public class TableUtils {
     public static final String DROP_TRANSFER_TABLE = "Dropping Transfer Table";
     public static final String REPAIR_DESC = "Repairing Table (MSCK)";
     public static final String STAGE_TRANSFER_DESC = "Moving data to transfer table";
+    public static final String STAGE_TRANSFER_PARTITION_DESC = "Moving data to partitioned ({0}) transfer table";
     public static final String LOAD_DESC = "Loading table from Staging";
     public static final String LOAD_FROM_SHADOW_DESC = "Loading table from Shadow";
+    public static final String LOAD_FROM_PARTITIONED_SHADOW_DESC = "Loading table from Partitioned ({0}) Shadow";
     public static final String EXPORT_TABLE = "EXPORT Table";
     public static final String IMPORT_TABLE = "IMPORT Table";
     public static final String ACID_NOT_ON = "This is an ACID table.  Turn on ACID migration `-ma|--migrate-acid`.";

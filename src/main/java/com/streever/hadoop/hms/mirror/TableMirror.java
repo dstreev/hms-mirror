@@ -22,7 +22,7 @@ public class TableMirror {
     private boolean remove = Boolean.FALSE;
     private DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
     @JsonIgnore
-    private Map<String[], Object> steps = new LinkedHashMap<String[], Object>();
+    private List<Marker> steps = new ArrayList<Marker>();
 
     private DataStrategy strategy = null;
 
@@ -50,6 +50,7 @@ public class TableMirror {
         EnvironmentTable et = getEnvironmentTable(environment);
         return et.getName();
     }
+
 
     public String getDbName() {
         return dbName;
@@ -140,19 +141,16 @@ public class TableMirror {
     }
 
     public void addStep(String key, Object value) {
-        String[] keySet = new String[2];
         Date now = new Date();
         Long elapsed = now.getTime() - start.getTime();
         start = now; // reset
         BigDecimal secs = new BigDecimal(elapsed).divide(new BigDecimal(1000));///1000
         DecimalFormat decf = new DecimalFormat("#,###.00");
         String secStr = decf.format(secs);
-        keySet[0] = secStr;
-        keySet[1] = key;
-        steps.put(keySet, value);
+        steps.add(new Marker(secStr, key, value));
     }
 
-    public Map<String[], Object> getSteps() {
+    public List<Marker> getSteps() {
         return steps;
     }
 
@@ -563,7 +561,7 @@ public class TableMirror {
 
                 if (ret.getExists()) {
                     // Already exists, no action.
-                    ret.addIssue("Schema exists already.  Can't do ACID transfer is schema already exists. Drop it and " +
+                    ret.addIssue("Schema exists already.  Can't do ACID transfer if schema already exists. Drop it and " +
                             "try again.");
                     ret.setCreateStrategy(CreateStrategy.NOTHING);
                     return Boolean.FALSE;
@@ -616,7 +614,7 @@ public class TableMirror {
             rtn = buildoutACIDDefinition(config, dbMirror);
         } else {
             if (let.getPartitioned()) {
-                if (let.getPartitions().size() > config.getHybrid().getSqlPartitionLimit()) {
+                if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit()) {
                     rtn = buildoutSQLDefinition(config, dbMirror);
                 } else {
                     rtn = buildoutEXPORT_IMPORTDefinition(config, dbMirror);
@@ -685,6 +683,9 @@ public class TableMirror {
             case HYBRID:
                 rtn = buildoutHYBRIDDefinition(config, dbMirror);
                 break;
+            case ACID:
+                rtn = buildoutACIDDefinition(config, dbMirror);
+                break;
             case INTERMEDIATE:
                 rtn = buildoutINTERMEDIATEDefinition(config, dbMirror);
                 break;
@@ -692,6 +693,7 @@ public class TableMirror {
                 rtn = buildoutCOMMONDefinition(config, dbMirror);
                 break;
         }
+        this.addStep("Definitions", "Built");
         return rtn;
     }
 
@@ -962,7 +964,7 @@ public class TableMirror {
             rtn = buildoutACIDSql(config, dbMirror);
         } else {
             if (let.getPartitioned()) {
-                if (let.getPartitions().size() > config.getHybrid().getSqlPartitionLimit()) {
+                if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit()) {
                     rtn = buildoutSQLSql(config, dbMirror);
                 } else {
                     rtn = buildoutEXPORT_IMPORTSql(config, dbMirror);
@@ -1034,6 +1036,9 @@ public class TableMirror {
             case HYBRID:
                 rtn = buildoutHYBRIDSql(config, dbMirror);
                 break;
+            case ACID:
+                rtn = buildoutACIDSql(config, dbMirror);
+                break;
             case INTERMEDIATE:
                 rtn = buildoutINTERMEDIATESql(config, dbMirror);
                 break;
@@ -1041,6 +1046,8 @@ public class TableMirror {
                 rtn = buildoutCOMMONSql(config, dbMirror);
                 break;
         }
+        this.addStep("SQL", "Built");
+
         return rtn;
     }
 
@@ -1109,7 +1116,7 @@ public class TableMirror {
                         }
 
                         if (TableUtils.removeBuckets(target, config.getMigrateACID().getArtificialBucketThreshold())) {
-                            target.addIssue("Bucket Definition removed (was " + TableUtils.numOfBuckets(source) + ") because it was BELOW " +
+                            target.addIssue("Bucket Definition removed (was " + TableUtils.numOfBuckets(source) + ") because it was EQUAL TO or BELOW " +
                                     "the configured 'artificialBucketThreshold' of " +
                                     config.getMigrateACID().getArtificialBucketThreshold());
                         }

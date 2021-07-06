@@ -349,6 +349,12 @@ public class Config {
             setExecute(Boolean.FALSE);
         }
 
+        if (dataStrategy == DataStrategy.ACID) {
+            issues.add("The `ACID` strategy is not a valid `hms-mirror` top level strategy.  Use 'HYBRID' to " +
+             " along with the `-ma|-mao` option to address ACID tables.");
+            return Boolean.FALSE;
+        }
+
         // Test to ensure the clusters are LINKED to support underlying functions.
         switch (dataStrategy) {
             case LINKED:

@@ -154,6 +154,7 @@ public class Conversion {
         sb.append("<table>").append("\n");
         sb.append("<tr>").append("\n");
         sb.append("<th style=\"test-align:left\">Table</th>").append("\n");
+        sb.append("<th style=\"test-align:left\">Strategy</th>").append("\n");
         sb.append("<th style=\"test-align:left\">Phase<br/>State</th>").append("\n");
         sb.append("<th style=\"test-align:right\">Duration</th>").append("\n");
         sb.append("<th style=\"test-align:right\">Partition<br/>Count</th>").append("\n");
@@ -180,6 +181,8 @@ public class Conversion {
             TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
             // table
             sb.append("<td>").append(table).append("</td>").append("\n");
+            // Strategy
+            sb.append("<td>").append(tblMirror.getStrategy()).append("</td>").append("\n");
             // phase state
             sb.append("<td>").append(tblMirror.getPhaseState().toString()).append("</td>").append("\n");
 
@@ -197,17 +200,17 @@ public class Conversion {
             // Steps
             sb.append("<td>\n");
             sb.append("<table>\n");
-            for (Map.Entry<String[], Object> entry: tblMirror.getSteps().entrySet()) {
+            for (Marker entry: tblMirror.getSteps()) {
                 sb.append("<tr>\n");
                 sb.append("<td>");
-                sb.append(entry.getKey()[0]);
+                sb.append(entry.getMark());
                 sb.append("</td>");
                 sb.append("<td>");
-                sb.append(entry.getKey()[1]);
+                sb.append(entry.getDescription());
                 sb.append("</td>");
                 sb.append("<td>");
-                if (entry.getValue() != null)
-                    sb.append(entry.getValue().toString());
+                if (entry.getAction() != null)
+                    sb.append(entry.getAction().toString());
                 sb.append("</td>");
                 sb.append("</tr>\n");
             }
@@ -216,23 +219,23 @@ public class Conversion {
 
             // Actions
             if (dbMirror.hasActions()) {
-                Iterator<Map.Entry<String[], Object>> aIter = tblMirror.getSteps().entrySet().iterator();
-                sb.append("<td>").append("\n");
-                sb.append("<table>");
-                while (aIter.hasNext()) {
-                    sb.append("<tr>");
-                    Map.Entry<String[], Object> item = aIter.next();
-                    String[] keySet = item.getKey();
-                    sb.append("<td style=\"text-align:left\">").append(keySet[0]).append("</td>");
-                    sb.append("<td>").append(keySet[1]).append("</td>");
-                    if (item.getValue() != null)
-                        sb.append("<td>").append(item.getValue().toString()).append("</td>");
-                    else
-                        sb.append("<td></td>");
-                    sb.append("</tr>");
-                }
-                sb.append("</table>");
-                sb.append("</td>").append("\n");
+//                Iterator<Map.Entry<String[], Object>> aIter = tblMirror.getTableActions().iterator();
+//                sb.append("<td>").append("\n");
+//                sb.append("<table>");
+//                while (aIter.hasNext()) {
+//                    sb.append("<tr>");
+//                    Map.Entry<String[], Object> item = aIter.next();
+//                    String[] keySet = item.getKey();
+//                    sb.append("<td style=\"text-align:left\">").append(keySet[0]).append("</td>");
+//                    sb.append("<td>").append(keySet[1]).append("</td>");
+//                    if (item.getValue() != null)
+//                        sb.append("<td>").append(item.getValue().toString()).append("</td>");
+//                    else
+//                        sb.append("<td></td>");
+//                    sb.append("</tr>");
+//                }
+//                sb.append("</table>");
+//                sb.append("</td>").append("\n");
 
                 // LEFT Table Actions
                 Iterator<String> a1Iter = tblMirror.getTableActions(Environment.LEFT).iterator();

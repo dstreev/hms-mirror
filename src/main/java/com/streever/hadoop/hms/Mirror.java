@@ -43,6 +43,7 @@ public class Mirror {
     private String configFile = null;
     private String reportOutputDir = null;
     private String reportOutputFile = null;
+    private String leftExecuteFile = null;
     private String rightExecuteFile = null;
     private String leftActionFile = null;
     private String rightActionFile = null;
@@ -337,7 +338,8 @@ public class Mirror {
 
         // Action Files
         reportOutputFile = reportOutputDir + System.getProperty("file.separator") + "<db>_hms-mirror.md|html";
-        rightExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_execute.sql";
+        leftExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_execute.sql";
+        rightExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_execute.sql";
         leftActionFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_action.sql";
         rightActionFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_action.sql";
 
@@ -548,7 +550,8 @@ public class Mirror {
         reporter.setVariable("config.file", configFile);
         reporter.setVariable("config.strategy", config.getDataStrategy().toString());
         reporter.setVariable("report.file", reportOutputFile);
-        reporter.setVariable("execute.file", rightExecuteFile);
+        reporter.setVariable("left.execute.file", leftExecuteFile);
+        reporter.setVariable("right.execute.file", rightExecuteFile);
         reporter.setVariable("left.action.file", leftActionFile);
         reporter.setVariable("right.action.file", rightActionFile);
         reporter.setRetry(this.retry);

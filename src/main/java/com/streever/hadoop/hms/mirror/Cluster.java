@@ -269,6 +269,10 @@ public class Cluster implements Comparable<Cluster> {
                             if (config.getMigrateACID().isOnly()) {
                                 tableMirror.setRemove(Boolean.TRUE);
                             }
+                            // When processing Tables, remove views.
+                            if (TableUtils.isView(et)) {
+                                tableMirror.setRemove(Boolean.TRUE);
+                            }
                         }
 
                     }
@@ -349,14 +353,19 @@ public class Cluster implements Comparable<Cluster> {
                 try {
                     stmt = conn.createStatement();
                     for (Pair pair : sqlList) {
-                        LOG.info("SQL:" + pair.getDescription() + ":" + pair.getAction());
+                        LOG.info(getEnvironment() + ":SQL:" + pair.getDescription() + ":" + pair.getAction());
                         tblMirror.setMigrationStageMessage("Executing SQL: " + pair.getDescription());
                         stmt.execute(pair.getAction());
+                        tblMirror.addStep(getEnvironment().toString(), "Sql Run Complete for: " + pair.getDescription());
                     }
                     rtn = Boolean.TRUE;
                 } catch (SQLException throwables) {
                     LOG.error(throwables);
-                    tblMirror.getEnvironmentTable(environment).addIssue(throwables.getMessage());
+                    String message = throwables.getMessage();
+                    if (throwables.getMessage().contains("HiveAccessControlException Permission denied")) {
+                        message = message + " See [Hive SQL Exception / HDFS Permissions Issues](https://github.com/dstreev/hms-mirror#hive-sql-exception--hdfs-permissions-issues)";
+                    }
+                    tblMirror.getEnvironmentTable(environment).addIssue(message);
                 } finally {
                     if (stmt != null) {
                         try {
@@ -399,7 +408,7 @@ public class Cluster implements Comparable<Cluster> {
                     }
 
                     try {
-                        LOG.debug(getEnvironment() + ":" + createDBSql);
+                        LOG.debug(getEnvironment() + ":CREATE_DB:" + createDBSql);
                         if (config.isExecute()) // on dry-run, without db, hard to get through the rest of the steps.
                             stmt.execute(createDBSql);
                     } catch (SQLException throwables) {
@@ -431,52 +440,8 @@ public class Cluster implements Comparable<Cluster> {
 
     public void createDatabase(Config config, String database) {
         // Open the connection and ensure we are running this on the "RIGHT" cluster.
-        Connection conn = null;
-        try {
-            conn = getConnection();
-            if (conn != null) {
-
-                LOG.debug(getEnvironment() + " - Create Database: " + database);
-
-                Statement stmt = null;
-                try {
-                    try {
-                        stmt = conn.createStatement();
-                    } catch (SQLException throwables) {
-                        LOG.error("Issue building statement", throwables);
-                    }
-
-                    // CREATE DB.
-                    String createDb = MessageFormat.format(MirrorConf.CREATE_DB, database);
-                    try {
-                        LOG.debug(getEnvironment() + ":" + createDb);
-                        if (config.isExecute()) // on dry-run, without db, hard to get through the rest of the steps.
-                            stmt.execute(createDb);
-                    } catch (SQLException throwables) {
-                        LOG.error(getEnvironment() + ":Creating DB", throwables);
-                    }
-
-                } finally {
-                    if (stmt != null) {
-                        try {
-                            stmt.close();
-                        } catch (SQLException sqlException) {
-                            // ignore
-                        }
-                    }
-                }
-            }
-        } catch (SQLException throwables) {
-            LOG.error("Issue", throwables);
-            throw new RuntimeException(throwables);
-        } finally {
-            try {
-                if (conn != null)
-                    conn.close();
-            } catch (SQLException throwables) {
-                //
-            }
-        }
+        String createDb = MessageFormat.format(MirrorConf.CREATE_DB, database);
+        createDatabase(config, database, createDb);
     }
 
 //    protected Boolean checkAndDoOverwrite(Statement stmt, Config config, DBMirror dbMirror, EnvironmentTable source, EnTableMirror tblMirror) {
