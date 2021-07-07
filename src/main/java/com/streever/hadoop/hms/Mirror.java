@@ -590,6 +590,15 @@ public class Mirror {
 
         stateMaintenance.start();
 
+        // State reason table/view was removed from processing list.
+        for (Map.Entry<String, DBMirror> dbEntry : conversion.getDatabases().entrySet()) {
+            for (TableMirror tm: dbEntry.getValue().getTableMirrors().values()) {
+                if (tm.isRemove()) {
+                    dbEntry.getValue().getFilteredOut().put(tm.getName(), tm.getRemoveReason());
+                }
+            }
+        }
+
         // Remove all the tblMirrors that shouldn't be processed based on config.
         for (Map.Entry<String, DBMirror> dbEntry : conversion.getDatabases().entrySet()) {
             dbEntry.getValue().getTableMirrors().values().removeIf(value -> value.isRemove());

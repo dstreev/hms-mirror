@@ -149,7 +149,7 @@ public class Conversion {
             sb.append("none\n");
         }
 
-        sb.append("\n## Table Status").append("\n\n");
+        sb.append("\n## Table Status (").append(dbMirror.getTableMirrors().size()).append(")\n\n");
 
         sb.append("<table>").append("\n");
         sb.append("<tr>").append("\n");
@@ -347,6 +347,16 @@ public class Conversion {
             sb.append("</tr>").append("\n");
         }
         sb.append("</table>").append("\n");
+
+        if (dbMirror.getFilteredOut().size() > 0) {
+            sb.append("\n## Skipped Tables/Views\n\n");
+
+            sb.append("| Table / View | Skipped Reason |\n");
+            sb.append("|:---|:---|\n");
+            for (Map.Entry<String, String> entry: dbMirror.getFilteredOut().entrySet()) {
+                sb.append("| ").append(entry.getKey()).append(" | ").append(entry.getValue()).append(" |\n");
+            }
+        }
         return sb.toString();
     }
 

@@ -16,6 +16,10 @@ public class DBMirror {
     private String name;
     private Map<Environment, Map<String, String>> dbDefinitions = new TreeMap<Environment, Map<String, String>>();
     private List<String> issues = new ArrayList<String>();
+    /*
+    table - reason
+     */
+    private Map<String, String> filteredOut = new TreeMap<String, String>();
 
     private Map<String, TableMirror> tableMirrors = new TreeMap<String, TableMirror>();
 
@@ -48,6 +52,9 @@ public class DBMirror {
         return issues;
     }
 
+    public Map<String, String> getFilteredOut() {
+        return filteredOut;
+    }
 
     public Map<Environment, Map<String, String>> getDBDefinitions() {
         return dbDefinitions;

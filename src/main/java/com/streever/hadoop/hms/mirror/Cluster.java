@@ -252,9 +252,10 @@ public class Cluster implements Comparable<Cluster> {
                     et.setExists(Boolean.TRUE);
                     tableMirror.addStep(getEnvironment().toString(), "Fetched Schema");
 
-                    if (config.getMigrateVIEW().isOn()) {
+                    if (config.getMigrateVIEW().isOn() && config.getDataStrategy() != DataStrategy.DUMP) {
                         if (!TableUtils.isView(et)) {
                             tableMirror.setRemove(Boolean.TRUE);
+                            tableMirror.setRemoveReason("VIEW's only processing selected.");
                         }
                     } else {
                         if (TableUtils.isACID(et)) {
@@ -263,15 +264,18 @@ public class Cluster implements Comparable<Cluster> {
                                 tableMirror.addStep("TRANSACTIONAL", Boolean.TRUE);
                             } else {
                                 tableMirror.setRemove(Boolean.TRUE);
+                                tableMirror.setRemoveReason("ACID table and ACID processing not selected (-ma|-mao).");
                             }
                         } else {
                             // Non ACID Tables should NOT be process if 'isOnly' is set.
                             if (config.getMigrateACID().isOnly()) {
                                 tableMirror.setRemove(Boolean.TRUE);
+                                tableMirror.setRemoveReason("Non-ACID table and ACID only processing selected `-mao`");
                             }
                             // When processing Tables, remove views.
-                            if (TableUtils.isView(et)) {
+                            if (TableUtils.isView(et) && config.getDataStrategy() != DataStrategy.DUMP) {
                                 tableMirror.setRemove(Boolean.TRUE);
+                                tableMirror.setRemoveReason("This is a VIEW and VIEW processing wasn't selected.");
                             }
                         }
 
@@ -364,6 +368,10 @@ public class Cluster implements Comparable<Cluster> {
                     String message = throwables.getMessage();
                     if (throwables.getMessage().contains("HiveAccessControlException Permission denied")) {
                         message = message + " See [Hive SQL Exception / HDFS Permissions Issues](https://github.com/dstreev/hms-mirror#hive-sql-exception--hdfs-permissions-issues)";
+                    }
+                    if (throwables.getMessage().contains("AvroSerdeException")) {
+                        message = message + ". It's possible the `avro.schema.url` referenced file doesn't exist at the target. " +
+                                "Use the `-asm` option and hms-mirror will attempt to copy it to the new cluster.";
                     }
                     tblMirror.getEnvironmentTable(environment).addIssue(message);
                 } finally {

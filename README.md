@@ -182,6 +182,9 @@ As long as the clusters are [linked](#linking-clusters-storage-layers) and the c
 - The user running `hms-mirror` will need enough storage level permissions to copy the file.
 - When hive is running with `doas=false`, `hive` will need to have access to this file.
 
+#### Warnings
+
+- With the `EXPORT_IMPORT` strategy, the `avro.schema.url` location will NOT be converted and may lead to issue reading the table is the location includes a prefix of the clusters namespace OR the file doesn't exist in the new cluster.
 
 ### Table Translations
 

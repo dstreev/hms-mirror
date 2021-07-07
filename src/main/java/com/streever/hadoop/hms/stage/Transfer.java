@@ -276,7 +276,9 @@ public class Transfer implements Callable<ReturnStatus> {
 
         EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
 
-        if (TableUtils.isACID(let.getName(), let.getDefinition())) {
+        if (TableUtils.isACID(let.getName(), let.getDefinition()) &&
+                !(config.getDataStrategy() == DataStrategy.DUMP
+                || config.getDataStrategy() == DataStrategy.SCHEMA_ONLY)) {
             if (config.getDataStrategy() != DataStrategy.COMMON) {
                 rtn = doHybrid();
             } else {
@@ -292,6 +294,11 @@ public class Transfer implements Callable<ReturnStatus> {
 
             if (rtn)
                 rtn = tblMirror.buildoutSql(config, dbMirror);
+
+            // If EXPORT_IMPORT, need to run LEFT queries.
+            if (rtn && tblMirror.getStrategy() == DataStrategy.EXPORT_IMPORT && config.isExecute()) {
+                rtn = config.getCluster(Environment.LEFT).runSql(tblMirror);
+            }
 
             // Execute the RIGHT sql if config.execute.
             if (rtn && config.isExecute()) {

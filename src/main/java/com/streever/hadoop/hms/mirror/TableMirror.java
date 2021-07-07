@@ -19,7 +19,11 @@ public class TableMirror {
     /*
     Use to indicate the tblMirror should be removed from processing, post setup.
      */
+    @JsonIgnore
     private boolean remove = Boolean.FALSE;
+    @JsonIgnore
+    private String removeReason = null;
+
     private DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
     @JsonIgnore
     private List<Marker> steps = new ArrayList<Marker>();
@@ -66,6 +70,14 @@ public class TableMirror {
 
     public void setRemove(boolean remove) {
         this.remove = remove;
+    }
+
+    public String getRemoveReason() {
+        return removeReason;
+    }
+
+    public void setRemoveReason(String removeReason) {
+        this.removeReason = removeReason;
     }
 
     public PhaseState getPhaseState() {
