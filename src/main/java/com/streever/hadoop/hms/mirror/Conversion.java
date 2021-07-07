@@ -351,7 +351,7 @@ public class Conversion {
         if (dbMirror.getFilteredOut().size() > 0) {
             sb.append("\n## Skipped Tables/Views\n\n");
 
-            sb.append("| Table / View | Skipped Reason |\n");
+            sb.append("| Table / View | Reason |\n");
             sb.append("|:---|:---|\n");
             for (Map.Entry<String, String> entry: dbMirror.getFilteredOut().entrySet()) {
                 sb.append("| ").append(entry.getKey()).append(" | ").append(entry.getValue()).append(" |\n");
