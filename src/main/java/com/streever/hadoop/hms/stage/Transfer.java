@@ -277,7 +277,13 @@ public class Transfer implements Callable<ReturnStatus> {
         EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
 
         if (TableUtils.isACID(let.getName(), let.getDefinition())) {
-            rtn = doHybrid();
+            if (config.getDataStrategy() != DataStrategy.COMMON) {
+                rtn = doHybrid();
+            } else {
+                rtn = Boolean.FALSE;
+                tblMirror.addIssue(Environment.RIGHT,
+                        "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
+            }
         } else {
             rtn = tblMirror.buildoutDefinitions(config, dbMirror);
 

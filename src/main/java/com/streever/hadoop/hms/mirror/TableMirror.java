@@ -266,7 +266,7 @@ public class TableMirror {
             copySpec.setUpgrade(Boolean.TRUE);
         if (!config.isReadOnly() || !config.isSync()) {
             copySpec.setTakeOwnership(Boolean.TRUE);
-        } else if (copySpec.getUpgrade()){
+        } else if (copySpec.getUpgrade()) {
             ret.addIssue("Ownership (PURGE Option) not set because of either: `sync` or `ro|read-only` was specified in the config.");
         }
         if (config.isReadOnly()) {
@@ -408,6 +408,77 @@ public class TableMirror {
             rtn = buildTableSchema(copySpec);
         } else {
             let.addIssue("Can't LINK ACID tables");
+            ret.setCreateStrategy(CreateStrategy.NOTHING);
+        }
+        return rtn;
+    }
+
+    private Boolean buildoutCOMMONDefinition(Config config, DBMirror dbMirror) {
+        Boolean rtn = Boolean.FALSE;
+        EnvironmentTable let = null;
+        EnvironmentTable ret = null;
+        CopySpec copySpec = null;
+
+        let = getEnvironmentTable(Environment.LEFT);
+        ret = getEnvironmentTable(Environment.RIGHT);
+
+        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        // Can't LINK ACID tables.
+        if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
+            // Swap out the namespace of the LEFT with the RIGHT.
+            copySpec.setReplaceLocation(Boolean.FALSE);
+            if (config.convertManaged())
+                copySpec.setUpgrade(Boolean.TRUE);
+            // COMMON owns the data unless readonly specified.
+            if (!config.isReadOnly())
+                copySpec.setTakeOwnership(Boolean.TRUE);
+
+            if (config.isSync()) {
+                // We assume that the 'definitions' are only there is the
+                //     table exists.
+                if (!let.getExists() && ret.getExists()) {
+                    // If left is empty and right is not, DROP RIGHT.
+                    ret.addIssue("Schema doesn't exist in 'source'.  Will be DROPPED.");
+                    ret.setCreateStrategy(CreateStrategy.DROP);
+                } else if (let.getExists() && !ret.getExists()) {
+                    // If left is defined and right is not, CREATE RIGHT.
+                    ret.addIssue("Schema missing, will be CREATED");
+                    ret.setCreateStrategy(CreateStrategy.CREATE);
+                } else if (let.getExists() && ret.getExists()) {
+                    // If left and right, check schema change and replace if necessary.
+                    // Compare Schemas.
+                    if (schemasEqual(Environment.LEFT, Environment.RIGHT)) {
+                        ret.addIssue("Schema exists AND matches.  No Actions Necessary.");
+                        ret.setCreateStrategy(CreateStrategy.LEAVE);
+                    } else {
+                        if (TableUtils.isExternalPurge(ret)) {
+                            ret.addIssue("Schema exists AND DOESN'T match.  But the 'RIGHT' table is has a PURGE option set. " +
+                                    "We can NOT safely replace the table without compromising the data. No action will be taken.");
+                            ret.setCreateStrategy(CreateStrategy.LEAVE);
+                            return Boolean.FALSE;
+                        } else {
+                            ret.addIssue("Schema exists AND DOESN'T match.  It will be REPLACED (DROPPED and RECREATED).");
+                            ret.setCreateStrategy(CreateStrategy.REPLACE);
+                        }
+                    }
+                }
+                // With sync, don't own data.
+                copySpec.setTakeOwnership(Boolean.FALSE);
+            } else {
+                if (ret.getExists()) {
+                    // Already exists, no action.
+                    ret.addIssue("Schema exists already, no action. If you wish to rebuild the schema, " +
+                            "drop it first and try again. <b>Any following messages MAY be irrelevant about schema adjustments.</b>");
+                    ret.setCreateStrategy(CreateStrategy.LEAVE);
+                } else {
+                    ret.addIssue("Schema will be created");
+                    ret.setCreateStrategy(CreateStrategy.CREATE);
+                }
+            }
+            // Rebuild Target from Source.
+            rtn = buildTableSchema(copySpec);
+        } else {
+            let.addIssue("Can't use COMMON for ACID tables");
             ret.setCreateStrategy(CreateStrategy.NOTHING);
         }
         return rtn;
@@ -630,24 +701,6 @@ public class TableMirror {
     TODO: buildoutINTERMEDIATEDefinition
      */
     private Boolean buildoutINTERMEDIATEDefinition(Config config, DBMirror dbMirror) {
-        Boolean rtn = Boolean.FALSE;
-        EnvironmentTable let = null;
-        EnvironmentTable ret = null;
-        CopySpec copySpec = null;
-
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
-
-        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
-
-
-        return rtn;
-    }
-
-    /*
-    TODO: buildoutCOMMONDefinition
-     */
-    private Boolean buildoutCOMMONDefinition(Config config, DBMirror dbMirror) {
         Boolean rtn = Boolean.FALSE;
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -1023,6 +1076,7 @@ public class TableMirror {
             case DUMP:
                 rtn = buildoutDUMPSql(config, dbMirror);
                 break;
+            case COMMON:
             case SCHEMA_ONLY:
             case LINKED:
                 rtn = buildoutSCHEMA_ONLYSql(config, dbMirror);
@@ -1042,9 +1096,9 @@ public class TableMirror {
             case INTERMEDIATE:
                 rtn = buildoutINTERMEDIATESql(config, dbMirror);
                 break;
-            case COMMON:
-                rtn = buildoutCOMMONSql(config, dbMirror);
-                break;
+//            case COMMON:
+//                rtn = buildoutCOMMONSql(config, dbMirror);
+//                break;
         }
         this.addStep("SQL", "Built");
 

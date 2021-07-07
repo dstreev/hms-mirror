@@ -370,9 +370,12 @@ public class Config {
                 }
                 break;
             case DUMP:
-            case INTERMEDIATE:
             case COMMON:
-
+                break;
+            case INTERMEDIATE:
+                issues.add("INTERMEDIATE data strategy not yet implemented.");
+                rtn = Boolean.FALSE;
+                break;
         }
         return rtn;
     }
@@ -426,85 +429,87 @@ public class Config {
         System.out.println("----------------------------------------------------------------");
         Boolean kerb = Boolean.FALSE;
         for (Environment env : Environment.values()) {
-            System.out.println("");
-            System.out.println("Setup " + env.toString() + " cluster....");
-            System.out.println("");
+            if (env.isVisible()) {
+                System.out.println("");
+                System.out.println("Setup " + env.toString() + " cluster....");
+                System.out.println("");
 
 
-            // get their input as a String
-            // Legacy?
-            System.out.print("Is the " + env.toString() + " hive instance Hive 1 or Hive 2? (Y/N)");
-            String response = scanner.next();
-            if (response.equalsIgnoreCase("y")) {
-                config.getCluster(env).setLegacyHive(Boolean.TRUE);
-            } else {
-                config.getCluster(env).setLegacyHive(Boolean.FALSE);
-            }
-
-            // hcfsNamespace
-            System.out.print("What is the namespace for the " + env.toString() + " cluster? ");
-            response = scanner.next();
-            config.getCluster(env).setHcfsNamespace(response);
-
-            // HS2 URI
-            System.out.print("What is the JDBC URI for the " + env.toString() + " cluster? ");
-            response = scanner.next();
-            HiveServer2Config hs2Cfg = config.getCluster(env).getHiveServer2();
-            hs2Cfg.setUri(response);
-
-            // If Kerberized, notify to include hive jar in 'aux_libs'
-            if (!kerb && response.contains("principal")) {
-                // appears the connection is kerberized.
-                System.out.println("----------------------------------------------------------------------------------------");
-                System.out.println("The connection appears to be Kerberized.\n\t\tPlace the 'hive standalone' driver in '$HOME/.hms-mirror/aux_libs'");
-                System.out.println("\tSPECIAL RUN INSTRUCTIONS for Legacy Kerberos Connections.");
-                System.out.println("\thttps://github.com/dstreev/hms-mirror#running-against-a-legacy-non-cdp-kerberized-hiveserver2");
-                System.out.println("----------------------------------------------------------------------------------------");
-                kerb = Boolean.TRUE;
-            } else if (response.contains("principal")) {
-                System.out.println("----------------------------------------------------------------------------------------");
-                System.out.println("The connection ALSO appears to be Kerberized.\n");
-                System.out.println(" >> Will your Kerberos Ticket be TRUSTED for BOTH JDBC Kerberos Connections? (Y/N)");
-                response = scanner.next();
-                if (!response.equalsIgnoreCase("y")) {
-                    throw new RuntimeException("Both JDBC connection must trust your kerberos ticket.");
+                // get their input as a String
+                // Legacy?
+                System.out.print("Is the " + env.toString() + " hive instance Hive 1 or Hive 2? (Y/N)");
+                String response = scanner.next();
+                if (response.equalsIgnoreCase("y")) {
+                    config.getCluster(env).setLegacyHive(Boolean.TRUE);
+                } else {
+                    config.getCluster(env).setLegacyHive(Boolean.FALSE);
                 }
-                System.out.println(" >> Are both clusters running the same version of Hadoop/Hive? (Y/N)");
+
+                // hcfsNamespace
+                System.out.print("What is the namespace for the " + env.toString() + " cluster? ");
                 response = scanner.next();
-                if (!response.equalsIgnoreCase("y")) {
-                    throw new RuntimeException("Both JDBC connections must be running the same version.");
+                config.getCluster(env).setHcfsNamespace(response);
+
+                // HS2 URI
+                System.out.print("What is the JDBC URI for the " + env.toString() + " cluster? ");
+                response = scanner.next();
+                HiveServer2Config hs2Cfg = config.getCluster(env).getHiveServer2();
+                hs2Cfg.setUri(response);
+
+                // If Kerberized, notify to include hive jar in 'aux_libs'
+                if (!kerb && response.contains("principal")) {
+                    // appears the connection is kerberized.
+                    System.out.println("----------------------------------------------------------------------------------------");
+                    System.out.println("The connection appears to be Kerberized.\n\t\tPlace the 'hive standalone' driver in '$HOME/.hms-mirror/aux_libs'");
+                    System.out.println("\tSPECIAL RUN INSTRUCTIONS for Legacy Kerberos Connections.");
+                    System.out.println("\thttps://github.com/dstreev/hms-mirror#running-against-a-legacy-non-cdp-kerberized-hiveserver2");
+                    System.out.println("----------------------------------------------------------------------------------------");
+                    kerb = Boolean.TRUE;
+                } else if (response.contains("principal")) {
+                    System.out.println("----------------------------------------------------------------------------------------");
+                    System.out.println("The connection ALSO appears to be Kerberized.\n");
+                    System.out.println(" >> Will your Kerberos Ticket be TRUSTED for BOTH JDBC Kerberos Connections? (Y/N)");
+                    response = scanner.next();
+                    if (!response.equalsIgnoreCase("y")) {
+                        throw new RuntimeException("Both JDBC connection must trust your kerberos ticket.");
+                    }
+                    System.out.println(" >> Are both clusters running the same version of Hadoop/Hive? (Y/N)");
+                    response = scanner.next();
+                    if (!response.equalsIgnoreCase("y")) {
+                        throw new RuntimeException("Both JDBC connections must be running the same version.");
+                    }
+                } else {
+                    //    get jarFile location.
+                    //    get username
+                    //    get password
+                    System.out.println("----------------------------------------------------------------------------------------");
+                    System.out.println("What is the location (local) of the 'hive standalone' jar file?");
+                    response = scanner.next();
+                    hs2Cfg.setJarFile(response);
+                    System.out.println("Connection username?");
+                    response = scanner.next();
+                    hs2Cfg.getConnectionProperties().put("user", response);
+                    System.out.println("Connection password?");
+                    response = scanner.next();
+                    hs2Cfg.getConnectionProperties().put("password", response);
                 }
-            } else {
-                //    get jarFile location.
-                //    get username
-                //    get password
-                System.out.println("----------------------------------------------------------------------------------------");
-                System.out.println("What is the location (local) of the 'hive standalone' jar file?");
-                response = scanner.next();
-                hs2Cfg.setJarFile(response);
-                System.out.println("Connection username?");
-                response = scanner.next();
-                hs2Cfg.getConnectionProperties().put("user", response);
-                System.out.println("Connection password?");
-                response = scanner.next();
-                hs2Cfg.getConnectionProperties().put("password", response);
-            }
-            // Partition Discovery
-            // Only on the RIGHT cluster.
-            if (env == Environment.RIGHT) {
-                PartitionDiscovery pd = config.getCluster(env).getPartitionDiscovery();
-                if (!config.getCluster(env).getLegacyHive()) {
-                    // Can only auto-discover in Hive 3
-                    System.out.println("Set created tables to 'auto-discover' partitions?(Y/N)");
+                // Partition Discovery
+                // Only on the RIGHT cluster.
+                if (env == Environment.RIGHT) {
+                    PartitionDiscovery pd = config.getCluster(env).getPartitionDiscovery();
+                    if (!config.getCluster(env).getLegacyHive()) {
+                        // Can only auto-discover in Hive 3
+                        System.out.println("Set created tables to 'auto-discover' partitions?(Y/N)");
+                        response = scanner.next();
+                        if (response.equalsIgnoreCase("y")) {
+                            pd.setAuto(Boolean.TRUE);
+                        }
+                    }
+                    System.out.println("Run 'MSCK' after table creation?(Y/N)");
                     response = scanner.next();
                     if (response.equalsIgnoreCase("y")) {
-                        pd.setAuto(Boolean.TRUE);
+                        pd.setInitMSCK(Boolean.TRUE);
                     }
-                }
-                System.out.println("Run 'MSCK' after table creation?(Y/N)");
-                response = scanner.next();
-                if (response.equalsIgnoreCase("y")) {
-                    pd.setInitMSCK(Boolean.TRUE);
                 }
             }
         }

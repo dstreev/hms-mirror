@@ -201,7 +201,13 @@ public class Mirror {
             String yamlCfgFile = FileUtils.readFileToString(cfgFile, Charset.forName("UTF-8"));
             config = mapper.readerFor(Config.class).readValue(yamlCfgFile);
         } catch (Throwable t) {
-            throw new RuntimeException(t);
+            // Look for yaml update errors.
+            if (t.toString().contains("MismatchedInputException")) {
+                throw new RuntimeException("The format of the 'config' yaml file MAY HAVE CHANGED from the last release.  Please make a copy and run " +
+                        "'-su|--setup' again to recreate in the new format", t);
+            } else {
+                throw new RuntimeException(t);
+            }
         }
 
         if (cmd.hasOption("t")) {
@@ -508,10 +514,13 @@ public class Mirror {
 
         if (!config.validate()) {
             List<String> issues = config.getIssues();
+            System.err.println("");
             for (String issue : issues) {
                 LOG.error(issue);
+                System.err.println(issue);
             }
-            throw new RuntimeException("Configuration issues, check log for details");
+            System.err.println("");
+            throw new RuntimeException("Configuration issues., check log (~/.hms-mirror/logs/hms-mirror.log) for details");
         }
 
     }
