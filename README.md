@@ -556,7 +556,7 @@ When you do need to move data, `hms-mirror` create a workbook of 'source' and 't
 
 ```
 usage: hms-mirror
-                  version:1.8.0_275
+                  version: x.x.x.x
  -accept,--accept                                Accept ALL confirmations
                                                  and silence prompts
  -asm,--avro-schema-migration                    Migrate AVRO Schema Files
