@@ -23,6 +23,7 @@ import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.checkerframework.checker.units.qual.A;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -88,6 +89,9 @@ public class Transfer implements Callable<ReturnStatus> {
                         break;
                     case HYBRID:
                         successful = doHybrid();
+                        break;
+                    case CONVERT_LINKED:
+                        successful = doConvertLinked();
                         break;
                 }
                 if (successful)
@@ -364,6 +368,50 @@ public class Transfer implements Callable<ReturnStatus> {
         }
         return rtn;
     }
+
+    protected Boolean doConvertLinked() {
+        Boolean rtn = Boolean.FALSE;
+        EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tblMirror.getEnvironmentTable(Environment.RIGHT);
+
+        // If RIGHT doesn't exist, run SCHEMA_ONLY.
+        if (ret == null) {
+            tblMirror.addIssue(Environment.RIGHT, "Table doesn't exist.  To transfer, run 'SCHEMA_ONLY'");
+        } else {
+            // Make sure table isn't an ACID table.
+            if (TableUtils.isACID(let)) {
+                tblMirror.addIssue(Environment.LEFT, "ACID tables not eligible for this operation");
+            } else {
+                // - AVRO LOCATION
+                if (AVROCheck()) {
+                    // Look at the table definition and get.
+                    // - LOCATION
+                    String sourceLocation = TableUtils.getLocation(ret.getName(), ret.getDefinition());
+                    String targetLocation = config.getTranslator().
+                            translateTableLocation(tblMirror.getDbName(), tblMirror.getName(), sourceLocation, config);
+                    String alterLocSql = MessageFormat.format(MirrorConf.ALTER_TABLE_LOCATION, tblMirror.getDbName(), ret.getName(), targetLocation);
+                    ret.addSql(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterLocSql);
+                    // TableUtils.updateTableLocation(ret, targetLocation)
+                    // - Check Comments for "legacy.managed" setting.
+                    //    - MirrorConf.HMS_MIRROR_LEGACY_MANAGED_FLAG (if so, set purge flag MirrorConf.EXTERNAL_TABLE_PURGE)
+                    if (TableUtils.isHMSLegacyManaged(tblMirror.getName(), ret.getDefinition())) {
+                        // ALTER TABLE x SET TBLPROPERTIES ('purge flag').
+                        String purgeSql = MessageFormat.format(MirrorConf.ADD_TBL_PROP,tblMirror.getDbName(), ret.getName(), MirrorConf.EXTERNAL_TABLE_PURGE, "true");
+                        ret.addSql(MirrorConf.ADD_TBL_PROP_DESC, purgeSql);
+                    }
+                    rtn = Boolean.TRUE;
+                }
+            }
+        }
+
+        // Execute the RIGHT sql if config.execute.
+        if (rtn && config.isExecute()) {
+            rtn = config.getCluster(Environment.RIGHT).runSql(tblMirror);
+        }
+
+        return rtn;
+    }
+
 
     protected Boolean AVROCheck() {
         Boolean rtn = Boolean.TRUE;
