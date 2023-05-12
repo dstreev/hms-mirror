@@ -365,7 +365,7 @@ public class Transfer implements Callable<ReturnStatus> {
             }
             // Set Override Properties.
             if (config.getOptimization().getOverrides() != null) {
-                for (String key: config.getOptimization().getOverrides().getLeft().stringPropertyNames()) {
+                for (String key: config.getOptimization().getOverrides().getLeft().keySet()) {
                     let.addSql("Setting " + key, "set " + key + "=" + config.getOptimization().getOverrides().getLeft().get(key));
                 }
             }

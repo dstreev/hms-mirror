@@ -596,7 +596,7 @@ public class TableMirror {
         let.addSql(TableUtils.USE_DESC, useDb);
         // Set Override Properties.
         if (config.getOptimization().getOverrides().getLeft().size() > 0) {
-            for (String key : config.getOptimization().getOverrides().getLeft().stringPropertyNames()) {
+            for (String key : config.getOptimization().getOverrides().getLeft().keySet()) {
                 let.addSql("Setting " + key, "set " + key + "=" + config.getOptimization().getOverrides().getLeft().get(key));
             }
         }
@@ -1544,7 +1544,7 @@ public class TableMirror {
         }
         // Set Override Properties.
         if (config.getOptimization().getOverrides() != null) {
-            for (String key : config.getOptimization().getOverrides().getLeft().stringPropertyNames()) {
+            for (String key : config.getOptimization().getOverrides().getLeft().keySet()) {
                 source.addSql("Setting " + key, "set " + key + "=" + config.getOptimization().getOverrides().getLeft().get(key));
             }
         }
@@ -1616,7 +1616,7 @@ public class TableMirror {
             }
             // Set Override Properties.
             if (config.getOptimization().getOverrides() != null) {
-                for (String key : config.getOptimization().getOverrides().getRight().stringPropertyNames()) {
+                for (String key : config.getOptimization().getOverrides().getRight().keySet()) {
                     target.addSql("Setting " + key, "set " + key + "=" + config.getOptimization().getOverrides().getRight().get(key));
                 }
             }

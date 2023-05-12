@@ -263,7 +263,7 @@ public class Translator {
                 if (originalLocation.startsWith(key)) {
                     String rLoc = getGlobalLocationMap().get(key);
                     newLocation = originalLocation.replace(key, rLoc);
-                    LOG.debug("Location Map Found. " + key +
+                    LOG.info("Location Map Found. " + key +
                             ":" + rLoc + " New Location: " + newLocation);
                     // Stop Processing
                     break;
