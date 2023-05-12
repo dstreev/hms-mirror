@@ -68,6 +68,7 @@ public class Transfer implements Callable<ReturnStatus> {
             tblMirror.setPhaseState(PhaseState.STARTED);
 
             tblMirror.setStrategy(config.getDataStrategy());
+            tblMirror.setResolvedDbName(config.getResolvedDB(tblMirror.getDbName()));
 
             tblMirror.incPhase();
             tblMirror.addStep("TRANSFER", config.getDataStrategy().toString());
