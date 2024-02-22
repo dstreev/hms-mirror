@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import net.minidev.json.annotate.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

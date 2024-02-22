@@ -51,7 +51,7 @@ public class DriverUtils {
                 }
 
                 LOG.trace("Building Classloader to isolate JDBC Library for: " + jarFile);
-                URLClassLoader hive3ClassLoader = URLClassLoader.newInstance(urls, jarFiles[0].getClass().getClassLoader());
+                URLClassLoader hive3ClassLoader = URLClassLoader.newInstance(urls, environment.getClass().getClassLoader());
                 LOG.trace("Loading Hive JDBC Driver");
                 Class<?> classToLoad = hive3ClassLoader.loadClass(driverClassName);
                 Package aPackage = classToLoad.getPackage();

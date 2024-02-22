@@ -164,7 +164,7 @@ public class Conversion {
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sb.append("# HMS-Mirror for: ").append(database).append("\n\n");
-        sb.append(ReportingConf.substituteVariablesFromManifest("v.${Implementation-Version}")).append("\n");
+        sb.append(ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}")).append("\n");
         sb.append("---\n").append("## Run Log\n\n");
         sb.append("| Date | Elapsed Time |\n");
         sb.append("|:---|:---|\n");

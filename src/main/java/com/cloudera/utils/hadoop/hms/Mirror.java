@@ -501,7 +501,7 @@ public class Mirror {
         } catch (ParseException pe) {
             System.out.println("Missing Arguments: " + pe.getMessage());
             HelpFormatter formatter = new HelpFormatter();
-            String cmdline = ReportingConf.substituteVariablesFromManifest("hms-mirror <options> \nversion:${Implementation-Version}");
+            String cmdline = ReportingConf.substituteVariablesFromManifest("hms-mirror <options> \nversion:${HMS-Mirror-Version}");
             formatter.printHelp(100, cmdline, "Hive Metastore Migration Utility", options,
                     "\nVisit https://github.com/cloudera-labs/hms-mirror/blob/main/README.md for detailed docs.");
 //            formatter.printHelp(cmdline, options);
@@ -510,7 +510,7 @@ public class Mirror {
 
         if (cmd.hasOption("h")) {
             HelpFormatter formatter = new HelpFormatter();
-            String cmdline = ReportingConf.substituteVariablesFromManifest("hms-mirror <options> \nversion:${Implementation-Version}");
+            String cmdline = ReportingConf.substituteVariablesFromManifest("hms-mirror <options> \nversion:${HMS-Mirror-Version}");
             formatter.printHelp(100, cmdline, "Hive Metastore Migration Utility", options,
                     "\nVisit https://github.com/cloudera-labs/hms-mirror/blob/main/README.md for detailed docs");
 //            formatter.printHelp(cmdline, options);
@@ -1075,7 +1075,7 @@ public class Mirror {
     public long go(String[] args) {
         long returnCode = 0;
         LOG.info("===================================================");
-        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${Implementation-Version}"));
+        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
         LOG.info("On Java Version: " + System.getProperty("java.version"));
         LOG.info(" with commandline parameters: " + String.join(",", args));
         LOG.info("===================================================");
@@ -2159,7 +2159,7 @@ public class Mirror {
     public long setupSql(String[] args, List<Pair> leftSql, List<Pair> rightSql) {
         long returnCode = 0;
         LOG.info("===================================================");
-        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${Implementation-Version}"));
+        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
         LOG.info(" with commandline parameters: " + String.join(",", args));
         LOG.info("===================================================");
         LOG.info("");
