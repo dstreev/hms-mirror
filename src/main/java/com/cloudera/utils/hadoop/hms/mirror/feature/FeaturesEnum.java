@@ -17,6 +17,8 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
+import java.lang.reflect.InvocationTargetException;
+
 public enum FeaturesEnum {
     BAD_FIELDS_FORM_FEED_DEF(BadFieldsFFDefFeature.class),
     BAD_ORC_DEF(BadOrcDefFeature.class),
@@ -36,11 +38,11 @@ public enum FeaturesEnum {
 
     FeaturesEnum(Class featureClass) {
         try {
-            feature = (Feature)featureClass.newInstance();
-        } catch (InstantiationException e) {
+            feature = (Feature)featureClass.getDeclaredConstructor().newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
+        } catch (InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
         }
     }
 }

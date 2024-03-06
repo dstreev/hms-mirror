@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -155,10 +156,8 @@ public enum DataStrategyEnum {
     public DataStrategy getDataStrategy() {
         DataStrategy rtn = null;
         try {
-            rtn = (DataStrategy) clazz.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+            rtn = (DataStrategy) clazz.getDeclaredConstructor().newInstance();
+        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             e.printStackTrace();
         }
         return rtn;

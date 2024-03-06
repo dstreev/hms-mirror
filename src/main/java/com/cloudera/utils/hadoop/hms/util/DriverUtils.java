@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -57,13 +58,13 @@ public class DriverUtils {
                 Package aPackage = classToLoad.getPackage();
                 String implementationVersion = aPackage.getImplementationVersion();
                 LOG.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
-                Driver hiveDriver = (Driver) classToLoad.newInstance();
+                Driver hiveDriver = (Driver) classToLoad.getDeclaredConstructor().newInstance();
                 LOG.trace("Building Hive Driver Shim");
                 hiveShim = new DriverShim(hiveDriver);
                 LOG.trace("Registering Hive Shim Driver with JDBC 'DriverManager'");
             } else {
                 Class hiveDriverClass = Class.forName(driverClassName);
-                hiveShim = (Driver) hiveDriverClass.newInstance();
+                hiveShim = (Driver) hiveDriverClass.getDeclaredConstructor().newInstance();
                 Package aPackage = hiveDriverClass.getPackage();
                 String implementationVersion = aPackage.getImplementationVersion();
                 LOG.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
@@ -74,6 +75,8 @@ public class DriverUtils {
                 IllegalAccessException throwables) {
             throwables.printStackTrace();
             LOG.error(throwables.getMessage(), throwables);
+        } catch (InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
         }
         return hiveShim;
     }
