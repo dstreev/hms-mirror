@@ -20,25 +20,19 @@ package com.cloudera.utils.hadoop.hms.mirror;
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.util.DriverUtils;
 import com.cloudera.utils.hive.config.DBStore;
-import com.google.common.collect.Sets;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 @Slf4j
 public class ConnectionPoolsHybridImpl implements ConnectionPools {
@@ -138,7 +132,9 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     protected void initHS2Drivers() throws SQLException {
-        Set<Environment> environments = Sets.newHashSet(Environment.LEFT, Environment.RIGHT);
+        Set<Environment> environments = new HashSet<>();
+        environments.add(Environment.LEFT);
+        environments.add(Environment.RIGHT);
 
         for (Environment environment : environments) {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);

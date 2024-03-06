@@ -18,7 +18,6 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import java.util.Map;
-import java.util.Properties;
 import java.util.TreeMap;
 
 public class Overrides {

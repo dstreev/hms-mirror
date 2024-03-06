@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties({"downgradeInPlace"})
 public class MigrateACID {

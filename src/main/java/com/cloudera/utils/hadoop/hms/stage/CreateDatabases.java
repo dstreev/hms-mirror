@@ -18,10 +18,11 @@
 package com.cloudera.utils.hadoop.hms.stage;
 
 import com.cloudera.utils.hadoop.hms.Context;
-import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.Config;
+import com.cloudera.utils.hadoop.hms.mirror.Conversion;
+import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
+import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 

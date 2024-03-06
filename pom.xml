@@ -19,12 +19,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-<!--    <parent>-->
-<!--        <groupId>org.springframework.boot</groupId>-->
-<!--        <artifactId>spring-boot-starter-parent</artifactId>-->
-<!--        <version>2.7.18</version>-->
-<!--        <relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
-<!--    </parent>-->
+    <!--    <parent>-->
+    <!--        <groupId>org.springframework.boot</groupId>-->
+    <!--        <artifactId>spring-boot-starter-parent</artifactId>-->
+    <!--        <version>2.7.18</version>-->
+    <!--        <relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
+    <!--    </parent>-->
 
     <groupId>com.cloudera.utils.hadoop</groupId>
     <artifactId>hms-mirror</artifactId>
@@ -113,6 +113,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <version>${springboot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -129,11 +130,11 @@
             <artifactId>jaxb-api</artifactId>
             <version>${jaxb-api.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>ch.qos.logback</groupId>-->
-<!--            <artifactId>logback-classic</artifactId>-->
-<!--            <version>${logback-classic.version}</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>ch.qos.logback</groupId>-->
+        <!--            <artifactId>logback-classic</artifactId>-->
+        <!--            <version>${logback-classic.version}</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
@@ -360,6 +361,171 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${springboot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.cloudera.utils.hadoop.hms.MirrorConsoleApp</mainClass>
+                            <excludeGroupIds>org.apache.hadoop,
+                                org.apache.ozone,
+                                <!--                                org.apache.commons,-->
+                                org.apache.httpcomponents,
+                                com.google.guava,
+                                org.eclipse.jetty,
+                                com.sun.jersey,
+                                com.google.protobuf,
+                                javax.servlet,
+                                io.netty,
+                                com.squareup.okhttp3,
+                                com.squareup.okio,
+                                org.jetbrains.kotlin,
+                                jdk.tools,
+                                org.apache.httpcomponents,
+                                commons-net,
+                                commons-collections,
+                                org.eclipse.jetty,
+                                javax.servlet.jsp,
+                                com.sun.xml.bind,
+                                org.codehaus.jackson,
+                                org.codehaus.jettison,
+                                commons-beanutils,
+                                org.apache.avro,
+                                com.google.re2j,
+                                com.google.j2objc,
+                                com.google.code.gson,
+                                com.nimbusds,
+                                om.github.stephenc.jcip,
+                                org.apache.curator,
+                                org.apache.kerby,
+                                org.jline,
+                                com.jcraft,
+                                com.google.code.findbugs,
+                                org.apache.zookeeper,
+                                io.dropwizard.metrics,
+                                org.codehaus.woodstox,
+                                com.fasterxml.woodstox,
+                                org.xerial.snappy,
+                                org.lz4,
+                                javax.ws.rs,
+                                org.mariadb.jdbc,
+                                org.postgresql,
+                                org.fusesource.leveldbjni,
+                                com.amazonaws,
+                                org.wildfly.openssl,
+                                org.apache.yetus
+                            </excludeGroupIds>
+                            <excludes>
+                                <exclude>
+                                    <groupId>org.apache.commons</groupId>
+                                    <artifactId>commons-math3</artifactId>
+                                </exclude>
+                                <exclude>
+                                    <groupId>org.apache.commons</groupId>
+                                    <artifactId>commons-configuration2</artifactId>
+                                </exclude>
+                                <exclude>
+                                    <groupId>org.apache.commons</groupId>
+                                    <artifactId>commons-lang3</artifactId>
+                                </exclude>
+                                <exclude>
+                                    <groupId>org.apache.commons</groupId>
+                                    <artifactId>commons-compress</artifactId>
+                                </exclude>
+                            </excludes>
+                            <!--                            <includes>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.springframework.boot</groupId>-->
+                            <!--                                    <artifactId>spring-boot-starter</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.projectlombok</groupId>-->
+                            <!--                                    <artifactId>lombok</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.slf4j</groupId>-->
+                            <!--                                    <artifactId>slf4j-reload4j</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                &lt;!&ndash; https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api &ndash;&gt;-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>javax.xml.bind</groupId>-->
+                            <!--                                    <artifactId>jaxb-api</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.cloudera.utils.hadoop</groupId>-->
+                            <!--                                    <artifactId>hadoop-cli</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.cloudera.utils.hive</groupId>-->
+                            <!--                                    <artifactId>hive-sre</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.commonmark</groupId>-->
+                            <!--                                    <artifactId>commonmark</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.commonmark</groupId>-->
+                            <!--                                    <artifactId>commonmark-ext-gfm-tables</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.commonmark</groupId>-->
+                            <!--                                    <artifactId>commonmark-ext-yaml-front-matter</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.jcabi</groupId>-->
+                            <!--                                    <artifactId>jcabi-manifests</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.apache.commons</groupId>-->
+                            <!--                                    <artifactId>commons-text</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.apache.commons</groupId>-->
+                            <!--                                    <artifactId>commons-dbcp2</artifactId>-->
+                            <!--                                </include>-->
+
+                            <!--                                &lt;!&ndash; https://mvnrepository.com/artifact/com.zaxxer/HikariCP &ndash;&gt;-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.zaxxer</groupId>-->
+                            <!--                                    <artifactId>HikariCP</artifactId>-->
+                            <!--                                </include>-->
+
+                            <!--                                &lt;!&ndash; Jackson JSON Libraries &ndash;&gt;-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.fasterxml.jackson.core</groupId>-->
+                            <!--                                    <artifactId>jackson-core</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.fasterxml.jackson.core</groupId>-->
+                            <!--                                    <artifactId>jackson-annotations</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.fasterxml.jackson.core</groupId>-->
+                            <!--                                    <artifactId>jackson-databind</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>com.fasterxml.jackson.dataformat</groupId>-->
+                            <!--                                    <artifactId>jackson-dataformat-yaml</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                &lt;!&ndash; https://mvnrepository.com/artifact/org.yaml/snakeyaml &ndash;&gt;-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>org.yaml</groupId>-->
+                            <!--                                    <artifactId>snakeyaml</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                                <include>-->
+                            <!--                                    <groupId>javax.validation</groupId>-->
+                            <!--                                    <artifactId>validation-api</artifactId>-->
+                            <!--                                </include>-->
+                            <!--                            </includes>-->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
                     <descriptors>
@@ -377,13 +543,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>com.cloudera.utils.hadoop.hms.HmsMirrorConsoleApp</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>

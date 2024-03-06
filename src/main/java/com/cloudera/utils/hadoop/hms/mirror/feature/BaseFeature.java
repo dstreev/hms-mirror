@@ -18,8 +18,6 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 
-import org.apache.commons.text.StringEscapeUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

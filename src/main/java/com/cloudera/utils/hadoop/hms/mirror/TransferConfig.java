@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import java.util.List;
-
 public class TransferConfig {
     private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";

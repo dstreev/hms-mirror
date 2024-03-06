@@ -17,9 +17,10 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class EnvironmentMap {
 

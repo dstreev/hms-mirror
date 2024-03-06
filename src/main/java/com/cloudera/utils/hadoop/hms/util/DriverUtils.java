@@ -18,10 +18,7 @@
 package com.cloudera.utils.hadoop.hms.util;
 
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
-import com.cloudera.utils.hadoop.hms.mirror.ReportingConf;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;

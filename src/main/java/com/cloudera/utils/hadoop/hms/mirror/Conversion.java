@@ -24,12 +24,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.collect.Sets;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -224,7 +222,10 @@ public class Conversion {
         sb.append("## DB Issues").append("\n\n");
         // Issues
         if (dbMirror.isThereAnIssue()) {
-            Set<Environment> environments = Sets.newHashSet(Environment.LEFT, Environment.RIGHT);
+            Set<Environment> environments = new HashSet<>();
+            environments.add(Environment.LEFT);
+            environments.add(Environment.RIGHT);
+
             for (Environment env : environments) {
                 List<String> issues = dbMirror.getIssuesList(env);
                 if (issues != null) {

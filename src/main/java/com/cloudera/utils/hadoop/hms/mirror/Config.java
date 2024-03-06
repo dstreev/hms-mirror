@@ -29,12 +29,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -46,7 +43,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static com.cloudera.utils.hadoop.hms.mirror.ConnectionPoolLibs.*;
+import static com.cloudera.utils.hadoop.hms.mirror.ConnectionPoolLibs.HYBRID;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 
 @Slf4j
@@ -1251,12 +1248,14 @@ public class Config {
 
     public Boolean checkConnections() {
         Boolean rtn = Boolean.FALSE;
-        Set<Environment> envs = null;
+        Set<Environment> envs = new HashSet<>();
         if (!(getDataStrategy() == DataStrategyEnum.DUMP || getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION ||
-                getDataStrategy() == DataStrategyEnum.ICEBERG_CONVERSION))
-            envs = Sets.newHashSet(Environment.LEFT, Environment.RIGHT);
-        else
-            envs = Sets.newHashSet(Environment.LEFT);
+                getDataStrategy() == DataStrategyEnum.ICEBERG_CONVERSION)) {
+            envs.add(Environment.LEFT);
+            envs.add(Environment.RIGHT);
+        } else {
+            envs.add(Environment.LEFT);
+        }
 
         for (Environment env : envs) {
             Cluster cluster = clusters.get(env);

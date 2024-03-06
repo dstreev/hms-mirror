@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.IOUtils;
@@ -40,8 +39,6 @@ import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.renderer.html.HtmlRenderer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.RoundingMode;
@@ -1515,7 +1512,9 @@ public class Mirror {
 
                 // To keep the connections and remainder of the processing in place, set the env for the cluster
                 //   to the abstract name.
-                Set<Environment> environmentSet = Sets.newHashSet(Environment.LEFT, Environment.RIGHT);
+                Set<Environment> environmentSet = new HashSet<>();
+                environmentSet.add(Environment.LEFT);
+                environmentSet.add(Environment.RIGHT);
                 for (Environment lenv : environmentSet) {
                     getConfig().getCluster(lenv).setEnvironment(lenv);
                 }

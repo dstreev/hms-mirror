@@ -24,17 +24,15 @@ import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.codehaus.jackson.annotate.JsonIgnore;
 
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 
-import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
+import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
+import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.RDL_W_EPL_NO_MAPPING;
 import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 
 @Slf4j
 @JsonIgnoreProperties({"dbLocationMap"})

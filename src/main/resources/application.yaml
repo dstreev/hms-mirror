@@ -1,0 +1,16 @@
+spring:
+  main:
+    banner-mode: "off"
+#logging:
+#  file.name: ${HOME}/.hms-mirror/logs/hms-mirror.log
+#  level:
+#    org.springframework.web: DEBUG
+#    org.hibernate: ERROR
+#    com.cloudera.utils.hadoop.hms.mirror: ERROR
+#    com.cloudera.utils.hadoop.hms.mirror.DBMirror: INFO
+#    com.cloudera.utils.hadoop.hms.mirror.Cluster: INFO
+#    com.cloudera.utils.hadoop.hms.stage.GetTableMetadata: DEBUG
+#    com.zaxxer.hikari: WARN
+#    com.jcabi: WARN
+#    org.apache.hadoop: WARN
+#    org.apache.hive.org.apache: WARN
