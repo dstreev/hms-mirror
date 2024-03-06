@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +27,9 @@ import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 
+@Slf4j
 public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(SQLDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(SQLDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;
@@ -87,7 +89,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
 
 
         EnvironmentTable let = null;
@@ -170,7 +172,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutSql() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout SQL SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout SQL SQL");
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null) {

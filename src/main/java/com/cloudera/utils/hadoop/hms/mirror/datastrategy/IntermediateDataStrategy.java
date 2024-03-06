@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +29,9 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SET_TEZ_AS_EXECUTION_ENGINE;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.TEZ_EXECUTION_DESC;
 
+@Slf4j
 public class IntermediateDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(IntermediateDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(IntermediateDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;
@@ -98,7 +100,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout Intermediate Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout Intermediate Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
 
@@ -253,7 +255,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutSql() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout Intermediate SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout Intermediate SQL");
 
         String useDb = null;
         String database = null;

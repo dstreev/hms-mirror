@@ -20,14 +20,16 @@ package com.cloudera.utils.hadoop.hms.stage;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
 
+@Slf4j
 public class GetTables implements Callable<ReturnStatus> {
-    private static final Logger LOG = LoggerFactory.getLogger(GetTables.class);
+//    private static final Logger log = LoggerFactory.getLogger(GetTables.class);
 
     private Config config = null;
     private DBMirror dbMirror = null;
@@ -53,7 +55,7 @@ public class GetTables implements Callable<ReturnStatus> {
     @Override
     public ReturnStatus call() {
         ReturnStatus rtn = new ReturnStatus();
-        LOG.debug("Getting tables for: " +dbMirror.getName());
+        log.debug("Getting tables for: " +dbMirror.getName());
         try {
             config.getCluster(Environment.LEFT).getTables(config, dbMirror);
             if (config.isSync()) {

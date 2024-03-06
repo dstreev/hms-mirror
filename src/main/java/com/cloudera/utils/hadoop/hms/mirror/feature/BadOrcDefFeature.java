@@ -18,11 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+@Slf4j
 public class BadOrcDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_DELIMITED = "ROW FORMAT DELIMITED";
     private final String STORED_AS_INPUTFORMAT = "STORED AS INPUTFORMAT";
@@ -34,7 +36,7 @@ public class BadOrcDefFeature extends BaseFeature implements Feature {
     private final String OUTPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'";
 
     private final String STORED_AS_ORC = "STORED AS ORC";
-    private static final Logger LOG = LoggerFactory.getLogger(BadOrcDefFeature.class);
+//    private static final Logger log = LoggerFactory.getLogger(BadOrcDefFeature.class);
 
     public String getDescription() {
         return "Table schema definitions for ORC files that include ROW FORMAT DELIMITED " +
@@ -89,7 +91,7 @@ public class BadOrcDefFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
 //            schema = addEscaped(schema);
-            LOG.debug("Checking if table has bad ORC definition");
+            log.debug("Checking if table has bad ORC definition");
             // find the index of the ROW_FORMAT_DELIMITED
             int rfdIdx = indexOf(schema, ROW_FORMAT_DELIMITED);
             if (rfdIdx > 0) {
@@ -100,7 +102,7 @@ public class BadOrcDefFeature extends BaseFeature implements Feature {
                         int of = indexOf(schema, OUTPUTFORMAT);
                         if (of > saiIdx + 1) {
                             if (schema.get(of + 1).trim().equals("'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'")) {
-                                LOG.debug("BAD ORC definition found. Correcting...");
+                                log.debug("BAD ORC definition found. Correcting...");
                                 // All matches.  Need to replace with serde
                                 removeRange(rfdIdx, of + 2, schema);
                                 schema.add(rfdIdx, STORED_AS_ORC);

@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +31,9 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.*;
 /*
 Provide a class where rules can be generated based on the hms-mirror stats collected.
  */
+@Slf4j
 public class StatsCalculator {
-    private static final Logger LOG = LoggerFactory.getLogger(StatsCalculator.class);
+//    private static final Logger log = LoggerFactory.getLogger(StatsCalculator.class);
 
     /*
     This will return the ratio of files to the average partition size. For example, if the average partition size is 1GB
@@ -48,7 +50,7 @@ public class StatsCalculator {
                 Long avgPartSize = Math.floorDiv(dataSize, (long) envTable.getPartitions().size());
                 ratio = Math.floorDiv(avgPartSize, stype.targetSize) - 1;
             } catch (RuntimeException rte) {
-                LOG.warn("Unable to calculate partition distribution ratio for table: " + envTable.getName());
+                log.warn("Unable to calculate partition distribution ratio for table: " + envTable.getName());
             }
         }
         return ratio;
@@ -183,7 +185,7 @@ public class StatsCalculator {
             try {
                 serdeType = SerdeType.valueOf(sStype);
             } catch (IllegalArgumentException iae) {
-                LOG.warn("Unable to determine type for file format: " + sStype);
+                log.warn("Unable to determine type for file format: " + sStype);
                 serdeType = SerdeType.UNKNOWN;
             }
         }

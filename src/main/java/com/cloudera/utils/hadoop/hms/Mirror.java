@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -61,8 +62,9 @@ import java.util.concurrent.TimeUnit;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.ENVIRONMENT_CONNECTION_ISSUE;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED;
 
+@Slf4j
 public class Mirror {
-    private static final Logger LOG = LoggerFactory.getLogger(Mirror.class);
+//    private static final Logger log = LoggerFactory.getLogger(Mirror.class);
     private final String leftActionFile = null;
     private final String rightActionFile = null;
     private final Boolean retry = Boolean.FALSE;
@@ -89,10 +91,10 @@ public class Mirror {
             // Load conversion test data from a file.
             try {
                 System.out.println("Test data file: " + getConfig().getLoadTestDataFile());
-                LOG.info("Check 'classpath' for test data file");
+                log.info("Check 'classpath' for test data file");
                 URL configURL = this.getClass().getResource(getConfig().getLoadTestDataFile());
                 if (configURL == null) {
-                    LOG.info("Checking filesystem for test data file");
+                    log.info("Checking filesystem for test data file");
                     File conversionFile = new File(getConfig().getLoadTestDataFile());
                     if (!conversionFile.exists())
                         throw new RuntimeException("Couldn't locate test data file: " + getConfig().getLoadTestDataFile());
@@ -116,7 +118,7 @@ public class Mirror {
                     throw new RuntimeException("The format of the 'config' yaml file MAY HAVE CHANGED from the last release.  Please make a copy and run " +
                             "'-su|--setup' again to recreate in the new format", t);
                 } else {
-                    LOG.error(t.getMessage(), t);
+                    log.error(t.getMessage(), t);
                     throw new RuntimeException("A configuration element is no longer valid, progress.  Please remove the element from the configuration yaml and try again.", t);
                 }
             }
@@ -191,9 +193,9 @@ public class Mirror {
                 try (FileWriter conversionFileWriter = new FileWriter(conversionFile)) {
                     String conversionYamlStr = mapper.writeValueAsString(conversion);
                     conversionFileWriter.write(conversionYamlStr);
-                    LOG.info("Conversion yaml 'saved' to: " + conversionFile.getPath());
+                    log.info("Conversion yaml 'saved' to: " + conversionFile.getPath());
                 } catch (IOException ioe) {
-                    LOG.error("Problem 'writing' conversion yaml", ioe);
+                    log.error("Problem 'writing' conversion yaml", ioe);
                 }
                 return -99;
             }
@@ -343,7 +345,7 @@ public class Mirror {
                                 }
                             }
                         } catch (IOException ioe) {
-                            LOG.error("Issue writing distcp workbook", ioe);
+                            log.error("Issue writing distcp workbook", ioe);
                         }
                     }
 
@@ -384,9 +386,9 @@ public class Mirror {
                     String dbYamlStr = mapper.writeValueAsString(yamlDb);
                     try {
                         dbYamlFileWriter.write(dbYamlStr);
-                        LOG.info("Database (" + database + ") yaml 'saved' to: " + dbYamlFile.getPath());
+                        log.info("Database (" + database + ") yaml 'saved' to: " + dbYamlFile.getPath());
                     } catch (IOException ioe) {
-                        LOG.error("Problem 'writing' database yaml", ioe);
+                        log.error("Problem 'writing' database yaml", ioe);
                     } finally {
                         dbYamlFileWriter.close();
                     }
@@ -405,14 +407,14 @@ public class Mirror {
                     reportFile.write(htmlReportStr);
                     reportFile.close();
 
-                    LOG.info("Status Report of 'hms-mirror' is here: " + dbReportOutputFile + ".md|html");
+                    log.info("Status Report of 'hms-mirror' is here: " + dbReportOutputFile + ".md|html");
 
                     String les = conversion.executeSql(Environment.LEFT, database);
                     if (les != null) {
                         FileWriter leftExecOutput = new FileWriter(dbLeftExecuteFile);
                         leftExecOutput.write(les);
                         leftExecOutput.close();
-                        LOG.info("LEFT Execution Script is here: " + dbLeftExecuteFile);
+                        log.info("LEFT Execution Script is here: " + dbLeftExecuteFile);
                         runbookFile.write(step++ + ". **LEFT** clusters SQL script. ");
                         if (getConfig().isExecute()) {
                             runbookFile.write(" (Has been executed already, check report file details)");
@@ -432,7 +434,7 @@ public class Mirror {
                         FileWriter rightExecOutput = new FileWriter(dbRightExecuteFile);
                         rightExecOutput.write(res);
                         rightExecOutput.close();
-                        LOG.info("RIGHT Execution Script is here: " + dbRightExecuteFile);
+                        log.info("RIGHT Execution Script is here: " + dbRightExecuteFile);
                         runbookFile.write(step++ + ". **RIGHT** clusters SQL script. ");
                         if (getConfig().isExecute()) {
                             if (!getConfig().getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
@@ -456,7 +458,7 @@ public class Mirror {
                         FileWriter leftCleanUpOutput = new FileWriter(dbLeftCleanUpFile);
                         leftCleanUpOutput.write(lcu);
                         leftCleanUpOutput.close();
-                        LOG.info("LEFT CleanUp Execution Script is here: " + dbLeftCleanUpFile);
+                        log.info("LEFT CleanUp Execution Script is here: " + dbLeftCleanUpFile);
                         runbookFile.write(step++ + ". **LEFT** clusters CLEANUP SQL script. ");
                         runbookFile.write("(Has NOT been executed yet)");
                         runbookFile.write("\n");
@@ -467,15 +469,15 @@ public class Mirror {
                         FileWriter rightCleanUpOutput = new FileWriter(dbRightCleanUpFile);
                         rightCleanUpOutput.write(rcu);
                         rightCleanUpOutput.close();
-                        LOG.info("RIGHT CleanUp Execution Script is here: " + dbRightCleanUpFile);
+                        log.info("RIGHT CleanUp Execution Script is here: " + dbRightCleanUpFile);
                         runbookFile.write(step++ + ". **RIGHT** clusters CLEANUP SQL script. ");
                         runbookFile.write("(Has NOT been executed yet)");
                         runbookFile.write("\n");
                     }
-                    LOG.info("Runbook here: " + dbRunbookFile);
+                    log.info("Runbook here: " + dbRunbookFile);
                     runbookFile.close();
                 } catch (IOException ioe) {
-                    LOG.error("Issue writing report for: " + database, ioe);
+                    log.error("Issue writing report for: " + database, ioe);
                 }
             }
         }
@@ -483,7 +485,7 @@ public class Mirror {
         DecimalFormat decf = new DecimalFormat("#.###");
         decf.setRoundingMode(RoundingMode.CEILING);
 
-        LOG.info("HMS-Mirror: Completed in " +
+        log.info("HMS-Mirror: Completed in " +
                 decf.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
         reporter.stop();
         reporter.refresh(Boolean.TRUE);
@@ -1074,11 +1076,11 @@ public class Mirror {
 
     public long go(String[] args) {
         long returnCode = 0;
-        LOG.info("===================================================");
-        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
-        LOG.info("On Java Version: " + System.getProperty("java.version"));
-        LOG.info(" with commandline parameters: " + String.join(",", args));
-        LOG.info("===================================================");
+        log.info("===================================================");
+        log.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
+        log.info("On Java Version: " + System.getProperty("java.version"));
+        log.info(" with commandline parameters: " + String.join(",", args));
+        log.info("===================================================");
         try {
             returnCode = init(args);
             try {
@@ -1098,11 +1100,11 @@ public class Mirror {
                 Context.getInstance().getConnectionPools().close();
             }
         } catch (RuntimeException e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             System.err.println("=====================================================");
             System.err.println("Commandline args: " + Arrays.toString(args));
             System.err.println();
-            LOG.error("Commandline args: " + Arrays.toString(args));
+            log.error("Commandline args: " + Arrays.toString(args));
             if (config != null) {
                 returnCode = (getConfig().getErrors().getReturnCode() * -1);
             } else {
@@ -1116,14 +1118,14 @@ public class Mirror {
                     System.err.println("******* ERRORS *********");
                 }
                 for (String error : getConfig().getErrors().getMessages()) {
-                    LOG.error(error);
+                    log.error(error);
                     System.err.println(error);
                 }
                 if (getConfig().getWarnings().getReturnCode() != 0) {
                     System.err.println("******* WARNINGS *********");
                 }
                 for (String warning : getConfig().getWarnings().getMessages()) {
-                    LOG.warn(warning);
+                    log.warn(warning);
                     System.err.println(warning);
                 }
             }
@@ -1295,15 +1297,15 @@ public class Mirror {
                     if (cmd.hasOption("ip")) {
                         // Downgrade ACID tables inplace
                         // Only work on LEFT cluster definition.
-                        LOG.info("Inplace ACID Downgrade");
+                        log.info("Inplace ACID Downgrade");
                         getConfig().getMigrateACID().setDowngrade(Boolean.TRUE);
                         getConfig().getMigrateACID().setInplace(Boolean.TRUE);
                         // For 'in-place' downgrade, only applies to ACID tables.
                         // Implies `-mao`.
-                        LOG.info("Only ACID Tables will be looked at since 'ip' was specified.");
+                        log.info("Only ACID Tables will be looked at since 'ip' was specified.");
                         getConfig().getMigrateACID().setOnly(Boolean.TRUE);
                         // Remove RIGHT cluster and enforce mao
-                        LOG.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
+                        log.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
                         if (null != getConfig().getCluster(Environment.RIGHT).getHiveServer2())
                             getConfig().getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
                     }
@@ -1401,7 +1403,7 @@ public class Mirror {
                                 Environment source = Environment.valueOf(cmd.getOptionValue("ds").toUpperCase());
                                 getConfig().setDumpSource(source);
                             } catch (RuntimeException re) {
-                                LOG.error("The `-ds` option should be either: (LEFT|RIGHT). " + cmd.getOptionValue("ds") +
+                                log.error("The `-ds` option should be either: (LEFT|RIGHT). " + cmd.getOptionValue("ds") +
                                         " is NOT a valid option.");
                                 throw new RuntimeException("The `-ds` option should be either: (LEFT|RIGHT). " + cmd.getOptionValue("ds") +
                                         " is NOT a valid option.");
@@ -1412,7 +1414,7 @@ public class Mirror {
                     }
                     if (getConfig().getDataStrategy() == DataStrategyEnum.LINKED) {
                         if (cmd.hasOption("ma") || cmd.hasOption("mao")) {
-                            LOG.error("Can't LINK ACID tables.  ma|mao options are not valid with LINKED data strategy.");
+                            log.error("Can't LINK ACID tables.  ma|mao options are not valid with LINKED data strategy.");
                             throw new RuntimeException("Can't LINK ACID tables.  ma|mao options are not valid with LINKED data strategy.");
                         }
                     }
@@ -1424,7 +1426,7 @@ public class Mirror {
                             DataStrategyEnum migrationStrategy = DataStrategyEnum.valueOf(cmd.getOptionValue("sms"));
                             getConfig().getTransfer().getStorageMigration().setStrategy(migrationStrategy);
                         } catch (Throwable t) {
-                            LOG.error("Only SQL, EXPORT_IMPORT, and HYBRID are valid strategies for STORAGE_MIGRATION");
+                            log.error("Only SQL, EXPORT_IMPORT, and HYBRID are valid strategies for STORAGE_MIGRATION");
                             throw new RuntimeException("Only SQL, EXPORT_IMPORT, and HYBRID are valid strategies for STORAGE_MIGRATION");
                         }
                     }
@@ -1438,7 +1440,7 @@ public class Mirror {
                     if (getConfig().getTransfer().getCommonStorage() != null) {
                         if (wdStr.startsWith(getConfig().getTransfer().getCommonStorage())) {
                             wdStr = wdStr.substring(getConfig().getTransfer().getCommonStorage().length());
-                            LOG.warn("Managed Warehouse Location Modified (stripped duplicate namespace): " + wdStr);
+                            log.warn("Managed Warehouse Location Modified (stripped duplicate namespace): " + wdStr);
                         }
                     }
                     getConfig().getTransfer().getWarehouse().setManagedDirectory(wdStr);
@@ -1452,7 +1454,7 @@ public class Mirror {
                     if (getConfig().getTransfer().getCommonStorage() != null) {
                         if (ewdStr.startsWith(getConfig().getTransfer().getCommonStorage())) {
                             ewdStr = ewdStr.substring(getConfig().getTransfer().getCommonStorage().length());
-                            LOG.warn("External Warehouse Location Modified (stripped duplicate namespace): " + ewdStr);
+                            log.warn("External Warehouse Location Modified (stripped duplicate namespace): " + ewdStr);
                         }
                     }
                     getConfig().getTransfer().getWarehouse().setExternalDirectory(ewdStr);
@@ -1692,9 +1694,9 @@ public class Mirror {
                 }
                 getConfig().setExecute(Boolean.TRUE);
             } else {
-                LOG.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-                LOG.info("EXECUTE has NOT been set.  No ACTIONS will be performed, the process output will be recorded in the log.");
-                LOG.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                log.info("EXECUTE has NOT been set.  No ACTIONS will be performed, the process output will be recorded in the log.");
+                log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
                 getConfig().setExecute(Boolean.FALSE);
             }
         }
@@ -1714,15 +1716,15 @@ public class Mirror {
             ConnectionPools connPools = null;
             switch (getConfig().getConnectionPoolLib()) {
                 case DBCP2:
-                    LOG.info("Using DBCP2 Connection Pooling Libraries");
+                    log.info("Using DBCP2 Connection Pooling Libraries");
                     connPools = new ConnectionPoolsDBCP2Impl();
                     break;
                 case HIKARICP:
-                    LOG.info("Using HIKARICP Connection Pooling Libraries");
+                    log.info("Using HIKARICP Connection Pooling Libraries");
                     connPools = new ConnectionPoolsHikariImpl();
                     break;
                 case HYBRID:
-                    LOG.info("Using HYBRID Connection Pooling Libraries");
+                    log.info("Using HYBRID Connection Pooling Libraries");
                     connPools = new ConnectionPoolsHybridImpl();
                     break;
             }
@@ -1790,12 +1792,12 @@ public class Mirror {
                             // Set warning that RIGHT is disconnected.
                             getConfig().getWarnings().set(ENVIRONMENT_DISCONNECTED.getCode(), new Object[]{target});
                         } else {
-                            LOG.error(se.getMessage(), se);
+                            log.error(se.getMessage(), se);
                             getConfig().getErrors().set(ENVIRONMENT_CONNECTION_ISSUE.getCode(), new Object[]{target});
                             return getConfig().getErrors().getReturnCode();
                         }
                     } catch (Throwable t) {
-                        LOG.error(t.getMessage(), t);
+                        log.error(t.getMessage(), t);
                         getConfig().getErrors().set(ENVIRONMENT_CONNECTION_ISSUE.getCode(), new Object[]{target});
                         return getConfig().getErrors().getReturnCode();
                     } finally {
@@ -1808,7 +1810,7 @@ public class Mirror {
                     }
                 }
             } catch (SQLException cnfe) {
-                LOG.error("Issue initializing connections.  Check driver locations", cnfe);
+                log.error("Issue initializing connections.  Check driver locations", cnfe);
                 return -1;
 //                throw new RuntimeException(cnfe);
             }
@@ -1826,14 +1828,14 @@ public class Mirror {
             }
 
             if (getConfig().isConnectionKerberized()) {
-                LOG.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
+                log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
                 setupGSS();
             }
-            LOG.debug("Checking Hive Connections");
+            log.debug("Checking Hive Connections");
             if (!getConfig().checkConnections()) {
-                LOG.error("Check Hive Connections Failed.");
+                log.error("Check Hive Connections Failed.");
                 if (getConfig().isConnectionKerberized()) {
-                    LOG.error("Check Kerberos configuration if GSS issues are encountered.  See the running.md docs for details.");
+                    log.error("Check Kerberos configuration if GSS issues are encountered.  See the running.md docs for details.");
                 }
                 throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");
             }
@@ -1867,9 +1869,9 @@ public class Mirror {
             if (cfgUrl == null) {
                 throw new RuntimeException("Couldn't locate configuration file: " + configFile);
             }
-            LOG.info("Using 'classpath' config: " + configFile);
+            log.info("Using 'classpath' config: " + configFile);
         } else {
-            LOG.info("Using filesystem config: " + configFile);
+            log.info("Using filesystem config: " + configFile);
             try {
                 cfgUrl = cfgFile.toURI().toURL();
             } catch (MalformedURLException mfu) {
@@ -1877,7 +1879,7 @@ public class Mirror {
             }
         }
 
-        LOG.info("Check log '" + System.getProperty("app.path.dir") + System.getProperty("file.separator") + System.getProperty("app.log.file") +
+        log.info("Check log '" + System.getProperty("app.path.dir") + System.getProperty("file.separator") + System.getProperty("app.log.file") +
                 " for progress.");
 
         try {
@@ -1895,7 +1897,7 @@ public class Mirror {
                 throw new RuntimeException("The format of the 'config' yaml file MAY HAVE CHANGED from the last release.  Please make a copy and run " +
                         "'-su|--setup' again to recreate in the new format", t);
             } else {
-                LOG.error(t.getMessage(), t);
+                log.error(t.getMessage(), t);
                 throw new RuntimeException("A configuration element is no longer valid, progress.  Please remove the element from the configuration yaml and try again.", t);
             }
         }
@@ -1952,12 +1954,12 @@ public class Mirror {
             }
         });
         if (files.length == 0) {
-            LOG.error("No report files found in: " + reportDirectory);
+            log.error("No report files found in: " + reportDirectory);
             return;
         }
         conversion = new Conversion();
         for (File reportFile : files) {
-            LOG.info("Found report file: " + reportFile.getAbsolutePath());
+            log.info("Found report file: " + reportFile.getAbsolutePath());
             DBMirror dbMirror = DBMirror.load(reportFile.getAbsolutePath());
             // Set the table's phase state to INIT
             for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
@@ -1979,11 +1981,11 @@ public class Mirror {
             }
         });
         if (files.length == 0) {
-            LOG.error("No report files found in: " + reportDirectory);
+            log.error("No report files found in: " + reportDirectory);
             return;
         }
         File configFile = files[0];
-        LOG.info("Found config file: " + configFile.getAbsolutePath());
+        log.info("Found config file: " + configFile.getAbsolutePath());
         // Review the config file line by line
         try {
             BufferedReader br = new BufferedReader(new FileReader(configFile));
@@ -2012,7 +2014,7 @@ public class Mirror {
             }
             br.close();
         } catch (IOException ioe) {
-            LOG.error("Issue reading config file: " + configFile.getAbsolutePath(), ioe);
+            log.error("Issue reading config file: " + configFile.getAbsolutePath(), ioe);
             return;
         }
 
@@ -2021,9 +2023,9 @@ public class Mirror {
 
     public Conversion runTransfer(Conversion conversion) {
         Date startTime = new Date();
-        LOG.info("Start Processing for databases: " + Arrays.toString((getConfig().getDatabases())));
+        log.info("Start Processing for databases: " + Arrays.toString((getConfig().getDatabases())));
 
-        LOG.info(">>>>>>>>>>> Building/Starting Transition.");
+        log.info(">>>>>>>>>>> Building/Starting Transition.");
         List<Future<ReturnStatus>> mdf = new ArrayList<Future<ReturnStatus>>();
 
         // Loop through databases
@@ -2048,18 +2050,18 @@ public class Mirror {
                         mdf.add(getConfig().getTransferThreadPool().schedule(md, 1, TimeUnit.MILLISECONDS));
                         break;
                     case SUCCESS:
-                        LOG.debug("DB.tbl: " + tblMirror.getParent().getName() + "." + tblMirror.getName(Environment.LEFT) + " was SUCCESSFUL in " +
+                        log.debug("DB.tbl: " + tblMirror.getParent().getName() + "." + tblMirror.getName(Environment.LEFT) + " was SUCCESSFUL in " +
                                 "previous run.   SKIPPING and adjusting status to RETRY_SKIPPED_PAST_SUCCESS");
                         tblMirror.setPhaseState(PhaseState.RETRY_SKIPPED_PAST_SUCCESS);
                         break;
                     case RETRY_SKIPPED_PAST_SUCCESS:
-                        LOG.debug("DB.tbl: " + tblMirror.getParent().getName() + "." + tblMirror.getName(Environment.LEFT) + " was SUCCESSFUL in " +
+                        log.debug("DB.tbl: " + tblMirror.getParent().getName() + "." + tblMirror.getName(Environment.LEFT) + " was SUCCESSFUL in " +
                                 "previous run.  SKIPPING");
                 }
             }
         }
 
-        LOG.info(">>>>>>>>>>> Starting Transfer.");
+        log.info(">>>>>>>>>>> Starting Transfer.");
 
         while (true) {
             boolean check = true;
@@ -2088,13 +2090,13 @@ public class Mirror {
 
         getConfig().getTransferThreadPool().shutdown();
 
-        LOG.info("==============================");
-        LOG.info(conversion.toString());
-        LOG.info("==============================");
+        log.info("==============================");
+        log.info(conversion.toString());
+        log.info("==============================");
         Date endTime = new Date();
         DecimalFormat df = new DecimalFormat("#.###");
         df.setRoundingMode(RoundingMode.CEILING);
-        LOG.info("METADATA-STAGE: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
+        log.info("METADATA-STAGE: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
 
         return conversion;
     }
@@ -2119,7 +2121,7 @@ public class Mirror {
             for (String file : HADOOP_CONF_FILES) {
                 File f = new File(hadoopConfDir, file);
                 if (f.exists()) {
-                    LOG.debug("Adding conf resource: '" + f.getAbsolutePath() + "'");
+                    log.debug("Adding conf resource: '" + f.getAbsolutePath() + "'");
                     try {
                         // I found this new Path call failed on the Squadron Clusters.
                         // Not sure why.  Anyhow, the above seems to work the same.
@@ -2138,13 +2140,13 @@ public class Mirror {
                     UserGroupInformation.setConfiguration(hadoopConfig);
                 } catch (Throwable t) {
                     // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
-                    LOG.error("Failed GSS Init.  Attempting different Group Mapping");
+                    log.error("Failed GSS Init.  Attempting different Group Mapping");
                     hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
                     UserGroupInformation.setConfiguration(hadoopConfig);
                 }
             }
         } catch (Throwable t) {
-            LOG.error("Issue initializing Kerberos", t);
+            log.error("Issue initializing Kerberos", t);
             t.printStackTrace();
             throw t;
         }
@@ -2158,24 +2160,24 @@ public class Mirror {
 
     public long setupSql(String[] args, List<Pair> leftSql, List<Pair> rightSql) {
         long returnCode = 0;
-        LOG.info("===================================================");
-        LOG.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
-        LOG.info(" with commandline parameters: " + String.join(",", args));
-        LOG.info("===================================================");
-        LOG.info("");
-        LOG.info("======  SQL Setup ======");
+        log.info("===================================================");
+        log.info("Running: hms-mirror " + ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}"));
+        log.info(" with commandline parameters: " + String.join(",", args));
+        log.info("===================================================");
+        log.info("");
+        log.info("======  SQL Setup ======");
         try {
             returnCode = init(args);
             try {
                 if (leftSql != null && leftSql.size() > 0) {
                     if (!setupSql(Environment.LEFT, leftSql)) {
-                        LOG.error("Failed to run LEFT SQL, check Logs");
+                        log.error("Failed to run LEFT SQL, check Logs");
                         returnCode = -1;
                     }
                 }
                 if (rightSql != null && rightSql.size() > 0) {
                     if (!setupSql(Environment.RIGHT, rightSql)) {
-                        LOG.error("Failed to run RIGHT SQL, check Logs");
+                        log.error("Failed to run RIGHT SQL, check Logs");
                         returnCode = -1;
                     }
                 }
@@ -2189,14 +2191,14 @@ public class Mirror {
                 }
             }
         } catch (RuntimeException e) {
-            LOG.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             System.err.println("=====================================================");
             System.err.println("Commandline args: " + Arrays.toString(args));
             System.err.println();
-            LOG.error("Commandline args: " + Arrays.toString(args));
+            log.error("Commandline args: " + Arrays.toString(args));
             if (config != null) {
                 for (String error : getConfig().getErrors().getMessages()) {
-                    LOG.error(error);
+                    log.error(error);
                     System.err.println(error);
                 }
                 returnCode = getConfig().getErrors().getReturnCode();

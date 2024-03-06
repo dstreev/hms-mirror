@@ -20,6 +20,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +30,9 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SORT_DYNAMIC_PART
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SORT_DYNAMIC_PARTITION_THRESHOLD;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 
+@Slf4j
 public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(SQLAcidDowngradeInPlaceDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(SQLAcidDowngradeInPlaceDataStrategy.class);
 
     @Override
     public Boolean execute() {

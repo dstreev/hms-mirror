@@ -18,6 +18,7 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.Context;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +29,9 @@ import java.io.InputStreamReader;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class Reporter implements Runnable {
-    private static final Logger LOG = LoggerFactory.getLogger(Reporter.class);
+//    private static final Logger log = LoggerFactory.getLogger(Reporter.class);
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
     private Boolean quiet = Boolean.FALSE;
@@ -133,7 +135,7 @@ public class Reporter implements Runnable {
             populateVarMap();
             displayReport(showAll);
         } catch (ConcurrentModificationException cme) {
-            LOG.error("Report Refresh", cme);
+            log.error("Report Refresh", cme);
         }
     }
 
@@ -228,7 +230,7 @@ public class Reporter implements Runnable {
             report.append(String.join(",", conversion.getDatabases().keySet()));
             report.append("\n");
             report.append(ReportingConf.substituteAllVariables(reportTemplateOutput, varMap));
-            LOG.info(report.toString());
+            log.info(report.toString());
         }
 
         System.out.print(report);

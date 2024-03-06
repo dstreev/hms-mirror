@@ -18,17 +18,19 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
     private final String FTB = "FIELDS TERMINATED BY";
     private final Pattern FIELDS_TERMINATED_BY = Pattern.compile(FTB + " '(.*)'");
 
-    private static final Logger LOG = LoggerFactory.getLogger(BadFieldsFFDefFeature.class);
+//    private static final Logger log = LoggerFactory.getLogger(BadFieldsFFDefFeature.class);
 
     public String getDescription() {
         return "Table schemas with a \\f definition in the FIELDS TERMINATED BY declaration will not be created correctly " +
@@ -79,7 +81,7 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
 //            schema = addEscaped(schema);
-            LOG.debug("Checking if table has Bad Fields definition");
+            log.debug("Checking if table has Bad Fields definition");
             // find the index of the ROW_FORMAT_DELIMITED
 
             String v = getGroupFor(FIELDS_TERMINATED_BY, schema);

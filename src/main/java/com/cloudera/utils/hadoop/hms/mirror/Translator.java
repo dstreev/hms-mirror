@@ -22,6 +22,7 @@ import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hadoop.hms.stage.Transfer;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,9 +36,10 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 
+@Slf4j
 @JsonIgnoreProperties({"dbLocationMap"})
 public class Translator {
-    private static final Logger LOG = LoggerFactory.getLogger(Translator.class);
+//    private static final Logger log = LoggerFactory.getLogger(Translator.class);
 
     /*
     Use this to force the location element in the external table create statements and
@@ -123,13 +125,13 @@ public class Translator {
     public String processGlobalLocationMap(String originalLocation) {
         String newLocation = null;
         if (getGlobalLocationMap().size() > 0) {
-            LOG.debug("Checking location: " + originalLocation + " for replacement element in " +
+            log.debug("Checking location: " + originalLocation + " for replacement element in " +
                     "global location map.");
             for (String key : getGlobalLocationMap().keySet()) {
                 if (originalLocation.startsWith(key)) {
                     String rLoc = getGlobalLocationMap().get(key);
                     newLocation = originalLocation.replace(key, rLoc);
-                    LOG.info("Location Map Found. " + key +
+                    log.info("Location Map Found. " + key +
                             ":" + rLoc + " New Location: " + newLocation);
                     // Stop Processing
                     break;
@@ -314,7 +316,7 @@ public class Translator {
         }
         dirBuilder.append(newLocation);
 
-        LOG.debug("Translate Table Location: " + originalLocation + ": " + dirBuilder);
+        log.debug("Translate Table Location: " + originalLocation + ": " + dirBuilder);
         // Add Location Map for table to a list.
         // TODO: Need to handle RIGHT locations.
         if (config.getTransfer().getStorageMigration().isDistcp() && config.getDataStrategy() != DataStrategyEnum.SQL) {

@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +30,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class StateMaintenance implements Runnable {
-    private static final Logger LOG = LoggerFactory.getLogger(StateMaintenance.class);
+//    private static final Logger log = LoggerFactory.getLogger(StateMaintenance.class);
     private final String startDateStr = null;
     private Thread worker;
     private Conversion conversion;
@@ -122,9 +124,9 @@ public class StateMaintenance implements Runnable {
                     retryFile = getRetryFile();
                     retryFileWriter = new FileWriter(retryFile);
                     retryFileWriter.write(conversionStr);
-                    LOG.debug("Retry State 'saved' to: " + retryFile.getPath());
+                    log.debug("Retry State 'saved' to: " + retryFile.getPath());
                 } catch (IOException ioe) {
-                    LOG.error("Problem 'writing' Retry File", ioe);
+                    log.error("Problem 'writing' Retry File", ioe);
                 } finally {
                     retryFileWriter.close();
                 }
@@ -132,19 +134,19 @@ public class StateMaintenance implements Runnable {
                     retryFile = getRetryMarkerFile();
                     retryFileWriter = new FileWriter(retryFile);
                     retryFileWriter.write(conversionStr);
-                    LOG.debug("Retry State 'saved' to: " + retryFile.getPath());
+                    log.debug("Retry State 'saved' to: " + retryFile.getPath());
                 } catch (IOException ioe) {
-                    LOG.error("Problem 'writing' Retry File", ioe);
+                    log.error("Problem 'writing' Retry File", ioe);
                 } finally {
                     retryFileWriter.close();
                 }
             } catch (JsonProcessingException e) {
-                LOG.error("Problem 'saving' Retry state", e);
+                log.error("Problem 'saving' Retry state", e);
             } catch (IOException ioe) {
-                LOG.error("Problem 'closing' Retry File", ioe);
+                log.error("Problem 'closing' Retry File", ioe);
             }
         } else {
-            LOG.error("'conversion' hasn't been set'");
+            log.error("'conversion' hasn't been set'");
         }
     }
 
@@ -153,6 +155,6 @@ public class StateMaintenance implements Runnable {
         File retryFile = null;
         retryFile = getRetryFile();
         retryFile.delete();
-        LOG.debug("Retry State 'deleted' to: " + retryFile.getPath());
+        log.debug("Retry State 'deleted' to: " + retryFile.getPath());
     }
 }

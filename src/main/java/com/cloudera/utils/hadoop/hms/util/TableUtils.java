@@ -21,6 +21,7 @@ import com.cloudera.utils.hadoop.hms.mirror.Cluster;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.SerdeType;
 import com.cloudera.utils.hadoop.hms.mirror.feature.IcebergState;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,7 @@ import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.FILE_FORMAT;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.*;
 import static com.cloudera.utils.hadoop.hms.util.FileFormatType.*;
 
+@Slf4j
 public class TableUtils {
     public static final String CREATE = "CREATE";
     public static final String CREATE_TABLE = "CREATE TABLE";
@@ -75,13 +77,13 @@ public class TableUtils {
     public static final String IMPORT_TABLE = "IMPORT Table";
     public static final String RENAME_TABLE = "RENAME Table";
     public static final String ACID_NOT_ON = "This is an ACID table.  Turn on ACID migration `-ma|--migrate-acid`.";
-    private static final Logger LOG = LoggerFactory.getLogger(TableUtils.class);
+//    private static final Logger log = LoggerFactory.getLogger(TableUtils.class);
     private static final List<FileFormatType> validateIcebergFileFormats = new ArrayList<FileFormatType>(Arrays.asList(ORC, PARQUET, AVRO));
 //    public static Pattern dbdottable = Pattern.compile(".*`?\\.`?(.*)");
     public static Pattern tableCreatePattern = Pattern.compile(".*TABLE `?([a-z,A-Z,_,0-9,_]+)`?\\.?`?([a-z,A-Z,_,0-9,_]+)?");
 
     public static String getLocation(String tableName, List<String> tableDefinition) {
-        LOG.trace("Getting table location data for: " + tableName);
+        log.trace("Getting table location data for: " + tableName);
         String location = null;
         int locIdx = tableDefinition.indexOf(LOCATION);
         if (locIdx > 0) {
@@ -93,7 +95,7 @@ public class TableUtils {
     public static String getTableNameFromDefinition(List<String> tableDefinition) {
         String tableName = null;
         for (String line : tableDefinition) {
-            LOG.debug("Tablename Check: " + line);
+            log.debug("Tablename Check: " + line);
             if (line.contains("CREATE")) {
                 Matcher matcher = tableCreatePattern.matcher(line);
                 if (matcher.find()) {
@@ -110,7 +112,7 @@ public class TableUtils {
                     }
                     break;
                 } else {
-                    LOG.error("Couldn't locate tablename in: " + line);
+                    log.error("Couldn't locate tablename in: " + line);
                 }
             }
         }
@@ -134,7 +136,7 @@ public class TableUtils {
     }
 
     public static String getSerdePath(String tableName, List<String> tableDefinition) {
-        LOG.trace("Getting table serde path (if available) data for: " + tableName);
+        log.trace("Getting table serde path (if available) data for: " + tableName);
         String location = null;
 
         int wspIdx = tableDefinition.indexOf(WITH_SERDEPROPERTIES);
@@ -161,7 +163,7 @@ public class TableUtils {
     }
 
     public static String prefixTableNameLocation(String tableName, List<String> tableDefinition, String prefix) {
-        LOG.trace("Prefix table location data for: " + tableName);
+        log.trace("Prefix table location data for: " + tableName);
         String location = null;
         int locIdx = tableDefinition.indexOf(LOCATION);
         if (locIdx > 0) {
@@ -177,7 +179,7 @@ public class TableUtils {
     }
 
     public static List<String> stripLocation(String tableName, List<String> tableDefinition) {
-        LOG.trace("Stripping table location data for: " + tableName);
+        log.trace("Stripping table location data for: " + tableName);
         String location = null;
         int locIdx = tableDefinition.indexOf(LOCATION);
         if (locIdx > 0) {
@@ -194,7 +196,7 @@ public class TableUtils {
     }
 
     public static List<String> changeTableName(String tableName, String newTableName, List<String> tableDefinition) {
-        LOG.trace("Changing name of table in definition");
+        log.trace("Changing name of table in definition");
         for (String line : tableDefinition) {
             if (line.startsWith(CREATE)) {
                 int indexCT = tableDefinition.indexOf(line);
@@ -214,14 +216,14 @@ public class TableUtils {
 
     public static Boolean updateAVROSchemaLocation(String tableName, List<String> tableDefinition, String newLocation) {
         Boolean rtn = Boolean.FALSE;
-        LOG.trace("Updating AVRO Schema URL: " + tableName);
+        log.trace("Updating AVRO Schema URL: " + tableName);
 
         if (newLocation != null) {
             for (String line : tableDefinition) {
                 if (line.contains(AVRO_SCHEMA_URL_KEY)) {
                     int lineIdx = tableDefinition.indexOf(line);
                     String[] parts = line.split("=");
-                    LOG.debug("Old AVRO Schema location: " + parts[1]);
+                    log.debug("Old AVRO Schema location: " + parts[1]);
                     String replacedProperty = parts[0] + "='" + newLocation + "'";
                     // add back the comma if present before.
                     if (parts[1].trim().endsWith(",")) {
@@ -231,7 +233,7 @@ public class TableUtils {
                         replacedProperty = replacedProperty + ")";
                     }
                     tableDefinition.set(lineIdx, replacedProperty);
-                    LOG.debug("Replaced AVRO Schema URL Property: " + replacedProperty);
+                    log.debug("Replaced AVRO Schema URL Property: " + replacedProperty);
                     rtn = Boolean.TRUE;
                     break;
                 }
@@ -252,7 +254,7 @@ public class TableUtils {
     public static Boolean updateTableLocation(String tableName, List<String> tableDefinition,
                                               String newLocation) {
         Boolean rtn = Boolean.FALSE;
-        LOG.trace("Updating table location for: " + tableName);
+        log.trace("Updating table location for: " + tableName);
 
         if (newLocation != null) {
             int locIdx = tableDefinition.indexOf(LOCATION);
@@ -284,7 +286,7 @@ public class TableUtils {
 
     public static int numOfBuckets(EnvironmentTable envTable) {
         int rtn = 0;
-        LOG.trace("Looking to see if table has buckets");
+        log.trace("Looking to see if table has buckets");
         for (String line : envTable.getDefinition()) {
             if (line.startsWith(INTO)) {
                 String[] bucketParts = line.split(" ");
@@ -391,7 +393,7 @@ public class TableUtils {
     }
 
     public static SerdeType getSerdeType(EnvironmentTable envTable) {
-        LOG.trace("Getting table location data for: " + envTable.getName());
+        log.trace("Getting table location data for: " + envTable.getName());
         String serdeClass = null;
         SerdeType rtn = SerdeType.UNKNOWN;
         int locIdx = envTable.getDefinition().indexOf(ROW_FORMAT_SERDE);
@@ -412,7 +414,7 @@ public class TableUtils {
 
     public static Boolean isManaged(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is 'managed'");
+        log.debug("Checking if table '" + envTable.getName() + "' is 'managed'");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -467,7 +469,7 @@ public class TableUtils {
 
     public static Boolean prefixTableName(String tableName, String prefix, List<String> tableDefinition) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Prefixing table: " + tableName + " with " + prefix);
+        log.debug("Prefixing table: " + tableName + " with " + prefix);
         for (String line : tableDefinition) {
             if (line.startsWith(CREATE)) {
                 int indexCT = tableDefinition.indexOf(line);
@@ -489,7 +491,7 @@ public class TableUtils {
     public static Boolean makeExternal(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
         if (isManaged(envTable)) {
-            LOG.debug("Converting table: " + envTable.getName() + " to EXTERNAL");
+            log.debug("Converting table: " + envTable.getName() + " to EXTERNAL");
             for (String line : envTable.getDefinition()) {
                 if (line.startsWith(CREATE_TABLE)) {
                     int indexCT = envTable.getDefinition().indexOf(line);
@@ -545,7 +547,7 @@ public class TableUtils {
      */
     public static Boolean isHiveNative(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is 'native' (not a connector [HBase, Kafka, etc])");
+        log.debug("Checking if table '" + envTable.getName() + "' is 'native' (not a connector [HBase, Kafka, etc])");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -560,7 +562,7 @@ public class TableUtils {
 
     public static Boolean isExternal(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is 'external'");
+        log.debug("Checking if table '" + envTable.getName() + "' is 'external'");
         for (String line : envTable.getDefinition()) {
             if (line.startsWith(CREATE_EXTERNAL_TABLE)) {
                 rtn = Boolean.TRUE;
@@ -580,7 +582,7 @@ public class TableUtils {
 
     public static Boolean isHMSConverted(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' was converted by 'hms-mirror'");
+        log.debug("Checking if table '" + envTable.getName() + "' was converted by 'hms-mirror'");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -624,7 +626,7 @@ public class TableUtils {
 
     public static Boolean isACID(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is 'transactional(ACID)'");
+        log.debug("Checking if table '" + envTable.getName() + "' is 'transactional(ACID)'");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -656,7 +658,7 @@ public class TableUtils {
 
     public static Boolean isExternalPurge(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is an 'External' Purge table");
+        log.debug("Checking if table '" + envTable.getName() + "' is an 'External' Purge table");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -715,7 +717,7 @@ public class TableUtils {
 
     public static Boolean isPartitioned(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is 'Partitioned'");
+        log.debug("Checking if table '" + envTable.getName() + "' is 'Partitioned'");
         if (envTable.getDefinition() == null) {
             return rtn;
         }
@@ -730,7 +732,7 @@ public class TableUtils {
 
     public static Boolean isAVROSchemaBased(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' is an AVRO table using a schema file in hcfs.");
+        log.debug("Checking if table '" + envTable.getName() + "' is an AVRO table using a schema file in hcfs.");
         if (envTable.getDefinition() == null) {
             throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
         }
@@ -749,7 +751,7 @@ public class TableUtils {
 
     public static String getAVROSchemaPath(String tblName, List<String> tblDefinition) {
         String rtn = null;
-        LOG.debug("Retrieving AVRO Schema Path for " + tblName);
+        log.debug("Retrieving AVRO Schema Path for " + tblName);
         for (String line : tblDefinition) {
             if (line.contains(AVRO_SCHEMA_URL_KEY)) {
                 try {
@@ -785,7 +787,7 @@ public class TableUtils {
 
     public static Boolean isHMSLegacyManaged(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Checking if table '" + envTable.getName() + "' was tagged as Legacy Managed by 'hms-mirror'");
+        log.debug("Checking if table '" + envTable.getName() + "' was tagged as Legacy Managed by 'hms-mirror'");
         for (String line : envTable.getDefinition()) {
             String tline = line.trim();
             if (tline.toLowerCase().startsWith("'" + HMS_MIRROR_LEGACY_MANAGED_FLAG.toLowerCase())) {
@@ -852,7 +854,7 @@ public class TableUtils {
             }
         } else {
             // TODO: Need to be more aggressive here with this error
-            LOG.error("Issue locating TBLPROPERTIES for table");
+            log.error("Issue locating TBLPROPERTIES for table");
         }
     }
 

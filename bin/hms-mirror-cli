@@ -65,8 +65,8 @@ ENV_VAR_FILE=
 # Setting this to true ALWAYS.  No longer including all the hadoop lib in a shaded jar.
 HADOOP_CLASSPATH="true"
 
-LOGGING_THRESHOLD=${LOGGING_THRESHOLD:-"INFO"}
-APP_LOG_FILE=${APP_LOG_FILE:-"hms-mirror-cli.log"}
+logGING_THRESHOLD=${logGING_THRESHOLD:-"INFO"}
+APP_log_FILE=${APP_log_FILE:-"hms-mirror-cli.log"}
 APP_JAVA_OPTS="${JAVA_OPTS} -Xms2048m -Xmx4096m -XX:+UseG1GC"
 
 if [[ -f ${HOME}/.hms-mirror/env-var.props || -L ${HOME}/.hms-mirror/env-var.props ]]; then
@@ -166,7 +166,7 @@ fi
 APP_OUTPUT_PATH=${APP_OUTPUT_DIR}
 
 export APP_OUTPUT_PATH
-APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dapp.path.dir=\"$APP_OUTPUT_PATH\" -Dlogging.threshold=\"$LOGGING_THRESHOLD\" -Dapp.log.file=\"$APP_LOG_FILE\""
+APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dapp.path.dir=\"$APP_OUTPUT_PATH\" -Dlogging.threshold=\"$logGING_THRESHOLD\" -Dapp.log.file=\"$APP_log_FILE\""
 
 if [[ ! -d ${AUX_LIBS_DIR} ]]; then
     mkdir -p ${AUX_LIBS_DIR}

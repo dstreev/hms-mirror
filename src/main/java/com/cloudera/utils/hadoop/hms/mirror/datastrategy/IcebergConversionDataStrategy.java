@@ -23,6 +23,7 @@ import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
 import com.cloudera.utils.hadoop.hms.mirror.feature.IcebergState;
 import com.cloudera.utils.hadoop.hms.util.FileFormatType;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,19 +44,20 @@ import java.util.Map;
  * - Avro
  */
 
+@Slf4j
 public class IcebergConversionDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(IcebergConversionDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(IcebergConversionDataStrategy.class);
 
     @Override
     public Boolean buildOutDefinition() {
         // Check definition to ensure it is compatible with Iceberg.
         // Alarm if not.
         // Alarm if already converted.
-        LOG.debug("Table: " + dbMirror.getName() + " build Iceberg Conversions");
+        log.debug("Table: " + dbMirror.getName() + " build Iceberg Conversions");
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
         if (let == null) {
-            LOG.error("Table is null for LEFT");
+            log.error("Table is null for LEFT");
             return Boolean.FALSE;
         }
 
@@ -78,7 +80,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
 
     @Override
     public Boolean buildOutSql() {
-        LOG.debug("Table: " + tableMirror.getName() + " buildout Iceberg Conversion SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout Iceberg Conversion SQL");
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
         try {
             String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
@@ -107,7 +109,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
             let.addSql(convertToIcebergDesc, convertToIceberg);
             return Boolean.TRUE;
         } catch (Exception e) {
-            LOG.error("Error converting table to Iceberg: " + e.getMessage());
+            log.error("Error converting table to Iceberg: " + e.getMessage());
             return Boolean.FALSE;
         }
     }

@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.util;
 
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.ReportingConf;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +32,9 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+@Slf4j
 public class DriverUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(DriverUtils.class);
+//    private static final Logger log = LoggerFactory.getLogger(DriverUtils.class);
 
     // This is a shim process that allows us to load a Hive Driver from
     // a jar File, via a new ClassLoader.
@@ -51,30 +53,30 @@ public class DriverUtils {
                     urls[i] = jarFiles[i].toURI().toURL();
                 }
 
-                LOG.trace("Building Classloader to isolate JDBC Library for: " + jarFile);
+                log.trace("Building Classloader to isolate JDBC Library for: " + jarFile);
                 URLClassLoader hive3ClassLoader = URLClassLoader.newInstance(urls, environment.getClass().getClassLoader());
-                LOG.trace("Loading Hive JDBC Driver");
+                log.trace("Loading Hive JDBC Driver");
                 Class<?> classToLoad = hive3ClassLoader.loadClass(driverClassName);
                 Package aPackage = classToLoad.getPackage();
                 String implementationVersion = aPackage.getImplementationVersion();
-                LOG.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
+                log.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
                 Driver hiveDriver = (Driver) classToLoad.getDeclaredConstructor().newInstance();
-                LOG.trace("Building Hive Driver Shim");
+                log.trace("Building Hive Driver Shim");
                 hiveShim = new DriverShim(hiveDriver);
-                LOG.trace("Registering Hive Shim Driver with JDBC 'DriverManager'");
+                log.trace("Registering Hive Shim Driver with JDBC 'DriverManager'");
             } else {
                 Class hiveDriverClass = Class.forName(driverClassName);
                 hiveShim = (Driver) hiveDriverClass.getDeclaredConstructor().newInstance();
                 Package aPackage = hiveDriverClass.getPackage();
                 String implementationVersion = aPackage.getImplementationVersion();
-                LOG.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
+                log.info(environment + " - Hive JDBC Implementation Version: " + implementationVersion);
             }
             DriverManager.registerDriver(hiveShim);
         } catch (SQLException | MalformedURLException |
                 ClassNotFoundException | InstantiationException |
                 IllegalAccessException throwables) {
             throwables.printStackTrace();
-            LOG.error(throwables.getMessage(), throwables);
+            log.error(throwables.getMessage(), throwables);
         } catch (InvocationTargetException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -83,7 +85,7 @@ public class DriverUtils {
 
     public static void deregisterDriver(Driver hiveShim) {
         try {
-            LOG.trace("De-registering Driver from 'DriverManager'");
+            log.trace("De-registering Driver from 'DriverManager'");
             DriverManager.deregisterDriver(hiveShim);
         } catch (SQLException throwables) {
             throwables.printStackTrace();

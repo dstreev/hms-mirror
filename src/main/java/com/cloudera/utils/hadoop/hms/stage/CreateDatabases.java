@@ -19,13 +19,15 @@ package com.cloudera.utils.hadoop.hms.stage;
 
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 
+@Slf4j
 public class CreateDatabases implements Callable<ReturnStatus> {
-    private static final Logger LOG = LoggerFactory.getLogger(CreateDatabases.class);
+//    private static final Logger log = LoggerFactory.getLogger(CreateDatabases.class);
 
     private Conversion conversion = null;
 
@@ -45,7 +47,7 @@ public class CreateDatabases implements Callable<ReturnStatus> {
     public ReturnStatus call() {
         ReturnStatus rtn = new ReturnStatus();
         Config config = Context.getInstance().getConfig();
-        LOG.debug("Create Databases");
+        log.debug("Create Databases");
         for (String database : config.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
 

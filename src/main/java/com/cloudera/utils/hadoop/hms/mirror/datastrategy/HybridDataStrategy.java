@@ -20,11 +20,13 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class HybridDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(HybridDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(HybridDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;

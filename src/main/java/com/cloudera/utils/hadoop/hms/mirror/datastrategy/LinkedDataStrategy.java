@@ -22,13 +22,15 @@ import com.cloudera.utils.hadoop.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
 
+@Slf4j
 public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(LinkedDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(LinkedDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;
@@ -61,7 +63,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout LINKED Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout LINKED Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;

@@ -20,6 +20,7 @@ package com.cloudera.utils.hadoop.hms.stage;
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,8 +43,9 @@ Using the config, go through the databases and tables and collect the current st
 
 Create the target databases, where needed to support the migration.
  */
+@Slf4j
 public class Setup {
-    private static final Logger LOG = LoggerFactory.getLogger(Setup.class);
+//    private static final Logger log = LoggerFactory.getLogger(Setup.class);
 
     private Config config = null;
     private Conversion conversion = null;
@@ -66,7 +68,7 @@ public class Setup {
 //        initializing = Boolean.TRUE;
         Boolean rtn = Boolean.TRUE;
         Date startTime = new Date();
-        LOG.info("GATHERING METADATA: Start Processing for databases: " + Arrays.toString((getConfig().getDatabases())));
+        log.info("GATHERING METADATA: Start Processing for databases: " + Arrays.toString((getConfig().getDatabases())));
 
         // Check dbRegEx
         if (getConfig().getFilter().getDbRegEx() != null && !getConfig().isLoadingTestData()) {
@@ -77,7 +79,7 @@ public class Setup {
             try {
                 conn = getConfig().getCluster(Environment.LEFT).getConnection();
                 if (conn != null) {
-                    LOG.info("Retrieved LEFT Cluster Connection");
+                    log.info("Retrieved LEFT Cluster Connection");
                     stmt = conn.createStatement();
                     ResultSet rs = stmt.executeQuery(SHOW_DATABASES);
                     while (rs.next()) {
@@ -92,7 +94,7 @@ public class Setup {
                 }
             } catch (SQLException se) {
                 // Issue
-                LOG.error("Issue getting databases for dbRegEx");
+                log.error("Issue getting databases for dbRegEx");
             } finally {
                 if (conn != null) {
                     try {
@@ -108,11 +110,11 @@ public class Setup {
             // Look for the dbRegEx.
             Connection conn = null;
             Statement stmt = null;
-            LOG.info("Loading Environment Variables");
+            log.info("Loading Environment Variables");
             try {
                 conn = getConfig().getCluster(Environment.LEFT).getConnection();
                 if (conn != null) {
-                    LOG.info("Retrieving LEFT Cluster Connection");
+                    log.info("Retrieving LEFT Cluster Connection");
                     stmt = conn.createStatement();
                     // Load Session Environment Variables.
                     ResultSet rs = stmt.executeQuery(GET_ENV_VARS);
@@ -123,7 +125,7 @@ public class Setup {
                 }
             } catch (SQLException se) {
                 // Issue
-                LOG.error("Issue getting LEFT database connection");
+                log.error("Issue getting LEFT database connection");
             } finally {
                 if (conn != null) {
                     try {
@@ -136,7 +138,7 @@ public class Setup {
             try {
                 conn = getConfig().getCluster(Environment.RIGHT).getConnection();
                 if (conn != null) {
-                    LOG.info("Retrieving RIGHT Cluster Connection");
+                    log.info("Retrieving RIGHT Cluster Connection");
                     stmt = conn.createStatement();
                     // Load Session Environment Variables.
                     ResultSet rs = stmt.executeQuery(GET_ENV_VARS);
@@ -147,7 +149,7 @@ public class Setup {
                 }
             } catch (SQLException se) {
                 // Issue
-                LOG.error("Issue getting RIGHT databases connection");
+                log.error("Issue getting RIGHT databases connection");
             } finally {
                 if (conn != null) {
                     try {
@@ -264,7 +266,7 @@ public class Setup {
         ) {
 
             // Get the table METADATA for the tables collected in the databases.
-            LOG.info(">>>>>>>>>>> Getting Table Metadata");
+            log.info(">>>>>>>>>>> Getting Table Metadata");
             Set<String> collectedDbs = conversion.getDatabases().keySet();
             for (String database : collectedDbs) {
                 DBMirror dbMirror = conversion.getDatabase(database);
@@ -302,13 +304,13 @@ public class Setup {
                 getConfig().getErrors().set(COLLECTING_TABLE_DEFINITIONS.getCode());
             }
 
-            LOG.info("==============================");
-            LOG.info(conversion.toString());
-            LOG.info("==============================");
+            log.info("==============================");
+            log.info(conversion.toString());
+            log.info("==============================");
             Date endTime = new Date();
             DecimalFormat df = new DecimalFormat("#.###");
             df.setRoundingMode(RoundingMode.CEILING);
-            LOG.info("GATHERING METADATA: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
+            log.info("GATHERING METADATA: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
         }
         Context.getInstance().setInitializing(Boolean.FALSE);
         return rtn;

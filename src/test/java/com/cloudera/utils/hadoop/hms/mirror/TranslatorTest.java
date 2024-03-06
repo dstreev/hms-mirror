@@ -34,7 +34,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class TranslatorTest {
-    private static final Logger LOG = LoggerFactory.getLogger(TranslatorTest.class);
+    private static final Logger log = LoggerFactory.getLogger(TranslatorTest.class);
 
     public static Translator deserializeResource(String configResource) throws IOException {
         Translator translator = null;
@@ -283,7 +283,7 @@ public class TranslatorTest {
                     t.getMessage());
         }
 
-        LOG.debug("dbLocationMap:\n");
+        log.debug("dbLocationMap:\n");
     }
 
     @Test
@@ -351,7 +351,7 @@ public class TranslatorTest {
                     t.getMessage());
         }
 
-        LOG.debug("dbLocationMap:\n");
+        log.debug("dbLocationMap:\n");
     }
 
 //    @Test

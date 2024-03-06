@@ -23,14 +23,16 @@ import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
 
+@Slf4j
 public class GetTableMetadata implements Callable<ReturnStatus> {
-    private static final Logger LOG = LoggerFactory.getLogger(GetTableMetadata.class);
+//    private static final Logger log = LoggerFactory.getLogger(GetTableMetadata.class);
 
     private Config config = Context.getInstance().getConfig();
     private DBMirror dbMirror = null;
@@ -62,7 +64,7 @@ public class GetTableMetadata implements Callable<ReturnStatus> {
 
     public ReturnStatus doit() {
         ReturnStatus rtn = new ReturnStatus();
-        LOG.info("Getting table definition for: " + dbMirror.getName() + "." + tblMirror.getName());
+        log.info("Getting table definition for: " + dbMirror.getName() + "." + tblMirror.getName());
         try {
             config.getCluster(Environment.LEFT).getTableDefinition(dbMirror.getName(), tblMirror);
             switch (config.getDataStrategy()) {
@@ -80,7 +82,7 @@ public class GetTableMetadata implements Callable<ReturnStatus> {
         } else {
             rtn.setStatus(ReturnStatus.Status.ERROR);
         }
-        LOG.info("Completed table definition for: " + dbMirror.getName() + "." + tblMirror.getName());
+        log.info("Completed table definition for: " + dbMirror.getName() + "." + tblMirror.getName());
         return rtn;
     }
 }

@@ -18,11 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+@Slf4j
 public class BadParquetDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_DELIMITED = "ROW FORMAT DELIMITED";
     private final String STORED_AS_INPUTFORMAT = "STORED AS INPUTFORMAT";
@@ -32,7 +34,7 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
     private final String INPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'";
     private final String OUTPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'";
     private final String STORED_AS_PARQUET = "STORED AS PARQUET";
-    private static final Logger LOG = LoggerFactory.getLogger(BadParquetDefFeature.class);
+//    private static final Logger log = LoggerFactory.getLogger(BadParquetDefFeature.class);
 
     public String getDescription() {
         return "Table schema definitions for Parquet files that don't include include INPUT and " +
@@ -91,7 +93,7 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
 //            schema = addEscaped(schema);
-            LOG.debug("Checking if table has bad PARQUET definition");
+            log.debug("Checking if table has bad PARQUET definition");
             // find the index of the ROW_FORMAT_DELIMITED
 
             int startRange = -1;
@@ -121,7 +123,7 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
             }
 
             if ((startRange < endRange) & (startRange > 0)) {
-                LOG.debug("BAD PARQUET definition found. Correcting...");
+                log.debug("BAD PARQUET definition found. Correcting...");
                 removeRange(startRange, endRange, schema);
                 schema.add(startRange, STORED_AS_PARQUET);
             }

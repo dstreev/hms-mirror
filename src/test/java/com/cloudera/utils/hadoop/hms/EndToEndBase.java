@@ -157,7 +157,7 @@ public class EndToEndBase {
                     throw new RuntimeException("The format of the 'config' yaml file MAY HAVE CHANGED from the last release.  Please make a copy and run " +
                             "'-su|--setup' again to recreate in the new format", t);
                 } else {
-//                LOG.error(t);
+//                log.error(t);
                     throw new RuntimeException("A configuration element is no longer valid, progress.  Please remove the element from the configuration yaml and try again.", t);
                 }
             }

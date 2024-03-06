@@ -18,11 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+@Slf4j
 public class BadRCDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_DELIMITED = "ROW FORMAT DELIMITED";
     private final String STORED_AS_INPUTFORMAT = "STORED AS INPUTFORMAT";
@@ -33,7 +35,7 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
     private final String ORC_SERDE = "  'org.apache.hadoop.hive.ql.io.orc.OrcSerde'";
     private final String RC_INPUT_SERDE = "  'org.apache.hadoop.hive.ql.io.RCFileInputFormat'";
     private final String RC_OUTPUT_SERDE = "  'org.apache.hadoop.hive.ql.io.RCFileOutputFormat'";
-    private static final Logger LOG = LoggerFactory.getLogger(BadRCDefFeature.class);
+//    private static final Logger log = LoggerFactory.getLogger(BadRCDefFeature.class);
 
     public String getDescription() {
         return "Table schema definitions for RC files that include ROW FORMAT DELIMITED " +
@@ -87,7 +89,7 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
 //            schema = addEscaped(schema);
-            LOG.debug("Checking if table has bad ORC definition");
+            log.debug("Checking if table has bad ORC definition");
             // find the index of the ROW_FORMAT_DELIMITED
             int rfdIdx = indexOf(schema, ROW_FORMAT_DELIMITED);
             if (rfdIdx > 0) {
@@ -98,7 +100,7 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
                         int of = indexOf(schema, OUTPUTFORMAT);
                         if (of > saiIdx + 1) {
                             if (schema.get(of + 1).trim().equals(RC_OUTPUT_SERDE.trim())) {
-                                LOG.debug("BAD RC definition found. Correcting...");
+                                log.debug("BAD RC definition found. Correcting...");
                                 // All matches.  Need to replace with serde
                                 for (int i = of + 1; i >= rfdIdx; i--) {
                                     schema.remove(i);

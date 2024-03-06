@@ -18,12 +18,14 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class BadTextFileDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_DELIMITED = "ROW FORMAT DELIMITED";
     private final Pattern FIELDS_TERMINATED_BY = Pattern.compile("FIELDS TERMINATED BY (.*)");
@@ -33,7 +35,7 @@ public class BadTextFileDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_SERDE = "ROW FORMAT SERDE";
     private final String LAZY_SERDE = "'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'";
 
-    private static final Logger LOG = LoggerFactory.getLogger(BadTextFileDefFeature.class);
+//    private static final Logger log = LoggerFactory.getLogger(BadTextFileDefFeature.class);
 
     public String getDescription() {
         return "Table schema definitions that include both ROW FORMAT DELIMITED BY and " +
@@ -78,7 +80,7 @@ public class BadTextFileDefFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
 //            schema = addEscaped(schema);
-            LOG.debug("Checking if table has OLD TEXTFILE definition");
+            log.debug("Checking if table has OLD TEXTFILE definition");
             // find the index of the ROW_FORMAT_DELIMITED
             if (contains(ROW_FORMAT_DELIMITED, schema) && contains(WITH_SERDEPROPERTIES, schema)) {
                 // Bad Definition.

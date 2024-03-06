@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
@@ -48,10 +49,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import static com.cloudera.utils.hadoop.hms.mirror.ConnectionPoolLibs.*;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 
+@Slf4j
 @JsonIgnoreProperties({"featureList"})
 public class Config {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Config.class);
+//    private static final Logger log = LoggerFactory.getLogger(Config.class);
     @JsonIgnore
     private Date initDate = new Date();
     private Acceptance acceptance = new Acceptance();
@@ -270,16 +272,16 @@ public class Config {
             try {
                 cfgFileWriter = new FileWriter(cfgFile);
                 cfgFileWriter.write(configStr);
-                LOG.debug("Default Config 'saved' to: " + cfgFile.getPath());
+                log.debug("Default Config 'saved' to: " + cfgFile.getPath());
             } catch (IOException ioe) {
-                LOG.error("Problem 'writing' default config", ioe);
+                log.error("Problem 'writing' default config", ioe);
             } finally {
                 cfgFileWriter.close();
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Problem 'saving' default config", e);
+            log.error("Problem 'saving' default config", e);
         } catch (IOException ioe) {
-            LOG.error("Problem 'closing' default config file", ioe);
+            log.error("Problem 'closing' default config file", ioe);
         }
     }
 
@@ -562,7 +564,7 @@ public class Config {
 
     public boolean isExecute() {
         if (!execute) {
-            LOG.debug("Dry-run: ON");
+            log.debug("Dry-run: ON");
         }
         return execute;
     }
@@ -1087,7 +1089,7 @@ public class Config {
                 break;
             case SCHEMA_ONLY:
                 if (this.isCopyAvroSchemaUrls()) {
-                    LOG.info("CopyAVROSchemaUrls is TRUE, so the cluster must be linked to do this.  Testing...");
+                    log.info("CopyAVROSchemaUrls is TRUE, so the cluster must be linked to do this.  Testing...");
                     if (!linkTest()) {
                         errors.set(LINK_TEST_FAILED.getCode());
                         rtn = Boolean.FALSE;
@@ -1209,13 +1211,13 @@ public class Config {
     protected Boolean linkTest() {
         Boolean rtn = Boolean.FALSE;
         if (this.skipLinkCheck || this.isLoadingTestData()) {
-            LOG.warn("Skipping Link Check.");
+            log.warn("Skipping Link Check.");
             rtn = Boolean.TRUE;
         } else {
             HadoopSession session = null;
             try {
                 session = getCliPool().borrow();
-                LOG.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
+                log.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
                 // TODO: develop a test to copy data between clusters.
                 String leftHCFSNamespace = this.getCluster(Environment.LEFT).getHcfsNamespace();
                 String rightHCFSNamespace = this.getCluster(Environment.RIGHT).getHcfsNamespace();
@@ -1223,8 +1225,8 @@ public class Config {
                 // List User Directories on LEFT
                 String leftlsTestLine = "ls " + leftHCFSNamespace + "/user";
                 String rightlsTestLine = "ls " + rightHCFSNamespace + "/user";
-                LOG.info("LEFT ls testline: " + leftlsTestLine);
-                LOG.info("RIGHT ls testline: " + rightlsTestLine);
+                log.info("LEFT ls testline: " + leftlsTestLine);
+                log.info("RIGHT ls testline: " + rightlsTestLine);
 
                 CommandReturn lcr = session.processInput(leftlsTestLine);
                 if (lcr.isError()) {
@@ -1266,7 +1268,7 @@ public class Config {
                 try {
                     conn = cluster.getConnection();
                     // May not be set for DUMP strategy (RIGHT cluster)
-                    LOG.debug(env + ":" + ": Checking Hive Connection");
+                    log.debug(env + ":" + ": Checking Hive Connection");
                     if (conn != null) {
 //                        Statement stmt = null;
 //                        ResultSet resultSet = null;
@@ -1274,11 +1276,11 @@ public class Config {
 //                            stmt = conn.createStatement();
 //                            resultSet = stmt.executeQuery("SHOW DATABASES");
 //                            resultSet = stmt.executeQuery("SELECT 'HIVE CONNECTION TEST PASSED' AS STATUS");
-                        LOG.debug(env + ":" + ": Hive Connection Successful");
+                        log.debug(env + ":" + ": Hive Connection Successful");
                         rtn = Boolean.TRUE;
 //                        } catch (SQLException sql) {
                         // DB Doesn't Exists.
-//                            LOG.error(env + ": Hive Connection check failed.", sql);
+//                            log.error(env + ": Hive Connection check failed.", sql);
 //                            rtn = Boolean.FALSE;
 //                        } finally {
 //                            if (resultSet != null) {
@@ -1297,20 +1299,20 @@ public class Config {
 //                            }
 //                        }
                     } else {
-                        LOG.error(env + ": Hive Connection check failed.  Connection is null.");
+                        log.error(env + ": Hive Connection check failed.  Connection is null.");
                         rtn = Boolean.FALSE;
                     }
                 } catch (SQLException se) {
                     rtn = Boolean.FALSE;
-                    LOG.error(env + ": Hive Connection check failed.", se);
+                    log.error(env + ": Hive Connection check failed.", se);
                     se.printStackTrace();
                 } finally {
                     if (conn != null) {
                         try {
-                            LOG.info(env + ": Closing Connection");
+                            log.info(env + ": Closing Connection");
                             conn.close();
                         } catch (Throwable throwables) {
-                            LOG.error(env + ": Error closing connection.", throwables);
+                            log.error(env + ": Error closing connection.", throwables);
                         }
                     }
                 }

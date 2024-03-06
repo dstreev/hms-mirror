@@ -23,6 +23,7 @@ import com.cloudera.utils.hive.config.DBStore;
 import com.google.common.collect.Sets;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
@@ -39,8 +40,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
+@Slf4j
 public class ConnectionPoolsHybridImpl implements ConnectionPools {
-    private static final Logger LOG = LoggerFactory.getLogger(ConnectionPools.class);
+//    private static final Logger log = LoggerFactory.getLogger(ConnectionPools.class);
 
     private final Map<Environment, DataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
@@ -97,7 +99,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
                     conn = ds.getConnection();
             } catch (Throwable se) {
                 se.printStackTrace();
-                LOG.error(se.getMessage(), se);
+                log.error(se.getMessage(), se);
                 throw new RuntimeException(se);
             } finally {
                 DriverManager.deregisterDriver(lclDriver);
@@ -210,14 +212,14 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
                                 hs2DataSources.put(environment, poolingDatasource);
                             } catch (Throwable se) {
                                 se.printStackTrace();
-                                LOG.error(se.getMessage(), se);
+                                log.error(se.getMessage(), se);
                                 throw new RuntimeException(se);
                             } finally {
                                 DriverManager.deregisterDriver(lclDriver);
                             }
                         } catch (SQLException e) {
                             e.printStackTrace();
-                            LOG.error(e.getMessage(), e);
+                            log.error(e.getMessage(), e);
                             throw new RuntimeException(e);
                         }
                     }

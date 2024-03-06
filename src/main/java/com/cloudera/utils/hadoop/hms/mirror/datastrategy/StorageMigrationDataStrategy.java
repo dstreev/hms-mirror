@@ -20,6 +20,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +39,9 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SORT_DYNAMIC_PART
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 
+@Slf4j
 public class StorageMigrationDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(StorageMigrationDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(StorageMigrationDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;
@@ -101,7 +103,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                 } catch (RuntimeException rte) {
                     noIssues = Boolean.FALSE;
                     tableMirror.addIssue(Environment.LEFT, rte.getMessage());
-                    LOG.error(rte.getMessage(), rte);
+                    log.error(rte.getMessage(), rte);
                 }
 
                 // Build Alter Statement for Partitions to change location.
@@ -254,7 +256,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                 rtn = config.getCluster(Environment.LEFT).runTableSql(let.getSql(), tableMirror, Environment.LEFT);
             }
         } catch (Throwable t) {
-            LOG.error("Error executing StorageMigrationDataStrategy", t);
+            log.error("Error executing StorageMigrationDataStrategy", t);
             let.addIssue(t.getMessage());
             rtn = Boolean.FALSE;
         }
@@ -264,7 +266,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -320,7 +322,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean buildOutSql() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout STORAGE_MIGRATION SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout STORAGE_MIGRATION SQL");
 
         String useDb = null;
         String database = null;

@@ -18,14 +18,16 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class IcebergConfig {
-    private static final Logger LOG = LoggerFactory.getLogger(IcebergConfig.class);
+//    private static final Logger log = LoggerFactory.getLogger(IcebergConfig.class);
 
     private int version = 2;
     private Map<String, String> tableProperties = new HashMap<String, String>();
@@ -44,7 +46,7 @@ public class IcebergConfig {
                         getTableProperties().put(keyValue[0], keyValue[1]);
                     }
                 } catch (Throwable t) {
-                    LOG.error("Problem setting property override: " + property, t);
+                    log.error("Problem setting property override: " + property, t);
                 }
             }
         }

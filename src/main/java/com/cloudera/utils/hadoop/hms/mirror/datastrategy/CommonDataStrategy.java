@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +27,9 @@ import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA;
 
+@Slf4j
 public class CommonDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(CommonDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(CommonDataStrategy.class);
 
     @Override
     public Boolean execute() {
@@ -57,7 +59,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + dbMirror.getName() + " buildout COMMON Definition");
+        log.debug("Table: " + dbMirror.getName() + " buildout COMMON Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
@@ -132,7 +134,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutSql() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + getDBMirror().getName() + " buildout COMMON SQL");
+        log.debug("Table: " + getDBMirror().getName() + " buildout COMMON SQL");
 
         String useDb = null;
         String database = null;

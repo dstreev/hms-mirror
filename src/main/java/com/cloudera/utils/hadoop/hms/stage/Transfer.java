@@ -21,6 +21,7 @@ import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +31,9 @@ import java.util.regex.Pattern;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.DISTCP_FOR_SO_ACID;
 
+@Slf4j
 public class Transfer implements Callable<ReturnStatus> {
-    private static final Logger LOG = LoggerFactory.getLogger(Transfer.class);
+//    private static final Logger log = LoggerFactory.getLogger(Transfer.class);
     public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
@@ -58,7 +60,7 @@ public class Transfer implements Callable<ReturnStatus> {
 
         try {
             Date start = new Date();
-            LOG.info("Migrating " + dbMirror.getName() + "." + tableMirror.getName());
+            log.info("Migrating " + dbMirror.getName() + "." + tableMirror.getName());
 
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
@@ -241,13 +243,13 @@ public class Transfer implements Callable<ReturnStatus> {
                     tableMirror.setPhaseState(PhaseState.ERROR);
             } catch (ConnectionException ce) {
                 tableMirror.addIssue(Environment.LEFT, "FAILURE (check logs):" + ce.getMessage());
-                LOG.error("Connection Error", ce);
+                log.error("Connection Error", ce);
                 ce.printStackTrace();
                 rtn.setStatus(ReturnStatus.Status.FATAL);
                 rtn.setException(ce);
             } catch (RuntimeException rte) {
                 tableMirror.addIssue(Environment.LEFT, "FAILURE (check logs):" + rte.getMessage());
-                LOG.error("Transfer Error", rte);
+                log.error("Transfer Error", rte);
                 rte.printStackTrace();
                 rtn.setStatus(ReturnStatus.Status.FATAL);
                 rtn.setException(rte);
@@ -256,7 +258,7 @@ public class Transfer implements Callable<ReturnStatus> {
             Date end = new Date();
             Long diff = end.getTime() - start.getTime();
             tableMirror.setStageDuration(diff);
-            LOG.info("Migration complete for " + dbMirror.getName() + "." + tableMirror.getName() + " in " +
+            log.info("Migration complete for " + dbMirror.getName() + "." + tableMirror.getName() + " in " +
                     diff + "ms");
             rtn.setStatus(ReturnStatus.Status.SUCCESS);
         } catch (Throwable t) {
@@ -433,7 +435,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //            } catch (RuntimeException rte) {
 //                noIssues = Boolean.FALSE;
 //                tblMirror.addIssue(Environment.LEFT, rte.getMessage());
-//                LOG.error(rte.getMessage(), rte);
+//                log.error(rte.getMessage(), rte);
 //            }
 //
 //            // Build Alter Statement for Partitions to change location.
@@ -932,10 +934,10 @@ public class Transfer implements Callable<ReturnStatus> {
 //        EnvironmentTable let = tblMirror.getEnvironmentTable(Environment.LEFT);
 //        EnvironmentTable ret = tblMirror.getEnvironmentTable(Environment.RIGHT);
 //        if (TableUtils.isAVROSchemaBased(let)) {
-//            LOG.info(let.getName() + ": is an AVRO table.");
+//            log.info(let.getName() + ": is an AVRO table.");
 //            String leftPath = TableUtils.getAVROSchemaPath(let);
 //            String rightPath = null;
-//            LOG.debug(let.getName() + ": Original AVRO Schema path: " + leftPath);
+//            log.debug(let.getName() + ": Original AVRO Schema path: " + leftPath);
 //                /* Checks:
 //                - Is Path prefixed with a protocol?
 //                    - (Y) Does it match the LEFT's hcfsNamespace.
@@ -948,7 +950,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //            // ProtocolNS Found.
 //            String cpCmd = null;
 //            if (matcher.find()) {
-//                LOG.info(let.getName() + " protocol Matcher found.");
+//                log.info(let.getName() + " protocol Matcher found.");
 //
 //                // Return the whole set of groups.
 //                String lns = matcher.group(0);
@@ -959,7 +961,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //                    leftNS = leftNS.substring(0, leftNS.length() - 1);
 //                }
 //                if (lns.startsWith(leftNS)) {
-//                    LOG.info(let.getName() + " table namespace matches LEFT clusters namespace.");
+//                    log.info(let.getName() + " table namespace matches LEFT clusters namespace.");
 //
 //                    // They match, so replace with RIGHT hcfs namespace.
 //                    String newNS = config.getCluster(Environment.RIGHT).getHcfsNamespace();
@@ -967,7 +969,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //                        newNS = newNS.substring(0, newNS.length() - 1);
 //                    }
 //                    rightPath = leftPath.replace(leftNS, newNS);
-//                    LOG.info(ret.getName() + " table namespace adjusted for RIGHT clusters table to " + rightPath);
+//                    log.info(ret.getName() + " table namespace adjusted for RIGHT clusters table to " + rightPath);
 //                    TableUtils.updateAVROSchemaLocation(ret, rightPath);
 //                } else {
 //                    // Protocol found doesn't match configured hcfs namespace for LEFT.
@@ -976,13 +978,13 @@ public class Transfer implements Callable<ReturnStatus> {
 //                            ". Can't determine change, so we'll not do anything.";
 //                    ret.addIssue(warning);
 //                    ret.addIssue("Schema creation may fail if location isn't available to RIGHT cluster.");
-//                    LOG.warn(warning);
+//                    log.warn(warning);
 //                }
 //            } else {
 //                // No Protocol defined.  So we're assuming that its a relative path to the
 //                // defaultFS
 //                String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
-//                LOG.info(let.getName() + ": " + rpath);
+//                log.info(let.getName() + ": " + rpath);
 //                ret.addIssue(rpath);
 //                rightPath = leftPath;
 //                relative = Boolean.TRUE;
@@ -990,7 +992,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //
 //            if (leftPath != null && rightPath != null && config.isCopyAvroSchemaUrls() && config.isExecute()) {
 //                // Copy over.
-//                LOG.info(let.getName() + ": Attempting to copy AVRO schema file to target cluster.");
+//                log.info(let.getName() + ": Attempting to copy AVRO schema file to target cluster.");
 //                HadoopSession session = null;
 //                try {
 //                    session = config.getCliPool().borrow();
@@ -999,7 +1001,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //                        leftPath = config.getCluster(Environment.LEFT).getHcfsNamespace() + leftPath;
 //                        rightPath = config.getCluster(Environment.RIGHT).getHcfsNamespace() + rightPath;
 //                    }
-//                    LOG.info("AVRO Schema COPY from: " + leftPath + " to " + rightPath);
+//                    log.info("AVRO Schema COPY from: " + leftPath + " to " + rightPath);
 //                    // Ensure the path for the right exists.
 //                    matcher = lastDirPattern.matcher(rightPath);
 //                    if (matcher.find()) {
@@ -1019,7 +1021,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //                        }
 //                    }
 //                } catch (Throwable t) {
-//                    LOG.error(ret.getName() + ": AVRO file copy issue", t);
+//                    log.error(ret.getName() + ": AVRO file copy issue", t);
 //                    ret.addIssue(t.getMessage());
 //                    rtn = Boolean.FALSE;
 //                } finally {
@@ -1027,7 +1029,7 @@ public class Transfer implements Callable<ReturnStatus> {
 //                        config.getCliPool().returnSession(session);
 //                }
 //            } else {
-//                LOG.info(let.getName() + ": did NOT attempt to copy AVRO schema file to target cluster.");
+//                log.info(let.getName() + ": did NOT attempt to copy AVRO schema file to target cluster.");
 //            }
 //            tblMirror.addStep("AVRO", "Checked");
 //        } else {

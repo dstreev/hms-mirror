@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +46,9 @@ import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
 
+@Slf4j
 public class DBMirror {
-    private static final Logger LOG = LoggerFactory.getLogger(DBMirror.class);
+//    private static final Logger log = LoggerFactory.getLogger(DBMirror.class);
 
     private String name;
     @JsonIgnore
@@ -276,10 +278,10 @@ public class DBMirror {
                             String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
                             String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(METASTOREWAREHOUSE);
                             String defaultManagedLocation = envDefaultFS + envWarehouseDir;
-                            LOG.info("Comparing Managed Location: " + managedLocation + " to default: " + defaultManagedLocation);
+                            log.info("Comparing Managed Location: " + managedLocation + " to default: " + defaultManagedLocation);
                             if (managedLocation.startsWith(defaultManagedLocation)) {
                                 managedLocation = null;
-                                LOG.info("The location for the DB '" + database + "' is the same as the default FS + warehouse dir.  " +
+                                log.info("The location for the DB '" + database + "' is the same as the default FS + warehouse dir.  " +
                                         "The database location will NOT be set and will depend on the system default.");
                                 this.addIssue(Environment.RIGHT, "The location for the DB '" + database
                                         + "' is the same as the default FS + warehouse dir. The database " +
@@ -327,7 +329,7 @@ public class DBMirror {
                                     }
                                 }
                                 if (config.isReadOnly() && !config.isLoadingTestData()) {
-                                    LOG.debug("Config set to 'read-only'.  Validating FS before continuing");
+                                    log.debug("Config set to 'read-only'.  Validating FS before continuing");
                                     HadoopSession main = null;
                                     try {
                                         main = config.getCliPool().borrow();
@@ -367,7 +369,7 @@ public class DBMirror {
                                                     String propset = resultSet.getString(1);
                                                     String dbLocationPrefix = propset.split("=")[1];
                                                     dbLocation = dbLocationPrefix + getName().toLowerCase(Locale.ROOT) + ".db";
-                                                    LOG.debug(database + " location is: " + dbLocation);
+                                                    log.debug(database + " location is: " + dbLocation);
 
                                                 } else {
                                                     // Could get property.
@@ -375,7 +377,7 @@ public class DBMirror {
                                                 }
 
                                             } catch (SQLException throwables) {
-                                                LOG.error("Issue", throwables);
+                                                log.error("Issue", throwables);
                                                 throw new RuntimeException(throwables);
                                             } finally {
                                                 if (resultSet != null) {
@@ -417,7 +419,7 @@ public class DBMirror {
                                         } else {
                                             // Can't determine location.
                                             // TODO: What to do here.
-                                            LOG.error(getName() + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
+                                            log.error(getName() + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
                                                     "'read-only' mode without knowing where it should go and validating existance.");
                                             throw new RuntimeException(getName() + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
                                                     "'read-only' mode without knowing where it should go and validating existance.");
@@ -548,10 +550,10 @@ public class DBMirror {
 
     public TableMirror addTable(String table) {
         if (getTableMirrors().containsKey(table)) {
-            LOG.debug("Table object found in map: " + table);
+            log.debug("Table object found in map: " + table);
             return getTableMirrors().get(table);
         } else {
-            LOG.info("Adding table object to map: " + table);
+            log.info("Adding table object to map: " + table);
             TableMirror tableMirror = new TableMirror();
             tableMirror.setName(table);
             tableMirror.setParent(this);

@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +28,9 @@ import java.text.MessageFormat;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.EXPORT_IMPORT_SYNC;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 
+@Slf4j
 public class ExportImportDataStrategy extends DataStrategyBase implements DataStrategy {
-    private static final Logger LOG = LoggerFactory.getLogger(ExportImportDataStrategy.class);
+//    private static final Logger log = LoggerFactory.getLogger(ExportImportDataStrategy.class);
     @Override
     public Boolean execute() {
         Boolean rtn = Boolean.FALSE;
@@ -80,7 +82,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutDefinition() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Table: " + tableMirror.getName() + " buildout EXPORT_IMPORT Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout EXPORT_IMPORT Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
@@ -132,7 +134,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutSql() {
         Boolean rtn = Boolean.FALSE;
-        LOG.debug("Database: " + dbMirror.getName() + " buildout EXPORT_IMPORT SQL");
+        log.debug("Database: " + dbMirror.getName() + " buildout EXPORT_IMPORT SQL");
 
         String database = null;
 
@@ -263,7 +265,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                 rtn = Boolean.TRUE;
             }
         } catch (Throwable t) {
-            LOG.error("Error executing EXPORT_IMPORT", t);
+            log.error("Error executing EXPORT_IMPORT", t);
             let.addIssue(t.getMessage());
             rtn = Boolean.FALSE;
         }
