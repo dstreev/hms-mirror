@@ -55,7 +55,7 @@
         <fileSet>
             <directory>${project.basedir}/target</directory>
             <includes>
-                <include>hms-mirror-${project.version}.jar</include>
+                <include>hms-mirror-${project.version}-exec.jar</include>
             </includes>
             <outputDirectory>hms-mirror-install-${project.version}/lib</outputDirectory>
             <useDefaultExcludes>true</useDefaultExcludes>

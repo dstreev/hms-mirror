@@ -76,6 +76,7 @@
         <jcabi.manifests.version>1.1</jcabi.manifests.version>
         <commonmark.version>0.17.1</commonmark.version>
 
+        <lombok.version>1.18.30</lombok.version>
         <commons-text.version>1.10.0</commons-text.version>
         <junit.version>4.13.1</junit.version>
         <slf4j-reload4j.version>1.7.36</slf4j-reload4j.version>
@@ -86,7 +87,7 @@
         <hadoop.version>3.1.1</hadoop.version>
         <ozone.version>1.2.0</ozone.version>
 
-        <hadoop-cli.version>3.0.0.0</hadoop-cli.version>
+        <hadoop-cli.version>3.0.1.0</hadoop-cli.version>
         <hive-sre.version>2.5.1.4</hive-sre.version>
 
     </properties>
@@ -97,6 +98,7 @@
             <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
         </repository>
     </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -118,6 +120,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -277,7 +280,11 @@
     <build>
         <pluginManagement>
             <plugins>
-                <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${springboot.version}</version>
+                </plugin>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>${maven.clean.version}</version>
@@ -363,61 +370,61 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${springboot.version}</version>
                 <executions>
                     <execution>
                         <goals>
                             <goal>repackage</goal>
                         </goals>
                         <configuration>
-                            <mainClass>com.cloudera.utils.hadoop.hms.MirrorConsoleApp</mainClass>
-                            <excludeGroupIds>org.apache.hadoop,
-                                org.apache.ozone,
-                                <!--                                org.apache.commons,-->
-                                org.apache.httpcomponents,
+                            <mainClass>org.springframework.boot.loader.PropertiesLauncher</mainClass>
+                            <!-- layout needs to be zip in order to support '-Dload.path..'  -->
+                            <layout>ZIP</layout>
+                            <classifier>exec</classifier>
+                            <excludeGroupIds>
+                                com.amazonaws,
+                                com.fasterxml.woodstox,
+                                com.google.code.findbugs,
+                                com.google.code.gson,
                                 com.google.guava,
-                                org.eclipse.jetty,
-                                com.sun.jersey,
+                                com.google.j2objc,
                                 com.google.protobuf,
-                                javax.servlet,
-                                io.netty,
+                                com.google.re2j,
+                                com.jcraft,
+                                com.nimbusds,
                                 com.squareup.okhttp3,
                                 com.squareup.okio,
-                                org.jetbrains.kotlin,
-                                jdk.tools,
-                                org.apache.httpcomponents,
-                                commons-net,
-                                commons-collections,
-                                org.eclipse.jetty,
-                                javax.servlet.jsp,
+                                com.sun.jersey,
                                 com.sun.xml.bind,
+                                commons-beanutils,
+                                commons-collections,
+                                commons-net,
+                                io.dropwizard.metrics,
+                                io.netty,
+                                javax.servlet,
+                                javax.servlet.jsp,
+                                javax.ws.rs,
+                                jdk.tools,
+                                om.github.stephenc.jcip,
+                                org.apache.avro,
+                                org.apache.curator,
+                                org.apache.hadoop,
+                                org.apache.httpcomponents,
+                                org.apache.kerby,
+                                org.apache.ozone,
+                                org.apache.yetus,
+                                org.apache.zookeeper,
                                 org.codehaus.jackson,
                                 org.codehaus.jettison,
-                                commons-beanutils,
-                                org.apache.avro,
-                                com.google.re2j,
-                                com.google.j2objc,
-                                com.google.code.gson,
-                                com.nimbusds,
-                                om.github.stephenc.jcip,
-                                org.apache.curator,
-                                org.apache.kerby,
-                                org.jline,
-                                com.jcraft,
-                                com.google.code.findbugs,
-                                org.apache.zookeeper,
-                                io.dropwizard.metrics,
                                 org.codehaus.woodstox,
-                                com.fasterxml.woodstox,
-                                org.xerial.snappy,
+                                org.eclipse.jetty,
+                                org.fusesource.leveldbjni,
+                                org.jetbrains.kotlin,
+                                org.jline,
                                 org.lz4,
-                                javax.ws.rs,
                                 org.mariadb.jdbc,
                                 org.postgresql,
-                                org.fusesource.leveldbjni,
-                                com.amazonaws,
                                 org.wildfly.openssl,
-                                org.apache.yetus
+                                org.xerial.snappy
                             </excludeGroupIds>
                             <excludes>
                                 <exclude>
