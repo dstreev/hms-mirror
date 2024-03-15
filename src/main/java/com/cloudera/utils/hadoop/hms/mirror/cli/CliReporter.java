@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,10 +15,15 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror;
+package com.cloudera.utils.hadoop.hms.mirror.cli;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.*;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,15 +32,27 @@ import java.io.InputStreamReader;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Component
+@Getter
+@Setter
 @Slf4j
-public class Reporter implements Runnable {
-//    private static final Logger log = LoggerFactory.getLogger(Reporter.class);
+public class CliReporter implements Runnable {
+    //    private static final Logger log = LoggerFactory.getLogger(Reporter.class);
+    private Config config;
+    private Conversion conversion;
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
     private Boolean quiet = Boolean.FALSE;
     private final Date start = new Date();
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final int sleepInterval;
+    private final int sleepInterval = 1000;
+
+    private String reportOutputFile = null;
+    private String leftExecuteFile = null;
+    private String leftCleanUpFile = null;
+    private String rightExecuteFile = null;
+    private String rightCleanUpFile = null;
+
     private final List<String> reportTemplateHeader = new ArrayList<String>();
     private final List<String> reportTemplateTableDetail = new ArrayList<String>();
     private final List<String> reportTemplateFooter = new ArrayList<String>();
@@ -44,28 +61,41 @@ public class Reporter implements Runnable {
 
     private final List<TableMirror> startedTables = new ArrayList<TableMirror>();
 
-    private final Conversion conversion;
-
-    public Boolean getRetry() {
-        return retry;
-    }
-
-    public void setRetry(Boolean retry) {
-        this.retry = retry;
-    }
-
-    public Boolean getQuiet() {
-        return quiet;
-    }
-
-    public void setQuiet(Boolean quiet) {
-        this.quiet = quiet;
-    }
-
-    public Reporter(Conversion conversion, int sleepInterval) {
+    public CliReporter(Config config, Conversion conversion) {
+        this.config = config;
         this.conversion = conversion;
-        this.sleepInterval = sleepInterval;
     }
+
+
+    /*
+            // Action Files
+        reportOutputFile = reportOutputDir + System.getProperty("file.separator") + "<db>_hms-mirror.md|html|yaml";
+        leftExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_execute.sql";
+        leftCleanUpFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_CleanUp_execute.sql";
+        rightExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_execute.sql";
+        rightCleanUpFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_CleanUp_execute.sql";
+
+     */
+    //    public Boolean getRetry() {
+//        return retry;
+//    }
+//
+//    public void setRetry(Boolean retry) {
+//        this.retry = retry;
+//    }
+//
+//    public Boolean getQuiet() {
+//        return quiet;
+//    }
+//
+//    public void setQuiet(Boolean quiet) {
+//        this.quiet = quiet;
+//    }
+
+//    public Reporter(Conversion conversion, int sleepInterval) {
+//        this.conversion = conversion;
+//        this.sleepInterval = sleepInterval;
+//    }
 
     public void start() {
         worker = new Thread(this);
@@ -82,25 +112,25 @@ public class Reporter implements Runnable {
 
     private void fetchReportTemplates() throws IOException {
 
-        InputStream his = this.getClass().getResourceAsStream(!quiet?"/report_header.txt":"/quiet/report_header.txt");
+        InputStream his = this.getClass().getResourceAsStream(!quiet ? "/report_header.txt" : "/quiet/report_header.txt");
         BufferedReader hbr = new BufferedReader(new InputStreamReader(his));
         String hline = null;
         while ((hline = hbr.readLine()) != null) {
             reportTemplateHeader.add(hline);
         }
-        InputStream fis = this.getClass().getResourceAsStream(!quiet?"/report_footer.txt":"/quiet/report_footer.txt");
+        InputStream fis = this.getClass().getResourceAsStream(!quiet ? "/report_footer.txt" : "/quiet/report_footer.txt");
         BufferedReader fbr = new BufferedReader(new InputStreamReader(fis));
         String fline = null;
         while ((fline = fbr.readLine()) != null) {
             reportTemplateFooter.add(fline);
         }
-        InputStream fisop = this.getClass().getResourceAsStream(!quiet?"/report_output.txt":"/quiet/report_output.txt");
+        InputStream fisop = this.getClass().getResourceAsStream(!quiet ? "/report_output.txt" : "/quiet/report_output.txt");
         BufferedReader fbrop = new BufferedReader(new InputStreamReader(fisop));
         String flineop = null;
         while ((flineop = fbrop.readLine()) != null) {
             reportTemplateOutput.add(flineop);
         }
-        InputStream tis = this.getClass().getResourceAsStream(!quiet?"/table_display.txt":"/quiet/table_display.txt");
+        InputStream tis = this.getClass().getResourceAsStream(!quiet ? "/table_display.txt" : "/quiet/table_display.txt");
         BufferedReader tbr = new BufferedReader(new InputStreamReader(tis));
         String tline = null;
         while ((tline = tbr.readLine()) != null) {
@@ -198,9 +228,9 @@ public class Reporter implements Runnable {
 
 
     protected void displayReport(Boolean showAll) {
-        if (Context.getInstance().getInitializing()) {
-            return;
-        }
+//        if (Context.getInstance().getInitializing()) {
+//            return;
+//        }
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
         // Header
@@ -210,7 +240,7 @@ public class Reporter implements Runnable {
             // Table Processing
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<String, String>();
-                tblVars.put("db.name", tblMirror.getParent().getResolvedName());
+                tblVars.put("db.name", config.getResolvedDB(tblMirror.getParent().getName()));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
@@ -235,4 +265,10 @@ public class Reporter implements Runnable {
 
     }
 
+    @Bean
+    CommandLineRunner configQuiet(Config config) {
+        return args -> {
+            setQuiet(config.getQuiet());
+        };
+    }
 }

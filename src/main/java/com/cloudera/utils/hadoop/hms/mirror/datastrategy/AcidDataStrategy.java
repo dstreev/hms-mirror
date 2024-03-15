@@ -17,24 +17,33 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.hms.mirror.Config;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
+@Component
 @Slf4j
 public class AcidDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(AcidDataStrategy.class);
 
+    public AcidDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         return null;
     }
 }

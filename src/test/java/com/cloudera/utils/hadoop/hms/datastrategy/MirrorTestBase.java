@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.datastrategy;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.DataState;
 import com.cloudera.utils.hadoop.hms.Mirror;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
@@ -106,7 +106,7 @@ public class MirrorTestBase {
             Mirror cfgMirror = new Mirror();
 
             long rtn = 0L;
-            Config cfg = Context.getInstance().getConfig();
+            Config cfg = ConnectionPoolService.getInstance().getConfig();
             String ns = null;
             switch (datacleanup) {
                 case LEFT:

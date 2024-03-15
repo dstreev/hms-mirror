@@ -20,10 +20,13 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 import com.cloudera.utils.hadoop.hms.mirror.feature.IcebergState;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.FileFormatType;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -42,16 +45,20 @@ import java.util.Map;
  * - Avro
  */
 
+@Component
 @Slf4j
 public class IcebergConversionDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(IcebergConversionDataStrategy.class);
+
+    public IcebergConversionDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         // Check definition to ensure it is compatible with Iceberg.
         // Alarm if not.
         // Alarm if already converted.
-        log.debug("Table: " + dbMirror.getName() + " build Iceberg Conversions");
+        log.debug("Table: " + tableMirror.getName() + " build Iceberg Conversions");
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
         if (let == null) {
@@ -77,15 +84,15 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         log.debug("Table: " + tableMirror.getName() + " buildout Iceberg Conversion SQL");
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
         try {
-            String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
+            String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             FileFormatType fileFormat = TableUtils.getFileFormatType(let.getDefinition());
             Map<String, String> tableProperties = new HashMap<String, String>();
-            tableProperties.putAll(config.getIcebergConfig().getTableProperties());
+            tableProperties.putAll(getConfigService().getConfig().getIcebergConfig().getTableProperties());
 
             StringBuilder icebergProperties = new StringBuilder();
             if (fileFormat != FileFormatType.PARQUET) {
@@ -93,7 +100,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
             }
             tableProperties.put("storage_handler", "org.apache.iceberg.mr.hive.HiveIcebergStorageHandler");
 
-            if (config.getIcebergConfig().getVersion() == 2) {
+            if (getConfigService().getConfig().getIcebergConfig().getVersion() == 2) {
                 tableProperties.put("format-version", "2");
             }
             // Concatenate the table properties into a comma separated list.  Don't add the last comma
@@ -102,8 +109,10 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
                     .map(entry -> "'" + entry.getKey() + "'='" + entry.getValue() + "'")
                     .reduce((a, b) -> a + "," + b).orElse(""));
 
-            String convertToIceberg = MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG, let.getName(), icebergProperties.toString());
-            String convertToIcebergDesc = MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG_DESC, config.getIcebergConfig().getVersion());
+            String convertToIceberg =
+                    MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG, let.getName(), icebergProperties.toString());
+            String convertToIcebergDesc =
+                    MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG_DESC, getConfigService().getConfig().getIcebergConfig().getVersion());
             let.addSql(convertToIcebergDesc, convertToIceberg);
             return Boolean.TRUE;
         } catch (Exception e) {
@@ -113,15 +122,15 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     }
 
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = buildOutDefinition();//tblMirror.buildoutDUMPDefinition(config, dbMirror);
+        rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutDUMPDefinition(config, dbMirror);
         if (rtn) {
-            rtn = buildOutSql();//tblMirror.buildoutDUMPSql(config, dbMirror);
+            rtn = buildOutSql(tableMirror);//tblMirror.buildoutDUMPSql(config, dbMirror);
         }
         if (rtn) {
-            config.getCluster(Environment.LEFT).runTableSql(tableMirror);
+            getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;

@@ -18,13 +18,14 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.HadoopSession;
-import com.cloudera.utils.hadoop.hms.Context;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 
@@ -44,6 +45,8 @@ import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
 
+@Getter
+@Setter
 @Slf4j
 public class DBMirror {
 //    private static final Logger log = LoggerFactory.getLogger(DBMirror.class);
@@ -51,6 +54,8 @@ public class DBMirror {
     private String name;
     @JsonIgnore
     private String resolvedName;
+    @JsonIgnore
+    private Config config;
 
     private Map<Environment, Map<String, String>> dbDefinitions = new TreeMap<Environment, Map<String, String>>();
     @JsonIgnore
@@ -66,7 +71,8 @@ public class DBMirror {
     @JsonIgnore
     private final Map<Environment, List<Pair>> sql = new TreeMap<Environment, List<Pair>>();
 
-    public DBMirror() {
+    public DBMirror(Config config) {
+        this.config = config;
     }
 
     /*
@@ -91,20 +97,20 @@ public class DBMirror {
         return dbMirror;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+//    public void setName(String name) {
+//        this.name = name;
+//    }
 
-    public String getName() {
-        return name;
-    }
+//    public String getName() {
+//        return name;
+//    }
 
-    public String getResolvedName() {
-        if (resolvedName == null) {
-            resolvedName = Context.getInstance().getConfig().getResolvedDB(getName());
-        }
-        return resolvedName;
-    }
+//    public String getResolvedName() {
+//        if (resolvedName == null) {
+//            resolvedName = config.getResolvedDB(getName());
+//        }
+//        return resolvedName;
+//    }
 
     public void setTableMirrors(Map<String, TableMirror> tableMirrors) {
         this.tableMirrors = tableMirrors;
@@ -196,7 +202,7 @@ public class DBMirror {
     Return String[3] for Hive.  0-Create Sql, 1-Location, 2-Mngd Location.
      */
     public void buildDBStatements() {
-        Config config = Context.getInstance().getConfig();
+//        Config config = Context.getInstance().getConfig();
         // Start with the LEFT definition.
         Map<String, String> dbDefLeft = getDBDefinition(Environment.LEFT);//getDBDefinition(Environment.LEFT);
         Map<String, String> dbDefRight = getDBDefinition(Environment.RIGHT);//getDBDefinition(Environment.LEFT);
@@ -407,10 +413,10 @@ public class DBMirror {
                                             CommandReturn testCr = main.processInput("test -d " + dbLocation);
                                             if (testCr.isError()) {
                                                 // Doesn't exist.  So we can't create the DB in a "read-only" mode.
-                                                config.getErrors().set(RO_DB_DOESNT_EXIST.getCode(), dbLocation,
-                                                        testCr.getCode(), testCr.getCommand(), getName());
-                                                addIssue(Environment.RIGHT, config.getErrors().getMessage(RO_DB_DOESNT_EXIST.getCode()));
-                                                throw new RuntimeException(config.getErrors().getMessage(RO_DB_DOESNT_EXIST.getCode()));
+                                                config.addError(RO_DB_DOESNT_EXIST, dbLocation,
+                                                        testCr, testCr.getCommand(), getName());
+                                                addIssue(Environment.RIGHT, config.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
+                                                throw new RuntimeException(config.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
 //                                        } else {
 //                                            config.getCluster(Environment.RIGHT).databaseSql(config, database, dbCreate[0]);
                                             }
@@ -430,7 +436,7 @@ public class DBMirror {
                                 String createDbL = MessageFormat.format(MirrorConf.CREATE_DB, database);
                                 StringBuilder sbL = new StringBuilder();
                                 sbL.append(createDbL).append("\n");
-                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && dbDefLeft.get(MirrorConf.COMMENT).trim().length() > 0) {
+                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && !dbDefLeft.get(MirrorConf.COMMENT).trim().isEmpty()) {
                                     sbL.append(MirrorConf.COMMENT).append(" \"").append(dbDefLeft.get(MirrorConf.COMMENT)).append("\"\n");
                                 }
                                 // TODO: DB Properties.
@@ -459,7 +465,7 @@ public class DBMirror {
                                 String createDb = MessageFormat.format(MirrorConf.CREATE_DB, database);
                                 StringBuilder sb = new StringBuilder();
                                 sb.append(createDb).append("\n");
-                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && dbDefLeft.get(MirrorConf.COMMENT).trim().length() > 0) {
+                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && !dbDefLeft.get(MirrorConf.COMMENT).trim().isEmpty()) {
                                     sb.append(MirrorConf.COMMENT).append(" \"").append(dbDefLeft.get(MirrorConf.COMMENT)).append("\"\n");
                                 }
                                 if (location != null) {
@@ -475,7 +481,7 @@ public class DBMirror {
                                 String createDbCom = MessageFormat.format(MirrorConf.CREATE_DB, database);
                                 StringBuilder sbCom = new StringBuilder();
                                 sbCom.append(createDbCom).append("\n");
-                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && dbDefLeft.get(MirrorConf.COMMENT).trim().length() > 0) {
+                                if (dbDefLeft.get(MirrorConf.COMMENT) != null && !dbDefLeft.get(MirrorConf.COMMENT).trim().isEmpty()) {
                                     sbCom.append(MirrorConf.COMMENT).append(" \"").append(dbDefLeft.get(MirrorConf.COMMENT)).append("\"\n");
                                 }
                                 if (location != null) {

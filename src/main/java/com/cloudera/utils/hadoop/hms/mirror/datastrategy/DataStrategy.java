@@ -22,20 +22,20 @@ import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 
 public interface DataStrategy {
-    Boolean execute();
+    Boolean execute(TableMirror tableMirror);
 
-    Config getConfig();
+//    Config getConfig();
 
-    void setConfig(Config config);
+//    void setConfig(Config config);
 
-    DBMirror getDBMirror();
+//    DBMirror getDBMirror();
 
-    void setDBMirror(DBMirror dbMirror);
+//    void setDBMirror(DBMirror dbMirror);
 
-    TableMirror getTableMirror();
+//    TableMirror getTableMirror();
 
-    void setTableMirror(TableMirror tableMirror);
+//    void setTableMirror(TableMirror tableMirror);
 
-    Boolean buildOutDefinition();
-    Boolean buildOutSql();
+    Boolean buildOutDefinition(TableMirror tableMirror);
+    Boolean buildOutSql(TableMirror tableMirror);
 }

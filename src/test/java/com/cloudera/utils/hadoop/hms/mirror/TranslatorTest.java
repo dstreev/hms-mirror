@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -112,7 +112,7 @@ public class TranslatorTest {
 //        translator.setOn(true);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/apps/hive/warehouse/tpcds_09.db";
         String expectedLoc = "hdfs://RIGHT/apps/hive/warehouse/tpcds_09.db";
         try {
@@ -136,7 +136,7 @@ public class TranslatorTest {
         tableMirror.setParent(dbMirror);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/tpcds_base_dir";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/new_location";
         try {
@@ -160,7 +160,7 @@ public class TranslatorTest {
         tableMirror.setParent(dbMirror);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/tpcds_base_dir2";
         String expectedLoc = "hdfs://RIGHT/myspace/alt/ext/call_center";
         try {
@@ -188,7 +188,7 @@ public class TranslatorTest {
         tableMirror.setParent(dbMirror);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/tpcds_base_dir3";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/web_sales";
         try {
@@ -212,7 +212,7 @@ public class TranslatorTest {
         tableMirror.setParent(dbMirror);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/tpcds_base_dir5/web_sales";
         String expectedLoc = "hdfs://RIGHT/warehouse/tablespace/external/hive/tpcds_10.db/web_sales";
         try {
@@ -296,7 +296,7 @@ public class TranslatorTest {
         tableMirror.setParent(dbMirror);
         Assert.assertTrue("Couldn't validate translator configuration", translator.validate());
         Config config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
         String originalLoc = "hdfs://LEFT/tpcds_base_dir/web_sales";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/web_sales";
         try {

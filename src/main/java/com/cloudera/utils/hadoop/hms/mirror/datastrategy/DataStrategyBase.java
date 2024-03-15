@@ -19,8 +19,10 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.HadoopSession;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.regex.Matcher;
@@ -33,55 +35,60 @@ public abstract class DataStrategyBase implements DataStrategy {
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
-    protected Config config;
-    protected DBMirror dbMirror;
-    protected TableMirror tableMirror;
+    @Getter
+    protected ConfigService configService;
 
-    @Override
-    public void setDBMirror(DBMirror dbMirror) {
-        this.dbMirror = dbMirror;
-    }
+//    protected Config config;
+//    protected DBMirror dbMirror;
+//    protected TableMirror tableMirror;
 
-    @Override
-    public DBMirror getDBMirror() {
-        return dbMirror;
-    }
+//    @Override
+//    public void setDBMirror(DBMirror dbMirror) {
+//        this.dbMirror = dbMirror;
+//    }
 
-    @Override
-    public void setConfig(Config config) {
-        this.config = config;
-    }
+//    @Override
+//    public DBMirror getDBMirror() {
+//        return dbMirror;
+//    }
 
-    @Override
-    public Config getConfig() {
-        return config;
-    }
+//    @Override
+//    public void setConfig(Config config) {
+//        this.config = config;
+//    }
 
-    @Override
-    public void setTableMirror(TableMirror tableMirror) {
-        this.tableMirror = tableMirror;
-    }
+//    @Override
+//    public Config getConfig() {
+//        return config;
+//    }
 
-    @Override
-    public TableMirror getTableMirror() {
-        return tableMirror;
-    }
+//    @Override
+//    public void setTableMirror(TableMirror tableMirror) {
+//        this.tableMirror = tableMirror;
+//    }
 
-    public EnvironmentTable getEnvironmentTable(Environment environment) {
-        EnvironmentTable et = getTableMirror().getEnvironments().get(environment);
+//    @Override
+//    public TableMirror getTableMirror() {
+//        return tableMirror;
+//    }
+
+    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
+        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
         if (et == null) {
-            et = new EnvironmentTable(getTableMirror());
-            getTableMirror().getEnvironments().put(environment, et);
+            et = new EnvironmentTable(tableMirror);
+            tableMirror.getEnvironments().put(environment, et);
         }
         return et;
     }
 
-    protected Boolean AVROCheck() {
+    protected Boolean AVROCheck(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         Boolean relative = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
         // Check for AVRO
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
         if (TableUtils.isAVROSchemaBased(let)) {
             log.info(let.getName() + ": is an AVRO table.");
             String leftPath = TableUtils.getAVROSchemaPath(let);

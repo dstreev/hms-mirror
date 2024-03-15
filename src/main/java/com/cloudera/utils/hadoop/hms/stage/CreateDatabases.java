@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.stage;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Conversion;
 import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
@@ -47,7 +47,7 @@ public class CreateDatabases implements Callable<ReturnStatus> {
     @Override
     public ReturnStatus call() {
         ReturnStatus rtn = new ReturnStatus();
-        Config config = Context.getInstance().getConfig();
+        Config config = ConnectionPoolService.getInstance().getConfig();
         log.debug("Create Databases");
         for (String database : config.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);

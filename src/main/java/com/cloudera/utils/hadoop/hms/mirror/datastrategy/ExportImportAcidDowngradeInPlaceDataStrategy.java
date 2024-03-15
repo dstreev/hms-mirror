@@ -20,17 +20,35 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
+@Component
 @Slf4j
 public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(ExportImportAcidDowngradeInPlaceDataStrategy.class);
 
+    @Getter
+    private ExportImportDataStrategy exportImportDataStrategy;
+
+    @Autowired
+    public void setExportImportDataStrategy(ExportImportDataStrategy exportImportDataStrategy) {
+        this.exportImportDataStrategy = exportImportDataStrategy;
+    }
+
+    public ExportImportAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         /*
         rename original to archive
@@ -39,11 +57,11 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         write cleanup sql to drop original_archive.
          */
         // Check Partition Limits before proceeding.
-        DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT.getDataStrategy();
-        dsEI.setTableMirror(tableMirror);
-        dsEI.setDBMirror(dbMirror);
-        dsEI.setConfig(config);
-        rtn = dsEI.buildOutSql();// tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+//        DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT.getDataStrategy();
+//        dsEI.setTableMirror(tableMirror);
+//        dsEI.setDBMirror(dbMirror);
+//        dsEI.setConfig(config);
+        rtn = exportImportDataStrategy.buildOutSql(tableMirror);// tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
         if (rtn) {
             // Build cleanup Queries (drop archive table)
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -51,9 +69,10 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 
             // Check Partition Counts.
-            if (let.getPartitioned() && let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit()) {
+            if (let.getPartitioned() && let.getPartitions().size() > getConfigService().getConfig().getHybrid().getExportImportPartitionLimit()) {
                 let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the EXPORT_IMPORT " +
-                        "partition limit (hybrid->exportImportPartitionLimit) of " + config.getHybrid().getExportImportPartitionLimit() +
+                        "partition limit (hybrid->exportImportPartitionLimit) of " +
+                        getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() +
                         ".  The queries will NOT be automatically run.");
                 rtn = Boolean.FALSE;
             }
@@ -61,19 +80,19 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
 
         // run queries.
         if (rtn) {
-            config.getCluster(Environment.LEFT).runTableSql(tableMirror);
+            getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         return null;
     }
 }

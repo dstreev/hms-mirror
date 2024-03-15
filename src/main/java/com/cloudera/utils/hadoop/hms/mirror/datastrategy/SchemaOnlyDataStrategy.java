@@ -18,46 +18,76 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_SYNC_PARTS;
 
+@Component
 @Slf4j
 public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(SchemaOnlyDataStrategy.class);
 
+    @Getter
+    private TableService tableService;
+
+    @Getter
+    TranslatorService translatorService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+
+    public SchemaOnlyDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = getTableMirror().buildoutSCHEMA_ONLYDefinition(config, dbMirror);
+        rtn = this.buildOutDefinition(tableMirror);
 
         if (rtn) {
-            rtn = AVROCheck();
+            rtn = AVROCheck(tableMirror);
         }
         if (rtn) {
-            rtn = getTableMirror().buildoutSCHEMA_ONLYSql(config, dbMirror);
+            rtn = this.buildOutSql(tableMirror);
         }
         if (rtn) {
-            rtn = getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
+//            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
+            rtn = getTableService().runTableSql(tableMirror, Environment.RIGHT);
         }
         return rtn;
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        log.debug("Table: " + dbMirror.getName() + " buildout SCHEMA_ONLY Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout SCHEMA_ONLY Definition");
+        Config config = getConfigService().getConfig();
+
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
         // Swap out the namespace of the LEFT with the RIGHT.
@@ -65,10 +95,10 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         if (config.convertManaged())
             copySpec.setUpgrade(Boolean.TRUE);
         if (!config.isReadOnly() || !config.isSync()) {
-            if ((TableUtils.isExternal(let) && config.getCluster(Environment.LEFT).getLegacyHive()) ||
+            if ((TableUtils.isExternal(let) && config.getCluster(Environment.LEFT).isLegacyHive()) ||
                     // Don't add purge for non-legacy environments...
                     // https://github.com/cloudera-labs/hms-mirror/issues/5
-                    (TableUtils.isExternal(let) && !config.getCluster(Environment.LEFT).getLegacyHive())) {
+                    (TableUtils.isExternal(let) && !config.getCluster(Environment.LEFT).isLegacyHive())) {
                 copySpec.setTakeOwnership(Boolean.FALSE);
             } else {
                 copySpec.setTakeOwnership(Boolean.TRUE);
@@ -76,10 +106,10 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         } else if (copySpec.getUpgrade()) {
             ret.addIssue("Ownership (PURGE Option) not set because of either: `sync` or `ro|read-only` was specified in the config.");
         }
-        if (config.isReadOnly()) {
+        if (getConfigService().getConfig().isReadOnly()) {
             copySpec.setTakeOwnership(Boolean.FALSE);
         }
-        if (config.isNoPurge()) {
+        if (getConfigService().getConfig().isNoPurge()) {
             copySpec.setTakeOwnership(Boolean.FALSE);
         }
 
@@ -98,7 +128,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 // If left and right, check schema change and replace if necessary.
                 // Compare Schemas.
                 if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
-                    if (let.getPartitioned() && config.getEvaluatePartitionLocation()) {
+                    if (let.getPartitioned() && config.isEvaluatePartitionLocation()) {
                         ret.setCreateStrategy(CreateStrategy.AMEND_PARTS);
                         ret.addIssue(SCHEMA_EXISTS_SYNC_PARTS.getDesc());
                     } else {
@@ -124,7 +154,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                     ret.addIssue("View exists already.  Will REPLACE.");
                     ret.setCreateStrategy(CreateStrategy.REPLACE);
                 } else {
-                    if (config.getCluster(Environment.RIGHT).getCreateIfNotExists()) {
+                    if (getConfigService().getConfig().getCluster(Environment.RIGHT).isCreateIfNotExists()) {
                         ret.addIssue("Schema exists already.  But you've specified 'createIfNotExist', which will attempt to create " +
                                 "(possibly fail, softly) and continue with the remainder sql statements for the table/partitions.");
                         ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -149,7 +179,9 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         }
 
         // Rebuild Target from Source.
-        if (!TableUtils.isACID(let) || (TableUtils.isACID(let) && config.getMigrateACID().isOn())) {
+        if (!TableUtils.isACID(let)
+                || (TableUtils.isACID(let)
+                && getConfigService().getConfig().getMigrateACID().isOn())) {
             rtn = tableMirror.buildTableSchema(copySpec);
         } else {
             let.addIssue(TableUtils.ACID_NOT_ON);
@@ -158,7 +190,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         }
 
         // If not legacy, remove location from ACID tables.
-        if (rtn && !config.getCluster(Environment.LEFT).getLegacyHive() &&
+        if (rtn && !getConfigService().getConfig().getCluster(Environment.LEFT).isLegacyHive() &&
                 TableUtils.isACID(let)) {
             TableUtils.stripLocation(let.getName(), let.getDefinition());
         }
@@ -166,20 +198,21 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        log.debug("Table: " + getDBMirror().getName() + " buildout SCHEMA_ONLY SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout SCHEMA_ONLY SQL");
+        Config config = getConfigService().getConfig();
 
         String useDb = null;
         String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         //ret.getSql().clear();
 
-        database = config.getResolvedDB(dbMirror.getName());
+        database = getConfigService().getResolvedDB(tableMirror.getParent().getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -208,7 +241,8 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 ret.addSql(TableUtils.USE_DESC, useDb);
                 String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
+                if (!getConfigService().getConfig().getCluster(Environment.RIGHT).isLegacyHive()
+                        && getConfigService().getConfig().isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
@@ -222,10 +256,10 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         if (let.getPartitioned() && !TableUtils.isACID(let) &&
                 (ret.getCreateStrategy() == CreateStrategy.REPLACE || ret.getCreateStrategy() == CreateStrategy.CREATE
                         || ret.getCreateStrategy() == CreateStrategy.AMEND_PARTS)) {
-            if (config.getEvaluatePartitionLocation()) {
+            if (config.isEvaluatePartitionLocation()) {
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
-                String tableParts = config.getTranslator().buildPartitionAddStatement(ret);
+                String tableParts = getTranslatorService().buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
             } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {

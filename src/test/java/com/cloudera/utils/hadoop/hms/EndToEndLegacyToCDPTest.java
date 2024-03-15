@@ -21,12 +21,8 @@ import com.cloudera.utils.hadoop.hms.mirror.DBMirror;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.MessageCode;
 import com.cloudera.utils.hadoop.hms.mirror.PhaseState;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.List;
 
 import static com.cloudera.utils.hadoop.hms.EnvironmentConstants.*;
 import static org.junit.Assert.assertEquals;
@@ -1695,7 +1691,7 @@ public class EndToEndLegacyToCDPTest extends EndToEndBase {
 
         String line = getDistcpLine(outputDir, resultsMirrors, 0, Environment.RIGHT, 1, 0);
         String checkStr = "s3a://my_intermediate_bucket/hms_mirror_working/"
-                + Context.getInstance().getConfig().getRunMarker()
+                + ConnectionPoolService.getInstance().getConfig().getRunMarker()
                 + "/ext_purge_odd_parts.db";
         assertEquals("Right Distcp source file isn't correct.", checkStr, line);
 

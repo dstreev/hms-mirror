@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms;
 
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -70,7 +71,7 @@ public class DataState {
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         String yamlCfgFile = FileUtils.readFileToString(cfgFile, StandardCharsets.UTF_8);
         Config cfg = mapper.readerFor(Config.class).readValue(yamlCfgFile);
-        Context.getInstance().setConfig(cfg);
+        ConnectionPoolService.getInstance().setConfig(cfg);
     }
 
     public Boolean getPopulate() {
@@ -122,7 +123,7 @@ public class DataState {
     public Boolean isDataCreated(String dataset) {
         Boolean rtn = Boolean.FALSE;
         if (!skipAdditionDataCreation) {
-            Config cfg = Context.getInstance().getConfig();
+            Config cfg = ConnectionPoolService.getInstance().getConfig();
             String namespace = cfg.getCluster(Environment.LEFT).getHcfsNamespace();
             Map<String, Boolean> nsCreatedDataset = dataCreated.get(namespace);
             if (nsCreatedDataset == null) {
@@ -147,7 +148,7 @@ public class DataState {
     }
 
     public void setDataCreated(String dataset, Boolean dataCreatedFlag) {
-        Config cfg = Context.getInstance().getConfig();
+        Config cfg = ConnectionPoolService.getInstance().getConfig();
         String namespace = cfg.getCluster(Environment.LEFT).getHcfsNamespace();
         Map<String, Boolean> nsCreatedDataset = dataCreated.get(namespace);
         if (nsCreatedDataset == null) {

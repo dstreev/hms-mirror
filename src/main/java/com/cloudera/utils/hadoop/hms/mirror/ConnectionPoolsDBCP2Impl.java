@@ -17,13 +17,15 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.DriverUtils;
 import com.cloudera.utils.hive.config.DBStore;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -35,16 +37,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+//@Component
 @Slf4j
 public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
 //    private static final Logger log = LoggerFactory.getLogger(ConnectionPools.class);
 
+    @Getter
+    private ConfigService configService;
     private final Map<Environment, PoolingDataSource<PoolableConnection>> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
     private final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
 
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, PoolingDataSource<PoolableConnection>> metastoreDirectDataSources = new TreeMap<>();
+
+    public ConnectionPoolsDBCP2Impl(ConfigService configService) {
+        this.configService = configService;
+    }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
         hiveServerConfigs.put(environment, hiveServer2);
@@ -55,12 +64,15 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        initHS2Drivers();
-        initHS2PooledDataSources();
-        // Only init if we are going to use it. (`-epl`).
-        if (Context.getInstance().loadPartitionMetadata()) {
-            initMetastoreDataSources();
+        if (!getConfigService().getConfig().isLoadingTestData()) {
+            initHS2Drivers();
+            initHS2PooledDataSources();
+            // Only init if we are going to use it. (`-epl`).
+            if (getConfigService().loadPartitionMetadata()) {
+                initMetastoreDataSources();
+            }
         }
+
     }
 
     protected void initHS2Drivers() throws SQLException {
@@ -101,7 +113,7 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
 
                 poolableConnectionFactory.setPool(connectionPool);
 
-                PoolingDataSource poolingDatasource = new PoolingDataSource<>(connectionPool);
+                PoolingDataSource<PoolableConnection> poolingDatasource = new PoolingDataSource<>(connectionPool);
 //            poolingDatasource.setLoginTimeout(10);
 
                 hs2DataSources.put(environment, poolingDatasource);

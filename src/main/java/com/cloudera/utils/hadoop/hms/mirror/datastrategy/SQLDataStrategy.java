@@ -18,28 +18,56 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 
+@Component
 @Slf4j
 public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(SQLDataStrategy.class);
-    @Override
-    public Boolean execute() {
-        Boolean rtn = Boolean.FALSE;
 
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+    @Getter
+    private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
+
+    @Getter
+    private IntermediateDataStrategy intermediateDataStrategy;
+
+    @Autowired
+    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
+        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
+    }
+
+    @Autowired
+    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
+        this.intermediateDataStrategy = intermediateDataStrategy;
+    }
+
+    public SQLDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
         if (tableMirror.isACIDDowngradeInPlace(config, let)) {
-            DataStrategy dsACIDDowngradeInplace = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-            dsACIDDowngradeInplace.setTableMirror(tableMirror);
-            dsACIDDowngradeInplace.setDBMirror(dbMirror);
-            dsACIDDowngradeInplace.setConfig(config);
-            rtn = dsACIDDowngradeInplace.execute();//doSQLACIDDowngradeInplace();
+//            DataStrategy dsACIDDowngradeInplace = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
+//            dsACIDDowngradeInplace.setTableMirror(tableMirror);
+//            dsACIDDowngradeInplace.setDBMirror(dbMirror);
+//            dsACIDDowngradeInplace.setConfig(config);
+//            rtn = dsACIDDowngradeInplace.execute();//doSQLACIDDowngradeInplace();
+            rtn = getSqlAcidDowngradeInPlaceDataStrategy().execute(tableMirror);
         } else if (config.getTransfer().getIntermediateStorage() != null
                 || config.getTransfer().getCommonStorage() != null
                 || (TableUtils.isACID(let)
@@ -47,24 +75,25 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             if (TableUtils.isACID(let)) {
                 tableMirror.setStrategy(DataStrategyEnum.ACID);
             }
-            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-            dsIt.setTableMirror(tableMirror);
-            dsIt.setDBMirror(dbMirror);
-            dsIt.setConfig(config);
-            rtn = dsIt.execute();//doIntermediateTransfer();
+//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
+//            dsIt.setTableMirror(tableMirror);
+//            dsIt.setDBMirror(dbMirror);
+//            dsIt.setConfig(config);
+//            rtn = dsIt.execute();//doIntermediateTransfer();
+            rtn = getIntermediateDataStrategy().execute(tableMirror);
         } else {
 
-            EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
-            EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
+            EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+            EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
 
             // We should not get ACID tables in this routine.
-            rtn = buildOutDefinition();//tableMirror.buildoutSQLDefinition(config, dbMirror);
+            rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLDefinition(config, dbMirror);
 
             if (rtn)
-                rtn = AVROCheck();
+                rtn = AVROCheck(tableMirror);
 
             if (rtn)
-                rtn = buildOutSql();//tableMirror.buildoutSQLSql(config, dbMirror);
+                rtn = buildOutSql(tableMirror);//tableMirror.buildoutSQLSql(config, dbMirror);
 
             // Construct Transfer SQL
             if (rtn) {
@@ -85,27 +114,29 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
+        Config config = getConfigService().getConfig();
 
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         EnvironmentTable set = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         // Different transfer technique.  Staging location.
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null ||
                 TableUtils.isACID(let)) {
-            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-            dsIt.setTableMirror(tableMirror);
-            dsIt.setDBMirror(dbMirror);
-            dsIt.setConfig(config);
-            return dsIt.buildOutDefinition();
+//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
+//            dsIt.setTableMirror(tableMirror);
+//            dsIt.setDBMirror(dbMirror);
+//            dsIt.setConfig(config);
+//            return dsIt.buildOutDefinition();
+            return getIntermediateDataStrategy().buildOutDefinition(tableMirror);
 //            return buildoutIntermediateDefinition(config, dbMirror);
         }
 
@@ -168,17 +199,19 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout SQL SQL");
+        Config config = getConfigService().getConfig();
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null) {
-            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-            dsIt.setTableMirror(tableMirror);
-            dsIt.setDBMirror(dbMirror);
-            dsIt.setConfig(config);
-            return dsIt.buildOutSql();
+//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
+//            dsIt.setTableMirror(tableMirror);
+//            dsIt.setDBMirror(dbMirror);
+//            dsIt.setConfig(config);
+//            return dsIt.buildOutSql();
+            return getIntermediateDataStrategy().buildOutSql(tableMirror);
 //            return buildoutIntermediateSql(config, dbMirror);
         }
 
@@ -186,9 +219,9 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
         String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
-        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
 
         ret.getSql().clear();
 
@@ -198,14 +231,14 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
 //        if (!isACIDDowngradeInPlace(config, let)) {
-            database = config.getResolvedDB(dbMirror.getName());
+            database = getConfigService().getResolvedDB(tableMirror.getParent().getName());
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
             ret.addSql(TableUtils.USE_DESC, useDb);
 
             String dropStmt = null;
             // Create RIGHT Shadow Table
-            if (set.getDefinition().size() > 0) {
+            if (!set.getDefinition().isEmpty()) {
                 // Drop any previous SHADOW table, if it exists.
                 dropStmt = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
                 ret.addSql(TableUtils.DROP_DESC, dropStmt);
@@ -238,7 +271,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                 case CREATE:
                     String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                    if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
+                    if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                         ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                     }

@@ -17,26 +17,41 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hadoop.hms.mirror.CopySpec;
-import com.cloudera.utils.hadoop.hms.mirror.CreateStrategy;
-import com.cloudera.utils.hadoop.hms.mirror.Environment;
-import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
 
+@Component
 @Slf4j
 public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(LinkedDataStrategy.class);
+
+    @Getter
+    private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
+
+    @Autowired
+    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
+        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
+    }
+
+    public LinkedDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
-        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable tet = getEnvironmentTable(Environment.TRANSFER, tableMirror);
+        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         if (TableUtils.isACID(let)) {
             tableMirror.addIssue(Environment.LEFT, "You can't 'LINK' ACID tables.");
@@ -46,12 +61,12 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
         }
 
         if (rtn) {
-            rtn = buildOutSql();//tblMirror.buildoutLINKEDSql(config, dbMirror);
+            rtn = buildOutSql(tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
         }
 
         // Execute the RIGHT sql if config.execute.
         if (rtn) {
-            rtn = config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
+            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
         }
 
         return rtn;
@@ -59,27 +74,27 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout LINKED Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
         // Can't LINK ACID tables.
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
             copySpec.setReplaceLocation(Boolean.FALSE);
-            if (config.convertManaged())
+            if (getConfigService().getConfig().convertManaged())
                 copySpec.setUpgrade(Boolean.TRUE);
             // LINKED doesn't own the data.
             copySpec.setTakeOwnership(Boolean.FALSE);
 
-            if (config.isSync()) {
+            if (getConfigService().getConfig().isSync()) {
                 // We assume that the 'definitions' are only there is the
                 //     table exists.
                 if (!let.getExists() && ret.getExists()) {
@@ -131,11 +146,12 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     }
 
     @Override
-    public Boolean buildOutSql() {
-        DataStrategy dsSO = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
-        dsSO.setTableMirror(tableMirror);
-        dsSO.setDBMirror(dbMirror);
-        dsSO.setConfig(config);
-        return dsSO.execute();
+    public Boolean buildOutSql(TableMirror tableMirror) {
+//        DataStrategy dsSO = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
+//        dsSO.setTableMirror(tableMirror);
+//        dsSO.setDBMirror(dbMirror);
+//        dsSO.setConfig(config);
+        return schemaOnlyDataStrategy.execute(tableMirror);
+//        return dsSO.execute();
     }
 }

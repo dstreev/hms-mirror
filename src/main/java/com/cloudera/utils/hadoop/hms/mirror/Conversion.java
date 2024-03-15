@@ -17,13 +17,16 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -31,16 +34,31 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+//@Component
+@Getter
+@Setter
+@Slf4j
 public class Conversion {
     @JsonIgnore
     private final Date start = new Date();
+    @JsonIgnore
+    private Config config;
+
+    public Conversion() {
+    }
+
+    public Conversion(Config config) {
+        this.config = config;
+    }
+
     private Map<String, DBMirror> databases = new TreeMap<String, DBMirror>();
+
 
     public DBMirror addDatabase(String database) {
         if (databases.containsKey(database)) {
             return databases.get(database);
         } else {
-            DBMirror dbs = new DBMirror();
+            DBMirror dbs = new DBMirror(config);
             dbs.setName(database);
             databases.put(database, dbs);
             return dbs;
@@ -105,7 +123,7 @@ public class Conversion {
         sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
         sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
 //        sb.append("-- These are the command run on the " + environment + " cluster when `-e` is used.\n");
-        String rDb = Context.getInstance().getConfig().getResolvedDB(database);
+        String rDb = ConnectionPoolService.getInstance().getConfig().getResolvedDB(database);
         DBMirror dbMirror = databases.get(database);
 
         sb.append("USE ").append(rDb).append(";\n");

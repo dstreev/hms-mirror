@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,7 +41,7 @@ public class StatsCalculator {
      */
     protected static Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        if (!Context.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
+        if (!ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
             try {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 Long dataSize = (Long) envTable.getStatistics().get(DATA_SIZE);
@@ -59,8 +59,8 @@ public class StatsCalculator {
 
         if (envTable.getPartitioned()) {
 
-            if (Context.getInstance().getConfig().getOptimization().getAutoTune() &&
-                    !Context.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
+            if (ConnectionPoolService.getInstance().getConfig().getOptimization().getAutoTune() &&
+                    !ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 if (envTable.getStatistics().get(DATA_SIZE) != null) {
                     Long ratio = StatsCalculator.getPartitionDistributionRatio(envTable);
@@ -103,7 +103,7 @@ public class StatsCalculator {
     public static void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
 
         // Skip if no stats collection.
-        if (Context.getInstance().getConfig().getOptimization().getSkipStatsCollection())
+        if (ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection())
             return;
 
         // Small File Checks
@@ -146,7 +146,7 @@ public class StatsCalculator {
 
         // Compression Settings.
         if (serdeType == SerdeType.TEXT) {
-            if (Context.getInstance().getConfig().getOptimization().getCompressTextOutput()) {
+            if (ConnectionPoolService.getInstance().getConfig().getOptimization().getCompressTextOutput()) {
                 applyEnv.addIssue("Setting " + HIVE_COMPRESS_OUTPUT + " because you've setting that optimization");
                 applyEnv.addSql("Setting: " + HIVE_COMPRESS_OUTPUT, "set " + HIVE_COMPRESS_OUTPUT + "=true");
             } else {

@@ -17,10 +17,12 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
@@ -28,23 +30,28 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SORT_DYNAMIC_PART
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SORT_DYNAMIC_PARTITION_THRESHOLD;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 
+@Component
 @Slf4j
 public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(SQLAcidDowngradeInPlaceDataStrategy.class);
+
+    public SQLAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
 
         /*
         In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
         the RIGHT cluster is configured the same as the LEFT.
          */
-        Config config = Context.getInstance().getConfig();
-        Cluster leftCluster = config.getCluster(Environment.LEFT);
-        Cluster rightCluster = config.getCluster(Environment.RIGHT);
-        rightCluster.setLegacyHive(leftCluster.getLegacyHive());
-        rightCluster.setHdpHive3(leftCluster.isHdpHive3());
+        Config config = getConfigService().getConfig();
+//        Config config = getConfigService().getConfig();
+//        Cluster leftCluster = config.getCluster(Environment.LEFT);
+//        Cluster rightCluster = config.getCluster(Environment.RIGHT);
+//        rightCluster.setLegacyHive(leftCluster.getLegacyHive());
+//        rightCluster.setHdpHive3(leftCluster.isHdpHive3());
         /*
         rename original table
         remove artificial bucket in new table def
@@ -52,11 +59,11 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         from original_archive insert overwrite table new external (deal with partitions).
         write cleanup sql to drop original_archive.
          */
-        rtn = buildOutDefinition();//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+        rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
 
         if (rtn) {
             // Build cleanup Queries (drop archive table)
-            EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+            EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
             String cleanUpArchive = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 
@@ -71,7 +78,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
 
         if (rtn) {
             // Build Transfer SQL
-            rtn = buildOutSql(); //tableMirror.buildoutSQLACIDDowngradeInplaceSQL(config, dbMirror);
+            rtn = buildOutSql(tableMirror); //tableMirror.buildoutSQLACIDDowngradeInplaceSQL(config, dbMirror);
         }
 
         // run queries.
@@ -83,14 +90,15 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         // Use db
-        String useDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
+        String useDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
         let.addSql(TableUtils.USE_DESC, useDb);
 
         // Build Right (to be used as new table on left).
@@ -138,26 +146,28 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
         // Check to see if there are partitions.
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         // Ensure we're in the right database.
-        String database = dbMirror.getName();
+        String database = tableMirror.getParent().getName();
         String useDb = MessageFormat.format(MirrorConf.USE, database);
 
         let.addSql(TableUtils.USE_DESC, useDb);
         // Set Override Properties.
-        if (config.getOptimization().getOverrides().getLeft().size() > 0) {
+        if (!config.getOptimization().getOverrides().getLeft().isEmpty()) {
             for (String key : config.getOptimization().getOverrides().getLeft().keySet()) {
                 let.addSql("Setting " + key, "set " + key + "=" + config.getOptimization().getOverrides().getLeft().get(key));
             }
         }
 
         if (let.getPartitioned()) {
-            if (config.getOptimization().getSkip()) {
+            if (config.getOptimization().isSkip()) {
                 if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
                 }

@@ -17,12 +17,15 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.DriverUtils;
 import com.cloudera.utils.hive.config.DBStore;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -31,14 +34,21 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
+//@Component
 @Slf4j
 public class ConnectionPoolsHikariImpl implements ConnectionPools {
-//    private static final Logger log = LoggerFactory.getLogger(ConnectionPools.class);
+
+    @Getter
+    private ConfigService configService;
     private final Map<Environment, HikariDataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
     private final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
+
+    public ConnectionPoolsHikariImpl(ConfigService configService) {
+        this.configService = configService;
+    }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
         hiveServerConfigs.put(environment, hiveServer2);
@@ -104,11 +114,11 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!Context.getInstance().getConfig().isLoadingTestData()) {
+        if (!getConfigService().getConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).
-            if (Context.getInstance().loadPartitionMetadata()) {
+            if (getConfigService().loadPartitionMetadata()) {
                 initMetastoreDataSources();
             }
         }

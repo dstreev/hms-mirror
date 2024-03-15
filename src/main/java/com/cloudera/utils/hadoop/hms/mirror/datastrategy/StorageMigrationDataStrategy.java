@@ -17,11 +17,16 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.text.DateFormat;
 import java.text.MessageFormat;
@@ -36,14 +41,29 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.*;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG;
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 
+@Component
 @Slf4j
 public class StorageMigrationDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(StorageMigrationDataStrategy.class);
+
+    @Getter
+    private TranslatorService translatorService;
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+    public StorageMigrationDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        Config config = getConfigService().getConfig();
+
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
         try {
         /*
         If using distcp, we don't need to go through and rename/recreate the tables.  We just need to change the
@@ -51,7 +71,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
          */
             if (config.getTransfer().getStorageMigration().isDistcp()) {
 
-                String database = dbMirror.getName();
+                String database = tableMirror.getParent().getName();
                 String useDb = MessageFormat.format(MirrorConf.USE, database);
 
                 let.addSql(TableUtils.USE_DESC, useDb);
@@ -59,7 +79,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                 Boolean noIssues = Boolean.TRUE;
                 String origLocation = TableUtils.getLocation(tableMirror.getName(), tableMirror.getTableDefinition(Environment.LEFT));
                 try {
-                    String newLocation = Context.getInstance().getConfig().getTranslator().
+                    String newLocation = getTranslatorService().
                             translateTableLocation(tableMirror, origLocation, 0, null);
 
                     // Build Alter Statement for Table to change location.
@@ -113,7 +133,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                         partSpec = TableUtils.toPartitionSpec(partSpec);
                         String partLocation = entry.getValue();
                         try {
-                            String newPartLocation = Context.getInstance().getConfig().getTranslator().
+                            String newPartLocation = getTranslatorService().
                                     translateTableLocation(tableMirror, partLocation, ++level, entry.getKey());
                             String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION, let.getName(), partSpec, newPartLocation);
                             String partSpecDesc = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION_DESC, partSpec);
@@ -161,9 +181,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                     rtn = Boolean.TRUE;
                 }
             } else {
-                rtn = tableMirror.buildoutSTORAGEMIGRATIONDefinition(config, dbMirror);
+                rtn = buildOutDefinition(tableMirror); //tableMirror.buildoutSTORAGEMIGRATIONDefinition(config, dbMirror);
                 if (rtn)
-                    rtn = tableMirror.buildoutSTORAGEMIGRATIONSql(config, dbMirror);
+                    rtn = buildOutSql(tableMirror); //tableMirror.buildoutSTORAGEMIGRATIONSql(config, dbMirror);
 
                 if (rtn) {
                     // Construct Transfer SQL
@@ -184,7 +204,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                     if (let.getPartitioned()) {
                         // Check that the partition count doesn't exceed the configuration limit.
                         // Build Partition Elements.
-                        if (config.getOptimization().getSkip()) {
+                        if (config.getOptimization().isSkip()) {
                             if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
                             }
@@ -261,9 +281,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
+        Config config = getConfigService().getConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -271,7 +292,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         EnvironmentTable set = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
         // Check that the table isn't already in the target location.
         StringBuilder sb = new StringBuilder();
@@ -317,20 +338,21 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout STORAGE_MIGRATION SQL");
+        Config config = getConfigService().getConfig();
 
         String useDb = null;
         String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
         let.getSql().clear();
         ret.getSql().clear();
 
-        database = dbMirror.getName();
+        database = tableMirror.getParent().getName();
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         let.addSql(TableUtils.USE_DESC, useDb);
@@ -348,7 +370,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         // Create table with New Location
         String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
         let.addSql(TableUtils.CREATE_DESC, createStmt2);
-        if (!config.getCluster(Environment.LEFT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
+        if (!config.getCluster(Environment.LEFT).getLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
         }

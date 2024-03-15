@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,10 +15,15 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.stage;
+package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
-import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
+import com.cloudera.utils.hadoop.hms.stage.CreateDatabases;
+import com.cloudera.utils.hadoop.hms.stage.GetTableMetadata;
+import com.cloudera.utils.hadoop.hms.stage.GetTables;
+import com.cloudera.utils.hadoop.hms.stage.ReturnStatus;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.RoundingMode;
@@ -40,28 +45,22 @@ Using the config, go through the databases and tables and collect the current st
 
 Create the target databases, where needed to support the migration.
  */
+//@Component
 @Slf4j
+@Getter
+@Setter
 public class Setup {
 //    private static final Logger log = LoggerFactory.getLogger(Setup.class);
 
     private Config config = null;
     private Conversion conversion = null;
-
-    private Config getConfig() {
-        if (config == null) {
-            config = Context.getInstance().getConfig();
-        }
-        return config;
-    }
-
-    public Setup(Conversion conversion) {
-        this.conversion = conversion;
-    }
+    private ConnectionPoolService connectionPoolService = null;
+    private Progression progression = null;
 
 
     // TODO: Need to address failures here...
     public Boolean collect() {
-        Context.getInstance().setInitializing(Boolean.TRUE);
+//        context.setInitializing(Boolean.TRUE);
 //        initializing = Boolean.TRUE;
         Boolean rtn = Boolean.TRUE;
         Date startTime = new Date();
@@ -212,7 +211,7 @@ public class Setup {
 
             // Failure, report and exit with FALSE
             if (!rtn) {
-                getConfig().getErrors().set(COLLECTING_TABLES.getCode());
+                getProgression().getErrors().set(COLLECTING_TABLES.getCode());
                 return Boolean.FALSE;
             }
         }
@@ -253,7 +252,7 @@ public class Setup {
 
         // Failure, report and exit with FALSE
         if (!rtn) {
-            getConfig().getErrors().set(DATABASE_CREATION.getCode());
+            getProgression().getErrors().set(DATABASE_CREATION.getCode());
             return Boolean.FALSE;
         }
 
@@ -298,7 +297,7 @@ public class Setup {
             gtf.clear(); // reset
 
             if (!rtn) {
-                getConfig().getErrors().set(COLLECTING_TABLE_DEFINITIONS.getCode());
+                getProgression().getErrors().set(COLLECTING_TABLE_DEFINITIONS.getCode());
             }
 
             log.info("==============================");
@@ -309,7 +308,7 @@ public class Setup {
             df.setRoundingMode(RoundingMode.CEILING);
             log.info("GATHERING METADATA: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
         }
-        Context.getInstance().setInitializing(Boolean.FALSE);
+//        getContext().setInitializing(Boolean.FALSE);
         return rtn;
     }
 

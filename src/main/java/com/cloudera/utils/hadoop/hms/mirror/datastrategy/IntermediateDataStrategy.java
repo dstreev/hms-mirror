@@ -18,8 +18,10 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
@@ -27,16 +29,25 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.SET_TEZ_AS_EXECUTION_ENGINE;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.TEZ_EXECUTION_DESC;
 
+@Component
 @Slf4j
 public class IntermediateDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(IntermediateDataStrategy.class);
+
+
+    public IntermediateDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = tableMirror.buildoutIntermediateDefinition(config, dbMirror);
+        rtn = buildOutDefinition(tableMirror);
+//        rtn = tableMirror.buildoutIntermediateDefinition(config, dbMirror);
         if (rtn)
-            rtn = tableMirror.buildoutIntermediateSql(config, dbMirror);
+            rtn = buildOutSql(tableMirror);
+//            rtn = tableMirror.buildoutIntermediateSql(config, dbMirror);
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
@@ -96,22 +107,22 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout Intermediate Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
-        CopySpec rightSpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        CopySpec rightSpec = new CopySpec(getConfigService().getConfig(), Environment.LEFT, Environment.RIGHT);
 
         if (ret.getExists()) {
-            if (config.getCluster(Environment.RIGHT).getCreateIfNotExists() && config.isSync()) {
+            if (!TableUtils.isACID(ret) && getConfigService().getConfig().getCluster(Environment.RIGHT).getCreateIfNotExists() && config.isSync()) {
                 ret.addIssue(CINE_WITH_EXIST.getDesc());
                 ret.setCreateStrategy(CreateStrategy.CREATE);
-            } else if(TableUtils.isACID(ret) && config.isSync()) {
+            } else if(TableUtils.isACID(ret) && getConfigService().getConfig().isSync()) {
                 ret.addIssue(SCHEMA_EXISTS_SYNC_ACID.getDesc());
                 ret.setCreateStrategy(CreateStrategy.REPLACE);
             } else {
@@ -119,7 +130,6 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
                     ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                     ret.setCreateStrategy(CreateStrategy.NOTHING);
                     return Boolean.FALSE;
-
             }
         } else {
             ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -131,9 +141,9 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             rightSpec.setReplaceLocation(Boolean.TRUE);
         } else if (TableUtils.isACID(let)) {
             // ACID
-            if (config.getMigrateACID().isDowngrade()) {
-                if (config.getTransfer().getCommonStorage() == null) {
-                    if (config.getTransfer().getStorageMigration().isDistcp()) {
+            if (getConfigService().getConfig().getMigrateACID().isDowngrade()) {
+                if (getConfigService().getConfig().getTransfer().getCommonStorage() == null) {
+                    if (getConfigService().getConfig().getTransfer().getStorageMigration().isDistcp()) {
                         rightSpec.setReplaceLocation(Boolean.TRUE);
                     } else {
                         rightSpec.setStripLocation(Boolean.TRUE);
@@ -160,9 +170,9 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
 
         // Build Transfer Spec.
         CopySpec transferSpec = new CopySpec(config, Environment.LEFT, Environment.TRANSFER);
-        if (config.getTransfer().getCommonStorage() == null) {
-            if (config.getCluster(Environment.LEFT).getLegacyHive() != config.getCluster(Environment.RIGHT).getLegacyHive()) {
-                if (config.getCluster(Environment.LEFT).getLegacyHive()) {
+        if (getConfigService().getConfig().getTransfer().getCommonStorage() == null) {
+            if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive() != getConfigService().getConfig().getCluster(Environment.RIGHT).getLegacyHive()) {
+                if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
                     transferSpec.setMakeNonTransactional(Boolean.TRUE);
                 } else {
                     // Don't support non-legacy to legacy conversions.
@@ -170,7 +180,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
                     return Boolean.FALSE;
                 }
             } else {
-                if (config.getCluster(Environment.LEFT).getLegacyHive()) {
+                if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
                     // Legacy to Legacy
                     // Non-Transactional, Managed (for ownership)
                     transferSpec.setMakeNonTransactional(Boolean.TRUE);
@@ -184,14 +194,15 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         } else {
             // Storage will be used by right.  So don't let Transfer table own data.
             transferSpec.setMakeNonTransactional(Boolean.TRUE);
-            if (config.getCluster(Environment.LEFT).getLegacyHive() != config.getCluster(Environment.RIGHT).getLegacyHive()) {
-                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+            if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()
+                    != getConfigService().getConfig().getCluster(Environment.RIGHT).getLegacyHive()) {
+                if (!getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
                     // Don't support non-legacy to legacy conversions.
                     let.addIssue("Don't support Non-Legacy to Legacy conversions.");
                     return Boolean.FALSE;
                 } else {
-                    if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
-                        if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                    if (TableUtils.isACID(let) && getConfigService().getConfig().getMigrateACID().isDowngrade()) {
+                        if (!getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
                             transferSpec.setMakeExternal(Boolean.TRUE);
                             transferSpec.setTakeOwnership(Boolean.FALSE);
                         } else {
@@ -202,11 +213,11 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
                     }
                 }
             } else {
-                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                if (!getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
                     // Non Legacy to Non Legacy
                     // External w/ Ownership
                     transferSpec.setMakeExternal(Boolean.TRUE);
-                    if (config.getMigrateACID().isDowngrade()) {
+                    if (getConfigService().getConfig().getMigrateACID().isDowngrade()) {
                         // The location will be used by the right cluster, so do not own the data.
                         transferSpec.setTakeOwnership(Boolean.FALSE);
                     } else {
@@ -217,7 +228,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             }
         }
 
-        transferSpec.setTableNamePrefix(config.getTransfer().getTransferPrefix());
+        transferSpec.setTableNamePrefix(getConfigService().getConfig().getTransfer().getTransferPrefix());
         transferSpec.setReplaceLocation(Boolean.TRUE);
 
         if (rtn)
@@ -227,12 +238,13 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         // Build Shadow Spec (don't build when using commonStorage)
         // If acid and ma.isOn
         // if not downgrade
-        if ((config.getTransfer().getIntermediateStorage() != null && !TableUtils.isACID(let)) ||
-                (TableUtils.isACID(let) && config.getMigrateACID().isOn())) {
-            if (!config.getMigrateACID().isDowngrade() ||
+        if ((getConfigService().getConfig().getTransfer().getIntermediateStorage() != null && !TableUtils.isACID(let)) ||
+                (TableUtils.isACID(let) && getConfigService().getConfig().getMigrateACID().isOn())) {
+            if (!getConfigService().getConfig().getMigrateACID().isDowngrade() ||
                     // Is Downgrade but the downgraded location isn't available to the right.
-                    (config.getMigrateACID().isDowngrade() && config.getTransfer().getCommonStorage() == null)) {
-                if (!config.getTransfer().getStorageMigration().isDistcp()) { // ||
+                    (getConfigService().getConfig().getMigrateACID().isDowngrade()
+                            && getConfigService().getConfig().getTransfer().getCommonStorage() == null)) {
+                if (!getConfigService().getConfig().getTransfer().getStorageMigration().isDistcp()) { // ||
 //                (config.getMigrateACID().isOn() && TableUtils.isACID(let)
 //                        && !config.getMigrateACID().isDowngrade())) {
                     CopySpec shadowSpec = new CopySpec(config, Environment.LEFT, Environment.SHADOW);
@@ -240,7 +252,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
                     shadowSpec.setMakeExternal(Boolean.TRUE);
                     shadowSpec.setTakeOwnership(Boolean.FALSE);
                     shadowSpec.setReplaceLocation(Boolean.TRUE);
-                    shadowSpec.setTableNamePrefix(config.getTransfer().getShadowPrefix());
+                    shadowSpec.setTableNamePrefix(getConfigService().getConfig().getTransfer().getShadowPrefix());
 
                     if (rtn)
                         rtn = tableMirror.buildTableSchema(shadowSpec);
@@ -251,7 +263,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: " + tableMirror.getName() + " buildout Intermediate SQL");
 
@@ -267,7 +279,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         ret.getSql().clear();
 
         // LEFT Transfer Table
-        database = dbMirror.getName();
+        database = tableMirror.getParent().getName();
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         let.addSql(TableUtils.USE_DESC, useDb);
@@ -279,7 +291,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         String transferCreateStmt = tableMirror.getCreateStatement(Environment.TRANSFER);
         let.addSql(TableUtils.CREATE_TRANSFER_DESC, transferCreateStmt);
 
-        database = config.getResolvedDB(dbMirror.getName());
+        database = getConfigService().getResolvedDB(tableMirror.getParent().getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
         ret.addSql(TableUtils.USE_DESC, useDb);
 
@@ -319,12 +331,12 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             case CREATE:
                 String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
+                if (!getConfigService().getConfig().getCluster(Environment.RIGHT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
                 if (let.getPartitioned()) {
-                    if (config.getTransfer().getCommonStorage() != null) {
+                    if (getConfigService().getConfig().getTransfer().getCommonStorage() != null) {
                         if (!TableUtils.isACID(let) || (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade())) {
                             String rightMSCKStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                             ret.addSql(TableUtils.REPAIR_DESC, rightMSCKStmt);

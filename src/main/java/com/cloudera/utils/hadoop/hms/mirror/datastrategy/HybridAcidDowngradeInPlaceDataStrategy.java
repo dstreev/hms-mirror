@@ -19,15 +19,39 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 @Slf4j
 public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy  {
 
-//    private static final Logger log = LoggerFactory.getLogger(HybridAcidDowngradeInPlaceDataStrategy.class);
+    @Getter
+    private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
+
+    @Getter
+    private ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy;
+
+    @Autowired
+    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
+        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
+    }
+
+    @Autowired
+    public void setExportImportAcidDowngradeInPlaceDataStrategy(ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
+        this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
+    }
+
+    public HybridAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         /*
         Check environment is Hive 3.
@@ -41,49 +65,53 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
         else
             too many partitions.
          */
-        if (config.getCluster(Environment.LEFT).getLegacyHive()) {
-            DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-            dsSADI.setTableMirror(tableMirror);
-            dsSADI.setDBMirror(dbMirror);
-            dsSADI.setConfig(config);
-            rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
+        if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
+//            DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
+//            dsSADI.setTableMirror(tableMirror);
+//            dsSADI.setDBMirror(dbMirror);
+//            dsSADI.setConfig(config);
+//            rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
+            rtn = sqlAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             if (let.getPartitioned()) {
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
-                if (let.getPartitions().size() < config.getHybrid().getExportImportPartitionLimit() ||
-                        config.getHybrid().getExportImportPartitionLimit() <= 0) {
-                    DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-                    dsEI.setTableMirror(tableMirror);
-                    dsEI.setDBMirror(dbMirror);
-                    dsEI.setConfig(config);
-                    rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
+                if (let.getPartitions().size() < getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() ||
+                        getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() <= 0) {
+//                    DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
+//                    dsEI.setTableMirror(tableMirror);
+//                    dsEI.setDBMirror(dbMirror);
+//                    dsEI.setConfig(config);
+//                    rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
+                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
                 } else {
-                    DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-                    dsSADI.setTableMirror(tableMirror);
-                    dsSADI.setDBMirror(dbMirror);
-                    dsSADI.setConfig(config);
-                    rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
+//                    DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
+//                    dsSADI.setTableMirror(tableMirror);
+//                    dsSADI.setDBMirror(dbMirror);
+//                    dsSADI.setConfig(config);
+//                    rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
+                    rtn = sqlAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-                DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-                dsEI.setTableMirror(tableMirror);
-                dsEI.setDBMirror(dbMirror);
-                dsEI.setConfig(config);
-                rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
+//                DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
+//                dsEI.setTableMirror(tableMirror);
+//                dsEI.setDBMirror(dbMirror);
+//                dsEI.setConfig(config);
+//                rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
+                rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
             }
         }
         return rtn;
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         return null;
     }
 }

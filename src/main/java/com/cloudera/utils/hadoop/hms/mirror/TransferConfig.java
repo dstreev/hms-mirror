@@ -17,6 +17,14 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+
+//@Component("transfer")
+@Slf4j
+@Getter
+@Setter
 public class TransferConfig {
     private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";
@@ -30,57 +38,57 @@ public class TransferConfig {
     // TODO:
 //    private List<Mapping> pathMappings = null;
 
-    public int getConcurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
-    }
-
-    public String getTransferPrefix() {
-        return transferPrefix;
-    }
-
-    public void setTransferPrefix(String transferPrefix) {
-        this.transferPrefix = transferPrefix;
-    }
-
-    public String getShadowPrefix() {
-        return shadowPrefix;
-    }
-
-    public void setShadowPrefix(String shadowPrefix) {
-        this.shadowPrefix = shadowPrefix;
-    }
-
-    public String getExportBaseDirPrefix() {
-        return exportBaseDirPrefix;
-    }
-
-    public void setExportBaseDirPrefix(String exportBaseDirPrefix) {
-        this.exportBaseDirPrefix = exportBaseDirPrefix;
-    }
-
-    public String getRemoteWorkingDirectory() {
-        return remoteWorkingDirectory;
-    }
-
-    public void setRemoteWorkingDirectory(String remoteWorkingDirectory) {
-        this.remoteWorkingDirectory = remoteWorkingDirectory;
-    }
-
-    public String getIntermediateStorage() {
-        return intermediateStorage;
-    }
-
-    public void setIntermediateStorage(String intermediateStorage) {
-        this.intermediateStorage = intermediateStorage;
-    }
-
-    public String getCommonStorage() {
-        return commonStorage;
-    }
+//    public int getConcurrency() {
+//        return concurrency;
+//    }
+//
+//    public void setConcurrency(int concurrency) {
+//        this.concurrency = concurrency;
+//    }
+//
+//    public String getTransferPrefix() {
+//        return transferPrefix;
+//    }
+//
+//    public void setTransferPrefix(String transferPrefix) {
+//        this.transferPrefix = transferPrefix;
+//    }
+//
+//    public String getShadowPrefix() {
+//        return shadowPrefix;
+//    }
+//
+//    public void setShadowPrefix(String shadowPrefix) {
+//        this.shadowPrefix = shadowPrefix;
+//    }
+//
+//    public String getExportBaseDirPrefix() {
+//        return exportBaseDirPrefix;
+//    }
+//
+//    public void setExportBaseDirPrefix(String exportBaseDirPrefix) {
+//        this.exportBaseDirPrefix = exportBaseDirPrefix;
+//    }
+//
+//    public String getRemoteWorkingDirectory() {
+//        return remoteWorkingDirectory;
+//    }
+//
+//    public void setRemoteWorkingDirectory(String remoteWorkingDirectory) {
+//        this.remoteWorkingDirectory = remoteWorkingDirectory;
+//    }
+//
+//    public String getIntermediateStorage() {
+//        return intermediateStorage;
+//    }
+//
+//    public void setIntermediateStorage(String intermediateStorage) {
+//        this.intermediateStorage = intermediateStorage;
+//    }
+//
+//    public String getCommonStorage() {
+//        return commonStorage;
+//    }
 
     public void setCommonStorage(String commonStorage) {
         if (commonStorage != null) {
@@ -100,9 +108,9 @@ public class TransferConfig {
         return storageMigration;
     }
 
-    public void setStorageMigration(StorageMigration storageMigration) {
-        this.storageMigration = storageMigration;
-    }
+//    public void setStorageMigration(StorageMigration storageMigration) {
+//        this.storageMigration = storageMigration;
+//    }
 
     public WarehouseConfig getWarehouse() {
         if (warehouse == null)
@@ -110,9 +118,9 @@ public class TransferConfig {
         return warehouse;
     }
 
-    public void setWarehouse(WarehouseConfig warehouse) {
-        this.warehouse = warehouse;
-    }
+//    public void setWarehouse(WarehouseConfig warehouse) {
+//        this.warehouse = warehouse;
+//    }
 
 //    public List<Mapping> getPathMappings() {
 //        return pathMappings;

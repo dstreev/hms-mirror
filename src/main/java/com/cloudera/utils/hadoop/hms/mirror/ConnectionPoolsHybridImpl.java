@@ -17,15 +17,18 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.DriverUtils;
 import com.cloudera.utils.hive.config.DBStore;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -34,9 +37,13 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
+//@Component
 @Slf4j
 public class ConnectionPoolsHybridImpl implements ConnectionPools {
 //    private static final Logger log = LoggerFactory.getLogger(ConnectionPools.class);
+
+    @Getter
+    private ConfigService configService;
 
     private final Map<Environment, DataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
@@ -44,6 +51,10 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
 
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
+
+    public ConnectionPoolsHybridImpl(ConfigService configService) {
+        this.configService = configService;
+    }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
         hiveServerConfigs.put(environment, hiveServer2);
@@ -123,11 +134,13 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        initHS2Drivers();
-        initHS2PooledDataSources();
-        // Only init if we are going to use it. (`-epl`).
-        if (Context.getInstance().loadPartitionMetadata()) {
-            initMetastoreDataSources();
+        if (!getConfigService().getConfig().isLoadingTestData()) {
+            initHS2Drivers();
+            initHS2PooledDataSources();
+            // Only init if we are going to use it. (`-epl`).
+            if (getConfigService().loadPartitionMetadata()) {
+                initMetastoreDataSources();
+            }
         }
     }
 
@@ -159,7 +172,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
                 // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (Context.getInstance().getConfig().getCluster(environment).getLegacyHive()) {
+                if (ConnectionPoolService.getInstance().getConfig().getCluster(environment).getLegacyHive()) {
                     ConnectionFactory connectionFactory =
                             new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 

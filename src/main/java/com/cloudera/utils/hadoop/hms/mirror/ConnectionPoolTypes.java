@@ -17,6 +17,6 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-public enum ConnectionPoolLibs {
+public enum ConnectionPoolTypes {
     DBCP2, HIKARICP, HYBRID
 }

@@ -20,18 +20,47 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.EXTERNAL_TABLE_PURGE;
 
+@Component
 @Slf4j
 public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(ConvertLinkedDataStrategy.class);
+
+    @Getter
+    private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
+
+    @Getter
+    private TranslatorService translatorService;
+
+    @Autowired
+    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
+        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+
+    public ConvertLinkedDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
@@ -48,7 +77,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                 } else if (tableMirror.isPartitioned(Environment.LEFT)) {
                     // We need to drop the RIGHT and RECREATE.
                     ret.addIssue("Table is partitioned.  Need to change data strategy to drop and recreate.");
-                    String useDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getResolvedName());
+                    String useDb = MessageFormat.format(MirrorConf.USE, config.getResolvedDB(tableMirror.getParent().getName()));
                     ret.addSql(MirrorConf.USE_DESC, useDb);
 
                     // Make sure the table is NOT set to purge.
@@ -63,20 +92,20 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                     // Set False that it doesn't exists, which it won't, since we're dropping it.
                     ret.setExists(Boolean.FALSE);
                     // Fallback to SCHEMA_ONLY.
-                    DataStrategy soDS = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
-                    soDS.setTableMirror(tableMirror);
-                    soDS.setDBMirror(dbMirror);
-                    soDS.setConfig(config);
-                    rtn = soDS.execute();
+//                    DataStrategy soDS = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
+//                    soDS.setTableMirror(tableMirror);
+//                    soDS.setDBMirror(dbMirror);
+//                    soDS.setConfig(config);
+                    rtn = schemaOnlyDataStrategy.execute(tableMirror);
                 } else {
                     // - AVRO LOCATION
-                    if (AVROCheck()) {
-                        String useDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getResolvedName());
+                    if (AVROCheck(tableMirror)) {
+                        String useDb = MessageFormat.format(MirrorConf.USE, getConfigService().getResolvedDB(tableMirror.getParent().getName()));
                         ret.addSql(MirrorConf.USE_DESC, useDb);
                         // Look at the table definition and get.
                         // - LOCATION
                         String sourceLocation = TableUtils.getLocation(ret.getName(), ret.getDefinition());
-                        String targetLocation = config.getTranslator().
+                        String targetLocation = getTranslatorService().
                                 translateTableLocation(tableMirror, sourceLocation, 1, null);
                         String alterLocSql = MessageFormat.format(MirrorConf.ALTER_TABLE_LOCATION, ret.getName(), targetLocation);
                         ret.addSql(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterLocSql);
@@ -92,7 +121,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
 
                         // Execute the RIGHT sql if config.execute.
                         if (rtn) {
-                            rtn = config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
+                            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
                         }
                     }
                 }
@@ -107,12 +136,12 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         return null;
     }
 }

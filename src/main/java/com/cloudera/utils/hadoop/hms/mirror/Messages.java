@@ -29,15 +29,15 @@ public class Messages {
         bitSet = new BitSet(size);
     }
 
-    public void set(int bit, Object... args) {
-        bitSet.set(bit);
+    public void set(MessageCode messageCode, Object... args) {
+        bitSet.set(messageCode.getCode());
         if (args != null) {
-            argMap.put(bit, args);
+            argMap.put(messageCode.getCode(), args);
         }
     }
 
-    public void set(int bit) {
-        bitSet.set(bit);
+    public void set(MessageCode messageCode) {
+        bitSet.set(messageCode.getCode());
     }
 
     public long getReturnCode() {

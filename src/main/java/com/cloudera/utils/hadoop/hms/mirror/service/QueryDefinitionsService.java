@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,65 +15,35 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms;
+package com.cloudera.utils.hadoop.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.hms.mirror.Cluster;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
-import com.cloudera.utils.hadoop.hms.mirror.ConnectionPools;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hive.config.QueryDefinitions;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.stereotype.Service;
 
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
-import static com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
+@Service
+@Slf4j
+public class QueryDefinitionsService {
 
-public class Context {
-    private static final Context instance = new Context();
-    private List<String> supportFileSystems = new ArrayList<String>(Arrays.asList(
-            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf"
-    ));
-    private Config config = null;
-    private Boolean initializing = Boolean.FALSE;
-    private ConnectionPools connectionPools = null;
+    private Config config;
 
     private Map<Environment, QueryDefinitions> queryDefinitionsMap = new HashMap<>();
 
-    private Context() {
-    }
-
-    public Boolean getInitializing() {
-        return initializing;
-    }
-
-    public void setInitializing(Boolean initializing) {
-        this.initializing = initializing;
-    }
-
-    public static Context getInstance() {
-        return instance;
-    }
-
-    public Config getConfig() {
-        return config;
-    }
-
-    public Boolean loadPartitionMetadata() {
-        if (config.getEvaluatePartitionLocation() ||
-                (config.getDataStrategy() == STORAGE_MIGRATION && config.getTransfer().getStorageMigration().isDistcp())) {
-            return Boolean.TRUE;
-        } else {
-            return Boolean.FALSE;
-        }
-    }
-
-    public void setConfig(Config config) {
+    public QueryDefinitionsService(Config config) {
         this.config = config;
     }
 
@@ -112,15 +82,4 @@ public class Context {
         return queryDefinitions;
     }
 
-    public ConnectionPools getConnectionPools() {
-        return connectionPools;
-    }
-
-    public void setConnectionPools(ConnectionPools connectionPools) {
-        this.connectionPools = connectionPools;
-    }
-
-    public List<String> getSupportFileSystems() {
-        return supportFileSystems;
-    }
 }

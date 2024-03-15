@@ -63,8 +63,9 @@ CMD_DIRECTIVE=
 CMD_ARGS=
 VERBOSE=
 
-# Setting this to true ALWAYS.  No longer including all the hadoop lib in a shaded jar.
-HADOOP_CLASSPATH="true"
+# The new default is to run using the `hadoop classpath`, which assumes that the host has Hadoop installed and
+#  we'll use the classpath from the host to include the current hadoop libraries.
+STANDALONE="false"
 
 APP_JAVA_OPTS=${JAVA_OPTS:-"-Xms2048m -Xmx4096m -XX:+UseG1GC"}
 LOGGING_THRESHOLD=${LOGGING_THRESHOLD:-"DEBUG"}
@@ -90,7 +91,16 @@ while [[ $# -gt 0 ]]; do
     ;;
   --hadoop-classpath)
     shift
-    HADOOP_CLASSPATH="true"
+    echo "--hadoop-classpath is `deprecated`.  The hadoop dependencies are pulled from the host by default using `hadoop classpath`"
+    echo "If you want to use your own hadoop dependencies, use the --standalone option and place those libraries in the"
+    echo " ${HOME}/.hms-mirror/hadoop_libs directory."
+#    HADOOP_CLASSPATH="true"
+    ;;
+  --standalone)
+    shift
+    echo "Running in Standalone Mode.  Collect and place the appropriate hadoop libraries in ${HOME}/.hms-mirror/hadoop_libs directory."
+    echo " The application will use the libraries in that directory instead of the host hadoop libraries (which may not be available)."
+    STANDALONE="true"
     ;;
   --aux-libs)
     shift
@@ -129,25 +139,15 @@ if [[ ! -d ${AUX_LIBS_DIR} ]]; then
   mkdir -p ${AUX_LIBS_DIR}
 fi
 
-# Build Classpath of files in the lib directory
-#CMD_CP=${CMD_CP}:${APP_DIR}/../lib/*
-
-# Add Hadoop Libs to classpath only if hadoop-common isn't already in the classpath.
-#for jarfile in $(ls ${APP_DIR}/../lib/); do
-#    if [[ "${jarfile}" == "hadoop-common"* ]]; then
-#      echo "Found 'hadoop-common' in lib directory.  Not adding Hadoop Classpath."
-#      HADOOP_CLASSPATH="false"
-#    fi
-#done
-
-if [[ "${HADOOP_CLASSPATH}x" == "truex" ]]; then
-    echo "Picking up local Hadoop Classpath Libs."
-    CMD_CP=${CMD_CP}:$(hadoop classpath)
-fi
-
 # Add aux_libs to classpath
 CMD_CP=${CMD_CP}:${AUX_LIBS_DIR}/*
 
+if [[ "${STANDALONE}x" == "truex" ]]; then
+  echo "Picking up local Hadoop Classpath Libs."
+  CMD_CP=${CMD_CP}:${HOME}/.hms-mirror/hadoop_libs/*
+else
+  CMD_CP=${CMD_CP}:$(hadoop classpath)
+fi
 
 CLI_CMD=""
 
@@ -168,5 +168,7 @@ $(${JAVA} -version)
 echo ""
 
 CLI_CMD="${JAVA} -cp ${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=com.cloudera.utils.hadoop.hms.MirrorConsoleApp -jar ${APP_DIR}/../lib/* ${PRG_ARGS}"
+
+echo "CLI_CMD: ${CLI_CMD}"
 
 eval "${CLI_CMD}"

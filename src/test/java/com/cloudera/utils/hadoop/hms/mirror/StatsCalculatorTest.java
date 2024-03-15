@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.Context;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import junit.framework.TestCase;
 
@@ -98,7 +98,7 @@ public class StatsCalculatorTest extends TestCase {
         config.getOptimization().setSkipStatsCollection(Boolean.FALSE);
         config.getOptimization().setAutoTune(Boolean.TRUE);
         config.setDataStrategy(DataStrategyEnum.SQL);
-        Context.getInstance().setConfig(config);
+        ConnectionPoolService.getInstance().setConfig(config);
 
     }
 

@@ -18,19 +18,27 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA;
 
+@Component
 @Slf4j
 public class CommonDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(CommonDataStrategy.class);
 
+
+    public CommonDataStrategy(ConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public Boolean execute() {
+    public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -40,45 +48,45 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
             tableMirror.addIssue(Environment.RIGHT,
                     "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
         } else {
-            rtn = buildOutDefinition();
+            rtn = buildOutDefinition(tableMirror);
         }
 
         if (rtn) {
-            rtn = buildOutSql();
+            rtn = buildOutSql(tableMirror);
         }
         // Execute the RIGHT sql if config.execute.
         if (rtn) {
-            rtn = config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
+            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
         }
 
         return rtn;
     }
 
     @Override
-    public Boolean buildOutDefinition() {
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        log.debug("Table: " + dbMirror.getName() + " buildout COMMON Definition");
+        log.debug("Table: " + tableMirror.getName() + " buildout COMMON Definition");
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT);
-        ret = getEnvironmentTable(Environment.RIGHT);
+        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
-        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        copySpec = new CopySpec(getConfigService().getConfig(), Environment.LEFT, Environment.RIGHT);
         // Can't LINK ACID tables.
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
             copySpec.setReplaceLocation(Boolean.FALSE);
-            if (config.convertManaged())
+            if (getConfigService().getConfig().convertManaged())
                 copySpec.setUpgrade(Boolean.TRUE);
             // COMMON owns the data unless readonly specified.
-            if (!config.isReadOnly())
+            if (!getConfigService().getConfig().isReadOnly())
                 copySpec.setTakeOwnership(Boolean.TRUE);
-            if (config.isNoPurge())
+            if (getConfigService().getConfig().isNoPurge())
                 copySpec.setTakeOwnership(Boolean.FALSE);
 
-            if (config.isSync()) {
+            if (getConfigService().getConfig().isSync()) {
                 // We assume that the 'definitions' are only there if the
                 //     table exists.
                 if (!let.getExists() && ret.getExists()) {
@@ -130,20 +138,20 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     }
 
     @Override
-    public Boolean buildOutSql() {
+    public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        log.debug("Table: " + getDBMirror().getName() + " buildout COMMON SQL");
+        log.debug("Table: " + tableMirror.getName() + " buildout COMMON SQL");
 
         String useDb = null;
         String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         //ret.getSql().clear();
 
-        database = config.getResolvedDB(dbMirror.getName());
+        database = getConfigService().getResolvedDB(tableMirror.getParent().getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -172,7 +180,8 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 ret.addSql(TableUtils.USE_DESC, useDb);
                 String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.getTransferOwnership() && let.getOwner() != null) {
+                if (!getConfigService().getConfig().getCluster(Environment.RIGHT).getLegacyHive()
+                        && getConfigService().getConfig().isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
@@ -186,15 +195,15 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         if (let.getPartitioned() && !TableUtils.isACID(let) &&
                 (ret.getCreateStrategy() == CreateStrategy.REPLACE || ret.getCreateStrategy() == CreateStrategy.CREATE
                         || ret.getCreateStrategy() == CreateStrategy.AMEND_PARTS)) {
-            if (config.getEvaluatePartitionLocation()) {
+            if (getConfigService().getConfig().isEvaluatePartitionLocation()) {
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
-                String tableParts = config.getTranslator().buildPartitionAddStatement(ret);
+                String tableParts = getConfigService().getConfig().getTranslator().buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {
+            } else if (getConfigService().getConfig().getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
-                if (config.getTransfer().getStorageMigration().isDistcp()) {
+                if (getConfigService().getConfig().getTransfer().getStorageMigration().isDistcp()) {
                     ret.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
                 } else {
                     ret.addSql(TableUtils.REPAIR_DESC, msckStmt);
