@@ -35,12 +35,13 @@ import java.sql.SQLException;
 @Slf4j
 public class ConnectionPoolService implements ConnectionPools {
 
-    private Config config = null;
+    private ConfigService configService = null;
 
     private ConnectionPools connectionPools = null;
 
-    public ConnectionPoolService(Config config) {
-        this.config = config;
+    @Autowired
+    public ConnectionPoolService(ConfigService configService) {
+        this.configService = configService;
     }
 
     public ConnectionPools getConnectionPools() {
@@ -57,18 +58,18 @@ public class ConnectionPoolService implements ConnectionPools {
 
     private ConnectionPools getConnectionPoolsImpl() throws SQLException {
         ConnectionPools rtn = null;
-        switch (config.getConnectionPoolLib()) {
+        switch (getConfigService().getConfig().getConnectionPoolLib()) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
-                rtn = new ConnectionPoolsDBCP2Impl();
+                rtn = new ConnectionPoolsDBCP2Impl(getConfigService());
                 break;
             case HIKARICP:
                 log.info("Using HIKARICP Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHikariImpl();
+                rtn = new ConnectionPoolsHikariImpl(getConfigService());
                 break;
             case HYBRID:
                 log.info("Using HYBRID Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHybridImpl();
+                rtn = new ConnectionPoolsHybridImpl(getConfigService());
                 break;
         }
         // Initialize the connection pools

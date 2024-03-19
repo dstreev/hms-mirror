@@ -17,19 +17,23 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.cli;
 
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.commonmark.Extension;
 import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.renderer.html.HtmlRenderer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -48,31 +52,58 @@ import java.util.Set;
 @Setter
 public class CliReportWriter {
 
-    private Config config;
+    private ConfigService configService;
     private ConnectionPoolService connectionPoolService;
+    private TranslatorService translatorService;
     private Progression progression;
     private Conversion conversion;
 
-    public CliReportWriter(Config config, ConnectionPoolService connectionPoolService, Progression progression, @Qualifier("conversion") Conversion conversion) {
-        this.config = config;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
         this.connectionPoolService = connectionPoolService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+
+    @Autowired
+    public void setProgression(Progression progression) {
         this.progression = progression;
+    }
+
+    @Autowired
+    public void setConversion(Conversion conversion) {
         this.conversion = conversion;
     }
 
+//    public CliReportWriter(Config config, ConnectionPoolService connectionPoolService, Progression progression, @Qualifier("conversion") Conversion conversion) {
+//        this.config = config;
+//        this.connectionPoolService = connectionPoolService;
+//        this.progression = progression;
+//        this.conversion = conversion;
+//    }
+
     public void writeReport() {
+        Config config = getConfigService().getConfig();
         log.info("Writing CLI report and artifacts to directory: " + config.getOutputDirectory());
 //        if (!setupError) {
 
         // Remove the abstract environments from config before reporting output.
-        getConfig().getClusters().remove(Environment.TRANSFER);
-        getConfig().getClusters().remove(Environment.SHADOW);
+        config.getClusters().remove(Environment.TRANSFER);
+        config.getClusters().remove(Environment.SHADOW);
 
         ObjectMapper mapper;
         mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        for (String database : getConfig().getDatabases()) {
+        for (String database : config.getDatabases()) {
 
             String dbReportOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_hms-mirror";
             String dbLeftExecuteFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_execute.sql";
@@ -86,10 +117,10 @@ public class CliReportWriter {
                 boolean dcLeft = Boolean.FALSE;
                 boolean dcRight = Boolean.FALSE;
 
-                if (getConfig().canDeriveDistcpPlan()) {
+                if (getConfigService().canDeriveDistcpPlan()) {
                     try {
                         Environment[] environments = null;
-                        switch (getConfig().getDataStrategy()) {
+                        switch (config.getDataStrategy()) {
 
                             case DUMP:
                             case STORAGE_MIGRATION:
@@ -139,14 +170,14 @@ public class CliReportWriter {
 
                             FileWriter distcpSourceFW = null;
                             for (Map.Entry<String, Map<String, Set<String>>> entry :
-                                    getConfig().getTranslator().buildDistcpList(database, distcpEnv, 1).entrySet()) {
+                                    getTranslatorService().buildDistcpList(database, distcpEnv, 1).entrySet()) {
 
                                 distcpWorkbookSb.append("| ").append(entry.getKey()).append(" | | |\n");
                                 Map<String, Set<String>> value = entry.getValue();
                                 int i = 1;
                                 for (Map.Entry<String, Set<String>> dbMap : value.entrySet()) {
                                     String distcpSourceFile = entry.getKey() + "_" + distcpEnv.toString() + "_" + i++ + "_distcp_source.txt";
-                                    String distcpSourceFileFull = getConfig().getOutputDirectory() + FileSystems.getDefault().getSeparator() + distcpSourceFile;
+                                    String distcpSourceFileFull = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + distcpSourceFile;
                                     distcpSourceFW = new FileWriter(distcpSourceFileFull);
 
                                     StringBuilder line = new StringBuilder();
@@ -184,9 +215,9 @@ public class CliReportWriter {
                                         break;
                                 }
 
-                                String distcpWorkbookFile = getConfig().getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
+                                String distcpWorkbookFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
                                         "_" + distcpEnv + "_distcp_workbook.md";
-                                String distcpScriptFile = getConfig().getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
+                                String distcpScriptFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
                                         "_" + distcpEnv + "_distcp_script.sh";
 
                                 FileWriter distcpWorkbookFW = new FileWriter(distcpWorkbookFile);
@@ -211,12 +242,12 @@ public class CliReportWriter {
                         "\n\nThis file includes details about the configuration at the time this was run and the " +
                         "output/actions on each table in the database that was included.\n\n");
                 runbookFile.write("## Steps\n\n");
-                if (getConfig().isExecute()) {
+                if (config.isExecute()) {
                     runbookFile.write("Execute was **ON**, so many of the scripts have been run already.  Verify status " +
                             "in the above report.  `distcp` actions (if requested/applicable) need to be run manually. " +
                             "Some cleanup scripts may have been run if no `distcp` actions were requested.\n\n");
-                    if (getConfig().getCluster(Environment.RIGHT).getHiveServer2() != null) {
-                        if (getConfig().getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+                    if (config.getCluster(Environment.RIGHT).getHiveServer2() != null) {
+                        if (config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
                             runbookFile.write("Process ran with RIGHT environment 'disconnected'.  All RIGHT scripts will need to be run manually.\n\n");
                         }
                     }
@@ -225,7 +256,7 @@ public class CliReportWriter {
                 }
                 int step = 1;
                 FileWriter reportFile = new FileWriter(dbReportOutputFile + ".md");
-                String mdReportStr = conversion.toReport(config, database);
+                String mdReportStr = conversion.toReport(database);
 
 
                 File dbYamlFile = new File(dbReportOutputFile + ".yaml");
@@ -235,7 +266,8 @@ public class CliReportWriter {
                 Map<PhaseState, Integer> phaseSummaryMap = yamlDb.getPhaseSummary();
                 if (phaseSummaryMap.containsKey(PhaseState.ERROR)) {
                     Integer errCount = phaseSummaryMap.get(PhaseState.ERROR);
-                    rtn += errCount;
+                    // TODO: Add to Error Count
+//                    rtn += errCount;
                 }
 
                 String dbYamlStr = mapper.writeValueAsString(yamlDb);
@@ -271,7 +303,7 @@ public class CliReportWriter {
                     leftExecOutput.close();
                     log.info("LEFT Execution Script is here: " + dbLeftExecuteFile);
                     runbookFile.write(step++ + ". **LEFT** clusters SQL script. ");
-                    if (getConfig().isExecute()) {
+                    if (config.isExecute()) {
                         runbookFile.write(" (Has been executed already, check report file details)");
                     } else {
                         runbookFile.write("(Has NOT been executed yet)");
@@ -291,8 +323,8 @@ public class CliReportWriter {
                     rightExecOutput.close();
                     log.info("RIGHT Execution Script is here: " + dbRightExecuteFile);
                     runbookFile.write(step++ + ". **RIGHT** clusters SQL script. ");
-                    if (getConfig().isExecute()) {
-                        if (!getConfig().getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+                    if (config.isExecute()) {
+                        if (!config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
                             runbookFile.write(" (Has been executed already, check report file details)");
                         } else {
                             runbookFile.write(" (Has NOT been executed because the environment is NOT connected.  Review and run scripts manually.)");

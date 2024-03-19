@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -27,6 +28,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -39,17 +41,27 @@ import java.util.*;
 @Setter
 @Slf4j
 public class Conversion {
+
+    @JsonIgnore
+    private ConfigService configService = null;
+    @JsonIgnore
+    private Progression progression;
+
     @JsonIgnore
     private final Date start = new Date();
-    @JsonIgnore
-    private Config config;
 
-    public Conversion() {
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
     }
 
-    public Conversion(Config config) {
-        this.config = config;
+    @Autowired
+    public void setProgression(Progression progression) {
+        this.progression = progression;
     }
+//    public Conversion(Config config) {
+//        this.config = config;
+//    }
 
     private Map<String, DBMirror> databases = new TreeMap<String, DBMirror>();
 
@@ -58,7 +70,7 @@ public class Conversion {
         if (databases.containsKey(database)) {
             return databases.get(database);
         } else {
-            DBMirror dbs = new DBMirror(config);
+            DBMirror dbs = new DBMirror();
             dbs.setName(database);
             databases.put(database, dbs);
             return dbs;
@@ -67,14 +79,6 @@ public class Conversion {
 
     public void addDBMirror(DBMirror dbMirror) {
         databases.put(dbMirror.getName(), dbMirror);
-    }
-
-    public Map<String, DBMirror> getDatabases() {
-        return databases;
-    }
-
-    public void setDatabases(Map<String, DBMirror> databases) {
-        this.databases = databases;
     }
 
     public DBMirror getDatabase(String database) {
@@ -90,7 +94,7 @@ public class Conversion {
         DBMirror dbMirror = databases.get(database);
 
         List<Pair> dbSql = dbMirror.getSql(environment);
-        if (dbSql != null && dbSql.size() > 0) {
+        if (dbSql != null && !dbSql.isEmpty()) {
             for (Pair sqlPair : dbSql) {
                 sb.append("-- ").append(sqlPair.getDescription()).append("\n");
                 sb.append(sqlPair.getAction()).append(";\n");
@@ -119,11 +123,11 @@ public class Conversion {
 
     public String executeCleanUpSql(Environment environment, String database) {
         StringBuilder sb = new StringBuilder();
-        Boolean found = Boolean.FALSE;
+        boolean found = Boolean.FALSE;
         sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
         sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
 //        sb.append("-- These are the command run on the " + environment + " cluster when `-e` is used.\n");
-        String rDb = ConnectionPoolService.getInstance().getConfig().getResolvedDB(database);
+        String rDb = getConfigService().getResolvedDB(database);
         DBMirror dbMirror = databases.get(database);
 
         sb.append("USE ").append(rDb).append(";\n");
@@ -176,7 +180,9 @@ public class Conversion {
         return sb.toString();
     }
 
-    public String toReport(Config config, String database) throws JsonProcessingException {
+    public String toReport(String database) throws JsonProcessingException {
+        Config config = getConfigService().getConfig();
+
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sb.append("# HMS-Mirror for: ").append(database).append("\n\n");
@@ -204,16 +210,16 @@ public class Conversion {
         sb.append(yamlStr).append("\n");
         sb.append("```\n\n");
 
-        if (config.getErrors().getMessages().length > 0) {
+        if (progression.getErrors().getMessages().length > 0) {
             sb.append("### Config Errors:\n");
-            for (String message : config.getErrors().getMessages()) {
+            for (String message : progression.getErrors().getMessages()) {
                 sb.append("- ").append(message).append("\n");
             }
             sb.append("\n");
         }
-        if (config.getWarnings().getMessages().length > 0) {
+        if (progression.getWarnings().getMessages().length > 0) {
             sb.append("### Config Warnings:\n");
-            for (String message : config.getWarnings().getMessages()) {
+            for (String message : progression.getWarnings().getMessages()) {
                 sb.append("- ").append(message).append("\n");
             }
             sb.append("\n");
@@ -224,7 +230,7 @@ public class Conversion {
         sb.append("## Database SQL Statement(s)").append("\n\n");
 
         for (Environment environment : Environment.values()) {
-            if (dbMirror.getSql(environment) != null && dbMirror.getSql(environment).size() > 0) {
+            if (dbMirror.getSql(environment) != null && !dbMirror.getSql(environment).isEmpty()) {
                 sb.append("### ").append(environment.toString()).append("\n\n");
                 sb.append("```\n");
                 for (Pair sqlPair : dbMirror.getSql(environment)) {
@@ -375,7 +381,7 @@ public class Conversion {
                 sb.append("<td>").append("\n");
                 sb.append("<table>");
                 for (Map.Entry<Environment, EnvironmentTable> entry : tblMirror.getEnvironments().entrySet()) {
-                    if (entry.getValue().getAddProperties().size() > 0) {
+                    if (!entry.getValue().getAddProperties().isEmpty()) {
                         sb.append("<tr>\n");
                         sb.append("<th colspan=\"2\">");
                         sb.append(entry.getKey());
@@ -402,7 +408,7 @@ public class Conversion {
                 sb.append("<td>").append("\n");
                 sb.append("<table>");
                 for (Map.Entry<Environment, EnvironmentTable> entry : tblMirror.getEnvironments().entrySet()) {
-                    if (entry.getValue().getStatistics().size() > 0) {
+                    if (!entry.getValue().getStatistics().isEmpty()) {
                         sb.append("<tr>\n");
                         sb.append("<th colspan=\"2\">");
                         sb.append(entry.getKey());
@@ -443,7 +449,7 @@ public class Conversion {
                 sb.append("<td>").append("\n");
                 sb.append("<table>");
                 for (Map.Entry<Environment, EnvironmentTable> entry : tblMirror.getEnvironments().entrySet()) {
-                    if (entry.getValue().getIssues().size() > 0) {
+                    if (!entry.getValue().getIssues().isEmpty()) {
                         sb.append("<tr>\n");
                         sb.append("<th>");
                         sb.append(entry.getKey());
@@ -467,7 +473,7 @@ public class Conversion {
             sb.append("<td>\n");
             sb.append("<table>");
             for (Map.Entry<Environment, EnvironmentTable> entry : tblMirror.getEnvironments().entrySet()) {
-                if (entry.getValue().getSql().size() > 0) {
+                if (!entry.getValue().getSql().isEmpty()) {
                     sb.append("<tr>\n");
                     sb.append("<th colspan=\"2\">");
                     sb.append(entry.getKey());
@@ -502,7 +508,7 @@ public class Conversion {
         }
         sb.append("</table>").append("\n");
 
-        if (dbMirror.getFilteredOut().size() > 0) {
+        if (!dbMirror.getFilteredOut().isEmpty()) {
             sb.append("\n## Skipped Tables/Views\n\n");
 
             sb.append("| Table / View | Reason |\n");

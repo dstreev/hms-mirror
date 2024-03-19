@@ -18,10 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.StatsCalculatorService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
@@ -33,6 +36,22 @@ import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_
 @Component
 @Slf4j
 public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
+
+    @Getter
+    private TableService tableService;
+
+    @Getter
+    private StatsCalculatorService statsCalculatorService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setStatsCalculatorService(StatsCalculatorService statsCalculatorService) {
+        this.statsCalculatorService = statsCalculatorService;
+    }
 
     public SQLAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
         this.configService = configService;
@@ -83,7 +102,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
 
         // run queries.
         if (rtn) {
-            config.getCluster(Environment.LEFT).runTableSql(tableMirror);
+            getTableService().runTableSql(tableMirror, Environment.LEFT);//config.getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;
@@ -102,14 +121,14 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         let.addSql(TableUtils.USE_DESC, useDb);
 
         // Build Right (to be used as new table on left).
-        CopySpec leftNewTableSpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        CopySpec leftNewTableSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         leftNewTableSpec.setTakeOwnership(Boolean.TRUE);
         leftNewTableSpec.setMakeExternal(Boolean.TRUE);
         // Location of converted data will got to default location.
         leftNewTableSpec.setStripLocation(Boolean.TRUE);
 //        leftNewTableSpec.set
 
-        rtn = tableMirror.buildTableSchema(leftNewTableSpec);
+        rtn = getTableService().buildTableSchema(leftNewTableSpec);
 
         String origTableName = let.getName();
 
@@ -137,7 +156,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
 
         }
         // Create New Table.
-        String newCreateTable = tableMirror.getCreateStatement(Environment.RIGHT);
+        String newCreateTable = getTableService().getCreateStatement(tableMirror, Environment.RIGHT);
         let.addSql(TableUtils.CREATE_DESC, newCreateTable);
 
         rtn = Boolean.TRUE;
@@ -168,7 +187,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
 
         if (let.getPartitioned()) {
             if (config.getOptimization().isSkip()) {
-                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
                 }
                 String partElement = TableUtils.getPartitionElements(let);
@@ -177,9 +196,9 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
                 String transferDesc = MessageFormat.format(TableUtils.STAGE_TRANSFER_PARTITION_DESC, let.getPartitions().size());
                 let.addSql(new Pair(transferDesc, transferSql));
             } else if (config.getOptimization().getSortDynamicPartitionInserts()) {
-                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=true");
-                    if (!config.getCluster(Environment.LEFT).getHdpHive3()) {
+                    if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                         let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, "set " + SORT_DYNAMIC_PARTITION_THRESHOLD + "=0");
                     }
                 }
@@ -190,15 +209,15 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
                 let.addSql(new Pair(transferDesc, transferSql));
             } else {
                 // Prescriptive Optimization.
-                if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
-                    if (!config.getCluster(Environment.LEFT).getHdpHive3()) {
+                    if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                         let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, "set " + SORT_DYNAMIC_PARTITION_THRESHOLD + "=-1");
                     }
                 }
 
                 String partElement = TableUtils.getPartitionElements(let);
-                String distPartElement = StatsCalculator.getDistributedPartitionElements(let);
+                String distPartElement = statsCalculatorService.getDistributedPartitionElements(let);
                 String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS_PRESCRIPTIVE,
                         let.getName(), ret.getName(), partElement, distPartElement);
                 String transferDesc = MessageFormat.format(TableUtils.STORAGE_MIGRATION_TRANSFER_DESC, let.getPartitions().size());

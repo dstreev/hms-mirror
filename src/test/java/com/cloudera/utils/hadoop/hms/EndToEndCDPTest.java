@@ -64,7 +64,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -132,7 +132,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -183,7 +183,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM.getLong();
 
@@ -217,7 +217,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 1, rtn);
 
@@ -252,7 +252,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -312,7 +312,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 1, rtn);
 
@@ -349,7 +349,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -410,7 +410,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -445,7 +445,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -480,7 +480,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -515,7 +515,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -553,7 +553,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -588,7 +588,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 
@@ -623,7 +623,7 @@ public class EndToEndCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
 

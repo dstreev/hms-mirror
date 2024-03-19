@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,11 +15,17 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror;
+package com.cloudera.utils.hadoop.hms.mirror.service;
 
-import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
+import com.cloudera.utils.hadoop.hms.mirror.Cluster;
+import com.cloudera.utils.hadoop.hms.mirror.Config;
+import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hadoop.hms.mirror.SerdeType;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
@@ -29,8 +35,16 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.*;
 /*
 Provide a class where rules can be generated based on the hms-mirror stats collected.
  */
+@Component
 @Slf4j
-public class StatsCalculator {
+@Getter
+public class StatsCalculatorService {
+    private ConfigService configService;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 //    private static final Logger log = LoggerFactory.getLogger(StatsCalculator.class);
 
     /*
@@ -39,14 +53,16 @@ public class StatsCalculator {
         1GB / 128MB = 8
     (1024*1024*1024) / (128*1024*1024) = 8
      */
-    protected static Long getPartitionDistributionRatio(EnvironmentTable envTable) {
+    protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        if (!ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
+        Config config = getConfigService().getConfig();
+
+        if (!config.getOptimization().isSkipStatsCollection()) {
             try {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 Long dataSize = (Long) envTable.getStatistics().get(DATA_SIZE);
                 Long avgPartSize = Math.floorDiv(dataSize, (long) envTable.getPartitions().size());
-                ratio = Math.floorDiv(avgPartSize, stype.targetSize) - 1;
+                ratio = Math.floorDiv(avgPartSize, stype.getTargetSize()) - 1;
             } catch (RuntimeException rte) {
                 log.warn("Unable to calculate partition distribution ratio for table: " + envTable.getName());
             }
@@ -54,16 +70,17 @@ public class StatsCalculator {
         return ratio;
     }
 
-    public static String getDistributedPartitionElements(EnvironmentTable envTable) {
+    public String getDistributedPartitionElements(EnvironmentTable envTable) {
         StringBuilder sb = new StringBuilder();
+        Config config = getConfigService().getConfig();
 
         if (envTable.getPartitioned()) {
 
-            if (ConnectionPoolService.getInstance().getConfig().getOptimization().getAutoTune() &&
-                    !ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection()) {
+            if (config.getOptimization().isAutoTune() &&
+                    !config.getOptimization().isSkipStatsCollection()) {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 if (envTable.getStatistics().get(DATA_SIZE) != null) {
-                    Long ratio = StatsCalculator.getPartitionDistributionRatio(envTable);
+                    Long ratio = getPartitionDistributionRatio(envTable);
                     if (ratio >= 1) {
                         sb.append("ROUND((rand() * 1000) % ").append(ratio.toString()).append(")");
                     }
@@ -86,24 +103,25 @@ public class StatsCalculator {
     protected static Long getTezMaxGrouping(EnvironmentTable envTable) {
         SerdeType serdeType = serdeFromStats(envTable.getStatistics());
 
-        Long maxGrouping = serdeType.targetSize * 2L;
+        Long maxGrouping = serdeType.getTargetSize() * 2L;
 
         if (envTable.getPartitioned()) {
             if (envTable.getStatistics().get(AVG_FILE_SIZE) != null) {
                 Double avgFileSize = (Double) envTable.getStatistics().get(AVG_FILE_SIZE);
                 // If not 90% of target size.
-                if (avgFileSize < serdeType.targetSize * .5) {
-                    maxGrouping = (long) (serdeType.targetSize / 2);
+                if (avgFileSize < serdeType.getTargetSize() * .5) {
+                    maxGrouping = (long) (serdeType.getTargetSize() / 2);
                 }
             }
         }
         return maxGrouping;
     }
 
-    public static void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
+    public void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
+        Config config = getConfigService().getConfig();
 
         // Skip if no stats collection.
-        if (ConnectionPoolService.getInstance().getConfig().getOptimization().getSkipStatsCollection())
+        if (config.getOptimization().isSkipStatsCollection())
             return;
 
         // Small File Checks
@@ -112,7 +130,7 @@ public class StatsCalculator {
         if (controlEnv.getStatistics().get(AVG_FILE_SIZE) != null) {
             Double avgFileSize = (Double) controlEnv.getStatistics().get(AVG_FILE_SIZE);
             // If not 50% of target size.
-            if (avgFileSize < serdeType.targetSize * .5) {
+            if (avgFileSize < serdeType.getTargetSize() * .5) {
                 applyEnv.addIssue("Setting " + TEZ_GROUP_MAX_SIZE + " to account for the sources 'small files'");
                 // Set the tez group max size.
                 Long maxGrouping = getTezMaxGrouping(controlEnv);
@@ -146,7 +164,7 @@ public class StatsCalculator {
 
         // Compression Settings.
         if (serdeType == SerdeType.TEXT) {
-            if (ConnectionPoolService.getInstance().getConfig().getOptimization().getCompressTextOutput()) {
+            if (config.getOptimization().isCompressTextOutput()) {
                 applyEnv.addIssue("Setting " + HIVE_COMPRESS_OUTPUT + " because you've setting that optimization");
                 applyEnv.addSql("Setting: " + HIVE_COMPRESS_OUTPUT, "set " + HIVE_COMPRESS_OUTPUT + "=true");
             } else {
@@ -156,15 +174,15 @@ public class StatsCalculator {
         }
 
         // Handle Auto Stats Gathering.
-        if (!cluster.getLegacyHive()) {
-            if (cluster.getEnableAutoTableStats()) {
+        if (!cluster.isLegacyHive()) {
+            if (cluster.isEnableAutoTableStats()) {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_TABLE_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_TABLE_STATS, "set " + HIVE_AUTO_TABLE_STATS + "=true");
             } else {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_TABLE_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_TABLE_STATS, "set " + HIVE_AUTO_TABLE_STATS + "=false");
             }
-            if (cluster.getEnableAutoColumnStats()) {
+            if (cluster.isEnableAutoColumnStats()) {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_COLUMN_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_COLUMN_STATS, "set " + HIVE_AUTO_COLUMN_STATS + "=true");
             } else {

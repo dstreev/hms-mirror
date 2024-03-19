@@ -18,13 +18,15 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.StatsCalculatorService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Stat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -47,12 +49,29 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
 //    private static final Logger log = LoggerFactory.getLogger(StorageMigrationDataStrategy.class);
 
     @Getter
+    private TableService tableService;
+
+    @Getter
     private TranslatorService translatorService;
+
+    @Getter
+    private StatsCalculatorService statsCalculatorService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
 
     @Autowired
     public void setTranslatorService(TranslatorService translatorService) {
         this.translatorService = translatorService;
     }
+
+    @Autowired
+    public void setStatsCalculatorService(StatsCalculatorService statsCalculatorService) {
+        this.statsCalculatorService = statsCalculatorService;
+    }
+
     public StorageMigrationDataStrategy(ConfigService configService) {
         this.configService = configService;
     }
@@ -187,7 +206,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
 
                 if (rtn) {
                     // Construct Transfer SQL
-                    if (config.getCluster(Environment.LEFT).getLegacyHive()) {
+                    if (config.getCluster(Environment.LEFT).isLegacyHive()) {
                         // We need to ensure that 'tez' is the execution engine.
                         let.addSql(new Pair(TEZ_EXECUTION_DESC, SET_TEZ_AS_EXECUTION_ENGINE));
                     }
@@ -198,14 +217,14 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                         }
                     }
 
-                    StatsCalculator.setSessionOptions(config.getCluster(Environment.LEFT), let, let);
+                    statsCalculatorService.setSessionOptions(config.getCluster(Environment.LEFT), let, let);
 
                     // Need to see if the table has partitions.
                     if (let.getPartitioned()) {
                         // Check that the partition count doesn't exceed the configuration limit.
                         // Build Partition Elements.
                         if (config.getOptimization().isSkip()) {
-                            if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
                             }
                             String partElement = TableUtils.getPartitionElements(let);
@@ -215,9 +234,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             let.addSql(new Pair(transferDesc, transferSql));
                         } else if (config.getOptimization().getSortDynamicPartitionInserts()) {
                             // Declarative
-                            if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=true");
-                                if (!config.getCluster(Environment.LEFT).getHdpHive3()) {
+                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, "set " + SORT_DYNAMIC_PARTITION_THRESHOLD + "=0");
                                 }
                             }
@@ -228,14 +247,14 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             let.addSql(new Pair(transferDesc, transferSql));
                         } else {
                             // Prescriptive
-                            if (!config.getCluster(Environment.LEFT).getLegacyHive()) {
+                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=false");
-                                if (!config.getCluster(Environment.LEFT).getHdpHive3()) {
+                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, "set " + SORT_DYNAMIC_PARTITION_THRESHOLD + "=-1");
                                 }
                             }
                             String partElement = TableUtils.getPartitionElements(let);
-                            String distPartElement = StatsCalculator.getDistributedPartitionElements(let);
+                            String distPartElement = statsCalculatorService.getDistributedPartitionElements(let);
                             ;
                             String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS_PRESCRIPTIVE,
                                     let.getName(), ret.getName(), partElement, distPartElement);
@@ -270,7 +289,8 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
             }
             if (rtn) {
                 // Run the Transfer Scripts
-                rtn = config.getCluster(Environment.LEFT).runTableSql(let.getSql(), tableMirror, Environment.LEFT);
+                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
+                        //config.getCluster(Environment.LEFT).runTableSql(let.getSql(), tableMirror, Environment.LEFT);
             }
         } catch (Throwable t) {
             log.error("Error executing StorageMigrationDataStrategy", t);
@@ -283,6 +303,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+
         log.debug("Table: " + tableMirror.getName() + " buildout SQL Definition");
         Config config = getConfigService().getConfig();
 
@@ -319,7 +340,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         TableUtils.upsertTblProperty(HMS_STORAGE_MIGRATION_FLAG, df.format(new Date()), let);
 
         // Create a 'target' table definition on left cluster with right definition (used only as place holder)
-        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
 
         if (TableUtils.isACID(let)) {
             copySpec.setStripLocation(Boolean.TRUE);
@@ -332,7 +353,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         }
 
         // Build Shadow from Source.
-        rtn = tableMirror.buildTableSchema(copySpec);
+        rtn = tableService.buildTableSchema(copySpec);
 
         return rtn;
     }
@@ -368,9 +389,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         let.addSql(MirrorConf.RENAME_TABLE_DESC, origAlterRename);
 
         // Create table with New Location
-        String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
+        String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
         let.addSql(TableUtils.CREATE_DESC, createStmt2);
-        if (!config.getCluster(Environment.LEFT).getLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
+        if (!config.getCluster(Environment.LEFT).isLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
         }

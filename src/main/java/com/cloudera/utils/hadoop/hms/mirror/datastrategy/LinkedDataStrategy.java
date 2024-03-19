@@ -17,8 +17,10 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
+import com.amazonaws.services.glue.model.Table;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -35,9 +37,17 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Getter
     private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
 
+    @Getter
+    private TableService tableService;
+
     @Autowired
     public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
         this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 
     public LinkedDataStrategy(ConfigService configService) {
@@ -57,7 +67,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
             tableMirror.addIssue(Environment.LEFT, "You can't 'LINK' ACID tables.");
             rtn = Boolean.FALSE;
         } else {
-            rtn = buildOutDefinition();//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
+            rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
         }
 
         if (rtn) {
@@ -66,7 +76,8 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
 
         // Execute the RIGHT sql if config.execute.
         if (rtn) {
-            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
+            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+                    //getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
         }
 
         return rtn;
@@ -84,7 +95,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
         let = getEnvironmentTable(Environment.LEFT, tableMirror);
         ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
-        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         // Can't LINK ACID tables.
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
@@ -137,7 +148,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
                 }
             }
             // Rebuild Target from Source.
-            rtn = tableMirror.buildTableSchema(copySpec);
+            rtn = tableService.buildTableSchema(copySpec);
         } else {
             let.addIssue("Can't LINK ACID tables");
             ret.setCreateStrategy(CreateStrategy.NOTHING);

@@ -106,7 +106,7 @@ public class Cluster implements Comparable<Cluster> {
 
         Cluster cluster = (Cluster) o;
 
-        if (!legacyHive.equals(cluster.legacyHive)) return false;
+        if (legacyHive != (cluster.legacyHive)) return false;
         if (!hcfsNamespace.equals(cluster.hcfsNamespace)) return false;
         return hiveServer2.equals(cluster.hiveServer2);
     }
@@ -479,7 +479,7 @@ public class Cluster implements Comparable<Cluster> {
 
     @Override
     public int hashCode() {
-        int result = legacyHive.hashCode();
+        int result = legacyHive ? 1 : 0;
         result = 31 * result + hcfsNamespace.hashCode();
         result = 31 * result + hiveServer2.hashCode();
         return result;

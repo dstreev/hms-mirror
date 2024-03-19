@@ -44,7 +44,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir,};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION.getLong();
@@ -68,7 +68,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
@@ -92,7 +92,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.DISTCP_VALID_STRATEGY.getLong();
@@ -117,7 +117,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
@@ -140,7 +140,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-cfg", HDP2_CDP,
                 "-o", outputDir};
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION.getLong();
@@ -163,7 +163,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getLong();
@@ -188,7 +188,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getLong();
@@ -213,7 +213,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = MessageCode.NON_LEGACY_TO_LEGACY.getLong();
 
@@ -235,7 +235,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = MessageCode.DISTCP_REQUIRED_FOR_SCHEMA_ONLY_IS.getLong();
         assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
@@ -256,7 +256,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
         check = check | DISTCP_REQUIRED_FOR_SCHEMA_ONLY_RDL.getLong();
@@ -281,7 +281,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
@@ -305,7 +305,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
@@ -329,7 +329,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();
 
@@ -354,7 +354,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = DISTCP_REQUIRED_FOR_SCHEMA_ONLY_RDL.getLong();
         assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
@@ -377,7 +377,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = DISTCP_REQUIRED_FOR_SCHEMA_ONLY_RDL.getLong();
         assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
@@ -399,7 +399,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = 0;
@@ -424,7 +424,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.SQL_DISTCP_ONLY_W_DA_ACID.getLong();
@@ -449,7 +449,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.SQL_DISTCP_ONLY_W_DA_ACID.getLong();
@@ -475,7 +475,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         long check = MessageCode.SQL_ACID_DA_DISTCP_WO_EXT_WAREHOUSE.getLong();
 //        check = check | MessageCode.STORAGE_MIGRATION_REQUIRED_STRATEGY.getLong();
@@ -502,7 +502,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.SQL_DISTCP_ONLY_W_DA_ACID.getLong();
@@ -528,7 +528,7 @@ public class ConfigValidationTest extends EndToEndBase {
                 "-o", outputDir};
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
 
         long check = MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS.getLong();

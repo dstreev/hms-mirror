@@ -17,26 +17,28 @@
 
 package com.cloudera.utils.hadoop.hms.stage;
 
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Setter
+@Getter
 public class ReturnStatus {
-    public enum Status { SUCCESS, ERROR, FATAL }
+    public enum Status {
+        SUCCESS,
+        /*
+            * The next step has been set and the caller should continue with the next step
+         */
+        NEXTSTEP,
+        ERROR,
+        FATAL }
 
     private Status status = null;
-//    private String message = null;
+
+    private TableMirror tableMirror = null;
+
     private Throwable exception = null;
 
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public Throwable getException() {
-        return exception;
-    }
-
-    public void setException(Throwable exception) {
-        this.exception = exception;
-    }
 }

@@ -172,7 +172,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
                 // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (ConnectionPoolService.getInstance().getConfig().getCluster(environment).getLegacyHive()) {
+                if (getConfigService().getConfig().getCluster(environment).isLegacyHive()) {
                     ConnectionFactory connectionFactory =
                             new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 

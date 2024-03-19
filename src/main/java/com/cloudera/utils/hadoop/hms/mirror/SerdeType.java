@@ -17,9 +17,13 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+@Getter
 public enum SerdeType {
     ORC(134217728, "org.apache.hadoop.hive.ql.io.orc.OrcSerde"),
     PARQUET(134217728, "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
@@ -37,9 +41,7 @@ public enum SerdeType {
 
     private SerdeType(Integer targetSize, String... serdeClasses) {
         this.targetSize = targetSize;
-        for (String serdeClass : serdeClasses) {
-            this.serdeClasses.add(serdeClass);
-        }
+        Collections.addAll(this.serdeClasses, serdeClasses);
     }
 
     public Boolean isType(String serdeClass) {

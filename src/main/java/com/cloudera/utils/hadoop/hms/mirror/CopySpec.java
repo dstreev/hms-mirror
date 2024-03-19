@@ -17,52 +17,35 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+
 /*
 Used to define the table type and location you want to create.
  */
+@Slf4j
+@Getter
+@Setter
 public class CopySpec {
-    private Config config = null;
+    private TableMirror tableMirror = null;
     private Environment target = null;
     private Environment source = null;
     /*
     When specified, the table should be upgraded if it is a legacy managed table.
      */
-    private Boolean upgrade = Boolean.FALSE;
-    private Boolean makeExternal = Boolean.FALSE;
-    private Boolean makeNonTransactional = Boolean.FALSE;
-    private Boolean stripLocation = Boolean.FALSE;
-    private Boolean replaceLocation = Boolean.FALSE;
-    private Boolean takeOwnership = Boolean.FALSE;
+    private boolean upgrade = Boolean.FALSE;
+    private boolean makeExternal = Boolean.FALSE;
+    private boolean makeNonTransactional = Boolean.FALSE;
+    private boolean stripLocation = Boolean.FALSE;
+    private boolean replaceLocation = Boolean.FALSE;
+    private boolean takeOwnership = Boolean.FALSE;
     private String tableNamePrefix = null;
     private String location = null;
 
-    public CopySpec(Config config, Environment source, Environment target) {
-        this.config = config;
+    public CopySpec(TableMirror tableMirror, Environment source, Environment target) {
+        this.tableMirror = tableMirror;
         this.target = target;
-        this.source = source;
-    }
-
-    public Config getConfig() {
-        return config;
-    }
-
-    public void setConfig(Config config) {
-        this.config = config;
-    }
-
-    public Environment getTarget() {
-        return target;
-    }
-
-    public void setTarget(Environment target) {
-        this.target = target;
-    }
-
-    public Environment getSource() {
-        return source;
-    }
-
-    public void setSource(Environment source) {
         this.source = source;
     }
 
@@ -82,30 +65,6 @@ public class CopySpec {
         this.makeNonTransactional = makeNonTransactional;
     }
 
-    public Boolean getStripLocation() {
-        return stripLocation;
-    }
-
-    public void setStripLocation(Boolean stripLocation) {
-        this.stripLocation = stripLocation;
-    }
-
-    public Boolean getReplaceLocation() {
-        return replaceLocation;
-    }
-
-    public void setReplaceLocation(Boolean replaceLocation) {
-        this.replaceLocation = replaceLocation;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
     public boolean renameTable() {
         if (tableNamePrefix != null)
             return Boolean.TRUE;
@@ -113,7 +72,7 @@ public class CopySpec {
             return Boolean.FALSE;
     }
 
-    public Boolean getUpgrade() {
+    public Boolean isUpgrade() {
         return upgrade;
     }
 
@@ -122,22 +81,6 @@ public class CopySpec {
         if (this.upgrade) {
             takeOwnership = Boolean.TRUE;
         }
-    }
-
-    public Boolean getTakeOwnership() {
-        return takeOwnership;
-    }
-
-    public void setTakeOwnership(Boolean takeOwnership) {
-        this.takeOwnership = takeOwnership;
-    }
-
-    public String getTableNamePrefix() {
-        return tableNamePrefix;
-    }
-
-    public void setTableNamePrefix(String tableNamePrefix) {
-        this.tableNamePrefix = tableNamePrefix;
     }
 
 }

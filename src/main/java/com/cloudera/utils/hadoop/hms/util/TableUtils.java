@@ -777,7 +777,7 @@ public class TableUtils {
 
     public static Boolean isLegacyManaged(Cluster cluster, EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
-        if (isManaged(envTable) && cluster.getLegacyHive() && !isACID(envTable)) {
+        if (isManaged(envTable) && cluster.isLegacyHive() && !isACID(envTable)) {
             rtn = Boolean.TRUE;
         }
         return rtn;

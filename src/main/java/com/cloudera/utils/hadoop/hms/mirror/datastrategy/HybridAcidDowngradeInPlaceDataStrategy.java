@@ -65,7 +65,7 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
         else
             too many partitions.
          */
-        if (getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
+        if (getConfigService().getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
 //            DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
 //            dsSADI.setTableMirror(tableMirror);
 //            dsSADI.setDBMirror(dbMirror);

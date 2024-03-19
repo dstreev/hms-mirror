@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hadoop.hms.mirror.service.StatsCalculatorService;
 import junit.framework.TestCase;
 
 import java.util.*;
@@ -103,19 +104,19 @@ public class StatsCalculatorTest extends TestCase {
     }
 
     public void testGetAdditionalPartitionDistribution() {
-        String test = StatsCalculator.getDistributedPartitionElements(environmentTable);
+        String test = StatsCalculatorService.getDistributedPartitionElements(environmentTable);
         assertEquals("ROUND((rand() * 1000) % 8), `cr_returned_date_sk`", test);
         System.out.println(test);
     }
 
     public void testGetPartitionDistributionRatio() {
-        Long ratio = StatsCalculator.getPartitionDistributionRatio(environmentTable);
+        Long ratio = StatsCalculatorService.getPartitionDistributionRatio(environmentTable);
         assertEquals(8, (long) ratio);
         System.out.println();
     }
 
     public void testGetTezMaxGrouping_01() {
-        Long test = StatsCalculator.getTezMaxGrouping(environmentTable);
+        Long test = StatsCalculatorService.getTezMaxGrouping(environmentTable);
         assertEquals(67108864L, (long) test);
         System.out.println(test);
     }
@@ -127,7 +128,7 @@ public class StatsCalculatorTest extends TestCase {
         Cluster cluster = new Cluster();
         cluster.setEnableAutoColumnStats(Boolean.TRUE);
         cluster.setEnableAutoTableStats(Boolean.TRUE);
-        StatsCalculator.setSessionOptions(cluster, environmentTable, applyEnv);
+        StatsCalculatorService.setSessionOptions(cluster, environmentTable, applyEnv);
         System.out.println(applyEnv.getSql().stream().map(s -> s.toString() + "\n").reduce("", String::concat));
     }
 }

@@ -47,8 +47,9 @@ class ConversionInitialization {
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename",
             havingValue = "false")
-    public Conversion buildConversion(Config config) {
-        return new Conversion(config);
+    public Conversion buildConversion() {
+        log.info("Building Clean Conversion Instance");
+        return new Conversion();
     }
 
     @Bean(name = "conversion")
@@ -56,8 +57,9 @@ class ConversionInitialization {
             name = "hms-mirror.conversion.test-filename")
     public Conversion loadTestData(Config config, @Value("${hms-mirror.conversion.test-filename}")String filename) throws IOException {
         Conversion conversion = null;
+        log.info("Reconstituting Conversion from test data file: " + filename);
         try {
-            log.info("Test data file: " + filename);
+//            log.info("Test data file: " + filename);
             log.info("Check 'classpath' for test data file");
             URL configURL = this.getClass().getResource(filename);
             if (configURL == null) {
@@ -73,7 +75,7 @@ class ConversionInitialization {
             String yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
 //            mapper.readerForUpdating(conversion).readValue(yamlCfgFile);
             conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
-            conversion.setConfig(config);
+//            conversion.setConfig(config);
             // Set Config Databases;
             config.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
 //            String[] databases = conversion.getDatabases().keySet().toArray(new String[0]);

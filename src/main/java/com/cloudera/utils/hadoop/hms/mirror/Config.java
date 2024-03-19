@@ -275,7 +275,7 @@ public class Config {
                 // Only on the RIGHT cluster.
                 if (env == Environment.RIGHT) {
                     PartitionDiscovery pd = config.getCluster(env).getPartitionDiscovery();
-                    if (!config.getCluster(env).getLegacyHive()) {
+                    if (!config.getCluster(env).isLegacyHive()) {
                         // Can only auto-discover in Hive 3
                         System.out.println("Set created tables to 'auto-discover' partitions?(Y/N)");
                         response = scanner.next();
@@ -381,7 +381,7 @@ public class Config {
     }
 
     public boolean convertManaged() {
-        if (getCluster(Environment.LEFT).getLegacyHive() && !getCluster(Environment.RIGHT).getLegacyHive()) {
+        if (getCluster(Environment.LEFT).isLegacyHive() && !getCluster(Environment.RIGHT).isLegacyHive()) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;
@@ -1087,10 +1087,10 @@ public class Config {
             cluster.setConfig(this);
             switch (environment) {
                 case TRANSFER:
-                    cluster.setLegacyHive(getCluster(Environment.LEFT).getLegacyHive());
+                    cluster.setLegacyHive(getCluster(Environment.LEFT).isLegacyHive());
                     break;
                 case SHADOW:
-                    cluster.setLegacyHive(getCluster(Environment.RIGHT).getLegacyHive());
+                    cluster.setLegacyHive(getCluster(Environment.RIGHT).isLegacyHive());
                     break;
             }
             getClusters().put(environment, cluster);

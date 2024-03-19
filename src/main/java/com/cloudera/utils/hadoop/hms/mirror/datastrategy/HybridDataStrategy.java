@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
@@ -62,6 +63,8 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
 
         // Need to look at table.  ACID tables go to doACID()
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -82,11 +85,13 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
             }
         } else {
             if (let.getPartitioned()) {
-                if (let.getPartitions().size() > getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() &&
-                        getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() > 0) {
+                if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit() &&
+                        config.getHybrid().getExportImportPartitionLimit() > 0) {
                     // SQL
-                    let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the EXPORT_IMPORT " +
-                            "partition limit (hybrid->exportImportPartitionLimit) of " + config.getHybrid().getExportImportPartitionLimit() +
+                    let.addIssue("The number of partitions: " + let.getPartitions().size()
+                            + " exceeds the EXPORT_IMPORT "
+                            + "partition limit (hybrid->exportImportPartitionLimit) of "
+                            + config.getHybrid().getExportImportPartitionLimit() +
                             ".  Hence, the SQL method has been selected for the migration.");
 
                     tableMirror.setStrategy(DataStrategyEnum.SQL);

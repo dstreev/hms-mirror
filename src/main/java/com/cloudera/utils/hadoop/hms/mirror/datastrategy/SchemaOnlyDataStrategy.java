@@ -89,7 +89,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         let = getEnvironmentTable(Environment.LEFT, tableMirror);
         ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
-        copySpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         // Swap out the namespace of the LEFT with the RIGHT.
         copySpec.setReplaceLocation(Boolean.TRUE);
         if (config.convertManaged())
@@ -103,7 +103,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
             } else {
                 copySpec.setTakeOwnership(Boolean.TRUE);
             }
-        } else if (copySpec.getUpgrade()) {
+        } else if (copySpec.isUpgrade()) {
             ret.addIssue("Ownership (PURGE Option) not set because of either: `sync` or `ro|read-only` was specified in the config.");
         }
         if (getConfigService().getConfig().isReadOnly()) {
@@ -182,7 +182,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         if (!TableUtils.isACID(let)
                 || (TableUtils.isACID(let)
                 && getConfigService().getConfig().getMigrateACID().isOn())) {
-            rtn = tableMirror.buildTableSchema(copySpec);
+            rtn = getTableService().buildTableSchema(copySpec);
         } else {
             let.addIssue(TableUtils.ACID_NOT_ON);
             ret.setCreateStrategy(CreateStrategy.NOTHING);
@@ -234,12 +234,12 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                     dropStmt2 = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
                 }
                 ret.addSql(TableUtils.DROP_DESC, dropStmt2);
-                String createStmt = tableMirror.getCreateStatement(Environment.RIGHT);
+                String createStmt = getTableService().getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt);
                 break;
             case CREATE:
                 ret.addSql(TableUtils.USE_DESC, useDb);
-                String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
+                String createStmt2 = getTableService().getCreateStatement(tableMirror, Environment.RIGHT);//tableMirror.getCreateStatement(Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
                 if (!getConfigService().getConfig().getCluster(Environment.RIGHT).isLegacyHive()
                         && getConfigService().getConfig().isTransferOwnership() && let.getOwner() != null) {

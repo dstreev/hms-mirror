@@ -19,8 +19,12 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
@@ -32,6 +36,20 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_
 public class CommonDataStrategy extends DataStrategyBase implements DataStrategy {
 //    private static final Logger log = LoggerFactory.getLogger(CommonDataStrategy.class);
 
+    @Getter
+    private TableService tableService;
+    @Getter
+    private TranslatorService translatorService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
 
     public CommonDataStrategy(ConfigService configService) {
         this.configService = configService;
@@ -56,7 +74,8 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         }
         // Execute the RIGHT sql if config.execute.
         if (rtn) {
-            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
+            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+                    //getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
         }
 
         return rtn;
@@ -73,7 +92,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         let = getEnvironmentTable(Environment.LEFT, tableMirror);
         ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
-        copySpec = new CopySpec(getConfigService().getConfig(), Environment.LEFT, Environment.RIGHT);
+        copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         // Can't LINK ACID tables.
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
@@ -129,7 +148,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 }
             }
             // Rebuild Target from Source.
-            rtn = tableMirror.buildTableSchema(copySpec);
+            rtn = tableService.buildTableSchema(copySpec);
         } else {
             let.addIssue("Can't use COMMON for ACID tables");
             ret.setCreateStrategy(CreateStrategy.NOTHING);
@@ -173,14 +192,14 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                     dropStmt2 = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
                 }
                 ret.addSql(TableUtils.DROP_DESC, dropStmt2);
-                String createStmt = tableMirror.getCreateStatement(Environment.RIGHT);
+                String createStmt = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt);
                 break;
             case CREATE:
                 ret.addSql(TableUtils.USE_DESC, useDb);
-                String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
+                String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!getConfigService().getConfig().getCluster(Environment.RIGHT).getLegacyHive()
+                if (!getConfigService().getConfig().getCluster(Environment.RIGHT).isLegacyHive()
                         && getConfigService().getConfig().isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
@@ -198,7 +217,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
             if (getConfigService().getConfig().isEvaluatePartitionLocation()) {
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
-                String tableParts = getConfigService().getConfig().getTranslator().buildPartitionAddStatement(ret);
+                String tableParts = translatorService.buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
             } else if (getConfigService().getConfig().getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {

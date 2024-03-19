@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.cloudera.utils.hadoop.hms.stage.Transfer;
+import com.cloudera.utils.hadoop.hms.mirror.service.TransferService;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
@@ -93,7 +93,7 @@ public class Translator {
     }
 
     public static String removeLastDirFromUrl(final String url) {
-        Matcher matcher = Transfer.lastDirPattern.matcher(url);
+        Matcher matcher = TransferService.lastDirPattern.matcher(url);
         if (matcher.find()) {
             String matchStr = matcher.group(1);
             // Remove last occurrence ONLY.

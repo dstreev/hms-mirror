@@ -18,7 +18,7 @@
 package com.cloudera.utils.hadoop.hms.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.DataState;
-import com.cloudera.utils.hadoop.hms.Mirror;
+import com.cloudera.utils.hadoop.hms.MirrorLegacy;
 import com.cloudera.utils.hadoop.hms.mirror.Pair;
 import org.junit.Before;
 
@@ -55,7 +55,7 @@ public class AVROMigrationTest extends MirrorTestBase {
             }
             build_n_populate(CREATE_AVRO_TBL_SHORT, TBL_INSERT, null, leftSql, new String[]{"avro_01", "hdfs://HDP50/user/dstreev/datasets/avro/test.avsc"});
 
-            Mirror cfgMirror = new Mirror();
+            MirrorLegacy cfgMirror = new MirrorLegacy();
             long rtn = cfgMirror.setupSqlLeft(args, leftSql);
 
             DataState.getInstance().setDataCreated("avro", Boolean.TRUE);
@@ -84,7 +84,7 @@ public class AVROMigrationTest extends MirrorTestBase {
         args = toExecute(args, execArgs, Boolean.FALSE);
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         int check = 0;
         assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
@@ -104,7 +104,7 @@ public class AVROMigrationTest extends MirrorTestBase {
         args = toExecute(args, execArgs, Boolean.FALSE);
 
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         int check = 0;
         assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);

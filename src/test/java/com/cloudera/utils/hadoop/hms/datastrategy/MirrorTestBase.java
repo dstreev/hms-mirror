@@ -19,7 +19,7 @@ package com.cloudera.utils.hadoop.hms.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.DataState;
-import com.cloudera.utils.hadoop.hms.Mirror;
+import com.cloudera.utils.hadoop.hms.MirrorLegacy;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
@@ -103,7 +103,7 @@ public class MirrorTestBase {
             Pair r01p = new Pair("DROP DB: " + DataState.getInstance().getWorking_db(), dropDb2);
             rightSql.add(r01p);
 
-            Mirror cfgMirror = new Mirror();
+            MirrorLegacy cfgMirror = new MirrorLegacy();
 
             long rtn = 0L;
             Config cfg = ConnectionPoolService.getInstance().getConfig();
@@ -211,7 +211,7 @@ public class MirrorTestBase {
             build_n_populate(CREATE_EXTERNAL_TBL, TBL_INSERT, dataset, leftSql, new String[]{"ext_part_02"});
             build_n_populate(CREATE_LEGACY_MNGD_TBL, TBL_INSERT, dataset, leftSql, new String[]{"legacy_mngd_01"});
 
-            Mirror cfgMirror = new Mirror();
+            MirrorLegacy cfgMirror = new MirrorLegacy();
             long rtn = cfgMirror.setupSqlLeft(args, leftSql);
             DataState.getInstance().setDataCreated("dataset01", Boolean.TRUE);
         }

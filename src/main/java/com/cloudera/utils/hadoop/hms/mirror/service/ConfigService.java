@@ -22,30 +22,36 @@ import com.cloudera.utils.hadoop.hms.mirror.Cluster;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.HiveServer2Config;
-import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hadoop.hms.mirror.datastrategy.*;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.checkerframework.checker.units.qual.A;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.qos.logback.classic.util.StatusViaSLF4JLoggerFactory.addError;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
 
 @Service
 @Slf4j
+@Getter
 public class ConfigService {
-    @Getter
+
     private Config config = null;
 
-    public ConfigService(Config config) {
+    @Autowired
+    public void setConfig(Config config) {
         this.config = config;
     }
 
@@ -110,8 +116,8 @@ public class ConfigService {
                 }
                 // Check for INPLACE DOWNGRADE, in which case no RIGHT needs to be defined or check.
                 if (!getConfig().getMigrateACID().isDowngradeInPlace()) {
-                    if (getConfig().getCluster(Environment.RIGHT).getLegacyHive() &&
-                            !getConfig().getCluster(Environment.LEFT).getLegacyHive() &&
+                    if (getConfig().getCluster(Environment.RIGHT).isLegacyHive() &&
+                            !getConfig().getCluster(Environment.LEFT).isLegacyHive() &&
                             !getConfig().isDumpTestData()) {
                         getConfig().addError(NON_LEGACY_TO_LEGACY);
                         rtn = Boolean.FALSE;
@@ -121,13 +127,13 @@ public class ConfigService {
 //        }
 
         if (getConfig().getCluster(Environment.LEFT).isHdpHive3() &&
-                getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
+                getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
             getConfig().addError(LEGACY_AND_HIVE3);
             rtn = Boolean.FALSE;
         }
 
         if (getConfig().getCluster(Environment.RIGHT).isHdpHive3() &&
-                getConfig().getCluster(Environment.RIGHT).getLegacyHive()) {
+                getConfig().getCluster(Environment.RIGHT).isLegacyHive()) {
             getConfig().addError(LEGACY_AND_HIVE3);
             rtn = Boolean.FALSE;
         }
@@ -200,7 +206,7 @@ public class ConfigService {
                 }
         }
 
-        if (getConfig().getEvaluatePartitionLocation() && !getConfig().isLoadingTestData()) {
+        if (getConfig().isEvaluatePartitionLocation() && !getConfig().isLoadingTestData()) {
             switch (getConfig().getDataStrategy()) {
                 case SCHEMA_ONLY:
                 case DUMP:
@@ -284,7 +290,7 @@ public class ConfigService {
                     || getConfig().getDataStrategy() == DataStrategyEnum.LINKED
                     || getConfig().getDataStrategy() == DataStrategyEnum.CONVERT_LINKED
                     || getConfig().getDataStrategy() == DataStrategyEnum.HYBRID) {
-                addError(DISTCP_VALID_STRATEGY);
+                getConfig().addError(DISTCP_VALID_STRATEGY);
                 rtn = Boolean.FALSE;
             }
             if (getConfig().getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION
@@ -411,7 +417,7 @@ public class ConfigService {
                 getConfig().addError(DISTCP_W_DA_IP_ACID);
                 rtn = Boolean.FALSE;
             }
-            if (getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
+            if (getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
                 getConfig().addError(DA_IP_NON_LEGACY);
                 rtn = Boolean.FALSE;
             }
@@ -424,7 +430,7 @@ public class ConfigService {
                 getConfig().getTransfer().setCommonStorage(getConfig().getCluster(Environment.LEFT).getHcfsNamespace());
                 // Force reset to default location.
 //                this.setResetToDefaultLocation(Boolean.TRUE);
-                getConfig().addWarning(STORAGE_MIGRATION_NAMESPACE_LEFT, getCluster(Environment.LEFT).getHcfsNamespace());
+                getConfig().addWarning(STORAGE_MIGRATION_NAMESPACE_LEFT, getConfig().getCluster(Environment.LEFT).getHcfsNamespace());
                 if (!getConfig().isResetToDefaultLocation()
                         && getConfig().getTranslator().getGlobalLocationMap().isEmpty()) {
                     getConfig().addError(STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM);
@@ -500,7 +506,7 @@ public class ConfigService {
                 break;
             case CONVERT_LINKED:
                 // Check that the RIGHT cluster is NOT a legacy cluster.  No testing done in this scenario.
-                if (getConfig().getCluster(Environment.RIGHT).getLegacyHive()) {
+                if (getConfig().getCluster(Environment.RIGHT).isLegacyHive()) {
                     getConfig().addError(LEGACY_HIVE_RIGHT_CLUSTER);
                     rtn = Boolean.FALSE;
                 }
@@ -530,7 +536,7 @@ public class ConfigService {
 
         if (getConfig().getCluster(Environment.RIGHT) != null) {
             if (getConfig().getDataStrategy() != DataStrategyEnum.SCHEMA_ONLY &&
-                    getConfig().getCluster(Environment.RIGHT).getCreateIfNotExists()) {
+                    getConfig().getCluster(Environment.RIGHT).isCreateIfNotExists()) {
                 getConfig().addWarning(CINE_WITH_DATASTRATEGY);
             }
         }
@@ -583,7 +589,7 @@ public class ConfigService {
 
                     if (leftHS2.isKerberosConnection()
                             && rightHS2.isKerberosConnection()
-                            && (getConfig().getCluster(Environment.LEFT).getLegacyHive() != getConfig().getCluster(Environment.RIGHT).getLegacyHive())) {
+                            && (getConfig().getCluster(Environment.LEFT).isLegacyHive() != getConfig().getCluster(Environment.RIGHT).isLegacyHive())) {
                         rtn = Boolean.FALSE;
                         getConfig().addError(KERB_ACROSS_VERSIONS);
                     }
@@ -726,7 +732,7 @@ public class ConfigService {
     }
 
     public Boolean loadPartitionMetadata() {
-        if (getConfig().getEvaluatePartitionLocation() ||
+        if (getConfig().isEvaluatePartitionLocation() ||
                 (getConfig().getDataStrategy() == STORAGE_MIGRATION &&
                         getConfig().getTransfer().getStorageMigration().isDistcp())) {
             return Boolean.TRUE;
@@ -737,8 +743,8 @@ public class ConfigService {
 
     public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
-        if (getConfig().getCluster(Environment.LEFT).getLegacyHive() != getConfig().getCluster(Environment.RIGHT).getLegacyHive()) {
-            if (getConfig().getCluster(Environment.LEFT).getLegacyHive()) {
+        if (getConfig().getCluster(Environment.LEFT).isLegacyHive() != getConfig().getCluster(Environment.RIGHT).isLegacyHive()) {
+            if (getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
                 rtn = Boolean.TRUE;
             }
         }
@@ -766,6 +772,57 @@ public class ConfigService {
             }
         }
         return getConfig().getOptimization().isSkipStatsCollection();
+    }
+
+    public void setupGSS() {
+        try {
+            String CURRENT_USER_PROP = "current.user";
+
+            String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
+            String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml", "mapred-site.xml", "yarn-site.xml"};
+
+            // Get a value that over rides the default, if nothing then use default.
+            String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
+
+            // Set a default
+            if (hadoopConfDirProp == null)
+                hadoopConfDirProp = "/etc/hadoop/conf";
+
+            Configuration hadoopConfig = new Configuration(true);
+
+            File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
+            for (String file : HADOOP_CONF_FILES) {
+                File f = new File(hadoopConfDir, file);
+                if (f.exists()) {
+                    log.debug("Adding conf resource: '" + f.getAbsolutePath() + "'");
+                    try {
+                        // I found this new Path call failed on the Squadron Clusters.
+                        // Not sure why.  Anyhow, the above seems to work the same.
+                        hadoopConfig.addResource(new Path(f.getAbsolutePath()));
+                    } catch (Throwable t) {
+                        // This worked for the Squadron Cluster.
+                        // I think it has something to do with the Docker images.
+                        hadoopConfig.addResource("file:" + f.getAbsolutePath());
+                    }
+                }
+            }
+
+            // hadoop.security.authentication
+            if (hadoopConfig.get("hadoop.security.authentication", "simple").equalsIgnoreCase("kerberos")) {
+                try {
+                    UserGroupInformation.setConfiguration(hadoopConfig);
+                } catch (Throwable t) {
+                    // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
+                    log.error("Failed GSS Init.  Attempting different Group Mapping");
+                    hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
+                    UserGroupInformation.setConfiguration(hadoopConfig);
+                }
+            }
+        } catch (Throwable t) {
+            log.error("Issue initializing Kerberos", t);
+            t.printStackTrace();
+            throw t;
+        }
     }
 
 }

@@ -39,7 +39,7 @@ public class EndToEndHDP3toCDPTest extends EndToEndBase {
                 "-o", outputDir
         };
         long rtn = 0;
-        Mirror mirror = new Mirror();
+        MirrorLegacy mirror = new MirrorLegacy();
         rtn = mirror.go(args);
         assertEquals("Return Code Failure: " + rtn, 0, rtn);
     }

@@ -51,17 +51,17 @@ public class ClusterService {
         this.databaseService = databaseService;
     }
 
-    public Boolean runClusterSql(List<Pair> clusterSql) {
-        Boolean rtn = Boolean.TRUE;
-        for (Pair pair : clusterSql) {
-            if (!runDatabaseSql(null, pair)) {
-                rtn = Boolean.FALSE;
-                // don't continue
-                break;
-            }
-        }
-        return rtn;
-    }
+//    public Boolean runClusterSql(List<Pair> clusterSql) {
+//        Boolean rtn = Boolean.TRUE;
+//        for (Pair pair : clusterSql) {
+//            if (!runDatabaseSql(null, pair)) {
+//                rtn = Boolean.FALSE;
+//                // don't continue
+//                break;
+//            }
+//        }
+//        return rtn;
+//    }
 
 
 }

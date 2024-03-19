@@ -23,9 +23,12 @@ import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 import com.cloudera.utils.hadoop.hms.mirror.feature.IcebergState;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.FileFormatType;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
@@ -49,6 +52,14 @@ import java.util.Map;
 @Slf4j
 public class IcebergConversionDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    @Getter
+    private TableService tableService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
     public IcebergConversionDataStrategy(ConfigService configService) {
         this.configService = configService;
     }
@@ -60,7 +71,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
         // Alarm if already converted.
         log.debug("Table: " + tableMirror.getName() + " build Iceberg Conversions");
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         if (let == null) {
             log.error("Table is null for LEFT");
             return Boolean.FALSE;
@@ -86,7 +97,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         log.debug("Table: " + tableMirror.getName() + " buildout Iceberg Conversion SQL");
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         try {
             String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
@@ -130,7 +141,8 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
             rtn = buildOutSql(tableMirror);//tblMirror.buildoutDUMPSql(config, dbMirror);
         }
         if (rtn) {
-            getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
+            rtn = getTableService().runTableSql(tableMirror, Environment.LEFT);
+            //getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;

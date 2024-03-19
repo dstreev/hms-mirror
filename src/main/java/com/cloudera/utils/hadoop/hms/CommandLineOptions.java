@@ -20,6 +20,7 @@ package com.cloudera.utils.hadoop.hms;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.Protect;
 import lombok.Getter;
@@ -637,7 +638,7 @@ public class CommandLineOptions {
             name = "hms-mirror.config.databases")
     CommandLineRunner configDatabases(Config config, @Value("${hms-mirror.config.databases}") String dbs) {
         return args -> {
-            log.info("Databases: " + dbs);
+            log.info("databases: " + dbs);
             config.setDatabases(dbs.split(","));
 //            log.info("Concurrency: " + config.getTransfer().getConcurrency());
         };
@@ -717,8 +718,6 @@ public class CommandLineOptions {
         return args -> {
             log.info("data-strategy: " + value);
             config.setDataStrategy(DataStrategyEnum.valueOf(value));
-
-
         };
     }
 
@@ -802,7 +801,7 @@ public class CommandLineOptions {
     CommandLineRunner configDecryptPassword(Config config, @Value("${hms-mirror.config.decrypt-password}") String value) {
         return args -> {
             log.info("decrypt-password: " + value);
-            config.setDecryptPassword(Boolean.TRUE);
+            config.setDecryptPassword(value);
         };
     }
 
@@ -1126,46 +1125,46 @@ public class CommandLineOptions {
         };
     }
 
-    @Bean
-    @ConditionalOnProperty(
-            name = "app.path.dir",
-            matchIfMissing = true)
-    CommandLineRunner configOutputDirDefault(Config config, CliReporter reporter) {
-        return args -> {
-            log.warn("Java Env Var `app.path.dir` is NOT defined.  May cause issues with logging");
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-            String reportOutputDir = System.getProperty("user.home") + "/.hms-mirror/reports/" + df.format(new Date());
-            log.info("output-dir: " + reportOutputDir);
-            config.setOutputDirectory(reportOutputDir);
-            File reportPathDir = new File(reportOutputDir);
-            if (!reportPathDir.exists()) {
-                reportPathDir.mkdirs();
-            }
-            reporter.setReportOutputFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
-            reporter.setLeftExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
-            reporter.setLeftCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
-            reporter.setRightExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
-            reporter.setRightCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-
-            File testFile = new File(reportOutputDir + FileSystems.getDefault().getSeparator() + ".dir-check");
-
-            // Ensure the Retry Path is created.
-            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
-                    FileSystems.getDefault().getSeparator() + "retry");
-            if (!retryPath.exists()) {
-                retryPath.mkdirs();
-            }
-
-            // Test file to ensure we can write to it for the report.
-            try {
-                new FileOutputStream(testFile).close();
-            } catch (IOException e) {
-                throw new RuntimeException("Can't write to output directory: " + reportOutputDir, e);
-            }
-
-
-        };
-    }
+//    @Bean
+//    @ConditionalOnProperty(
+//            name = "app.path.dir",
+//            matchIfMissing = false)
+//    CommandLineRunner configOutputDirDefault(Config config, CliReporter reporter) {
+//        return args -> {
+//            log.warn("Java Env Var `app.path.dir` is NOT defined.  May cause issues with logging");
+//            DateFormat df = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+//            String reportOutputDir = System.getProperty("user.home") + "/.hms-mirror/reports/" + df.format(new Date());
+//            log.info("output-dir: " + reportOutputDir);
+//            config.setOutputDirectory(reportOutputDir);
+//            File reportPathDir = new File(reportOutputDir);
+//            if (!reportPathDir.exists()) {
+//                reportPathDir.mkdirs();
+//            }
+//            reporter.setReportOutputFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
+//            reporter.setLeftExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
+//            reporter.setLeftCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
+//            reporter.setRightExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
+//            reporter.setRightCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
+//
+//            File testFile = new File(reportOutputDir + FileSystems.getDefault().getSeparator() + ".dir-check");
+//
+//            // Ensure the Retry Path is created.
+//            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
+//                    FileSystems.getDefault().getSeparator() + "retry");
+//            if (!retryPath.exists()) {
+//                retryPath.mkdirs();
+//            }
+//
+//            // Test file to ensure we can write to it for the report.
+//            try {
+//                new FileOutputStream(testFile).close();
+//            } catch (IOException e) {
+//                throw new RuntimeException("Can't write to output directory: " + reportOutputDir, e);
+//            }
+//
+//
+//        };
+//    }
 
     @Bean
     @ConditionalOnProperty(
@@ -1522,8 +1521,9 @@ public class CommandLineOptions {
     This should run last to ensure that the config is set correctly after all the flags have been set.
      */
     @Bean
-    CommandLineRunner postConfigProcessing(Config config, ConnectionPoolService connectionPoolService, CliReporter reporter, Progression progression) {
+    CommandLineRunner postConfigProcessing(ConfigService configService, ConnectionPoolService connectionPoolService, CliReporter reporter, Progression progression) {
         return args -> {
+            Config config = configService.getConfig();
 
             // Decode Password if necessary.
             if (config.getPassword() != null || config.getDecryptPassword() != null) {
@@ -1554,7 +1554,7 @@ public class CommandLineOptions {
                 }
             }
 
-            if (!config.validate()) {
+            if (!configService.validate()) {
                 throw new RuntimeException("Configuration issues., check log (~/.hms-mirror/logs/hms-mirror.log) for details");
             }
 
@@ -1631,7 +1631,7 @@ public class CommandLineOptions {
                     hs2Envs.add(Environment.LEFT);
                     break;
             }
-            if (config.loadPartitionMetadata()) {
+            if (configService.loadPartitionMetadata()) {
                 if (config.getCluster(Environment.LEFT).getMetastoreDirect() != null) {
                     connectionPoolService.getConnectionPools().addMetastoreDirect(Environment.LEFT, config.getCluster(Environment.LEFT).getMetastoreDirect());
                 }
@@ -1649,10 +1649,10 @@ public class CommandLineOptions {
                         if (conn == null) {
                             if (target == Environment.RIGHT && config.getCluster(target).getHiveServer2().isDisconnected()) {
                                 // Skip error.  Set Warning that we're disconnected.
-                                progression.addWarning(ENVIRONMENT_DISCONNECTED.getCode(), new Object[]{target});
+                                progression.addWarning(ENVIRONMENT_DISCONNECTED, new Object[]{target});
                             } else {
-                                progression.addError(ENVIRONMENT_CONNECTION_ISSUE.getCode(), new Object[]{target});
-                                return progression.getErrors().getReturnCode();
+                                progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
+//                                return progression.getErrors().getReturnCode();
                             }
                         } else {
                             // Exercise the connection.
@@ -1666,12 +1666,12 @@ public class CommandLineOptions {
                         } else {
                             log.error(se.getMessage(), se);
                             progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
-                            return progression.getErrors().getReturnCode();
+//                            return progression.getErrors().getReturnCode();
                         }
                     } catch (Throwable t) {
                         log.error(t.getMessage(), t);
                         progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
-                        return progression.getErrors().getReturnCode();
+//                        return progression.getErrors().getReturnCode();
                     } finally {
                         if (stmt != null) {
                             stmt.close();
@@ -1683,8 +1683,9 @@ public class CommandLineOptions {
                 }
             } catch (SQLException cnfe) {
                 log.error("Issue initializing connections.  Check driver locations", cnfe);
-                return -1;
-//                throw new RuntimeException(cnfe);
+//                progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{Environment.LEFT});
+//                return -1;
+                throw new RuntimeException(cnfe);
             }
 
             config.getCluster(Environment.LEFT).setPools(connectionPoolService.getConnectionPools());
@@ -1699,14 +1700,14 @@ public class CommandLineOptions {
                     }
             }
 
-            if (config.isConnectionKerberized()) {
+            if (configService.isConnectionKerberized()) {
                 log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
-                setupGSS();
+                configService.setupGSS();
             }
             log.debug("Checking Hive Connections");
-            if (!config.checkConnections()) {
+            if (!configService.checkConnections()) {
                 log.error("Check Hive Connections Failed.");
-                if (config.isConnectionKerberized()) {
+                if (configService.isConnectionKerberized()) {
                     log.error("Check Kerberos configuration if GSS issues are encountered.  See the running.md docs for details.");
                 }
                 throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");

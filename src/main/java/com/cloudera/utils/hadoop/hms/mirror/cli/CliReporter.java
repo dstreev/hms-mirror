@@ -18,9 +18,11 @@
 package com.cloudera.utils.hadoop.hms.mirror.cli;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -38,8 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class CliReporter implements Runnable {
     //    private static final Logger log = LoggerFactory.getLogger(Reporter.class);
-    private Config config;
-    private Conversion conversion;
+//    private Config config;
+//    private Conversion conversion;
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
     private Boolean quiet = Boolean.FALSE;
@@ -61,10 +63,23 @@ public class CliReporter implements Runnable {
 
     private final List<TableMirror> startedTables = new ArrayList<TableMirror>();
 
-    public CliReporter(Config config, Conversion conversion) {
-        this.config = config;
+    private ConfigService configService;
+    private Conversion conversion;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setConversion(Conversion conversion) {
         this.conversion = conversion;
     }
+
+//    public CliReporter(Config config, Conversion conversion) {
+//        this.config = config;
+//        this.conversion = conversion;
+//    }
 
 
     /*
@@ -240,7 +255,7 @@ public class CliReporter implements Runnable {
             // Table Processing
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<String, String>();
-                tblVars.put("db.name", config.getResolvedDB(tblMirror.getParent().getName()));
+                tblVars.put("db.name", getConfigService().getResolvedDB(tblMirror.getParent().getName()));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
@@ -268,7 +283,7 @@ public class CliReporter implements Runnable {
     @Bean
     CommandLineRunner configQuiet(Config config) {
         return args -> {
-            setQuiet(config.getQuiet());
+            setQuiet(config.isQuiet());
         };
     }
 }

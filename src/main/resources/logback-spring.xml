@@ -31,7 +31,7 @@
 
     <appender name="RollingFile"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS}/${app.log.file}</file>
+        <file>${LOGS}/${app.log.file}.log</file>
         <encoder
                 class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
@@ -40,7 +40,7 @@
         <rollingPolicy
                 class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS}/archived/hms-mirror-%d{yyyy-MM-dd}.%i.log
+            <fileNamePattern>${LOGS}/archived/${app.log.file}-%d{yyyy-MM-dd}.%i.log
             </fileNamePattern>
             <timeBasedFileNamingAndTriggeringPolicy
                     class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
@@ -71,7 +71,7 @@ log4j.logger.org.apache.hadoop=WARN
 log4j.logger.org.apache.hive.org.apache=WARN
 
 -->
-    <logger name="com.cloudera.utils.hadoop.hms.Mirror" level="error" additivity="false">
+    <logger name="com.cloudera.utils.hadoop.hms.MirrorLegacy" level="error" additivity="false">
         <appender-ref ref="Console" />
     </logger>
     <logger name="com.cloudera.utils.hadoop.hms.mirror.DBMirror" level="info" additivity="false">
@@ -80,10 +80,10 @@ log4j.logger.org.apache.hive.org.apache=WARN
     <logger name="com.cloudera.utils.hadoop.hms.mirror.Cluster" level="info" additivity="false">
         <appender-ref ref="Console" />
     </logger>
-    <logger name="com.cloudera.utils.hadoop.hms.stage.GetTableMetadata" level="debug" additivity="false">
+    <logger name="com.cloudera.utils.hadoop.hms.mirror.service.GetTableMetadataService" level="debug" additivity="false">
         <appender-ref ref="Console" />
     </logger>
-    <logger name="com.cloudera.utils.hadoop.hms.stage.Transfer" level="warn" additivity="false">
+    <logger name="com.cloudera.utils.hadoop.hms.mirror.service.TransferService" level="warn" additivity="false">
         <appender-ref ref="Console" />
     </logger>
     <logger name="com.zaxxer.hikari" level="warn" additivity="false">

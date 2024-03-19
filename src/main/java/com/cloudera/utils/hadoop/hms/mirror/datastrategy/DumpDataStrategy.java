@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
@@ -34,7 +35,14 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
 
 //    private static final Logger log = LoggerFactory.getLogger(DumpDataStrategy.class);
     @Getter
+    private TableService tableService;
+    @Getter
     private TranslatorService translatorService;
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
 
     @Autowired
     public void setTranslatorService(TranslatorService translatorService) {
@@ -59,6 +67,8 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         log.debug("Table: " + tableMirror.getName() + " buildout DUMP Definition");
+        Config config = getConfigService().getConfig();
+
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
@@ -69,7 +79,7 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
         TableUtils.stripDatabase(let.getName(), let.getDefinition());
 
         // If not legacy, remove location from ACID tables.
-        if (!getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive() &&
+        if (!config.getCluster(Environment.LEFT).isLegacyHive() &&
                 TableUtils.isACID(let)) {
             TableUtils.stripLocation(let.getName(), let.getDefinition());
         }
@@ -79,6 +89,8 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
         log.debug("Table: " + tableMirror.getName() + " buildout DUMP SQL");
 
         String useDb = null;
@@ -92,9 +104,9 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
         useDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
         let.addSql(TableUtils.USE_DESC, useDb);
 
-        createTbl = tableMirror.getCreateStatement(Environment.LEFT);
+        createTbl = tableService.getCreateStatement(tableMirror, Environment.LEFT);
         let.addSql(TableUtils.CREATE_DESC, createTbl);
-        if (!getConfigService().getConfig().getCluster(Environment.LEFT).getLegacyHive()
+        if (!config.getCluster(Environment.LEFT).isLegacyHive()
                 && getConfigService().getConfig().isTransferOwnership() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);

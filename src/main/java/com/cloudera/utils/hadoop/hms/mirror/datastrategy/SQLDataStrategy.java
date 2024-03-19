@@ -19,6 +19,7 @@ package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,9 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
 
     @Getter
+    private TableService tableService;
+
+    @Getter
     private IntermediateDataStrategy intermediateDataStrategy;
 
     @Autowired
@@ -48,6 +52,11 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Autowired
     public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
         this.intermediateDataStrategy = intermediateDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 
     public SQLDataStrategy(ConfigService configService) {
@@ -61,7 +70,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
-        if (tableMirror.isACIDDowngradeInPlace(config, let)) {
+        if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
 //            DataStrategy dsACIDDowngradeInplace = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
 //            dsACIDDowngradeInplace.setTableMirror(tableMirror);
 //            dsACIDDowngradeInplace.setDBMirror(dbMirror);
@@ -102,11 +111,14 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 //                dsIt.setDBMirror(dbMirror);
 //                dsIt.setConfig(config);
 //                rtn = dsIt.buildOutSql();
-                rtn = tableMirror.buildTransferSql(let, set, ret, config);
+                // TODO: Double check this...
+                rtn = tableService.buildTransferSql(tableMirror, Environment.TRANSFER, Environment.SHADOW, Environment.RIGHT);
+//                        tableMirror.buildTransferSql(let, set, ret, config);
 
                 // Execute the RIGHT sql if config.execute.
                 if (rtn) {
-                    config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
+                    tableService.runTableSql(tableMirror, Environment.RIGHT);
+//                    config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
                 }
             }
         }
@@ -141,7 +153,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
         }
 
         if (ret.getExists()) {
-            if (config.isSync() && config.getCluster(Environment.RIGHT).getCreateIfNotExists()) {
+            if (config.isSync() && config.getCluster(Environment.RIGHT).isCreateIfNotExists()) {
                 // sync with overwrite.
                 ret.addIssue(SQL_SYNC_W_CINE.getDesc());
                 ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -158,7 +170,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             CopySpec shadowSpec = null;
 
             // Create a 'shadow' table definition on right cluster pointing to the left data.
-            shadowSpec = new CopySpec(config, Environment.LEFT, Environment.SHADOW);
+            shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
 
             if (config.convertManaged())
                 shadowSpec.setUpgrade(Boolean.TRUE);
@@ -170,11 +182,12 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             shadowSpec.setTableNamePrefix(config.getTransfer().getShadowPrefix());
 
             // Build Shadow from Source.
-            rtn = tableMirror.buildTableSchema(shadowSpec);
+            rtn = tableService.buildTableSchema(shadowSpec);
+//                    tableMirror.buildTableSchema(shadowSpec);
         }
 
         // Create final table in right.
-        CopySpec rightSpec = new CopySpec(config, Environment.LEFT, Environment.RIGHT);
+        CopySpec rightSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
 
         // Swap out the namespace of the LEFT with the RIGHT.
         rightSpec.setReplaceLocation(Boolean.TRUE);
@@ -193,7 +206,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
         }
 
         // Rebuild Target from Source.
-        rtn = tableMirror.buildTableSchema(rightSpec);
+        rtn = tableService.buildTableSchema(rightSpec);
 
         return rtn;
     }
@@ -243,7 +256,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                 dropStmt = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
                 ret.addSql(TableUtils.DROP_DESC, dropStmt);
 
-                String shadowCreateStmt = tableMirror.getCreateStatement(Environment.SHADOW);
+                String shadowCreateStmt = tableService.getCreateStatement(tableMirror, Environment.SHADOW);
                 ret.addSql(TableUtils.CREATE_SHADOW_DESC, shadowCreateStmt);
                 // Repair Partitions
 //                if (let.getPartitioned()) {
@@ -265,13 +278,15 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                 case REPLACE:
                     dropStmt = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
                     ret.addSql(TableUtils.DROP_DESC, dropStmt);
-                    String createStmt = tableMirror.getCreateStatement(Environment.RIGHT);
+                    String createStmt = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
+                            //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt);
                     break;
                 case CREATE:
-                    String createStmt2 = tableMirror.getCreateStatement(Environment.RIGHT);
+                    String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
+                            //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                    if (!config.getCluster(Environment.RIGHT).getLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
+                    if (!config.getCluster(Environment.RIGHT).isLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                         ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                     }
