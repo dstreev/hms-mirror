@@ -69,6 +69,9 @@ public class Config {
     @Setter
     private Map<Environment, Cluster> clusters = new TreeMap<Environment, Cluster>();
     private String commandLineOptions = null;
+    @JsonIgnore
+    private String configFilename = null;
+
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
     @Getter
     private ConnectionPoolTypes connectionPoolLib = HYBRID; // DBCP2 is Alternate.

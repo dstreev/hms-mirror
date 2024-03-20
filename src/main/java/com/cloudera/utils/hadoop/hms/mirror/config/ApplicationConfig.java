@@ -79,7 +79,7 @@ public class ApplicationConfig {
 
     // TODO: Need to address failures here...
     @Bean
-    @Order(100)
+    @Order(1000) // Needs to be the last thing to run.
     public CommandLineRunner collect() {
         return args -> {
 //        context.setInitializing(Boolean.TRUE);
@@ -87,6 +87,8 @@ public class ApplicationConfig {
             log.info("Starting Application Workflow");
             Boolean rtn = Boolean.TRUE;
             Config config = getConfigService().getConfig();
+            log.info("Setting 'running' to TRUE");
+            getConfigService().getRunning().set(Boolean.TRUE);
 
             Date startTime = new Date();
             log.info("GATHERING METADATA: Start Processing for databases: " + Arrays.toString((config.getDatabases())));
@@ -365,6 +367,9 @@ public class ApplicationConfig {
 
                 // TODO: Loop through the migrationFuture and check status.
 
+                log.info("Wrapping up the Application Workflow");
+                log.info("Setting 'running' to FALSE");
+                getConfigService().getRunning().set(Boolean.FALSE);
 
                 getCliReportWriter().writeReport();
 

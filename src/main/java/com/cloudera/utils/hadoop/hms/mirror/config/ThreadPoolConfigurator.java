@@ -51,4 +51,16 @@ public class ThreadPoolConfigurator {
         return executor;
     }
 
+    @Bean("reportingThreadPool")
+    @Order(20)
+    public TaskExecutor reportingThreadPool(ConfigService configService) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(configService.getConfig().getTransfer().getConcurrency());
+        executor.setMaxPoolSize(configService.getConfig().getTransfer().getConcurrency());
+        executor.setQueueCapacity(Integer.MAX_VALUE);
+        executor.setThreadNamePrefix("reporting-");
+        executor.initialize();
+        return executor;
+    }
+
 }

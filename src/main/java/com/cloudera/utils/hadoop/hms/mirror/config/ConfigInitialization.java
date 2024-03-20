@@ -57,6 +57,7 @@ class ConfigInitialization {
                 for (Cluster cluster : config.getClusters().values()) {
                     cluster.setConfig(config);
                 }
+                config.setConfigFilename(configFilename);
 //                mapper.readerForUpdating(config).readValue(yamlCfgFile);
             } else {
                 throw new RuntimeException("Config file not found: " + configFilename);

@@ -26,6 +26,7 @@ import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +39,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
@@ -48,6 +50,7 @@ import static com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum
 public class ConfigService {
 
     private Config config = null;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     public Boolean canDeriveDistcpPlan() {
         Boolean rtn = Boolean.FALSE;

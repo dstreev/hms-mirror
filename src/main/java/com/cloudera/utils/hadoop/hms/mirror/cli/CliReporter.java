@@ -25,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.annotation.Order;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -38,9 +40,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Getter
 @Setter
 @Slf4j
-public class CliReporter implements Runnable {
+public class CliReporter {
     private final Date start = new Date();
-    private final AtomicBoolean running = new AtomicBoolean(false);
+//    private final AtomicBoolean running = new AtomicBoolean(false);
     private final int sleepInterval = 1000;
     private final List<String> reportTemplateHeader = new ArrayList<String>();
     private final List<String> reportTemplateTableDetail = new ArrayList<String>();
@@ -61,6 +63,7 @@ public class CliReporter implements Runnable {
     private boolean tiktok = false;
 
     @Bean
+    @Order(20)
     CommandLineRunner configQuiet(Config config) {
         return args -> {
             setQuiet(config.isQuiet());
@@ -141,6 +144,10 @@ public class CliReporter implements Runnable {
             varMap.put("retry", "       ");
         else
             varMap.put("retry", "(RETRY)");
+        varMap.put("run.mode", getConfigService().getConfig().isExecute() ? "EXECUTE" : "DRYRUN");
+        varMap.put("HMS-Mirror-Version", ReportingConf.substituteVariablesFromManifest("${HMS-Mirror-Version}"));
+        varMap.put("config.file", getConfigService().getConfig().getConfigFilename());
+        varMap.put("config.strategy", getConfigService().getConfig().getDataStrategy().toString());
         varMap.put("tik.tok", tiktok ? "*" : "");
         varMap.put("total.dbs", Integer.toString(conversion.getDatabases().size()));
         // Count
@@ -197,12 +204,13 @@ public class CliReporter implements Runnable {
         }
     }
 
-    @Override
+    @Async("reportingThreadPool")
     public void run() {
         try {
             fetchReportTemplates();
-            running.set(true);
-            while (running.get()) {
+            log.info("Starting Reporting Thread");
+            getConfigService().getRunning().set(true);
+            while (getConfigService().getRunning().get()) {
                 refresh(Boolean.FALSE);
                 try {
                     Thread.sleep(sleepInterval);
@@ -211,6 +219,7 @@ public class CliReporter implements Runnable {
                     System.out.println("Reporting thread interrupted");
                 }
             }
+            log.info("Completed Reporting Thread");
         } catch (IOException ioe) {
             System.out.println("Missing Reporting Template");
         }
@@ -230,12 +239,4 @@ public class CliReporter implements Runnable {
         varMap.put(key, value);
     }
 
-    public void start() {
-        worker = new Thread(this);
-        worker.start();
-    }
-
-    public void stop() {
-        running.set(false);
-    }
 }
