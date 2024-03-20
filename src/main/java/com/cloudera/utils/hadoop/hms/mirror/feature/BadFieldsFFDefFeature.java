@@ -28,13 +28,6 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
     private final String FTB = "FIELDS TERMINATED BY";
     private final Pattern FIELDS_TERMINATED_BY = Pattern.compile(FTB + " '(.*)'");
 
-//    private static final Logger log = LoggerFactory.getLogger(BadFieldsFFDefFeature.class);
-
-    public String getDescription() {
-        return "Table schemas with a \\f definition in the FIELDS TERMINATED BY declaration will not be created correctly " +
-                "in Hive.  We need to set the value to the character set value \\014 to successfully translate the schema.";
-    }
-
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
         return applicable(envTable.getDefinition());
@@ -49,7 +42,7 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
 
         String v = getGroupFor(FIELDS_TERMINATED_BY, schema);
         try {
-            if (v != null && Character.compare('f', v.charAt(1)) == 0) {
+            if (v != null && 'f' == v.charAt(1)) {
                 rtn = Boolean.TRUE;
             }
         } catch (Throwable t) {
@@ -58,7 +51,6 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
 
         return rtn;
     }
-
 
     @Override
     /*
@@ -78,7 +70,6 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
      */
     public Boolean fixSchema(List<String> schema) {
         if (applicable(schema)) {
-//            schema = addEscaped(schema);
             log.debug("Checking if table has Bad Fields definition");
             // find the index of the ROW_FORMAT_DELIMITED
 
@@ -87,7 +78,7 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
 
             Boolean badDef = Boolean.FALSE;
             try {
-                if (v != null && Character.compare('f', v.charAt(1)) == 0) {
+                if (v != null && 'f' == v.charAt(1)) {
                     badDef = Boolean.TRUE;
                 }
             } catch (Throwable t) {
@@ -113,6 +104,11 @@ public class BadFieldsFFDefFeature extends BaseFeature implements Feature {
         } else {
             return Boolean.FALSE;
         }
+    }
+
+    public String getDescription() {
+        return "Table schemas with a \\f definition in the FIELDS TERMINATED BY declaration will not be created correctly " +
+                "in Hive.  We need to set the value to the character set value \\014 to successfully translate the schema.";
     }
 
 }

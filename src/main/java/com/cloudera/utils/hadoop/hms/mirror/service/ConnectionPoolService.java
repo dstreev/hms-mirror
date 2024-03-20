@@ -17,7 +17,12 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.service;
 
-import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.Environment;
+import com.cloudera.utils.hadoop.hms.mirror.HiveServer2Config;
+import com.cloudera.utils.hadoop.hms.mirror.connections.ConnectionPools;
+import com.cloudera.utils.hadoop.hms.mirror.connections.ConnectionPoolsDBCP2Impl;
+import com.cloudera.utils.hadoop.hms.mirror.connections.ConnectionPoolsHikariImpl;
+import com.cloudera.utils.hadoop.hms.mirror.connections.ConnectionPoolsHybridImpl;
 import com.cloudera.utils.hive.config.DBStore;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -42,6 +46,21 @@ public class ConnectionPoolService implements ConnectionPools {
     @Autowired
     public ConnectionPoolService(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Override
+    public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
+        getConnectionPools().addHiveServer2(environment, hiveServer2);
+    }
+
+    @Override
+    public void addMetastoreDirect(Environment environment, DBStore dbStore) {
+        getConnectionPools().addMetastoreDirect(environment, dbStore);
+    }
+
+    @Override
+    public void close() {
+        getConnectionPools().close();
     }
 
     public ConnectionPools getConnectionPools() {
@@ -75,21 +94,6 @@ public class ConnectionPoolService implements ConnectionPools {
         // Initialize the connection pools
         rtn.init();
         return rtn;
-    }
-
-    @Override
-    public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
-        getConnectionPools().addHiveServer2(environment, hiveServer2);
-    }
-
-    @Override
-    public void addMetastoreDirect(Environment environment, DBStore dbStore) {
-        getConnectionPools().addMetastoreDirect(environment, dbStore);
-    }
-
-    @Override
-    public void close() {
-        getConnectionPools().close();
     }
 
     @Override

@@ -18,13 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.connections.ConnectionException;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.HybridAcidDowngradeInPlaceDataStrategy;
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.HybridDataStrategy;
 import com.cloudera.utils.hadoop.hms.stage.ReturnStatus;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -46,14 +46,11 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.DISTCP_FOR_SO_ACI
 @Getter
 @Setter
 public class TransferService {
-    private final DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
-    private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
-
-    //    private static final Logger log = LoggerFactory.getLogger(Transfer.class);
     public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
-
+    private final DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
+    private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
     private ConfigService configService;
     private TableService tableService;
     private DatabaseService databaseService;
@@ -65,14 +62,10 @@ public class TransferService {
     public void setConfigService(ConfigService configService) {
         this.configService = configService;
     }
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
 
     @Autowired
-    public void setHybridDataStrategy(HybridDataStrategy hybridDataStrategy) {
-        this.hybridDataStrategy = hybridDataStrategy;
+    public void setDataStrategyService(DataStrategyService dataStrategyService) {
+        this.dataStrategyService = dataStrategyService;
     }
 
     @Autowired
@@ -81,13 +74,18 @@ public class TransferService {
     }
 
     @Autowired
-    public void setDataStrategyService(DataStrategyService dataStrategyService) {
-        this.dataStrategyService = dataStrategyService;
+    public void setHybridAcidDowngradeInPlaceDataStrategy(HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy) {
+        this.hybridAcidDowngradeInPlaceDataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
     }
 
     @Autowired
-    public void setHybridAcidDowngradeInPlaceDataStrategy(HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy) {
-        this.hybridAcidDowngradeInPlaceDataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
+    public void setHybridDataStrategy(HybridDataStrategy hybridDataStrategy) {
+        this.hybridDataStrategy = hybridDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 
     @Async("jobThreadPool")
@@ -117,67 +115,23 @@ public class TransferService {
             try {
                 DataStrategy dataStrategy = null;
                 switch (config.getDataStrategy()) {
-//                    case DUMP:
-//                        successful = doDump();
-//                        break;
-//                    case SCHEMA_ONLY:
-//                        successful = doSchemaOnly();
-//                        break;
-//                    case LINKED:
-//                        successful = doLinked();
-//                        break;
-//                    case COMMON:
-//                        successful = doCommon();
-//                        break;
-//                    case EXPORT_IMPORT:
-//                        successful = doExportImport();
-//                        break;
-//                    case SQL:
-//                        successful = doSQL();
-//                        break;
-//                    case CONVERT_LINKED:
-//
-//                    case STORAGE_MIGRATION:
-//                        dataStrategy = config.getDataStrategy().getDataStrategy();
-//                        dataStrategy.setConfig(config);
-//                        dataStrategy.setDBMirror(dbMirror);
-//                        dataStrategy.setTableMirror(tblMirror);
-//                        successful = dataStrategy.execute();
-//                        break;
                     case HYBRID:
                         if (TableUtils.isACID(let) && config.getMigrateACID().isDowngradeInPlace()) {
-//                            DataStrategy dsHADI = DataStrategyEnum.HYBRID_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//                            dsHADI.setTableMirror(tableMirror);
-//                            dsHADI.setDBMirror(dbMirror);
-//                            dsHADI.setConfig(config);
-//                            successful = dsHADI.execute();// doHYBRIDACIDInplaceDowngrade();
                             if (hybridAcidDowngradeInPlaceDataStrategy.execute(tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
                             }
-//                            successful = hybridAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
-//                            successful = doHYBRIDACIDInplaceDowngrade();
                         } else {
-//                            DataStrategy dsH = DataStrategyEnum.HYBRID.getDataStrategy();
-//                            dsH.setTableMirror(tableMirror);
-//                            dsH.setDBMirror(dbMirror);
-//                            dsH.setConfig(config);
-//                            successful = dsH.execute();// doHYBRID();
                             if (hybridDataStrategy.execute(tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
                             }
-//                            successful = doHybrid();
                         }
                         break;
                     default:
                         dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
-//                        dataStrategy = config.getDataStrategy().getDataStrategy();
-//                        dataStrategy.setConfig(config);
-//                        dataStrategy.setDBMirror(dbMirror);
-//                        dataStrategy.setTableMirror(tableMirror);
                         if (dataStrategy.execute(tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
@@ -241,14 +195,13 @@ public class TransferService {
                             newLoc = TableUtils.getLocation(ret.getName(), ret.getDefinition());
                         }
                         if (newLoc == null && config.isResetToDefaultLocation()) {
-                            StringBuilder sbDir = new StringBuilder();
-                            sbDir.append(config.getTransfer().getCommonStorage());
-                            sbDir.append(config.getTransfer().getWarehouse().getExternalDirectory()).append("/");
-                            sbDir.append(getConfigService().getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
-                            newLoc = sbDir.toString();
+                            String sbDir = config.getTransfer().getCommonStorage() +
+                                    config.getTransfer().getWarehouse().getExternalDirectory() + "/" +
+                                    getConfigService().getResolvedDB(tableMirror.getParent().getName()) + ".db" + "/" + tableMirror.getName();
+                            newLoc = sbDir;
                         }
                         config.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.LEFT,
-                                origLoc, newLoc,1);
+                                origLoc, newLoc, 1);
                     } else {
                         // RIGHT PULL
                         if (TableUtils.isACID(let)
@@ -271,7 +224,7 @@ public class TransferService {
                             }
                             config.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), tet.getDefinition()),
-                                    rLoc,1);
+                                    rLoc, 1);
                         } else {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (rLoc == null && config.isResetToDefaultLocation()) {
@@ -287,7 +240,7 @@ public class TransferService {
                             }
                             config.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), let.getDefinition())
-                                    , rLoc,1);
+                                    , rLoc, 1);
                         }
                     }
                 }
@@ -302,18 +255,12 @@ public class TransferService {
                 ce.printStackTrace();
                 rtn.setStatus(ReturnStatus.Status.FATAL);
                 rtn.setException(ce);
-//                successful = Boolean.FALSE;
-//                rtn.setStatus(ReturnStatus.Status.FATAL);
-//                rtn.setException(ce);
             } catch (RuntimeException rte) {
                 tableMirror.addIssue(Environment.LEFT, "FAILURE (check logs):" + rte.getMessage());
                 log.error("Transfer Error", rte);
                 rte.printStackTrace();
                 rtn.setStatus(ReturnStatus.Status.FATAL);
                 rtn.setException(rte);
-//                successful = Boolean.FALSE;
-//                rtn.setStatus(ReturnStatus.Status.FATAL);
-//                rtn.setException(rte);
             }
 
             Date end = new Date();
@@ -321,13 +268,9 @@ public class TransferService {
             tableMirror.setStageDuration(diff);
             log.info("Migration complete for " + tableMirror.getParent().getName() + "." + tableMirror.getName() + " in " +
                     diff + "ms");
-//            rtn.setStatus(ReturnStatus.Status.SUCCESS);
         } catch (Throwable t) {
             rtn.setStatus(ReturnStatus.Status.FATAL);
             rtn.setException(t);
-//            successful = Boolean.FALSE;
-//            rtn.setStatus(ReturnStatus.Status.ERROR);
-//            rtn.setException(t);
         }
         return new AsyncResult<>(rtn);
     }

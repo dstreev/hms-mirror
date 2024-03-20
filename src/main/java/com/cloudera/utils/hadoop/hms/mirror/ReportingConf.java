@@ -68,7 +68,7 @@ public class ReportingConf {
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
         StringBuilder sb = new StringBuilder();
 
-        for (String line: template) {
+        for (String line : template) {
             Matcher matcher = pattern.matcher(line);
             // StringBuilder cannot be used here because Matcher expects StringBuffer
             StringBuffer buffer = new StringBuffer();

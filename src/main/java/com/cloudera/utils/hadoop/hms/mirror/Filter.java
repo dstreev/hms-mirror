@@ -18,9 +18,13 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.regex.Pattern;
 
+@Getter
+@Setter
 public class Filter {
     @JsonIgnore
     private Pattern dbFilterPattern = null;
@@ -32,12 +36,8 @@ public class Filter {
     private Pattern tblFilterPattern = null;
     private String tblExcludeRegEx = null;
     private String tblRegEx = null;
-    private Long tblSizeLimit = -1l;
+    private Long tblSizeLimit = -1L;
     private Integer tblPartitionLimit = -1;
-
-    public String getDbRegEx() {
-        return dbRegEx;
-    }
 
     public void setDbRegEx(String dbRegEx) {
         this.dbRegEx = dbRegEx;
@@ -48,34 +48,6 @@ public class Filter {
 
     }
 
-    public Pattern getDbFilterPattern() {
-        return dbFilterPattern;
-    }
-
-    public String getTblRegEx() {
-        return tblRegEx;
-    }
-
-    @JsonIgnore
-    public Boolean isTableFiltering() {
-        if (tblRegEx != null || tblExcludeRegEx != null) {
-            return Boolean.TRUE;
-        } else {
-            return Boolean.FALSE;
-        }
-    }
-    public void setTblRegEx(String tblRegEx) {
-        this.tblRegEx = tblRegEx;
-        if (this.tblRegEx != null)
-            tblFilterPattern = Pattern.compile(tblRegEx);
-        else
-            tblFilterPattern = null;
-    }
-
-    public String getTblExcludeRegEx() {
-        return tblExcludeRegEx;
-    }
-
     public void setTblExcludeRegEx(String tblExcludeRegEx) {
         this.tblExcludeRegEx = tblExcludeRegEx;
         if (this.tblExcludeRegEx != null)
@@ -84,27 +56,21 @@ public class Filter {
             tblExcludeFilterPattern = null;
 
     }
-    public Pattern getTblFilterPattern() {
-        return tblFilterPattern;
+
+    public void setTblRegEx(String tblRegEx) {
+        this.tblRegEx = tblRegEx;
+        if (this.tblRegEx != null)
+            tblFilterPattern = Pattern.compile(tblRegEx);
+        else
+            tblFilterPattern = null;
     }
 
-    public Pattern getTblExcludeFilterPattern() {
-        return tblExcludeFilterPattern;
-    }
-
-    public Long getTblSizeLimit() {
-        return tblSizeLimit;
-    }
-
-    public void setTblSizeLimit(Long tblSizeLimit) {
-        this.tblSizeLimit = tblSizeLimit;
-    }
-
-    public Integer getTblPartitionLimit() {
-        return tblPartitionLimit;
-    }
-
-    public void setTblPartitionLimit(Integer tblPartitionLimit) {
-        this.tblPartitionLimit = tblPartitionLimit;
+    @JsonIgnore
+    public boolean isTableFiltering() {
+        if (tblRegEx != null || tblExcludeRegEx != null) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
     }
 }

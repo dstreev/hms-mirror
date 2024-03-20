@@ -33,7 +33,6 @@ import java.util.*;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.RDL_W_EPL_NO_MAPPING;
 import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 
 @Service
 @Slf4j
@@ -42,12 +41,61 @@ import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.DB_MANAGED_LOCATIO
 public class TranslatorService {
     @Getter
     private ConfigService configService = null;
-//    private Translator translator = null;
 
+    /**
+     * @param consolidationLevel how far up the directory hierarchy to go to build the distcp list based on the sources
+     *                           provided.
+     * @return A map of databases.  Each database will have a map that has 1 or more 'targets' and 'x' sources for each
+     * target.
+     */
+    public Map<String, Map<String, Set<String>>> buildDistcpList(String database, Environment environment, int consolidationLevel) {
+        Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
 
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
+        // get the map for a db.
+        Set<String> databases = getConfigService().getConfig().getTranslator().getDbLocationMap().keySet();
+
+        // get the map.entry
+        Map<String, Set<String>> reverseMap = new TreeMap<String, Set<String>>();
+        Set<EnvironmentMap.TranslationLevel> dbTranslationLevel = getConfigService().getConfig().getTranslator().getDbLocationMap(database, environment);
+
+        Map<String, String> dbLocationMap = new TreeMap<>();
+
+        for (EnvironmentMap.TranslationLevel translationLevel : dbTranslationLevel) {
+            dbLocationMap.put(translationLevel.getAdjustedOriginal(), translationLevel.getAdjustedTarget());
+        }
+
+        for (Map.Entry<String, String> entry : dbLocationMap.entrySet()) {
+            // reduce folder level by 'consolidationLevel' for key and value.
+            // Source
+            String reducedSource = Translator.reduceUrlBy(entry.getKey(), consolidationLevel);
+            // Target
+            String reducedTarget = Translator.reduceUrlBy(entry.getValue(), consolidationLevel);
+
+            if (reverseMap.get(reducedTarget) != null) {
+                reverseMap.get(reducedTarget).add(entry.getKey());
+            } else {
+                Set<String> sourceSet = new TreeSet<String>();
+                sourceSet.add(entry.getKey());
+                reverseMap.put(reducedTarget, sourceSet);
+            }
+
+        }
+        rtn.put(database, reverseMap);
+        return rtn;
+    }
+
+    public String buildPartitionAddStatement(EnvironmentTable environmentTable) {
+        StringBuilder sbPartitionDetails = new StringBuilder();
+        Map<String, String> partitions = new HashMap<String, String>();
+        // Fix formatting of partition names.
+        for (Map.Entry<String, String> item : environmentTable.getPartitions().entrySet()) {
+            String partitionName = item.getKey();
+            String partSpec = TableUtils.toPartitionSpec(partitionName);
+            partitions.put(partSpec, item.getValue());
+        }
+        // Transfer partitions map to a string using streaming
+        partitions.entrySet().stream().forEach(e -> sbPartitionDetails.append("\tPARTITION (" + e.getKey() + ") LOCATION '" + e.getValue() + "' \n"));
+        return sbPartitionDetails.toString();
     }
 
     public String processGlobalLocationMap(String originalLocation) {
@@ -72,18 +120,9 @@ public class TranslatorService {
             return originalLocation;
     }
 
-    public String buildPartitionAddStatement(EnvironmentTable environmentTable) {
-        StringBuilder sbPartitionDetails = new StringBuilder();
-        Map<String, String> partitions = new HashMap<String, String>();
-        // Fix formatting of partition names.
-        for (Map.Entry<String, String> item : environmentTable.getPartitions().entrySet()) {
-            String partitionName = item.getKey();
-            String partSpec = TableUtils.toPartitionSpec(partitionName);
-            partitions.put(partSpec, item.getValue());
-        }
-        // Transfer partitions map to a string using streaming
-        partitions.entrySet().stream().forEach(e -> sbPartitionDetails.append("\tPARTITION (" + e.getKey() + ") LOCATION '" + e.getValue() + "' \n"));
-        return sbPartitionDetails.toString();
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
     }
 
     public Boolean translatePartitionLocations(TableMirror tblMirror) {
@@ -173,7 +212,7 @@ public class TranslatorService {
         return rtn;
     }
 
-    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws Exception{
+    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws Exception {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
@@ -265,51 +304,6 @@ public class TranslatorService {
         }
 
         return dirBuilder.toString().trim();
-    }
-
-    /**
-     * @param consolidationLevel how far up the directory hierarchy to go to build the distcp list based on the sources
-     *                           provided.
-     * @return A map of databases.  Each database will have a map that has 1 or more 'targets' and 'x' sources for each
-     * target.
-     */
-    public Map<String, Map<String, Set<String>>> buildDistcpList(String database, Environment environment, int consolidationLevel) {
-        Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
-        // dbLocationMap Map<String, Map<String, String>>
-
-        // get the map for a db.
-        Set<String> databases = getConfigService().getConfig().getTranslator().getDbLocationMap().keySet();
-
-//        for (String database: databases) {
-        // get the map.entry
-        Map<String, Set<String>> reverseMap = new TreeMap<String, Set<String>>();
-        Set<EnvironmentMap.TranslationLevel> dbTranslationLevel = getConfigService().getConfig().getTranslator().getDbLocationMap(database, environment);
-
-        Map<String, String> dbLocationMap = new TreeMap<>();
-
-        for (EnvironmentMap.TranslationLevel translationLevel : dbTranslationLevel) {
-            dbLocationMap.put(translationLevel.getAdjustedOriginal(), translationLevel.getAdjustedTarget());
-        }
-
-        for (Map.Entry<String, String> entry : dbLocationMap.entrySet()) {
-            // reduce folder level by 'consolidationLevel' for key and value.
-            // Source
-            String reducedSource = Translator.reduceUrlBy(entry.getKey(), consolidationLevel);
-            // Target
-            String reducedTarget = Translator.reduceUrlBy(entry.getValue(), consolidationLevel);
-
-            if (reverseMap.get(reducedTarget) != null) {
-                reverseMap.get(reducedTarget).add(entry.getKey());
-            } else {
-                Set<String> sourceSet = new TreeSet<String>();
-                sourceSet.add(entry.getKey());
-                reverseMap.put(reducedTarget, sourceSet);
-            }
-
-        }
-        rtn.put(database, reverseMap);
-//        }
-        return rtn;
     }
 
 }

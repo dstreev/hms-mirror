@@ -26,19 +26,18 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 @Getter
 public class ReturnStatus {
+    private Status status = null;
+    private TableMirror tableMirror = null;
+    private Throwable exception = null;
+
     public enum Status {
         SUCCESS,
         /*
-            * The next step has been set and the caller should continue with the next step
+         * The next step has been set and the caller should continue with the next step
          */
         NEXTSTEP,
         ERROR,
-        FATAL }
-
-    private Status status = null;
-
-    private TableMirror tableMirror = null;
-
-    private Throwable exception = null;
+        FATAL
+    }
 
 }

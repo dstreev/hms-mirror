@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
@@ -43,69 +43,8 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Getter
     private StatsCalculatorService statsCalculatorService;
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setStatsCalculatorService(StatsCalculatorService statsCalculatorService) {
-        this.statsCalculatorService = statsCalculatorService;
-    }
-
     public SQLAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.TRUE;
-
-        /*
-        In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
-        the RIGHT cluster is configured the same as the LEFT.
-         */
-        Config config = getConfigService().getConfig();
-//        Config config = getConfigService().getConfig();
-//        Cluster leftCluster = config.getCluster(Environment.LEFT);
-//        Cluster rightCluster = config.getCluster(Environment.RIGHT);
-//        rightCluster.setLegacyHive(leftCluster.getLegacyHive());
-//        rightCluster.setHdpHive3(leftCluster.isHdpHive3());
-        /*
-        rename original table
-        remove artificial bucket in new table def
-        create new external table with original name
-        from original_archive insert overwrite table new external (deal with partitions).
-        write cleanup sql to drop original_archive.
-         */
-        rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
-
-        if (rtn) {
-            // Build cleanup Queries (drop archive table)
-            EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-            String cleanUpArchive = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
-            let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
-
-            // Check Partition Counts.
-            if (let.getPartitioned() && let.getPartitions().size() > config.getMigrateACID().getPartitionLimit()) {
-                let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the ACID SQL " +
-                        "partition limit (migrateACID->partitionLimit) of " + config.getMigrateACID().getPartitionLimit() +
-                        ".  The queries will NOT be automatically run.");
-                rtn = Boolean.FALSE;
-            }
-        }
-
-        if (rtn) {
-            // Build Transfer SQL
-            rtn = buildOutSql(tableMirror); //tableMirror.buildoutSQLACIDDowngradeInplaceSQL(config, dbMirror);
-        }
-
-        // run queries.
-        if (rtn) {
-            getTableService().runTableSql(tableMirror, Environment.LEFT);//config.getCluster(Environment.LEFT).runTableSql(tableMirror);
-        }
-
-        return rtn;
     }
 
     @Override
@@ -126,7 +65,6 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         leftNewTableSpec.setMakeExternal(Boolean.TRUE);
         // Location of converted data will got to default location.
         leftNewTableSpec.setStripLocation(Boolean.TRUE);
-//        leftNewTableSpec.set
 
         rtn = getTableService().buildTableSchema(leftNewTableSpec);
 
@@ -195,7 +133,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
                         let.getName(), ret.getName(), partElement);
                 String transferDesc = MessageFormat.format(TableUtils.STAGE_TRANSFER_PARTITION_DESC, let.getPartitions().size());
                 let.addSql(new Pair(transferDesc, transferSql));
-            } else if (config.getOptimization().getSortDynamicPartitionInserts()) {
+            } else if (config.getOptimization().isSortDynamicPartitionInserts()) {
                 if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, "set " + SORT_DYNAMIC_PARTITION + "=true");
                     if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
@@ -232,5 +170,61 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         rtn = Boolean.TRUE;
 
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.TRUE;
+
+        /*
+        In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
+        the RIGHT cluster is configured the same as the LEFT.
+         */
+        Config config = getConfigService().getConfig();
+        /*
+        rename original table
+        remove artificial bucket in new table def
+        create new external table with original name
+        from original_archive insert overwrite table new external (deal with partitions).
+        write cleanup sql to drop original_archive.
+         */
+        rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+
+        if (rtn) {
+            // Build cleanup Queries (drop archive table)
+            EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+            String cleanUpArchive = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
+            let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
+
+            // Check Partition Counts.
+            if (let.getPartitioned() && let.getPartitions().size() > config.getMigrateACID().getPartitionLimit()) {
+                let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the ACID SQL " +
+                        "partition limit (migrateACID->partitionLimit) of " + config.getMigrateACID().getPartitionLimit() +
+                        ".  The queries will NOT be automatically run.");
+                rtn = Boolean.FALSE;
+            }
+        }
+
+        if (rtn) {
+            // Build Transfer SQL
+            rtn = buildOutSql(tableMirror);
+        }
+
+        // run queries.
+        if (rtn) {
+            getTableService().runTableSql(tableMirror, Environment.LEFT);
+        }
+
+        return rtn;
+    }
+
+    @Autowired
+    public void setStatsCalculatorService(StatsCalculatorService statsCalculatorService) {
+        this.statsCalculatorService = statsCalculatorService;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

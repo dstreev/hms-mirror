@@ -157,7 +157,8 @@ public enum DataStrategyEnum {
         DataStrategy rtn = null;
         try {
             rtn = (DataStrategy) clazz.getDeclaredConstructor().newInstance();
-        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException |
+                 IllegalAccessException e) {
             e.printStackTrace();
         }
         return rtn;

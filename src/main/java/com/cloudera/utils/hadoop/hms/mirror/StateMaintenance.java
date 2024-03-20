@@ -17,18 +17,11 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
@@ -36,36 +29,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Setter
 @Slf4j
 public class StateMaintenance
-//        implements Runnable
 {
-//    private static final Logger log = LoggerFactory.getLogger(StateMaintenance.class);
+
     private final String startDateStr = null;
-    private Thread worker;
-    private Conversion conversion;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final int sleepInterval = 1000;
-//    private final ObjectMapper mapper;
-//    private final String configFile;
-//    private final String dateMarker;
-
-//    public StateMaintenance(int sleepInterval,
-//                            final String configFile, final String dateMarker) {
-//        this.sleepInterval = sleepInterval;
-//        this.configFile = configFile;
-//        mapper = new ObjectMapper(new YAMLFactory());
-//        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-//        // TODO: Need to use this to record a time specific retry file because the current one gets overwritten when
-//        //       the process is run again and we lose some start to debug from.
-//        this.dateMarker = dateMarker;
-//    }
-
-//    public Conversion getConversion() {
-//        return conversion;
-//    }
-//
-//    public void setConversion(Conversion conversion) {
-//        this.conversion = conversion;
-//    }
+    private Thread worker;
+    private Conversion conversion;
 
     /*
     public void start() {

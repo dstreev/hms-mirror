@@ -28,7 +28,7 @@ public class Optimization {
     Control whether we'll set the 'hive.optimize.sort.dynamic.partition` conf to 'true' or not.  If this is not set,
     we'll use a PRESCRIPTIVE approach with the transfer SQL on partitioned tables by adding a DISTRIBUTE BY clause.
      */
-    private Boolean sortDynamicPartitionInserts = Boolean.FALSE;
+    private boolean sortDynamicPartitionInserts = Boolean.FALSE;
     /*
     Skip all optimizations by setting:
     - hive.optimize.sort.dynamic.partition=false
@@ -42,30 +42,5 @@ public class Optimization {
 
     private Overrides overrides = new Overrides();
     private boolean buildShadowStatistics = Boolean.FALSE;
-
-
-//    public Boolean getSkipStatsCollection() {
-//        // Reset skipStatsCollection to true if we're doing a dump or schema only. (and a few other conditions)
-//        if (skipStatsCollection != null && !skipStatsCollection) {
-//            try {
-//                switch (getConfig().getDataStrategy()) {
-//                    case DUMP:
-//                    case SCHEMA_ONLY:
-//                    case EXPORT_IMPORT:
-//                        skipStatsCollection = Boolean.TRUE;
-//                        break;
-//                    case STORAGE_MIGRATION:
-//                        if (EnvironmentConnectionPools.getInstance().getConfig().getTransfer().getStorageMigration().isDistcp()) {
-//                            skipStatsCollection = Boolean.TRUE;
-//                        }
-//                        break;
-//                }
-//            } catch (NullPointerException npe) {
-//                // Ignore: Caused during 'setup' since the context and config don't exist.
-//            }
-//        }
-//        return skipStatsCollection;
-//    }
-//
 
 }

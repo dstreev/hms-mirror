@@ -18,7 +18,6 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -36,35 +35,41 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-//@Component
 @Getter
 @Setter
 @Slf4j
 public class Conversion {
 
     @JsonIgnore
+    private final Date start = new Date();
+    @JsonIgnore
     private ConfigService configService = null;
     @JsonIgnore
     private Progression progression;
-
-    @JsonIgnore
-    private final Date start = new Date();
-
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
-    }
-
-    @Autowired
-    public void setProgression(Progression progression) {
-        this.progression = progression;
-    }
-//    public Conversion(Config config) {
-//        this.config = config;
-//    }
-
     private Map<String, DBMirror> databases = new TreeMap<String, DBMirror>();
 
+    public String actionsSql(Environment env, String database) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");
+        sb.append("-- HELPER Script to assist with MANUAL updates.\n");
+        sb.append("-- RUN AT OWN RISK  !!!\n");
+        sb.append("-- REVIEW and UNDERSTAND the adjustments below before running.\n\n");
+        DBMirror dbMirror = databases.get(database);
+        sb.append("-- DATABASE: ").append(database).append("\n");
+        Set<String> tables = dbMirror.getTableMirrors().keySet();
+        for (String table : tables) {
+            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
+            sb.append("--    Table: ").append(table).append("\n");
+            // LEFT Table Actions
+            Iterator<String> a1Iter = tblMirror.getTableActions(env).iterator();
+            while (a1Iter.hasNext()) {
+                String item = a1Iter.next();
+                sb.append(item).append(";\n");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
 
     public DBMirror addDatabase(String database) {
         if (databases.containsKey(database)) {
@@ -77,12 +82,39 @@ public class Conversion {
         }
     }
 
-    public void addDBMirror(DBMirror dbMirror) {
-        databases.put(dbMirror.getName(), dbMirror);
-    }
+    public String executeCleanUpSql(Environment environment, String database) {
+        StringBuilder sb = new StringBuilder();
+        boolean found = Boolean.FALSE;
+        sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
+        sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
+//        sb.append("-- These are the command run on the " + environment + " cluster when `-e` is used.\n");
+        String rDb = getConfigService().getResolvedDB(database);
+        DBMirror dbMirror = databases.get(database);
 
-    public DBMirror getDatabase(String database) {
-        return databases.get(database);
+        sb.append("USE ").append(rDb).append(";\n");
+
+        Set<String> tables = dbMirror.getTableMirrors().keySet();
+        for (String table : tables) {
+            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
+            if (tblMirror.isThereCleanupSql(environment)) {
+                sb.append("\n--    Cleanup script: ").append(table).append("\n");
+                for (Pair pair : tblMirror.getCleanUpSql(environment)) {
+                    sb.append(pair.getAction());
+                    // Skip ';' when its a comment
+                    // https://github.com/cloudera-labs/hms-mirror/issues/33
+                    if (!pair.getAction().trim().startsWith("--")) {
+                        sb.append(";\n");
+                        found = Boolean.TRUE;
+                    }
+                }
+            } else {
+                sb.append("\n");
+            }
+        }
+        if (found)
+            return sb.toString();
+        else
+            return null;
     }
 
     public String executeSql(Environment environment, String database) {
@@ -121,63 +153,18 @@ public class Conversion {
             return null;
     }
 
-    public String executeCleanUpSql(Environment environment, String database) {
-        StringBuilder sb = new StringBuilder();
-        boolean found = Boolean.FALSE;
-        sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
-        sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
-//        sb.append("-- These are the command run on the " + environment + " cluster when `-e` is used.\n");
-        String rDb = getConfigService().getResolvedDB(database);
-        DBMirror dbMirror = databases.get(database);
-
-        sb.append("USE ").append(rDb).append(";\n");
-
-        Set<String> tables = dbMirror.getTableMirrors().keySet();
-        for (String table : tables) {
-            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-            if (tblMirror.isThereCleanupSql(environment)) {
-                sb.append("\n--    Cleanup script: ").append(table).append("\n");
-                for (Pair pair : tblMirror.getCleanUpSql(environment)) {
-                    sb.append(pair.getAction());
-                    // Skip ';' when its a comment
-                    // https://github.com/cloudera-labs/hms-mirror/issues/33
-                    if (!pair.getAction().trim().startsWith("--")) {
-                        sb.append(";\n");
-                        found = Boolean.TRUE;
-                    }
-                }
-            } else {
-                sb.append("\n");
-            }
-        }
-        if (found)
-            return sb.toString();
-        else
-            return null;
+    public DBMirror getDatabase(String database) {
+        return databases.get(database);
     }
 
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
-    public String actionsSql(Environment env, String database) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");
-        sb.append("-- HELPER Script to assist with MANUAL updates.\n");
-        sb.append("-- RUN AT OWN RISK  !!!\n");
-        sb.append("-- REVIEW and UNDERSTAND the adjustments below before running.\n\n");
-        DBMirror dbMirror = databases.get(database);
-        sb.append("-- DATABASE: ").append(database).append("\n");
-        Set<String> tables = dbMirror.getTableMirrors().keySet();
-        for (String table : tables) {
-            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-            sb.append("--    Table: ").append(table).append("\n");
-            // LEFT Table Actions
-            Iterator<String> a1Iter = tblMirror.getTableActions(env).iterator();
-            while (a1Iter.hasNext()) {
-                String item = a1Iter.next();
-                sb.append(item).append(";\n");
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
+    @Autowired
+    public void setProgression(Progression progression) {
+        this.progression = progression;
     }
 
     public String toReport(String database) throws JsonProcessingException {

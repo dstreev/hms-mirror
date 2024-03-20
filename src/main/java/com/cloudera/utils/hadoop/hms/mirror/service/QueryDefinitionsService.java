@@ -22,7 +22,6 @@ import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hive.config.QueryDefinitions;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -31,7 +30,7 @@ import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,9 +38,9 @@ import java.util.Map;
 @Slf4j
 public class QueryDefinitionsService {
 
-    private Config config;
+    private final Config config;
 
-    private Map<Environment, QueryDefinitions> queryDefinitionsMap = new HashMap<>();
+    private final Map<Environment, QueryDefinitions> queryDefinitionsMap = new HashMap<>();
 
     public QueryDefinitionsService(Config config) {
         this.config = config;
@@ -66,7 +65,7 @@ public class QueryDefinitionsService {
                             throw new RuntimeException("Can't build URL for Resource: " +
                                     dbQueryDefReference);
                         }
-                        String yamlConfigDefinition = IOUtils.toString(configURL, Charset.forName("UTF-8"));
+                        String yamlConfigDefinition = IOUtils.toString(configURL, StandardCharsets.UTF_8);
                         queryDefinitions = mapper.readerFor(QueryDefinitions.class).readValue(yamlConfigDefinition);
                         queryDefinitionsMap.put(environment, queryDefinitions);
                     } catch (Exception e) {

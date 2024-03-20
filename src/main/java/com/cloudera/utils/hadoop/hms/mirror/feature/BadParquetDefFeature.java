@@ -32,13 +32,6 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
     private final String INPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'";
     private final String OUTPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'";
     private final String STORED_AS_PARQUET = "STORED AS PARQUET";
-//    private static final Logger log = LoggerFactory.getLogger(BadParquetDefFeature.class);
-
-    public String getDescription() {
-        return "Table schema definitions for Parquet files that don't include include INPUT and " +
-                "OUTPUT format but no ROW FORMAT SERDE will not translate correctly.  This process will " +
-                "remove the invalid declarations and set STORED AS PARQUET";
-    }
 
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
@@ -64,7 +57,7 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
                             // Missing ROW FORMAT SERDE, so we need to fix it.
                             rtn = Boolean.TRUE;
                         } else if (rfsIdx > 0) {
-                            if (!schema.get(rfsIdx +1).trim().equals(ROW_FORMAT_SERDE_CLASS)) {
+                            if (!schema.get(rfsIdx + 1).trim().equals(ROW_FORMAT_SERDE_CLASS)) {
                                 rtn = Boolean.TRUE;
                             }
                         }
@@ -129,6 +122,12 @@ public class BadParquetDefFeature extends BaseFeature implements Feature {
         } else {
             return Boolean.FALSE;
         }
+    }
+
+    public String getDescription() {
+        return "Table schema definitions for Parquet files that don't include include INPUT and " +
+                "OUTPUT format but no ROW FORMAT SERDE will not translate correctly.  This process will " +
+                "remove the invalid declarations and set STORED AS PARQUET";
     }
 
 }

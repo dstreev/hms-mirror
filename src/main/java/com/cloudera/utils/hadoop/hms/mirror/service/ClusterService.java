@@ -17,19 +17,10 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.service;
 
-import com.cloudera.utils.hadoop.hms.mirror.Cluster;
-import com.cloudera.utils.hadoop.hms.mirror.Config;
-import com.cloudera.utils.hadoop.hms.mirror.Environment;
-import com.cloudera.utils.hadoop.hms.mirror.Pair;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 @Service
 @Slf4j
@@ -50,18 +41,5 @@ public class ClusterService {
     public void setDatabaseService(DatabaseService databaseService) {
         this.databaseService = databaseService;
     }
-
-//    public Boolean runClusterSql(List<Pair> clusterSql) {
-//        Boolean rtn = Boolean.TRUE;
-//        for (Pair pair : clusterSql) {
-//            if (!runDatabaseSql(null, pair)) {
-//                rtn = Boolean.FALSE;
-//                // don't continue
-//                break;
-//            }
-//        }
-//        return rtn;
-//    }
-
 
 }

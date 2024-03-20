@@ -19,28 +19,27 @@ package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.*;
 
+@Getter
+@Setter
 public class EnvironmentTable {
 
+    private final List<Pair> sql = new ArrayList<Pair>();
+    private final List<Pair> cleanUpSql = new ArrayList<Pair>();
     private String name = null;
-    private Boolean exists = Boolean.FALSE;
+    private boolean exists = Boolean.FALSE;
     private CreateStrategy createStrategy = CreateStrategy.NOTHING;
     private List<String> definition = new ArrayList<String>();
-//    private final Boolean partitioned = Boolean.FALSE;
     private String owner = null;
-
     private Map<String, String> partitions = new HashMap<String, String>();
     private List<String> actions = new ArrayList<String>();
     private Map<String, String> addProperties = new TreeMap<String, String>();
-
     private Map<String, Object> statistics = new HashMap<String, Object>();
-
     private List<String> issues = new ArrayList<String>();
-    private final List<Pair> sql = new ArrayList<Pair>();
-    private final List<Pair> cleanUpsql = new ArrayList<Pair>();
-
     @JsonIgnore
     private TableMirror parent = null;
 
@@ -51,53 +50,35 @@ public class EnvironmentTable {
         this.parent = parent;
     }
 
-    public TableMirror getParent() {
-        return parent;
+    public void addAction(String action) {
+        getActions().add(action);
     }
 
-    public void setParent(TableMirror parent) {
-        this.parent = parent;
+    public void addCleanUpSql(Pair sqlPair) {
+        getCleanUpSql().add(sqlPair);
     }
 
-    public String getName() {
-        return name;
+    public void addCleanUpSql(String desc, String sql) {
+        Pair pair = new Pair(desc, sql);
+        addCleanUpSql(pair);
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void addIssue(String issue) {
+        getIssues().add(issue);
     }
 
-    public Boolean getExists() {
-        return exists;
+    public void addProperty(String key, String value) {
+        getAddProperties().put(key, value);
     }
 
-    public void setExists(Boolean exists) {
-        this.exists = exists;
+    public void addSql(Pair sqlPair) {
+        getSql().add(sqlPair);
+        parent.incTotalPhaseCount();
     }
 
-    public CreateStrategy getCreateStrategy() {
-        return createStrategy;
-    }
-
-    public void setCreateStrategy(CreateStrategy createStrategy) {
-        this.createStrategy = createStrategy;
-    }
-
-    @JsonIgnore
-    public Boolean isDefined() {
-        if (definition != null && definition.size() > 0) {
-            return Boolean.TRUE;
-        } else {
-            return Boolean.FALSE;
-        }
-    }
-
-    public List<String> getDefinition() {
-        return definition;
-    }
-
-    public void setDefinition(List<String> definition) {
-        this.definition = definition;
+    public void addSql(String desc, String sql) {
+        Pair pair = new Pair(desc, sql);
+        addSql(pair);
     }
 
     @JsonIgnore
@@ -111,90 +92,13 @@ public class EnvironmentTable {
         return rtn;
     }
 
-    public Map<String, String> getPartitions() {
-        return partitions;
-    }
-
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
-    public void setPartitions(Map<String, String> partitions) {
-        this.partitions = partitions;
-    }
-
-    public List<String> getActions() {
-        return actions;
-    }
-
-    public void setActions(List<String> actions) {
-        this.actions = actions;
-    }
-
-    public void addAction(String action) {
-        getActions().add(action);
-    }
-
-    public Map<String, String> getAddProperties() {
-        return addProperties;
-    }
-
-    public void addProperty(String key, String value) {
-        getAddProperties().put(key, value);
-    }
-    public void setAddProperties(Map<String, String> addProperties) {
-        this.addProperties = addProperties;
-    }
-
-    public Map<String, Object> getStatistics() {
-        return statistics;
-    }
-
-    public void setStatistics(Map<String, Object> statistics) {
-        this.statistics = statistics;
-    }
-
-    public List<String> getIssues() {
-        return issues;
-    }
-
-    public void addIssue(String issue) {
-        getIssues().add(issue);
-    }
-
-    public void setIssues(List<String> issues) {
-        this.issues = issues;
-    }
-
-    public List<Pair> getSql() {
-        return sql;
-    }
-
-    public void addSql(Pair sqlPair) {
-        getSql().add(sqlPair);
-        parent.incTotalPhaseCount();
-    }
-
-    public void addSql(String desc, String sql) {
-        Pair pair = new Pair(desc, sql);
-        addSql(pair);
-    }
-
-    public List<Pair> getCleanUpSql() {
-        return cleanUpsql;
-    }
-
-    public void addCleanUpSql(Pair sqlPair) {
-        getCleanUpSql().add(sqlPair);
-    }
-
-    public void addCleanUpSql(String desc, String sql) {
-        Pair pair = new Pair(desc, sql);
-        addCleanUpSql(pair);
+    @JsonIgnore
+    public boolean isDefined() {
+        if (definition != null && definition.size() > 0) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
     }
 
 }

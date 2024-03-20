@@ -15,41 +15,38 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms;
+package com.cloudera.utils.hadoop.hms.mirror.config;
 
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import org.apache.kerby.config.Conf;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executors;
-
 @Configuration
-//@EnableAsync
 public class ThreadPoolConfigurator {
 
-    @Bean("metadataThreadPool")
-    public TaskExecutor metadataThreadPool(ConfigService configService) {
+    @Bean("jobThreadPool")
+    @Order(20)
+    public TaskExecutor jobThreadPool(ConfigService configService) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(configService.getConfig().getTransfer().getConcurrency()/2);
+        executor.setCorePoolSize(configService.getConfig().getTransfer().getConcurrency());
         executor.setMaxPoolSize(configService.getConfig().getTransfer().getConcurrency());
         executor.setQueueCapacity(Integer.MAX_VALUE);
-        executor.setThreadNamePrefix("metadata-");
+        executor.setThreadNamePrefix("job-");
         executor.initialize();
         return executor;
     }
 
-    @Bean("jobThreadPool")
-    public TaskExecutor jobThreadPool(ConfigService configService) {
+    @Bean("metadataThreadPool")
+    @Order(20)
+    public TaskExecutor metadataThreadPool(ConfigService configService) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(configService.getConfig().getTransfer().getConcurrency()/2);
+        executor.setCorePoolSize(configService.getConfig().getTransfer().getConcurrency());
         executor.setMaxPoolSize(configService.getConfig().getTransfer().getConcurrency());
         executor.setQueueCapacity(Integer.MAX_VALUE);
-        executor.setThreadNamePrefix("job-");
+        executor.setThreadNamePrefix("metadata-");
         executor.initialize();
         return executor;
     }

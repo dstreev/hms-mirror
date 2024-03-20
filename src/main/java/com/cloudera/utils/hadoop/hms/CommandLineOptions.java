@@ -27,11 +27,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,8 +42,6 @@ import java.nio.file.FileSystems;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.ENVIRONMENT_CONNECTION_ISSUE;
@@ -51,8 +51,6 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.ENVIRONMENT_DISCO
 @Slf4j
 @Getter
 @Setter
-//@ConfigurationProperties(prefix = "hms-mirror.config")
-//@DependsOn("config")
 public class CommandLineOptions {
     private String SPRING_CONFIG_PREFIX = "hms-mirror.config";
 
@@ -61,27 +59,933 @@ public class CommandLineOptions {
         System.out.println(pcli.toSpringBootOption(args));
     }
 
-    public String toSpringBootOption(String[] args) {
-        CommandLine cmd = getCommandLine(args);
-        StringBuilder sb = new StringBuilder();
-        for (Option option : cmd.getOptions()) {
-            String opt = option.getLongOpt();
-            String[] values = option.getValues();
-            if (opt.equals("config")) {
-                // Handle the config file differently
-                sb.append("--hms-mirror.config-filename" + opt + "=\"" + String.join(",", values) + "\"");
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.acid-partition-count")
+    CommandLineRunner configAcidPartitionCount(Config config, @Value("${hms-mirror.config.acid-partition-count}") String value) {
+        return args -> {
+            log.info("Acid Partition Limit: " + value);
+            config.getMigrateACID().setPartitionLimit(Integer.parseInt(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.auto-tune")
+    CommandLineRunner configAutoTune(Config config, @Value("${hms-mirror.config.auto-tune}") String value) {
+        return args -> {
+            log.info("avro-schema-migration: " + value);
+            config.getOptimization().setAutoTune(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.avro-schema-migration")
+    CommandLineRunner configAvroSchemaMigration(Config config, @Value("${hms-mirror.config.avro-schema-migration}") String value) {
+        return args -> {
+            log.info("avro-schema-migration: " + value);
+            config.setCopyAvroSchemaUrls(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.create-if-not-exist")
+    CommandLineRunner configCine(Config config, @Value("${hms-mirror.config.create-if-not-exist}") String value) {
+        return args -> {
+            log.info("create-if-not-exist: " + value);
+            if (config.getCluster(Environment.LEFT) != null) {
+                config.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.parseBoolean(value));
+            }
+            if (config.getCluster(Environment.RIGHT) != null) {
+                config.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.parseBoolean(value));
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.legacy-command-line-options")
+    CommandLineRunner configCommandLineOptions(Config config, @Value("${hms-mirror.config.legacy-command-line-options}") String value) {
+        return args -> {
+            log.info("legacy-command-line-args: " + value);
+            config.setCommandLineOptions(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.common-storage")
+    CommandLineRunner configCommonStorage(Config config, @Value("${hms-mirror.config.common-storage}") String value) {
+        return args -> {
+            log.info("common-storage: " + value);
+            config.getTransfer().setCommonStorage(value);
+            // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp.
+            config.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.compress-text-output")
+    CommandLineRunner configCompressTextOutput(Config config, @Value("${hms-mirror.config.compress-text-output}") String value) {
+        return args -> {
+            log.info("compress-text-output: " + value);
+            config.getOptimization().setCompressTextOutput(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.data-strategy")
+    CommandLineRunner configDataStrategy(Config config, @Value("${hms-mirror.config.data-strategy}") String value) {
+        return args -> {
+            log.info("data-strategy: " + value);
+            config.setDataStrategy(DataStrategyEnum.valueOf(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.database")
+    CommandLineRunner configDatabase(Config config, @Value("${hms-mirror.config.database}") String dbs) {
+        return args -> {
+            log.info("databases: " + dbs);
+            config.setDatabases(dbs.split(","));
+//            log.info("Concurrency: " + config.getTransfer().getConcurrency());
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.database-only")
+    CommandLineRunner configDatabaseOnly(Config config, @Value("${hms-mirror.config.database-only}") String value) {
+        return args -> {
+            log.info("database-only: " + value);
+            config.setDatabaseOnly(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.db-prefix")
+    CommandLineRunner configDatabasePrefix(Config config, @Value("${hms-mirror.config.db-prefix}") String value) {
+        return args -> {
+            log.info("db-prefix: " + value);
+            config.setDbPrefix(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.database-regex")
+    CommandLineRunner configDatabaseRegEx(Config config, @Value("${hms-mirror.config.database-regex}") String value) {
+        return args -> {
+            log.info("database-regex: " + value);
+            config.getFilter().setDbRegEx(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.db-rename")
+    CommandLineRunner configDatabaseRename(Config config, @Value("${hms-mirror.config.db-rename}") String value) {
+        return args -> {
+            log.info("db-rename: " + value);
+            config.setDbRename(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.decrypt-password")
+    CommandLineRunner configDecryptPassword(Config config, @Value("${hms-mirror.config.decrypt-password}") String value) {
+        return args -> {
+            log.info("decrypt-password: " + value);
+            config.setDecryptPassword(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.distcp")
+    CommandLineRunner configDistcp(Config config, @Value("${hms-mirror.config.distcp}") String value) {
+        return args -> {
+            log.info("distcp: " + value);
+            if (Boolean.parseBoolean(value)) {
+                config.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
             } else {
-                if (values != null && values.length > 0) {
-                    sb.append("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + String.join(",", values));
-                } else {
-                    sb.append("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + "true");
+                config.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
+                String flowStr = value;
+                if (flowStr != null) {
+                    try {
+                        DistcpFlow flow = DistcpFlow.valueOf(flowStr.toUpperCase(Locale.ROOT));
+                        config.getTransfer().getStorageMigration().setDataFlow(flow);
+                    } catch (IllegalArgumentException iae) {
+                        throw new RuntimeException("Optional argument for `distcp` is invalid. Valid values: " +
+                                Arrays.toString(DistcpFlow.values()), iae);
+                    }
                 }
             }
-            sb.append(" ");
-        }
-        String springOptions = sb.toString();
-//        System.out.println(springOptions);
-        return springOptions;
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.downgrade-acid")
+    CommandLineRunner configDowngradeAcid(Config config, @Value("${hms-mirror.config.downgrade-acid}") String value) {
+        return args -> {
+            log.info("downgrade-acid: " + value);
+            config.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.dump-source")
+    CommandLineRunner configDumpSource(Config config, @Value("${hms-mirror.config.dump-source}") String value) {
+        return args -> {
+            log.info("dump-source: " + value);
+            if (config.getDataStrategy() == DataStrategyEnum.DUMP) {
+                config.setExecute(Boolean.FALSE); // No Actions.
+                config.setSync(Boolean.FALSE);
+
+                try {
+                    Environment source = Environment.valueOf(value.toUpperCase());
+                    config.setDumpSource(source);
+                } catch (RuntimeException re) {
+                    log.error("The `-ds` option should be either: (LEFT|RIGHT). " + value +
+                            " is NOT a valid option.");
+                    throw new RuntimeException("The `-ds` option should be either: (LEFT|RIGHT). " + value +
+                            " is NOT a valid option.");
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.dump-test-data")
+    CommandLineRunner configDumpTestData(Config config, @Value("${hms-mirror.config.dump-test-data}") String value) {
+        return args -> {
+            log.info("dump-test-data: " + value);
+            config.setDumpTestData(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.evaluate-partition-location")
+    CommandLineRunner configEvaluatePartitionLocation(Config config, @Value("${hms-mirror.config.evaluate-partition-location}") String value) {
+        return args -> {
+            log.info("evaluate-partition-location: " + value);
+            config.setEvaluatePartitionLocation(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.execute")
+    CommandLineRunner configExecute(Config config, @Value("${hms-mirror.config.execute}") String value) {
+        return args -> {
+            log.info("execute: " + value);
+            config.setExecute(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.export-partition-count")
+    CommandLineRunner configExportPartitionCount(Config config, @Value("${hms-mirror.config.export-partition-count}") String value) {
+        return args -> {
+            log.info("export-partition-count: " + value);
+            config.getHybrid().setExportImportPartitionLimit(Integer.parseInt(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.external-warehouse-directory")
+    CommandLineRunner configExternalWarehouseDirectory(Config config, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
+        return args -> {
+            log.info("external-warehouse-directory: " + value);
+            if (config.getTransfer().getWarehouse() == null)
+                config.getTransfer().setWarehouse(new WarehouseConfig());
+            String ewdStr = value;
+            // Remove/prevent duplicate namespace config.
+            if (config.getTransfer().getCommonStorage() != null) {
+                if (ewdStr.startsWith(config.getTransfer().getCommonStorage())) {
+                    ewdStr = ewdStr.substring(config.getTransfer().getCommonStorage().length());
+                    log.warn("External Warehouse Location Modified (stripped duplicate namespace): " + ewdStr);
+                }
+            }
+            config.getTransfer().getWarehouse().setExternalDirectory(ewdStr);
+
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.flip")
+    CommandLineRunner configFlip(Config config, @Value("${hms-mirror.config.flip}") String value) {
+        return args -> {
+            log.info("flip: " + value);
+            config.setFlip(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.force-external-location")
+    CommandLineRunner configForceExternalLocation(Config config, @Value("${hms-mirror.config.force-external-location}") String value) {
+        return args -> {
+            log.info("force-external-location: " + value);
+            config.getTranslator().setForceExternalLocation(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.global-location-map")
+    CommandLineRunner configGlobalLocationMap(Config config, @Value("${hms-mirror.config.global-location-map}") String value) {
+        return args -> {
+            log.info("global-location-map: " + value);
+            String[] globalLocMap = value.split(",");
+            if (globalLocMap != null)
+                config.setGlobalLocationMapKV(globalLocMap);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.help")
+    CommandLineRunner configHelp(Config config, @Value("${hms-mirror.config.help}") String value) {
+        return args -> {
+            log.info("help: " + value);
+//            config.
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.iceberg-table-property-overrides")
+    CommandLineRunner configIcebergTablePropertyOverrides(Config config, @Value("${hms-mirror.config.iceberg-table-property-overrides}") String value) {
+        return args -> {
+            log.info("iceberg-table-property-overrides: " + value);
+            String[] overrides = value.split(",");
+            if (overrides != null)
+                config.getIcebergConfig().setPropertyOverridesStr(overrides);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.iceberg-version")
+    CommandLineRunner configIcebergVersion(Config config, @Value("${hms-mirror.config.iceberg-version}") String value) {
+        return args -> {
+            log.info("iceberg-version: " + value);
+            config.getIcebergConfig().setVersion(Integer.parseInt(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.in-place")
+    CommandLineRunner configInPlace(Config config, @Value("${hms-mirror.config.in-place}") String value) {
+        return args -> {
+            log.info("in-place: " + value);
+            if (config.getMigrateACID().isOn()) {
+//                if (cmd.hasOption("da")) {
+//                    // Downgrade ACID tables
+//                    getConfig().getMigrateACID().setDowngrade(Boolean.TRUE);
+//                }
+//                if (cmd.hasOption("ip")) {
+                // Downgrade ACID tables inplace
+                // Only work on LEFT cluster definition.
+//                    log.info("Inplace ACID Downgrade");
+                config.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
+                config.getMigrateACID().setInplace(Boolean.parseBoolean(value));
+                // For 'in-place' downgrade, only applies to ACID tables.
+                // Implies `-mao`.
+                log.info("Only ACID Tables will be looked at since 'ip' was specified.");
+                config.getMigrateACID().setOnly(Boolean.TRUE);
+                // Remove RIGHT cluster and enforce mao
+                log.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
+                if (null != config.getCluster(Environment.RIGHT).getHiveServer2())
+                    config.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
+//                }
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.intermediate-storage")
+    CommandLineRunner configIntermediateStorage(Config config, @Value("${hms-mirror.config.intermediate-storage}") String value) {
+        return args -> {
+            log.info("intermediate-storage: " + value);
+            config.getTransfer().setIntermediateStorage(value);
+            // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp from the
+            // LEFT and PULL from the RIGHT.
+            config.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH_PULL);
+        };
+    }
+
+    /*
+    This is taken care of thru the spring variable 'hms-mirror.config.load-test-data' and the
+    construction of the Conversion object.
+
+    Setting this value in the config will allow us to check for this in the config and make the
+    appropriate workflow adjustments.
+     */
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.load-test-data")
+    CommandLineRunner configLoadTestData(Config config, @Value("${hms-mirror.config.load-test-data}") String value) {
+        return args -> {
+            log.info("load-test-data: " + value);
+            config.setLoadTestDataFile(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.migrate-acid")
+    CommandLineRunner configMigrateAcid(Config config, @Value("${hms-mirror.config.migrate-acid}") String value) {
+        return args -> {
+            log.info("migrate-acid: " + value);
+            if (Boolean.parseBoolean(value)) {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.FALSE);
+            } else {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.FALSE);
+                String bucketLimit = value;
+                if (bucketLimit != null) {
+                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.migrate-acid-only")
+    CommandLineRunner configMigrateAcidOnly(Config config, @Value("${hms-mirror.config.migrate-acid-only}") String value) {
+        return args -> {
+            log.info("migrate-acid-only: " + value);
+            if (Boolean.parseBoolean(value)) {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.TRUE);
+            } else {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.TRUE);
+                String bucketLimit = value;
+                if (bucketLimit != null) {
+                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.migrate-non-native")
+    CommandLineRunner configMigrateNonNative(Config config, @Value("${hms-mirror.config.migrate-non-native}") String value) {
+        return args -> {
+            log.info("migrate-non-native: " + value);
+            config.setMigratedNonNative(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.migrate-non-native-only")
+    CommandLineRunner configMigrateNonNativeOnly(Config config, @Value("${hms-mirror.config.migrate-non-native-only}") String value) {
+        return args -> {
+            log.info("migrate-non-native-only: " + value);
+            config.setMigratedNonNative(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.no-purge")
+    CommandLineRunner configNoPurge(Config config, @Value("${hms-mirror.config.no-purge}") String value) {
+        return args -> {
+            log.info("no-purge: " + value);
+            config.setNoPurge(Boolean.parseBoolean(value));
+        };
+    }
+
+    /*
+    The APP_OUTPUT_PATH is an Environment Variable that is should be set in the
+    start-up script for the application.  It is used to set the default output for
+    reports and is picked up by the Log4j configuration so those logs are in the same
+    directory as the reports.
+     */
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "app.path.dir")
+    CommandLineRunner configOutputDir(Config config, CliReporter reporter, @Value("${app.path.dir}") String value) {
+        return args -> {
+            log.info("output-dir: " + value);
+            config.setOutputDirectory(value);
+            File reportPathDir = new File(value);
+            if (!reportPathDir.exists()) {
+                reportPathDir.mkdirs();
+            }
+            reporter.setReportOutputFile(value + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
+            reporter.setLeftExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
+            reporter.setLeftCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
+            reporter.setRightExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
+            reporter.setRightCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
+
+            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
+
+            // Ensure the Retry Path is created.
+            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
+                    FileSystems.getDefault().getSeparator() + "retry");
+            if (!retryPath.exists()) {
+                retryPath.mkdirs();
+            }
+
+            // Test file to ensure we can write to it for the report.
+            try {
+                new FileOutputStream(testFile).close();
+            } catch (IOException e) {
+                throw new RuntimeException("Can't write to output directory: " + value, e);
+            }
+
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.password")
+    CommandLineRunner configPassword(Config config, @Value("${hms-mirror.config.password}") String value) {
+        return args -> {
+            log.info("password: " + value);
+            config.setPassword(value);
+//            if (cmd.hasOption("p") || cmd.hasOption("dp")) {
+//                // Used to generate encrypted password.
+//                if (cmd.hasOption("pkey")) {
+//                    Protect protect = new Protect(cmd.getOptionValue("pkey"));
+//                    // Set to control execution flow.
+//                    config.addError(MessageCode.PASSWORD_CFG.getCode());
+//                    if (cmd.hasOption("p")) {
+//                        String epassword = null;
+//                        try {
+//                            epassword = protect.encrypt(cmd.getOptionValue("p"));
+//                            config.addWarning(MessageCode.ENCRYPTED_PASSWORD.getCode(), epassword);
+//                        } catch (Exception e) {
+//                            config.addError(MessageCode.ENCRYPT_PASSWORD_ISSUE.getCode());
+//                        }
+//                    } else {
+//                        String password = null;
+//                        try {
+//                            password = protect.decrypt(cmd.getOptionValue("dp"));
+//                            config.addWarning(MessageCode.DECRYPTED_PASSWORD.getCode(), password);
+//                        } catch (Exception e) {
+//                            config.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE.getCode());
+//                        }
+//                    }
+//                } else {
+//                    config.addError(MessageCode.PKEY_PASSWORD_CFG.getCode());
+//                }
+//            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.password-key")
+    CommandLineRunner configPasswordKey(Config config, @Value("${hms-mirror.config.password-key}") String value) {
+        return args -> {
+            log.info("password-key: " + value);
+            config.setPasswordKey(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.property-overrides")
+    CommandLineRunner configPropertyOverrides(Config config, @Value("${hms-mirror.config.property-overrides}") String value) {
+        return args -> {
+            log.info("property-overrides: " + value);
+            String[] overrides = value.split(",");
+            if (overrides != null)
+                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.BOTH);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.property-overrides-left")
+    CommandLineRunner configPropertyOverridesLeft(Config config, @Value("${hms-mirror.config.property-overrides-left}") String value) {
+        return args -> {
+            log.info("property-overrides-left: " + value);
+            String[] overrides = value.split(",");
+            if (overrides != null)
+                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.LEFT);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.property-overrides-right")
+    CommandLineRunner configPropertyOverridesRight(Config config, @Value("${hms-mirror.config.property-overrides-right}") String value) {
+        return args -> {
+            log.info("property-overrides-right: " + value);
+            String[] overrides = value.split(",");
+            if (overrides != null)
+                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.RIGHT);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.quiet")
+    CommandLineRunner configQuiet(Config config, @Value("${hms-mirror.config.quiet}") String value) {
+        return args -> {
+            log.info("quiet: " + value);
+            config.setQuiet(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.read-only")
+    CommandLineRunner configReadOnly(Config config, @Value("${hms-mirror.config.read-only}") String value) {
+        return args -> {
+            log.info("read-only: " + value);
+            switch (config.getDataStrategy()) {
+                case SCHEMA_ONLY:
+                case LINKED:
+                case COMMON:
+                case SQL:
+                    config.setReadOnly(Boolean.TRUE);
+                    break;
+                default:
+                    throw new RuntimeException("RO option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies.");
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.replay-directory")
+    CommandLineRunner configReportDirectory(Config config, @Value("${hms-mirror.config.replay-directory}") String value) {
+        return args -> {
+            log.info("replay-directory: " + value);
+            // TODO: Implement Replay
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.reset-right")
+    CommandLineRunner configResetRight(Config config, @Value("${hms-mirror.config.reset-right}") String value) {
+        return args -> {
+            log.info("reset-right: " + value);
+            // TODO: Implement.  Does this still make sense?
+//            config.
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.reset-to-default-location")
+    CommandLineRunner configResetToDefaultLocation(Config config, @Value("${hms-mirror.config.reset-to-default-location}") String value) {
+        return args -> {
+            log.info("reset-to-default-location: " + value);
+            config.setResetToDefaultLocation(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.right-is-disconnected")
+    CommandLineRunner configRightIsDisconnected(Config config, @Value("${hms-mirror.config.right-is-disconnected}") String value) {
+        return args -> {
+            log.info("right-is-disconnected: " + value);
+            if (null != config.getCluster(Environment.RIGHT).getHiveServer2())
+                config.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.setup")
+    CommandLineRunner configSetup(Config config, @Value("${hms-mirror.config.setup}") String value) {
+        return args -> {
+            log.info("setup: " + value);
+            // TODO: Implement Setup
+//            configFile = System.getProperty("user.home") + System.getProperty("file.separator") + ".hms-mirror/cfg/default.yaml";
+//            File defaultCfg = new File(configFile);
+//            if (defaultCfg.exists()) {
+//                Scanner scanner = new Scanner(System.in);
+//                System.out.print("Default Config exists.  Proceed with overwrite:(Y/N) ");
+//                String response = scanner.next();
+//                if (response.equalsIgnoreCase("y")) {
+//                    Config.setup(configFile);
+//                    System.exit(0);
+//                }
+//            } else {
+//                Config.setup(configFile);
+//                System.exit(0);
+//            }
+
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-features")
+    CommandLineRunner configSkipFeatures(Config config, @Value("${hms-mirror.config.skip-features}") String value) {
+        return args -> {
+            log.info("skip-features: " + value);
+            config.setSkipFeatures(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-legacy-translation")
+    CommandLineRunner configSkipLegacyTranslation(Config config, @Value("${hms-mirror.config.skip-legacy-translation}") String value) {
+        return args -> {
+            log.info("skip-legacy-translation: " + value);
+            config.setSkipLegacyTranslation(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-link-check")
+    CommandLineRunner configSkipLinkCheck(Config config, @Value("${hms-mirror.config.skip-link-check}") String value) {
+        return args -> {
+            log.info("skip-link-check: " + value);
+            config.setSkipLinkCheck(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-optimizations")
+    CommandLineRunner configSkipOptimizations(Config config, @Value("${hms-mirror.config.skip-optimizations}") String value) {
+        return args -> {
+            log.info("skip-optimizations: " + value);
+            config.getOptimization().setSkip(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-stats-collection")
+    CommandLineRunner configSkipStatsCollection(Config config, @Value("${hms-mirror.config.skip-stats-collection}") String value) {
+        return args -> {
+            log.info("skip-stats-collection: " + value);
+            config.getOptimization().setSkipStatsCollection(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sort-dynamic-partition-inserts")
+    CommandLineRunner configSortDynamicPartitionInserts(Config config, @Value("${hms-mirror.config.sort-dynamic-partition-inserts}") String value) {
+        return args -> {
+            log.info("sort-dynamic-partition-inserts: " + value);
+            config.getOptimization().setSortDynamicPartitionInserts(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sql-partition-count")
+    CommandLineRunner configSqlPartitionCount(Config config, @Value("${hms-mirror.config.sql-partition-count}") String value) {
+        return args -> {
+            log.info("sql-partition-count: " + value);
+            config.getHybrid().setSqlPartitionLimit(Integer.valueOf(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.storage-migration-namespace")
+    CommandLineRunner configStorageMigrationNamespace(Config config, @Value("${hms-mirror.config.storage-migration-namespace}") String value) {
+        return args -> {
+            log.info("storage-migration-namespace: " + value);
+            config.getTransfer().setCommonStorage(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sync")
+    CommandLineRunner configSync(Config config, @Value("${hms-mirror.config.sync}") String value) {
+        return args -> {
+            log.info("sync: " + value);
+            if (config.getDataStrategy() != DataStrategyEnum.DUMP) {
+                config.setSync(Boolean.parseBoolean(value));
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.table-exclude-filter")
+    CommandLineRunner configTableExcludeFilter(Config config, @Value("${hms-mirror.config.table-exclude-filter}") String value) {
+        return args -> {
+            log.info("table-exclude-filter: " + value);
+            config.getFilter().setTblExcludeRegEx(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.table-filter")
+    CommandLineRunner configTableFilter(Config config, @Value("${hms-mirror.config.table-filter}") String value) {
+        return args -> {
+            log.info("table-filter: " + value);
+            config.getFilter().setTblRegEx(value);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.table-filter-partition-count-limit")
+    CommandLineRunner configTableFilterPartitionCountLimit(Config config, @Value("${hms-mirror.config.table-filter-partition-count-limit}") String value) {
+        return args -> {
+            log.info("table-filter-partition-count-limit: " + value);
+            config.getFilter().setTblPartitionLimit(Integer.parseInt(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.table-filter-size-limit")
+    CommandLineRunner configTableFilterSizeLimit(Config config, @Value("${hms-mirror.config.table-filter-size-limit}") String value) {
+        return args -> {
+            log.info("table-filter-size-limit: " + value);
+            config.getFilter().setTblSizeLimit(Long.parseLong(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.transfer-ownership")
+    CommandLineRunner configTransferOwnership(Config config, @Value("${hms-mirror.config.transfer-ownership}") String value) {
+        return args -> {
+            log.info("transfer-ownership: " + value);
+            config.setTransferOwnership(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.web-interface")
+    CommandLineRunner configUi(Config config, @Value("${hms-mirror.config.web-interface}") String value) {
+        return args -> {
+            log.info("web-interface: " + value);
+            config.setWebInterface(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.views-only")
+    CommandLineRunner configViewsOnly(Config config, @Value("${hms-mirror.config.views-only}") String value) {
+        return args -> {
+            log.info("views-only: " + value);
+            config.getMigrateVIEW().setOn(Boolean.parseBoolean(value));
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.warehouse-directory")
+    CommandLineRunner configWarehouseDirectory(Config config, @Value("${hms-mirror.config.warehouse-directory}") String value) {
+        return args -> {
+            log.info("warehouse-directory: " + value);
+            if (config.getTransfer().getWarehouse() == null)
+                config.getTransfer().setWarehouse(new WarehouseConfig());
+            String wdStr = value;
+            // Remove/prevent duplicate namespace config.
+            if (config.getTransfer().getCommonStorage() != null) {
+                if (wdStr.startsWith(config.getTransfer().getCommonStorage())) {
+                    wdStr = wdStr.substring(config.getTransfer().getCommonStorage().length());
+                    log.warn("Managed Warehouse Location Modified (stripped duplicate namespace): " + wdStr);
+                }
+            }
+            config.getTransfer().getWarehouse().setManagedDirectory(wdStr);
+        };
     }
 
     public CommandLine getCommandLine(String[] args) {
@@ -121,6 +1025,12 @@ public class CommandLineOptions {
         quietOutput.setOptionalArg(Boolean.FALSE);
         quietOutput.setRequired(Boolean.FALSE);
         options.addOption(quietOutput);
+
+        Option webInterfaceOption = new Option("wi", "web-interface", false,
+                "Start Web-Interface.");
+        webInterfaceOption.setOptionalArg(Boolean.FALSE);
+        webInterfaceOption.setRequired(Boolean.FALSE);
+        options.addOption(webInterfaceOption);
 
         Option resetTarget = new Option("rr", "reset-right", false,
                 "Use this for testing to remove the database on the RIGHT using CASCADE.");
@@ -633,894 +1543,11 @@ public class CommandLineOptions {
         return options;
     }
 
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.databases")
-    CommandLineRunner configDatabases(Config config, @Value("${hms-mirror.config.databases}") String dbs) {
-        return args -> {
-            log.info("databases: " + dbs);
-            config.setDatabases(dbs.split(","));
-//            log.info("Concurrency: " + config.getTransfer().getConcurrency());
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.acid-partition-count")
-    CommandLineRunner configAcidPartitionCount(Config config, @Value("${hms-mirror.config.acid-partition-count}") String value) {
-        return args -> {
-            log.info("Acid Partition Limit: " + value);
-            config.getMigrateACID().setPartitionLimit(Integer.parseInt(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.avro-schema-migration")
-    CommandLineRunner configAvroSchemaMigration(Config config, @Value("${hms-mirror.config.avro-schema-migration}") String value) {
-        return args -> {
-            log.info("avro-schema-migration: " + value);
-            config.setCopyAvroSchemaUrls(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.auto-tune")
-    CommandLineRunner configAutoTune(Config config, @Value("${hms-mirror.config.auto-tune}") String value) {
-        return args -> {
-            log.info("avro-schema-migration: " + value);
-            config.getOptimization().setAutoTune(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.create-if-not-exist")
-    CommandLineRunner configCine(Config config, @Value("${hms-mirror.config.create-if-not-exist}") String value) {
-        return args -> {
-            log.info("create-if-not-exist: " + value);
-            if (config.getCluster(Environment.LEFT) != null) {
-                config.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.parseBoolean(value));
-            }
-            if (config.getCluster(Environment.RIGHT) != null) {
-                config.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.parseBoolean(value));
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.common-storage")
-    CommandLineRunner configCommonStorage(Config config, @Value("${hms-mirror.config.common-storage}") String value) {
-        return args -> {
-            log.info("common-storage: " + value);
-            config.getTransfer().setCommonStorage(value);
-            // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp.
-            config.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.compress-text-output")
-    CommandLineRunner configCompressTextOutput(Config config, @Value("${hms-mirror.config.compress-text-output}") String value) {
-        return args -> {
-            log.info("compress-text-output: " + value);
-            config.getOptimization().setCompressTextOutput(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.data-strategy")
-    CommandLineRunner configDataStrategy(Config config, @Value("${hms-mirror.config.data-strategy}") String value) {
-        return args -> {
-            log.info("data-strategy: " + value);
-            config.setDataStrategy(DataStrategyEnum.valueOf(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.downgrade-acid")
-    CommandLineRunner configDowngradeAcid(Config config, @Value("${hms-mirror.config.downgrade-acid}") String value) {
-        return args -> {
-            log.info("downgrade-acid: " + value);
-            config.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.database-only")
-    CommandLineRunner configDatabaseOnly(Config config, @Value("${hms-mirror.config.database-only}") String value) {
-        return args -> {
-            log.info("database-only: " + value);
-            config.setDatabaseOnly(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.db-prefix")
-    CommandLineRunner configDatabasePrefix(Config config, @Value("${hms-mirror.config.db-prefix}") String value) {
-        return args -> {
-            log.info("db-prefix: " + value);
-            config.setDbPrefix(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.db-rename")
-    CommandLineRunner configDatabaseRename(Config config, @Value("${hms-mirror.config.db-rename}") String value) {
-        return args -> {
-            log.info("db-rename: " + value);
-            config.setDbRename(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.database-regex")
-    CommandLineRunner configDatabaseRegEx(Config config, @Value("${hms-mirror.config.database-regex}") String value) {
-        return args -> {
-            log.info("database-regex: " + value);
-            config.getFilter().setDbRegEx(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.distcp")
-    CommandLineRunner configDistcp(Config config, @Value("${hms-mirror.config.distcp}") String value) {
-        return args -> {
-            log.info("distcp: " + value);
-            if (Boolean.parseBoolean(value)) {
-                config.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
-            } else {
-                config.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
-                String flowStr = value;
-                if (flowStr != null) {
-                    try {
-                        DistcpFlow flow = DistcpFlow.valueOf(flowStr.toUpperCase(Locale.ROOT));
-                        config.getTransfer().getStorageMigration().setDataFlow(flow);
-                    } catch (IllegalArgumentException iae) {
-                        throw new RuntimeException("Optional argument for `distcp` is invalid. Valid values: " +
-                                Arrays.toString(DistcpFlow.values()), iae);
-                    }
-                }
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.decrypt-password")
-    CommandLineRunner configDecryptPassword(Config config, @Value("${hms-mirror.config.decrypt-password}") String value) {
-        return args -> {
-            log.info("decrypt-password: " + value);
-            config.setDecryptPassword(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.dump-source")
-    CommandLineRunner configDumpSource(Config config, @Value("${hms-mirror.config.dump-source}") String value) {
-        return args -> {
-            log.info("dump-source: " + value);
-            if (config.getDataStrategy() == DataStrategyEnum.DUMP) {
-                config.setExecute(Boolean.FALSE); // No Actions.
-                config.setSync(Boolean.FALSE);
-
-                try {
-                    Environment source = Environment.valueOf(value.toUpperCase());
-                    config.setDumpSource(source);
-                } catch (RuntimeException re) {
-                    log.error("The `-ds` option should be either: (LEFT|RIGHT). " + value +
-                            " is NOT a valid option.");
-                    throw new RuntimeException("The `-ds` option should be either: (LEFT|RIGHT). " + value +
-                            " is NOT a valid option.");
-                }
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.dump-test-data")
-    CommandLineRunner configDumpTestData(Config config, @Value("${hms-mirror.config.dump-test-data}") String value) {
-        return args -> {
-            log.info("dump-test-data: " + value);
-            config.setDumpTestData(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.execute")
-    CommandLineRunner configExecute(Config config, @Value("${hms-mirror.config.execute}") String value) {
-        return args -> {
-            log.info("execute: " + value);
-            config.setExecute(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.export-partition-count")
-    CommandLineRunner configExportPartitionCount(Config config, @Value("${hms-mirror.config.export-partition-count}") String value) {
-        return args -> {
-            log.info("export-partition-count: " + value);
-            config.getHybrid().setExportImportPartitionLimit(Integer.parseInt(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.evaluate-partition-location")
-    CommandLineRunner configEvaluatePartitionLocation(Config config, @Value("${hms-mirror.config.evaluate-partition-location}") String value) {
-        return args -> {
-            log.info("evaluate-partition-location: " + value);
-            config.setEvaluatePartitionLocation(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.external-warehouse-directory")
-    CommandLineRunner configExternalWarehouseDirectory(Config config, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
-        return args -> {
-            log.info("external-warehouse-directory: " + value);
-            if (config.getTransfer().getWarehouse() == null)
-                config.getTransfer().setWarehouse(new WarehouseConfig());
-            String ewdStr = value;
-            // Remove/prevent duplicate namespace config.
-            if (config.getTransfer().getCommonStorage() != null) {
-                if (ewdStr.startsWith(config.getTransfer().getCommonStorage())) {
-                    ewdStr = ewdStr.substring(config.getTransfer().getCommonStorage().length());
-                    log.warn("External Warehouse Location Modified (stripped duplicate namespace): " + ewdStr);
-                }
-            }
-            config.getTransfer().getWarehouse().setExternalDirectory(ewdStr);
-
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.flip")
-    CommandLineRunner configFlip(Config config, @Value("${hms-mirror.config.flip}") String value) {
-        return args -> {
-            log.info("flip: " + value);
-            config.setFlip(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.force-external-location")
-    CommandLineRunner configForceExternalLocation(Config config, @Value("${hms-mirror.config.force-external-location}") String value) {
-        return args -> {
-            log.info("force-external-location: " + value);
-            config.getTranslator().setForceExternalLocation(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.global-location-map")
-    CommandLineRunner configGlobalLocationMap(Config config, @Value("${hms-mirror.config.global-location-map}") String value) {
-        return args -> {
-            log.info("global-location-map: " + value);
-            String[] globalLocMap = value.split(",");
-            if (globalLocMap != null)
-                config.setGlobalLocationMapKV(globalLocMap);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.help")
-    CommandLineRunner configHelp(Config config, @Value("${hms-mirror.config.help}") String value) {
-        return args -> {
-            log.info("help: " + value);
-//            config.
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.in-place")
-    CommandLineRunner configInPlace(Config config, @Value("${hms-mirror.config.in-place}") String value) {
-        return args -> {
-            log.info("in-place: " + value);
-            if (config.getMigrateACID().isOn()) {
-//                if (cmd.hasOption("da")) {
-//                    // Downgrade ACID tables
-//                    getConfig().getMigrateACID().setDowngrade(Boolean.TRUE);
-//                }
-//                if (cmd.hasOption("ip")) {
-                // Downgrade ACID tables inplace
-                // Only work on LEFT cluster definition.
-//                    log.info("Inplace ACID Downgrade");
-                config.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
-                config.getMigrateACID().setInplace(Boolean.parseBoolean(value));
-                // For 'in-place' downgrade, only applies to ACID tables.
-                // Implies `-mao`.
-                log.info("Only ACID Tables will be looked at since 'ip' was specified.");
-                config.getMigrateACID().setOnly(Boolean.TRUE);
-                // Remove RIGHT cluster and enforce mao
-                log.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
-                if (null != config.getCluster(Environment.RIGHT).getHiveServer2())
-                    config.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
-//                }
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.intermediate-storage")
-    CommandLineRunner configIntermediateStorage(Config config, @Value("${hms-mirror.config.intermediate-storage}") String value) {
-        return args -> {
-            log.info("intermediate-storage: " + value);
-            config.getTransfer().setIntermediateStorage(value);
-            // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp from the
-            // LEFT and PULL from the RIGHT.
-            config.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH_PULL);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.iceberg-table-property-overrides")
-    CommandLineRunner configIcebergTablePropertyOverrides(Config config, @Value("${hms-mirror.config.iceberg-table-property-overrides}") String value) {
-        return args -> {
-            log.info("iceberg-table-property-overrides: " + value);
-            String[] overrides = value.split(",");
-            if (overrides != null)
-                config.getIcebergConfig().setPropertyOverridesStr(overrides);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.iceberg-version")
-    CommandLineRunner configIcebergVersion(Config config, @Value("${hms-mirror.config.iceberg-version}") String value) {
-        return args -> {
-            log.info("iceberg-version: " + value);
-            config.getIcebergConfig().setVersion(Integer.parseInt(value));
-        };
-    }
-
-    /*
-    This is taken care of thru the spring variable 'hms-mirror.config.load-test-data' and the
-    construction of the Conversion object.
-
-    Setting this value in the config will allow us to check for this in the config and make the
-    appropriate workflow adjustments.
-     */
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.load-test-data")
-    CommandLineRunner configLoadTestData(Config config, @Value("${hms-mirror.config.load-test-data}") String value) {
-        return args -> {
-            log.info("load-test-data: " + value);
-            config.setLoadTestDataFile(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-acid")
-    CommandLineRunner configMigrateAcid(Config config, @Value("${hms-mirror.config.migrate-acid}") String value) {
-        return args -> {
-            log.info("migrate-acid: " + value);
-            if (Boolean.parseBoolean(value)) {
-                config.getMigrateACID().setOn(Boolean.TRUE);
-                config.getMigrateACID().setOnly(Boolean.FALSE);
-            } else {
-                config.getMigrateACID().setOn(Boolean.TRUE);
-                config.getMigrateACID().setOnly(Boolean.FALSE);
-                String bucketLimit = value;
-                if (bucketLimit != null) {
-                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
-                }
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-acid-only")
-    CommandLineRunner configMigrateAcidOnly(Config config, @Value("${hms-mirror.config.migrate-acid-only}") String value) {
-        return args -> {
-            log.info("migrate-acid-only: " + value);
-            if (Boolean.parseBoolean(value)) {
-                config.getMigrateACID().setOn(Boolean.TRUE);
-                config.getMigrateACID().setOnly(Boolean.TRUE);
-            } else {
-                config.getMigrateACID().setOn(Boolean.TRUE);
-                config.getMigrateACID().setOnly(Boolean.TRUE);
-                String bucketLimit = value;
-                if (bucketLimit != null) {
-                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
-                }
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-non-native")
-    CommandLineRunner configMigrateNonNative(Config config, @Value("${hms-mirror.config.migrate-non-native}") String value) {
-        return args -> {
-            log.info("migrate-non-native: " + value);
-            config.setMigratedNonNative(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-non-native-only")
-    CommandLineRunner configMigrateNonNativeOnly(Config config, @Value("${hms-mirror.config.migrate-non-native-only}") String value) {
-        return args -> {
-            log.info("migrate-non-native-only: " + value);
-            config.setMigratedNonNative(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.no-purge")
-    CommandLineRunner configNoPurge(Config config, @Value("${hms-mirror.config.no-purge}") String value) {
-        return args -> {
-            log.info("no-purge: " + value);
-            config.setNoPurge(Boolean.parseBoolean(value));
-        };
-    }
-
-    /*
-    The APP_OUTPUT_PATH is an Environment Variable that is should be set in the
-    start-up script for the application.  It is used to set the default output for
-    reports and is picked up by the Log4j configuration so those logs are in the same
-    directory as the reports.
-     */
-    @Bean
-    @ConditionalOnProperty(
-            name = "app.path.dir")
-    CommandLineRunner configOutputDir(Config config, CliReporter reporter, @Value("${app.path.dir}") String value) {
-        return args -> {
-            log.info("output-dir: " + value);
-            config.setOutputDirectory(value);
-            File reportPathDir = new File(value);
-            if (!reportPathDir.exists()) {
-                reportPathDir.mkdirs();
-            }
-            reporter.setReportOutputFile(value + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
-            reporter.setLeftExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
-            reporter.setLeftCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
-            reporter.setRightExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
-            reporter.setRightCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-
-            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
-
-            // Ensure the Retry Path is created.
-            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
-                    FileSystems.getDefault().getSeparator() + "retry");
-            if (!retryPath.exists()) {
-                retryPath.mkdirs();
-            }
-
-            // Test file to ensure we can write to it for the report.
-            try {
-                new FileOutputStream(testFile).close();
-            } catch (IOException e) {
-                throw new RuntimeException("Can't write to output directory: " + value, e);
-            }
-
-        };
-    }
-
-//    @Bean
-//    @ConditionalOnProperty(
-//            name = "app.path.dir",
-//            matchIfMissing = false)
-//    CommandLineRunner configOutputDirDefault(Config config, CliReporter reporter) {
-//        return args -> {
-//            log.warn("Java Env Var `app.path.dir` is NOT defined.  May cause issues with logging");
-//            DateFormat df = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-//            String reportOutputDir = System.getProperty("user.home") + "/.hms-mirror/reports/" + df.format(new Date());
-//            log.info("output-dir: " + reportOutputDir);
-//            config.setOutputDirectory(reportOutputDir);
-//            File reportPathDir = new File(reportOutputDir);
-//            if (!reportPathDir.exists()) {
-//                reportPathDir.mkdirs();
-//            }
-//            reporter.setReportOutputFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
-//            reporter.setLeftExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
-//            reporter.setLeftCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
-//            reporter.setRightExecuteFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
-//            reporter.setRightCleanUpFile(reportOutputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-//
-//            File testFile = new File(reportOutputDir + FileSystems.getDefault().getSeparator() + ".dir-check");
-//
-//            // Ensure the Retry Path is created.
-//            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
-//                    FileSystems.getDefault().getSeparator() + "retry");
-//            if (!retryPath.exists()) {
-//                retryPath.mkdirs();
-//            }
-//
-//            // Test file to ensure we can write to it for the report.
-//            try {
-//                new FileOutputStream(testFile).close();
-//            } catch (IOException e) {
-//                throw new RuntimeException("Can't write to output directory: " + reportOutputDir, e);
-//            }
-//
-//
-//        };
-//    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.password")
-    CommandLineRunner configPassword(Config config, @Value("${hms-mirror.config.password}") String value) {
-        return args -> {
-            log.info("password: " + value);
-            config.setPassword(value);
-//            if (cmd.hasOption("p") || cmd.hasOption("dp")) {
-//                // Used to generate encrypted password.
-//                if (cmd.hasOption("pkey")) {
-//                    Protect protect = new Protect(cmd.getOptionValue("pkey"));
-//                    // Set to control execution flow.
-//                    config.addError(MessageCode.PASSWORD_CFG.getCode());
-//                    if (cmd.hasOption("p")) {
-//                        String epassword = null;
-//                        try {
-//                            epassword = protect.encrypt(cmd.getOptionValue("p"));
-//                            config.addWarning(MessageCode.ENCRYPTED_PASSWORD.getCode(), epassword);
-//                        } catch (Exception e) {
-//                            config.addError(MessageCode.ENCRYPT_PASSWORD_ISSUE.getCode());
-//                        }
-//                    } else {
-//                        String password = null;
-//                        try {
-//                            password = protect.decrypt(cmd.getOptionValue("dp"));
-//                            config.addWarning(MessageCode.DECRYPTED_PASSWORD.getCode(), password);
-//                        } catch (Exception e) {
-//                            config.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE.getCode());
-//                        }
-//                    }
-//                } else {
-//                    config.addError(MessageCode.PKEY_PASSWORD_CFG.getCode());
-//                }
-//            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.password-key")
-    CommandLineRunner configPasswordKey(Config config, @Value("${hms-mirror.config.password-key}") String value) {
-        return args -> {
-            log.info("password-key: " + value);
-            config.setPasswordKey(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.property-overrides")
-    CommandLineRunner configPropertyOverrides(Config config, @Value("${hms-mirror.config.property-overrides}") String value) {
-        return args -> {
-            log.info("property-overrides: " + value);
-            String[] overrides = value.split(",");
-            if (overrides != null)
-                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.BOTH);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.property-overrides-left")
-    CommandLineRunner configPropertyOverridesLeft(Config config, @Value("${hms-mirror.config.property-overrides-left}") String value) {
-        return args -> {
-            log.info("property-overrides-left: " + value);
-            String[] overrides = value.split(",");
-            if (overrides != null)
-                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.LEFT);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.property-overrides-right")
-    CommandLineRunner configPropertyOverridesRight(Config config, @Value("${hms-mirror.config.property-overrides-right}") String value) {
-        return args -> {
-            log.info("property-overrides-right: " + value);
-            String[] overrides = value.split(",");
-            if (overrides != null)
-                config.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.RIGHT);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.quiet")
-    CommandLineRunner configQuiet(Config config, @Value("${hms-mirror.config.quiet}") String value) {
-        return args -> {
-            log.info("quiet: " + value);
-            config.setQuiet(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.reset-to-default-location")
-    CommandLineRunner configResetToDefaultLocation(Config config, @Value("${hms-mirror.config.reset-to-default-location}") String value) {
-        return args -> {
-            log.info("reset-to-default-location: " + value);
-            config.setResetToDefaultLocation(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.replay-directory")
-    CommandLineRunner configReportDirectory(Config config, @Value("${hms-mirror.config.replay-directory}") String value) {
-        return args -> {
-            log.info("replay-directory: " + value);
-            // TODO: Implement Replay
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.right-is-disconnected")
-    CommandLineRunner configRightIsDisconnected(Config config, @Value("${hms-mirror.config.right-is-disconnected}") String value) {
-        return args -> {
-            log.info("right-is-disconnected: " + value);
-            if (null != config.getCluster(Environment.RIGHT).getHiveServer2())
-                config.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.read-only")
-    CommandLineRunner configReadOnly(Config config, @Value("${hms-mirror.config.read-only}") String value) {
-        return args -> {
-            log.info("read-only: " + value);
-            switch (config.getDataStrategy()) {
-                case SCHEMA_ONLY:
-                case LINKED:
-                case COMMON:
-                case SQL:
-                    config.setReadOnly(Boolean.TRUE);
-                    break;
-                default:
-                    throw new RuntimeException("RO option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies.");
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.reset-right")
-    CommandLineRunner configResetRight(Config config, @Value("${hms-mirror.config.reset-right}") String value) {
-        return args -> {
-            log.info("reset-right: " + value);
-            // TODO: Implement.  Does this still make sense?
-//            config.
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.sync")
-    CommandLineRunner configSync(Config config, @Value("${hms-mirror.config.sync}") String value) {
-        return args -> {
-            log.info("sync: " + value);
-            if (config.getDataStrategy() != DataStrategyEnum.DUMP) {
-                config.setSync(Boolean.parseBoolean(value));
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.sort-dynamic-partition-inserts")
-    CommandLineRunner configSortDynamicPartitionInserts(Config config, @Value("${hms-mirror.config.sort-dynamic-partition-inserts}") String value) {
-        return args -> {
-            log.info("sort-dynamic-partition-inserts: " + value);
-            config.getOptimization().setSortDynamicPartitionInserts(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-features")
-    CommandLineRunner configSkipFeatures(Config config, @Value("${hms-mirror.config.skip-features}") String value) {
-        return args -> {
-            log.info("skip-features: " + value);
-            config.setSkipFeatures(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-link-check")
-    CommandLineRunner configSkipLinkCheck(Config config, @Value("${hms-mirror.config.skip-link-check}") String value) {
-        return args -> {
-            log.info("skip-link-check: " + value);
-            config.setSkipLinkCheck(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-legacy-translation")
-    CommandLineRunner configSkipLegacyTranslation(Config config, @Value("${hms-mirror.config.skip-legacy-translation}") String value) {
-        return args -> {
-            log.info("skip-legacy-translation: " + value);
-            config.setSkipLegacyTranslation(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.storage-migration-namespace")
-    CommandLineRunner configStorageMigrationNamespace(Config config, @Value("${hms-mirror.config.storage-migration-namespace}") String value) {
-        return args -> {
-            log.info("storage-migration-namespace: " + value);
-            config.getTransfer().setCommonStorage(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-optimizations")
-    CommandLineRunner configSkipOptimizations(Config config, @Value("${hms-mirror.config.skip-optimizations}") String value) {
-        return args -> {
-            log.info("skip-optimizations: " + value);
-            config.getOptimization().setSkip(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.sql-partition-count")
-    CommandLineRunner configSqlPartitionCount(Config config, @Value("${hms-mirror.config.sql-partition-count}") String value) {
-        return args -> {
-            log.info("sql-partition-count: " + value);
-            config.getHybrid().setSqlPartitionLimit(Integer.valueOf(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-stats-collection")
-    CommandLineRunner configSkipStatsCollection(Config config, @Value("${hms-mirror.config.skip-stats-collection}") String value) {
-        return args -> {
-            log.info("skip-stats-collection: " + value);
-            config.getOptimization().setSkipStatsCollection(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.setup")
-    CommandLineRunner configSetup(Config config, @Value("${hms-mirror.config.setup}") String value) {
-        return args -> {
-            log.info("setup: " + value);
-            // TODO: Implement Setup
-//            configFile = System.getProperty("user.home") + System.getProperty("file.separator") + ".hms-mirror/cfg/default.yaml";
-//            File defaultCfg = new File(configFile);
-//            if (defaultCfg.exists()) {
-//                Scanner scanner = new Scanner(System.in);
-//                System.out.print("Default Config exists.  Proceed with overwrite:(Y/N) ");
-//                String response = scanner.next();
-//                if (response.equalsIgnoreCase("y")) {
-//                    Config.setup(configFile);
-//                    System.exit(0);
-//                }
-//            } else {
-//                Config.setup(configFile);
-//                System.exit(0);
-//            }
-
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.table-exclude-filter")
-    CommandLineRunner configTableExcludeFilter(Config config, @Value("${hms-mirror.config.table-exclude-filter}") String value) {
-        return args -> {
-            log.info("table-exclude-filter: " + value);
-            config.getFilter().setTblExcludeRegEx(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.table-filter")
-    CommandLineRunner configTableFilter(Config config, @Value("${hms-mirror.config.table-filter}") String value) {
-        return args -> {
-            log.info("table-filter: " + value);
-            config.getFilter().setTblRegEx(value);
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.table-filter-partition-count-limit")
-    CommandLineRunner configTableFilterPartitionCountLimit(Config config, @Value("${hms-mirror.config.table-filter-partition-count-limit}") String value) {
-        return args -> {
-            log.info("table-filter-partition-count-limit: " + value);
-            config.getFilter().setTblPartitionLimit(Integer.parseInt(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.table-filter-size-limit")
-    CommandLineRunner configTableFilterSizeLimit(Config config, @Value("${hms-mirror.config.table-filter-size-limit}") String value) {
-        return args -> {
-            log.info("table-filter-size-limit: " + value);
-            config.getFilter().setTblSizeLimit(Long.parseLong(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.transfer-ownership")
-    CommandLineRunner configTransferOwnership(Config config, @Value("${hms-mirror.config.transfer-ownership}") String value) {
-        return args -> {
-            log.info("transfer-ownership: " + value);
-            config.setTransferOwnership(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.views-only")
-    CommandLineRunner configViewsOnly(Config config, @Value("${hms-mirror.config.views-only}") String value) {
-        return args -> {
-            log.info("views-only: " + value);
-            config.getMigrateVIEW().setOn(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.warehouse-directory")
-    CommandLineRunner configWarehouseDirectory(Config config, @Value("${hms-mirror.config.warehouse-directory}") String value) {
-        return args -> {
-            log.info("warehouse-directory: " + value);
-            if (config.getTransfer().getWarehouse() == null)
-                config.getTransfer().setWarehouse(new WarehouseConfig());
-            String wdStr = value;
-            // Remove/prevent duplicate namespace config.
-            if (config.getTransfer().getCommonStorage() != null) {
-                if (wdStr.startsWith(config.getTransfer().getCommonStorage())) {
-                    wdStr = wdStr.substring(config.getTransfer().getCommonStorage().length());
-                    log.warn("Managed Warehouse Location Modified (stripped duplicate namespace): " + wdStr);
-                }
-            }
-            config.getTransfer().getWarehouse().setManagedDirectory(wdStr);
-        };
-    }
-
     /*
     This should run last to ensure that the config is set correctly after all the flags have been set.
      */
     @Bean
+    @Order(10)
     CommandLineRunner postConfigProcessing(ConfigService configService, ConnectionPoolService connectionPoolService, CliReporter reporter, Progression progression) {
         return args -> {
             Config config = configService.getConfig();
@@ -1649,9 +1676,9 @@ public class CommandLineOptions {
                         if (conn == null) {
                             if (target == Environment.RIGHT && config.getCluster(target).getHiveServer2().isDisconnected()) {
                                 // Skip error.  Set Warning that we're disconnected.
-                                progression.addWarning(ENVIRONMENT_DISCONNECTED, new Object[]{target});
+                                progression.addWarning(ENVIRONMENT_DISCONNECTED, target);
                             } else {
-                                progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
+                                progression.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
 //                                return progression.getErrors().getReturnCode();
                             }
                         } else {
@@ -1662,15 +1689,15 @@ public class CommandLineOptions {
                     } catch (SQLException se) {
                         if (target == Environment.RIGHT && config.getCluster(target).getHiveServer2().isDisconnected()) {
                             // Set warning that RIGHT is disconnected.
-                            progression.addWarning(ENVIRONMENT_DISCONNECTED, new Object[]{target});
+                            progression.addWarning(ENVIRONMENT_DISCONNECTED, target);
                         } else {
                             log.error(se.getMessage(), se);
-                            progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
+                            progression.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
 //                            return progression.getErrors().getReturnCode();
                         }
                     } catch (Throwable t) {
                         log.error(t.getMessage(), t);
-                        progression.addError(ENVIRONMENT_CONNECTION_ISSUE, new Object[]{target});
+                        progression.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
 //                        return progression.getErrors().getReturnCode();
                     } finally {
                         if (stmt != null) {
@@ -1714,5 +1741,28 @@ public class CommandLineOptions {
             }
 
         };
+    }
+
+    public String[] toSpringBootOption(String[] args) {
+        CommandLine cmd = getCommandLine(args);
+        List<String> springOptions = new ArrayList<>();
+        for (Option option : cmd.getOptions()) {
+            String opt = option.getLongOpt();
+            String[] values = option.getValues();
+            if (opt.equals("config")) {
+                // Handle the config file differently
+                springOptions.add("--hms-mirror.config-filename" + opt + "=\"" + String.join(",", values) + "\"");
+            } else {
+                if (values != null && values.length > 0) {
+                    springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + String.join(",", values));
+                } else {
+                    springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + "true");
+                }
+            }
+        }
+        // Collect Legacy Command Line Options and pass them to the Spring Boot Application as a single string.
+        String clo = Strings.join(Arrays.asList(args), ' ');
+        springOptions.add("--hms-mirror.config.legacy-command-line-options=\"" + clo + "\"");
+        return springOptions.toArray(new String[0]);
     }
 }

@@ -17,6 +17,11 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class Marker {
     private final String mark;
     private final String description;
@@ -31,15 +36,4 @@ public class Marker {
             this.action = action.toString();
     }
 
-    public String getMark() {
-        return mark;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public String getAction() {
-        return action;
-    }
 }

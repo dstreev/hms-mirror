@@ -34,14 +34,6 @@ public class BadOrcDefFeature extends BaseFeature implements Feature {
     private final String OUTPUT_FORMAT_CLASS = "'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'";
 
     private final String STORED_AS_ORC = "STORED AS ORC";
-//    private static final Logger log = LoggerFactory.getLogger(BadOrcDefFeature.class);
-
-    public String getDescription() {
-        return "Table schema definitions for ORC files that include ROW FORMAT DELIMITED " +
-                "declarations are invalid.  This process will remove the invalid declarations " +
-                "and set STORED AS ORC";
-    }
-
 
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
@@ -113,6 +105,12 @@ public class BadOrcDefFeature extends BaseFeature implements Feature {
         } else {
             return Boolean.FALSE;
         }
+    }
+
+    public String getDescription() {
+        return "Table schema definitions for ORC files that include ROW FORMAT DELIMITED " +
+                "declarations are invalid.  This process will remove the invalid declarations " +
+                "and set STORED AS ORC";
     }
 
 }

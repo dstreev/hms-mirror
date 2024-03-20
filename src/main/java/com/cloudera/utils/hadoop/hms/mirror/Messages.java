@@ -29,26 +29,6 @@ public class Messages {
         bitSet = new BitSet(size);
     }
 
-    public void set(MessageCode messageCode, Object... args) {
-        bitSet.set(messageCode.getCode());
-        if (args != null) {
-            argMap.put(messageCode.getCode(), args);
-        }
-    }
-
-    public void set(MessageCode messageCode) {
-        bitSet.set(messageCode.getCode());
-    }
-
-    public long getReturnCode() {
-        long rtn = 0;
-        long[] messageSet = bitSet.toLongArray();
-        for (long messageBit : messageSet) {
-            rtn = rtn | messageBit;
-        }
-        return rtn;
-    }
-
     public String getMessage(int bit) {
         String rtn = null;
         for (MessageCode messageCode : MessageCode.values()) {
@@ -69,16 +49,36 @@ public class Messages {
         List<String> messageList = new ArrayList<String>();
         for (MessageCode messageCode : MessageCode.getCodes(bitSet)) {
             if (!argMap.containsKey(messageCode.getCode())) {
-                messageList.add(messageCode.getCode()+":"+messageCode.getDesc());
+                messageList.add(messageCode.getCode() + ":" + messageCode.getDesc());
             } else {
                 Object[] vMap = argMap.get(messageCode.getCode());
                 String m = MessageFormat.format(messageCode.getDesc(), vMap);
-                messageList.add(messageCode.getCode()+":" + m);
+                messageList.add(messageCode.getCode() + ":" + m);
             }
         }
         String[] rtn = messageList.toArray(new String[0]);
 
         return rtn;
+    }
+
+    public long getReturnCode() {
+        long rtn = 0;
+        long[] messageSet = bitSet.toLongArray();
+        for (long messageBit : messageSet) {
+            rtn = rtn | messageBit;
+        }
+        return rtn;
+    }
+
+    public void set(MessageCode messageCode) {
+        bitSet.set(messageCode.getCode());
+    }
+
+    public void set(MessageCode messageCode, Object... args) {
+        bitSet.set(messageCode.getCode());
+        if (args != null) {
+            argMap.put(messageCode.getCode(), args);
+        }
     }
 
 }

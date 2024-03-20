@@ -19,9 +19,11 @@ package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+@Slf4j
 public class SparkSqlPartFeature extends BaseFeature implements Feature {
 
     private static final String SPARK_SCHEMA_PROPERTY = "spark.sql.sources.schema.part";
@@ -34,7 +36,7 @@ public class SparkSqlPartFeature extends BaseFeature implements Feature {
     @Override
     public Boolean applicable(List<String> schema) {
         Boolean rtn = Boolean.FALSE;
-        for (int i=0;i<10;i++) {
+        for (int i = 0; i < 10; i++) {
             String key = SPARK_SCHEMA_PROPERTY + "." + i;
             String value = TableUtils.getTblProperty(key, schema);
             if (value != null && value.contains("\\")) {
@@ -49,7 +51,7 @@ public class SparkSqlPartFeature extends BaseFeature implements Feature {
     public Boolean fixSchema(List<String> schema) {
         Boolean rtn = Boolean.FALSE;
         if (applicable(schema)) {
-            for (int i=0;i<10;i++) {
+            for (int i = 0; i < 10; i++) {
                 String key = SPARK_SCHEMA_PROPERTY + "." + i;
                 String value = TableUtils.getTblProperty(key, schema);
 

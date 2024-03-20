@@ -18,16 +18,16 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class StorageMigration {
 
     private DataStrategyEnum strategy = DataStrategyEnum.SQL;
-    private Boolean distcp = Boolean.FALSE;
+    private boolean distcp = Boolean.FALSE;
     private DistcpFlow dataFlow = DistcpFlow.PULL;
-
-    public DataStrategyEnum getStrategy() {
-        return strategy;
-    }
 
     public void setStrategy(DataStrategyEnum strategy) {
         switch (strategy) {
@@ -41,19 +41,4 @@ public class StorageMigration {
         }
     }
 
-    public DistcpFlow getDataFlow() {
-        return dataFlow;
-    }
-
-    public void setDataFlow(DistcpFlow dataFlow) {
-        this.dataFlow = dataFlow;
-    }
-
-    public Boolean isDistcp() {
-        return distcp;
-    }
-
-    public void setDistcp(Boolean distcp) {
-        this.distcp = distcp;
-    }
 }

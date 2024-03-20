@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.cli;
 
+import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -27,14 +27,12 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.commonmark.Extension;
 import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -69,8 +67,8 @@ public class CliReportWriter {
     }
 
     @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
+    public void setConversion(Conversion conversion) {
+        this.conversion = conversion;
     }
 
     @Autowired
@@ -79,16 +77,9 @@ public class CliReportWriter {
     }
 
     @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
-
-//    public CliReportWriter(Config config, ConnectionPoolService connectionPoolService, Progression progression, @Qualifier("conversion") Conversion conversion) {
-//        this.config = config;
-//        this.connectionPoolService = connectionPoolService;
-//        this.progression = progression;
-//        this.conversion = conversion;
-//    }
 
     public void writeReport() {
         Config config = getConfigService().getConfig();

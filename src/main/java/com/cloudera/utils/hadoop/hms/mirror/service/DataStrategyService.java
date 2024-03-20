@@ -45,6 +45,60 @@ public class DataStrategyService {
     private IntermediateDataStrategy intermediateDataStrategy = null;
     private IcebergConversionDataStrategy icebergConversionDataStrategy = null;
 
+    public DataStrategy getDefaultDataStrategy(Config config) {
+        DataStrategy dataStrategy = null;
+        switch (config.getDataStrategy()) {
+            case STORAGE_MIGRATION:
+                dataStrategy = storageMigrationDataStrategy;
+                break;
+            case ICEBERG_CONVERSION:
+                dataStrategy = icebergConversionDataStrategy;
+                break;
+            case DUMP:
+                dataStrategy = dumpDataStrategy;
+                break;
+            case EXPORT_IMPORT:
+                dataStrategy = exportImportDataStrategy;
+                break;
+            case HYBRID:
+                dataStrategy = hybridDataStrategy;
+                break;
+            case LINKED:
+                dataStrategy = linkedDataStrategy;
+                break;
+            case SCHEMA_ONLY:
+                dataStrategy = schemaOnlyDataStrategy;
+                break;
+            case SQL:
+                dataStrategy = sqlDataStrategy;
+                break;
+            case CONVERT_LINKED:
+                dataStrategy = convertLinkedDataStrategy;
+                break;
+            case COMMON:
+                dataStrategy = commonDataStrategy;
+                break;
+            case INTERMEDIATE:
+                dataStrategy = intermediateDataStrategy;
+                break;
+            case ACID:
+                dataStrategy = acidDataStrategy;
+                break;
+            case HYBRID_ACID_DOWNGRADE_INPLACE:
+                dataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
+                break;
+            case SQL_ACID_DOWNGRADE_INPLACE:
+                dataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
+                break;
+            case EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE:
+                dataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
+                break;
+            default:
+                dataStrategy = schemaOnlyDataStrategy;
+        }
+        return dataStrategy;
+    }
+
     @Autowired
     public void setAcidDataStrategy(AcidDataStrategy acidDataStrategy) {
         this.acidDataStrategy = acidDataStrategy;
@@ -76,8 +130,23 @@ public class DataStrategyService {
     }
 
     @Autowired
+    public void setHybridAcidDowngradeInPlaceDataStrategy(HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy) {
+        this.hybridAcidDowngradeInPlaceDataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
+    }
+
+    @Autowired
     public void setHybridDataStrategy(HybridDataStrategy hybridDataStrategy) {
         this.hybridDataStrategy = hybridDataStrategy;
+    }
+
+    @Autowired
+    public void setIcebergConversionDataStrategy(IcebergConversionDataStrategy icebergConversionDataStrategy) {
+        this.icebergConversionDataStrategy = icebergConversionDataStrategy;
+    }
+
+    @Autowired
+    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
+        this.intermediateDataStrategy = intermediateDataStrategy;
     }
 
     @Autowired
@@ -91,8 +160,8 @@ public class DataStrategyService {
     }
 
     @Autowired
-    public void setStorageMigrationDataStrategy(StorageMigrationDataStrategy storageMigrationDataStrategy) {
-        this.storageMigrationDataStrategy = storageMigrationDataStrategy;
+    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
+        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
     }
 
     @Autowired
@@ -101,77 +170,8 @@ public class DataStrategyService {
     }
 
     @Autowired
-    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
-        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
-    }
-
-    @Autowired
-    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
-        this.intermediateDataStrategy = intermediateDataStrategy;
-    }
-
-    @Autowired
-    public void setIcebergConversionDataStrategy(IcebergConversionDataStrategy icebergConversionDataStrategy) {
-        this.icebergConversionDataStrategy = icebergConversionDataStrategy;
-    }
-
-    @Autowired
-    public void setHybridAcidDowngradeInPlaceDataStrategy(HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy) {
-        this.hybridAcidDowngradeInPlaceDataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
-    }
-
-    public DataStrategy getDefaultDataStrategy(Config config) {
-        DataStrategy dataStrategy = null;
-        switch (config.getDataStrategy()) {
-            case STORAGE_MIGRATION:
-                dataStrategy = storageMigrationDataStrategy;
-                break;
-            case ICEBERG_CONVERSION:
-                dataStrategy =  icebergConversionDataStrategy;
-                break;
-            case DUMP:
-                dataStrategy =  dumpDataStrategy;
-                break;
-            case EXPORT_IMPORT:
-                dataStrategy =  exportImportDataStrategy;
-                break;
-            case HYBRID:
-                dataStrategy =  hybridDataStrategy;
-                break;
-            case LINKED:
-                dataStrategy =  linkedDataStrategy;
-                break;
-            case SCHEMA_ONLY:
-                dataStrategy =  schemaOnlyDataStrategy;
-                break;
-            case SQL:
-                dataStrategy =  sqlDataStrategy;
-                break;
-            case CONVERT_LINKED:
-                dataStrategy =  convertLinkedDataStrategy;
-                break;
-            case COMMON:
-                dataStrategy =  commonDataStrategy;
-                break;
-            case INTERMEDIATE:
-                dataStrategy =  intermediateDataStrategy;
-                break;
-            case ACID:
-                dataStrategy =  acidDataStrategy;
-                break;
-            case HYBRID_ACID_DOWNGRADE_INPLACE:
-                dataStrategy =  hybridAcidDowngradeInPlaceDataStrategy;
-                break;
-            case SQL_ACID_DOWNGRADE_INPLACE:
-                dataStrategy =  sqlAcidDowngradeInPlaceDataStrategy;
-                break;
-            case EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE:
-                dataStrategy =  exportImportAcidDowngradeInPlaceDataStrategy;
-                break;
-            default:
-                dataStrategy = schemaOnlyDataStrategy;
-        }
-        return dataStrategy;
+    public void setStorageMigrationDataStrategy(StorageMigrationDataStrategy storageMigrationDataStrategy) {
+        this.storageMigrationDataStrategy = storageMigrationDataStrategy;
     }
 
 }

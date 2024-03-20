@@ -31,8 +31,6 @@ import static com.cloudera.utils.hadoop.hms.util.TableUtils.*;
 
 @Slf4j
 public class LegacyTranslations extends BaseFeature implements Feature {
-//    private static final Logger log = LoggerFactory.getLogger(LegacyTranslations.class);
-
     private final Pattern RFS = Pattern.compile(ROW_FORMAT_SERDE + " '(.*)'");
     private final Pattern SAIF = Pattern.compile(STORED_AS_INPUTFORMAT + " '(.*)'");
     private final Pattern SAOF = Pattern.compile(OUTPUTFORMAT + " '(.*)'");
@@ -42,36 +40,6 @@ public class LegacyTranslations extends BaseFeature implements Feature {
     // TODO: When needed... add translation for formats.
     //    private Map<String, String> inputFormat = null;
     //    private Map<String, String> outputFormat = null;
-
-    public Map<String, String> getRowSerde() {
-        if (rowSerde == null) {
-            rowSerde = new TreeMap<String, String>();
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.RegexSerDe'", "'org.apache.hadoop.hive.serde2.RegexSerDe'");
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.MultiDelimitSerDe'", "'org.apache.hadoop.hive.serde2.MultiDelimitSerDe'");
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.TypedBytesSerDe'", "'org.apache.hadoop.hive.serde2.TypedBytesSerDe'");
-        }
-        return rowSerde;
-    }
-
-    public void setRowSerde(Map<String, String> rowSerde) {
-        this.rowSerde = rowSerde;
-    }
-
-//    public Map<String, String> getInputFormat() {
-//        return inputFormat;
-//    }
-//
-//    public void setInputFormat(Map<String, String> inputFormat) {
-//        this.inputFormat = inputFormat;
-//    }
-//
-//    public Map<String, String> getOutputFormat() {
-//        return outputFormat;
-//    }
-//
-//    public void setOutputFormat(Map<String, String> outputFormat) {
-//        this.outputFormat = outputFormat;
-//    }
 
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
@@ -99,7 +67,7 @@ public class LegacyTranslations extends BaseFeature implements Feature {
             if (rfdIdx > 0) {
                 String serde = schema.get(rfdIdx + 1);
                 if (getRowSerde().containsKey(serde.trim())) {
-                    schema.set(rfdIdx+1, getRowSerde().get(serde.trim()));
+                    schema.set(rfdIdx + 1, getRowSerde().get(serde.trim()));
                     rtn = Boolean.TRUE;
                 }
             }
@@ -127,6 +95,20 @@ public class LegacyTranslations extends BaseFeature implements Feature {
             }
         }
         return rtn;
+    }
+
+    public Map<String, String> getRowSerde() {
+        if (rowSerde == null) {
+            rowSerde = new TreeMap<String, String>();
+            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.RegexSerDe'", "'org.apache.hadoop.hive.serde2.RegexSerDe'");
+            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.MultiDelimitSerDe'", "'org.apache.hadoop.hive.serde2.MultiDelimitSerDe'");
+            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.TypedBytesSerDe'", "'org.apache.hadoop.hive.serde2.TypedBytesSerDe'");
+        }
+        return rowSerde;
+    }
+
+    public void setRowSerde(Map<String, String> rowSerde) {
+        this.rowSerde = rowSerde;
     }
 
 }

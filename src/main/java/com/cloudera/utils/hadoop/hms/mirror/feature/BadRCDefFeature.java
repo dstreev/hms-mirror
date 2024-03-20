@@ -33,13 +33,6 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
     private final String ORC_SERDE = "  'org.apache.hadoop.hive.ql.io.orc.OrcSerde'";
     private final String RC_INPUT_SERDE = "  'org.apache.hadoop.hive.ql.io.RCFileInputFormat'";
     private final String RC_OUTPUT_SERDE = "  'org.apache.hadoop.hive.ql.io.RCFileOutputFormat'";
-//    private static final Logger log = LoggerFactory.getLogger(BadRCDefFeature.class);
-
-    public String getDescription() {
-        return "Table schema definitions for RC files that include ROW FORMAT DELIMITED " +
-                "declarations are invalid.  This process will remove the invalid declarations " +
-                "and set STORED AS RC";
-    }
 
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
@@ -68,7 +61,6 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
 
         return rtn;
     }
-
 
     @Override
     public Boolean fixSchema(EnvironmentTable envTable) {
@@ -114,6 +106,12 @@ public class BadRCDefFeature extends BaseFeature implements Feature {
             return Boolean.FALSE;
         }
 
+    }
+
+    public String getDescription() {
+        return "Table schema definitions for RC files that include ROW FORMAT DELIMITED " +
+                "declarations are invalid.  This process will remove the invalid declarations " +
+                "and set STORED AS RC";
     }
 
 }

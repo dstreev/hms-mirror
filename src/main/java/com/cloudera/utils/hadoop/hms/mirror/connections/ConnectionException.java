@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror;
+package com.cloudera.utils.hadoop.hms.mirror.connections;
 
-public enum ConnectionPoolTypes {
-    DBCP2, HIKARICP, HYBRID
+public class ConnectionException extends RuntimeException {
 }

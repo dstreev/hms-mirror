@@ -17,11 +17,7 @@
 
 package com.cloudera.utils.hadoop.hms;
 
-import com.cloudera.utils.hadoop.hms.mirror.Config;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -29,29 +25,17 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 @EnableAsync
 @Slf4j
-public class MirrorWebApp
-//        implements ApplicationRunner
-{
+public class Mirror {
 
     public static void main(String[] args) {
+        // Translate the legacy command line arguments to Spring Boot arguments
+        //    before starting the application.
+        log.info("Translating command line arguments to Spring Boot arguments");
+        CommandLineOptions commandLineOptions = new CommandLineOptions();
+        String[] springArgs = commandLineOptions.toSpringBootOption(args);
+        log.info("Translated Spring Boot arguments: " + String.join(" ", springArgs));
         log.info("STARTING THE APPLICATION");
-        SpringApplication.run(MirrorWebApp.class, args);
+        SpringApplication.run(Mirror.class, springArgs);
         log.info("APPLICATION FINISHED");
     }
-
-//    @Override
-//    public void run(ApplicationArguments args) throws Exception {
-//        log.info("EXECUTING : command line runner");
-//        for (String arg : args.getSourceArgs()) {
-//            log.info("Application Argument: " + arg);
-//        }
-//        Mirror mirror = new Mirror();
-//        int returnCode = (int) mirror.go(args.getSourceArgs());
-//        log.info("Return Code: " + returnCode);
-//        log.info("APPLICATION FINISHED");
-//
-//        while (true) {
-//            Thread.sleep(10000);
-//        }
-//    }
 }

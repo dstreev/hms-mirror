@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,20 +15,17 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror;
+package com.cloudera.utils.hadoop.hms.mirror.connections;
 
+import com.cloudera.utils.hadoop.hms.mirror.Environment;
+import com.cloudera.utils.hadoop.hms.mirror.HiveServer2Config;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hadoop.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hadoop.hms.util.DriverUtils;
 import com.cloudera.utils.hive.config.DBStore;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.dbcp2.*;
-import org.apache.commons.pool2.ObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -37,22 +34,18 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
-//@Component
 @Slf4j
-public class ConnectionPoolsHybridImpl implements ConnectionPools {
-//    private static final Logger log = LoggerFactory.getLogger(ConnectionPools.class);
+public class ConnectionPoolsHikariImpl implements ConnectionPools {
 
-    @Getter
-    private ConfigService configService;
-
-    private final Map<Environment, DataSource> hs2DataSources = new TreeMap<>();
+    private final Map<Environment, HikariDataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
     private final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
-
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
+    @Getter
+    private final ConfigService configService;
 
-    public ConnectionPoolsHybridImpl(ConfigService configService) {
+    public ConnectionPoolsHikariImpl(ConfigService configService) {
         this.configService = configService;
     }
 
@@ -65,30 +58,15 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     public void close() {
-        try {
-            if (hs2DataSources.get(Environment.LEFT) != null) {
-                if (hs2DataSources.get(Environment.LEFT) instanceof PoolingDataSource) {
-                    ((PoolingDataSource<?>) hs2DataSources.get(Environment.LEFT)).close();
-                } else if (hs2DataSources.get(Environment.LEFT) instanceof HikariDataSource) {
-                    ((HikariDataSource) hs2DataSources.get(Environment.LEFT)).close();
-                }
-            }
-        } catch (SQLException throwables) {
-            //
-        }
-        try {
-            if (hs2DataSources.get(Environment.RIGHT) != null) {
-                if (hs2DataSources.get(Environment.RIGHT) instanceof PoolingDataSource) {
-                    ((PoolingDataSource<?>) hs2DataSources.get(Environment.RIGHT)).close();
-                } else if (hs2DataSources.get(Environment.RIGHT) instanceof HikariDataSource) {
-                    ((HikariDataSource) hs2DataSources.get(Environment.RIGHT)).close();
-                }
-            }
-        } catch (SQLException throwables) {
-            //
-        }
+        if (hs2DataSources.get(Environment.LEFT) != null)
+            hs2DataSources.get(Environment.LEFT).close();
+
+        if (hs2DataSources.get(Environment.RIGHT) != null)
+            hs2DataSources.get(Environment.RIGHT).close();
+
         if (metastoreDirectDataSources.get(Environment.LEFT) != null)
             metastoreDirectDataSources.get(Environment.LEFT).close();
+
         if (metastoreDirectDataSources.get(Environment.RIGHT) != null)
             metastoreDirectDataSources.get(Environment.RIGHT).close();
     }
@@ -100,8 +78,9 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             DriverManager.registerDriver(lclDriver);
             try {
                 DataSource ds = getHS2EnvironmentDataSource(environment);
-                if (ds != null)
+                if (ds != null) {
                     conn = ds.getConnection();
+                }
             } catch (Throwable se) {
                 se.printStackTrace();
                 log.error(se.getMessage(), se);
@@ -171,81 +150,50 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
         for (Environment environment : environments) {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
-                // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (getConfigService().getConfig().getCluster(environment).isLegacyHive()) {
-                    ConnectionFactory connectionFactory =
-                            new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 
-                    PoolableConnectionFactory poolableConnectionFactory =
-                            new PoolableConnectionFactory(connectionFactory, null);
-
-                    ObjectPool<PoolableConnection> connectionPool =
-                            new GenericObjectPool<>(poolableConnectionFactory);
-
-                    poolableConnectionFactory.setPool(connectionPool);
-
-                    PoolingDataSource poolingDatasource = new PoolingDataSource<>(connectionPool);
-
-                    hs2DataSources.put(environment, poolingDatasource);
-                    Connection conn = null;
+                Driver lclDriver = getHS2EnvironmentDriver(environment);
+                if (lclDriver != null) {
                     try {
-                        conn = getHS2EnvironmentConnection(environment);
-                    } catch (Throwable t) {
-                        if (conn != null) {
-                            try {
-                                conn.close();
-                            } catch (SQLException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            throw new RuntimeException(t);
-                        }
-                    }
-                } else {
-                    Driver lclDriver = getHS2EnvironmentDriver(environment);
-                    if (lclDriver != null) {
+                        DriverManager.registerDriver(lclDriver);
                         try {
-                            DriverManager.registerDriver(lclDriver);
-                            try {
-                                Properties props = new Properties();
-                                if (hs2Config.getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-                                    // Need with Apache Hive Driver, since it doesn't support
-                                    //      Connection.isValid() api (JDBC4) and prevents Hikari-CP from attempting to call it.
-                                    props.put("connectionTestQuery", "SELECT 1");
-                                }
-                                HikariConfig config = new HikariConfig(props);
-                                config.setJdbcUrl(hs2Config.getUri());
-                                config.setDataSourceProperties(hs2Config.getConnectionProperties());
-                                HikariDataSource poolingDatasource = new HikariDataSource(config);
-
-                                hs2DataSources.put(environment, poolingDatasource);
-                            } catch (Throwable se) {
-                                se.printStackTrace();
-                                log.error(se.getMessage(), se);
-                                throw new RuntimeException(se);
-                            } finally {
-                                DriverManager.deregisterDriver(lclDriver);
+                            Properties props = new Properties();
+                            if (hs2Config.getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                                // Need with Apache Hive Driver, since it doesn't support
+                                //      Connection.isValid() api (JDBC4) and prevents Hikari-CP from attempting to call it.
+                                props.put("connectionTestQuery", "SELECT 1");
                             }
+                            HikariConfig config = new HikariConfig(props);
+                            config.setJdbcUrl(hs2Config.getUri());
+                            config.setDataSourceProperties(hs2Config.getConnectionProperties());
+                            HikariDataSource poolingDatasource = new HikariDataSource(config);
+
+                            hs2DataSources.put(environment, poolingDatasource);
+                        } catch (Throwable se) {
+                            se.printStackTrace();
+                            log.error(se.getMessage(), se);
+                            throw new RuntimeException(se);
+                        } finally {
+                            DriverManager.deregisterDriver(lclDriver);
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        log.error(e.getMessage(), e);
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                Connection conn = null;
+                try {
+                    conn = getHS2EnvironmentConnection(environment);
+                } catch (Throwable t) {
+                    if (conn != null) {
+                        try {
+                            conn.close();
                         } catch (SQLException e) {
-                            e.printStackTrace();
-                            log.error(e.getMessage(), e);
                             throw new RuntimeException(e);
                         }
-                    }
-
-                    Connection conn = null;
-                    try {
-                        conn = getHS2EnvironmentConnection(environment);
-                    } catch (Throwable t) {
-                        if (conn != null) {
-                            try {
-                                conn.close();
-                            } catch (SQLException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            throw new RuntimeException(t);
-                        }
+                    } else {
+                        throw new RuntimeException(t);
                     }
                 }
             }

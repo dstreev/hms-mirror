@@ -19,16 +19,20 @@ package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @JsonIgnoreProperties({"downgradeInPlace"})
 public class MigrateACID {
 
     /*
     Whether or not we'll be migrating ACID tables.
      */
-    private Boolean on = Boolean.FALSE;
+    private boolean on = Boolean.FALSE;
 
-    private Boolean only = Boolean.FALSE;
+    private boolean only = Boolean.FALSE;
 
     /*
     When migrating ACID tables, older ACID tables (Hive 1/2) required buckets in the definition.  In Hive 3, this is no longer
@@ -57,67 +61,13 @@ public class MigrateACID {
     /*
     Downgrade ACID tables to EXTERNAL w/ purge tables.
      */
-    private Boolean downgrade = Boolean.FALSE;
+    private boolean downgrade = Boolean.FALSE;
     /*
     When 'in-place', only the LEFT cluster is used and the ACID tables are downgraded in-place.  In-place means within the
     same cluster.  SQL/EXPORT_IMPORT will be used to migrate the data out of the ACID table, into an EXTERNAL/PURGE table.  That table
     will be renamed to the original ACID table once this is completed.
      */
-    private Boolean inplace = Boolean.FALSE;
-
-    public Boolean getOn() {
-        return on;
-    }
-
-    public Boolean isOn() {
-        return on;
-    }
-
-    public void setOn(Boolean on) {
-        this.on = on;
-    }
-
-    public Boolean isOnly() {
-        return only;
-    }
-
-    public void setOnly(Boolean only) {
-        this.only = only;
-        if (only)
-            setOn(only);
-    }
-
-    public Integer getArtificialBucketThreshold() {
-        return artificialBucketThreshold;
-    }
-
-    public void setArtificialBucketThreshold(Integer artificialBucketThreshold) {
-        this.artificialBucketThreshold = artificialBucketThreshold;
-    }
-
-    public Integer getPartitionLimit() {
-        return partitionLimit;
-    }
-
-    public void setPartitionLimit(Integer partitionLimit) {
-        this.partitionLimit = partitionLimit;
-    }
-
-    public Boolean isDowngrade() {
-        return downgrade;
-    }
-
-    public void setDowngrade(Boolean downgrade) {
-        this.downgrade = downgrade;
-    }
-
-    public Boolean isInplace() {
-        return inplace;
-    }
-
-    public void setInplace(Boolean inplace) {
-        this.inplace = inplace;
-    }
+    private boolean inplace = Boolean.FALSE;
 
     @JsonIgnore
     public Boolean isDowngradeInPlace() {
@@ -127,11 +77,4 @@ public class MigrateACID {
             return Boolean.FALSE;
     }
 
-    //    public String getTransferPrefix() {
-//        return transferPrefix;
-//    }
-//
-//    public void setTransferPrefix(String transferPrefix) {
-//        this.transferPrefix = transferPrefix;
-//    }
 }

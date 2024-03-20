@@ -18,20 +18,31 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Getter
+@Setter
 @Slf4j
 public class IcebergConfig {
-//    private static final Logger log = LoggerFactory.getLogger(IcebergConfig.class);
 
     private int version = 2;
     private Map<String, String> tableProperties = new HashMap<String, String>();
 
     private void addTableProperty(String key, String value) {
         tableProperties.put(key, value);
+    }
+
+    public void setVersion(int version) {
+        if (version == 1 || version == 2) {
+            this.version = version;
+        } else {
+            throw new RuntimeException("Invalid Iceberg Version: " + version);
+        }
     }
 
     @JsonIgnore
@@ -47,26 +58,6 @@ public class IcebergConfig {
                     log.error("Problem setting property override: " + property, t);
                 }
             }
-        }
-    }
-
-    public Map<String, String> getTableProperties() {
-        return tableProperties;
-    }
-
-    public void setTableProperties(Map<String, String> tableProperties) {
-        this.tableProperties = tableProperties;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        if (version == 1 || version == 2) {
-            this.version = version;
-        } else {
-            throw new RuntimeException("Invalid Iceberg Version: " + version);
         }
     }
 

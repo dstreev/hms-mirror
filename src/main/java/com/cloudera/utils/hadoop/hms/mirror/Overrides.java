@@ -17,12 +17,17 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.Map;
 import java.util.TreeMap;
 
+@Getter
+@Setter
 public class Overrides {
-    public enum Side { BOTH, LEFT, RIGHT };
     private Map<String, String> left = null;
+
     private Map<String, String> right = null;
 
     public Map<String, String> getLeft() {
@@ -31,18 +36,10 @@ public class Overrides {
         return left;
     }
 
-    public void setLeft(Map<String, String> left) {
-        this.left = left;
-    }
-
     public Map<String, String> getRight() {
         if (right == null)
             right = new TreeMap<String, String>();
         return right;
-    }
-
-    public void setRight(Map<String, String> right) {
-        this.right = right;
     }
 
     public Boolean setPropertyOverridesStr(String[] inPropsStr, Side side) {
@@ -72,5 +69,7 @@ public class Overrides {
         }
         return set;
     }
+
+    public enum Side {BOTH, LEFT, RIGHT}
 
 }

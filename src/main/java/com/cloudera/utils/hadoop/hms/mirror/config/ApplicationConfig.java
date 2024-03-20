@@ -15,8 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror;
+package com.cloudera.utils.hadoop.hms.mirror.config;
 
+import com.cloudera.utils.hadoop.hms.CommandLineOptions;
+import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.cli.CliReportWriter;
 import com.cloudera.utils.hadoop.hms.mirror.service.*;
 import com.cloudera.utils.hadoop.hms.stage.ReturnStatus;
 import lombok.Getter;
@@ -25,7 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import java.math.RoundingMode;
 import java.sql.Connection;
@@ -34,7 +38,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
@@ -46,14 +51,17 @@ Using the config, go through the databases and tables and collect the current st
 
 Create the target databases, where needed to support the migration.
  */
-//@Component
-@Component
+@Configuration
 @Slf4j
 @Getter
 @Setter
-public class Application {
+public class ApplicationConfig {
 //    private static final Logger log = LoggerFactory.getLogger(Setup.class);
 
+    @Getter
+    private CliReportWriter cliReportWriter = null;
+    @Getter
+    private CommandLineOptions commandLineOptions = null;
     @Getter
     private ConfigService configService = null;
     @Getter
@@ -62,7 +70,6 @@ public class Application {
     private ConnectionPoolService connectionPoolService = null;
     @Getter
     private DatabaseService databaseService = null;
-
     @Getter
     private Progression progression = null;
     @Getter
@@ -70,43 +77,9 @@ public class Application {
     @Getter
     private TransferService transferService = null;
 
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
-    }
-
-    @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
-    }
-
-    @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
-    }
-
-    @Autowired
-    public void setDatabaseService(DatabaseService databaseService) {
-        this.databaseService = databaseService;
-    }
-
-    @Autowired
-    public void setProgression(Progression progression) {
-        this.progression = progression;
-    }
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTransferService(TransferService transferService) {
-        this.transferService = transferService;
-    }
-
     // TODO: Need to address failures here...
     @Bean
+    @Order(100)
     public CommandLineRunner collect() {
         return args -> {
 //        context.setInitializing(Boolean.TRUE);
@@ -389,17 +362,72 @@ public class Application {
                     getProgression().getErrors().set(COLLECTING_TABLE_DEFINITIONS);
                 }
 
+
+                // TODO: Loop through the migrationFuture and check status.
+
+
+                getCliReportWriter().writeReport();
+
                 log.info("==============================");
                 log.info(conversion.toString());
                 log.info("==============================");
                 Date endTime = new Date();
                 DecimalFormat df = new DecimalFormat("#.###");
                 df.setRoundingMode(RoundingMode.CEILING);
-                log.info("GATHERING METADATA: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
+//                log.info("GATHERING METADATA: Completed in " + df.format((Double) ((endTime.getTime() - startTime.getTime()) / (double) 1000)) + " secs");
             }
-//        getContext().setInitializing(Boolean.FALSE);
-//            return rtn;
+            if (!config.isWebInterface()) {
+                System.exit(0);
+            } else {
+                log.info("The Application Workflow has completed");
+                log.info("Use the web interface to review the results");
+            }
         };
+    }
+
+    @Autowired
+    public void setCliReportWriter(CliReportWriter cliReportWriter) {
+        this.cliReportWriter = cliReportWriter;
+    }
+
+    @Autowired
+    public void setCommandLineOptions(CommandLineOptions commandLineOptions) {
+        this.commandLineOptions = commandLineOptions;
+    }
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
+        this.connectionPoolService = connectionPoolService;
+    }
+
+    @Autowired
+    public void setConversion(Conversion conversion) {
+        this.conversion = conversion;
+    }
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+    }
+
+    @Autowired
+    public void setProgression(Progression progression) {
+        this.progression = progression;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTransferService(TransferService transferService) {
+        this.transferService = transferService;
     }
 
 }

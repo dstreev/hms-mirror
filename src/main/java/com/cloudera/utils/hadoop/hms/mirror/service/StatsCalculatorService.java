@@ -41,33 +41,38 @@ Provide a class where rules can be generated based on the hms-mirror stats colle
 public class StatsCalculatorService {
     private ConfigService configService;
 
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
+    protected static Long getTezMaxGrouping(EnvironmentTable envTable) {
+        SerdeType serdeType = serdeFromStats(envTable.getStatistics());
+
+        Long maxGrouping = serdeType.getTargetSize() * 2L;
+
+        if (envTable.getPartitioned()) {
+            if (envTable.getStatistics().get(AVG_FILE_SIZE) != null) {
+                Double avgFileSize = (Double) envTable.getStatistics().get(AVG_FILE_SIZE);
+                // If not 90% of target size.
+                if (avgFileSize < serdeType.getTargetSize() * .5) {
+                    maxGrouping = (long) (serdeType.getTargetSize() / 2);
+                }
+            }
+        }
+        return maxGrouping;
     }
 //    private static final Logger log = LoggerFactory.getLogger(StatsCalculator.class);
 
-    /*
-    This will return the ratio of files to the average partition size. For example, if the average partition size is 1GB
-    and the target size is 128MB, then the ratio will be 8. This means that we should have 8 files per partition.
-        1GB / 128MB = 8
-    (1024*1024*1024) / (128*1024*1024) = 8
-     */
-    protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
-        Long ratio = 0L;
-        Config config = getConfigService().getConfig();
-
-        if (!config.getOptimization().isSkipStatsCollection()) {
+    private static SerdeType serdeFromStats(Map<String, Object> stats) {
+        String sStype = stats.getOrDefault(FILE_FORMAT, "UNKNOWN").toString();
+        SerdeType serdeType = null;
+        if (sStype == null) {
+            serdeType = SerdeType.UNKNOWN;
+        } else {
             try {
-                SerdeType stype = serdeFromStats(envTable.getStatistics());
-                Long dataSize = (Long) envTable.getStatistics().get(DATA_SIZE);
-                Long avgPartSize = Math.floorDiv(dataSize, (long) envTable.getPartitions().size());
-                ratio = Math.floorDiv(avgPartSize, stype.getTargetSize()) - 1;
-            } catch (RuntimeException rte) {
-                log.warn("Unable to calculate partition distribution ratio for table: " + envTable.getName());
+                serdeType = SerdeType.valueOf(sStype);
+            } catch (IllegalArgumentException iae) {
+                log.warn("Unable to determine type for file format: " + sStype);
+                serdeType = SerdeType.UNKNOWN;
             }
         }
-        return ratio;
+        return serdeType;
     }
 
     public String getDistributedPartitionElements(EnvironmentTable envTable) {
@@ -82,7 +87,7 @@ public class StatsCalculatorService {
                 if (envTable.getStatistics().get(DATA_SIZE) != null) {
                     Long ratio = getPartitionDistributionRatio(envTable);
                     if (ratio >= 1) {
-                        sb.append("ROUND((rand() * 1000) % ").append(ratio.toString()).append(")");
+                        sb.append("ROUND((rand() * 1000) % ").append(ratio).append(")");
                     }
                 }
             }
@@ -100,21 +105,32 @@ public class StatsCalculatorService {
         return sb.toString();
     }
 
-    protected static Long getTezMaxGrouping(EnvironmentTable envTable) {
-        SerdeType serdeType = serdeFromStats(envTable.getStatistics());
+    /*
+    This will return the ratio of files to the average partition size. For example, if the average partition size is 1GB
+    and the target size is 128MB, then the ratio will be 8. This means that we should have 8 files per partition.
+        1GB / 128MB = 8
+    (1024*1024*1024) / (128*1024*1024) = 8
+     */
+    protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
+        Long ratio = 0L;
+        Config config = getConfigService().getConfig();
 
-        Long maxGrouping = serdeType.getTargetSize() * 2L;
-
-        if (envTable.getPartitioned()) {
-            if (envTable.getStatistics().get(AVG_FILE_SIZE) != null) {
-                Double avgFileSize = (Double) envTable.getStatistics().get(AVG_FILE_SIZE);
-                // If not 90% of target size.
-                if (avgFileSize < serdeType.getTargetSize() * .5) {
-                    maxGrouping = (long) (serdeType.getTargetSize() / 2);
-                }
+        if (!config.getOptimization().isSkipStatsCollection()) {
+            try {
+                SerdeType stype = serdeFromStats(envTable.getStatistics());
+                Long dataSize = (Long) envTable.getStatistics().get(DATA_SIZE);
+                Long avgPartSize = Math.floorDiv(dataSize, envTable.getPartitions().size());
+                ratio = Math.floorDiv(avgPartSize, stype.getTargetSize()) - 1;
+            } catch (RuntimeException rte) {
+                log.warn("Unable to calculate partition distribution ratio for table: " + envTable.getName());
             }
         }
-        return maxGrouping;
+        return ratio;
+    }
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
     }
 
     public void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
@@ -153,7 +169,7 @@ public class StatsCalculatorService {
                 if (ratio >= 1) {
                     applyEnv.addSql("Setting " + HIVE_MAX_REDUCERS,
                             "set " + HIVE_MAX_REDUCERS + "=" +
-                                    (int) (ratio * controlEnv.getPartitions().size()) + 20);
+                                    (ratio * controlEnv.getPartitions().size()) + 20);
                 } else {
                     applyEnv.addSql("Setting " + HIVE_MAX_REDUCERS,
                             "set " + HIVE_MAX_REDUCERS + "=" +
@@ -190,21 +206,5 @@ public class StatsCalculatorService {
                 applyEnv.addSql("Setting: " + HIVE_AUTO_COLUMN_STATS, "set " + HIVE_AUTO_COLUMN_STATS + "=false");
             }
         }
-    }
-
-    private static SerdeType serdeFromStats(Map<String, Object> stats) {
-        String sStype = stats.getOrDefault(FILE_FORMAT, "UNKNOWN").toString();
-        SerdeType serdeType = null;
-        if (sStype == null) {
-            serdeType = SerdeType.UNKNOWN;
-        } else {
-            try {
-                serdeType = SerdeType.valueOf(sStype);
-            } catch (IllegalArgumentException iae) {
-                log.warn("Unable to determine type for file format: " + sStype);
-                serdeType = SerdeType.UNKNOWN;
-            }
-        }
-        return serdeType;
     }
 }

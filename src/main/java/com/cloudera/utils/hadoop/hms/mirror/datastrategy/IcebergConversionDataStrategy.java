@@ -55,11 +55,6 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     @Getter
     private TableService tableService;
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
     public IcebergConversionDataStrategy(ConfigService configService) {
         this.configService = configService;
     }
@@ -87,7 +82,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
                 return Boolean.TRUE;
             case V1_FORMAT:
             case V2_FORMAT:
-                let.addIssue("Table has already been converted.  Is currently " + state.toString());
+                let.addIssue("Table has already been converted.  Is currently " + state);
                 return Boolean.FALSE;
             default:
                 return Boolean.FALSE;
@@ -136,15 +131,19 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutDUMPDefinition(config, dbMirror);
+        rtn = buildOutDefinition(tableMirror);
         if (rtn) {
-            rtn = buildOutSql(tableMirror);//tblMirror.buildoutDUMPSql(config, dbMirror);
+            rtn = buildOutSql(tableMirror);
         }
         if (rtn) {
             rtn = getTableService().runTableSql(tableMirror, Environment.LEFT);
-            //getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

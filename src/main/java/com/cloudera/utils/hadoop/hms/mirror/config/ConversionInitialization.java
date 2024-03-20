@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms;
+package com.cloudera.utils.hadoop.hms.mirror.config;
 
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Conversion;
@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 class ConversionInitialization {
 
     @Bean(name = "conversion")
+    @Order(10)
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename",
             havingValue = "false")
@@ -53,13 +55,13 @@ class ConversionInitialization {
     }
 
     @Bean(name = "conversion")
+    @Order(10)
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename")
-    public Conversion loadTestData(Config config, @Value("${hms-mirror.conversion.test-filename}")String filename) throws IOException {
+    public Conversion loadTestData(Config config, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
         Conversion conversion = null;
         log.info("Reconstituting Conversion from test data file: " + filename);
         try {
-//            log.info("Test data file: " + filename);
             log.info("Check 'classpath' for test data file");
             URL configURL = this.getClass().getResource(filename);
             if (configURL == null) {
@@ -73,13 +75,9 @@ class ConversionInitialization {
             mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
             String yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-//            mapper.readerForUpdating(conversion).readValue(yamlCfgFile);
             conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
-//            conversion.setConfig(config);
             // Set Config Databases;
             config.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
-//            String[] databases = conversion.getDatabases().keySet().toArray(new String[0]);
-//            getConfig().setDatabases(databases);
         } catch (UnrecognizedPropertyException upe) {
             throw new RuntimeException("\nThere may have been a breaking change in the configuration since the previous " +
                     "release. Review the note below and remove the 'Unrecognized field' from the configuration and try " +

@@ -41,23 +41,18 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
     @Getter
     private ExportImportDataStrategy exportImportDataStrategy;
 
-    @Autowired
-    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
-        this.intermediateDataStrategy = intermediateDataStrategy;
-    }
-
-    @Autowired
-    public void setSqlDataStrategy(SQLDataStrategy sqlDataStrategy) {
-        this.sqlDataStrategy = sqlDataStrategy;
-    }
-
-    @Autowired
-    public void setExportImportDataStrategy(ExportImportDataStrategy exportImportDataStrategy) {
-        this.exportImportDataStrategy = exportImportDataStrategy;
-    }
-
     public HybridDataStrategy(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Override
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
+        return null;
+    }
+
+    @Override
+    public Boolean buildOutSql(TableMirror tableMirror) {
+        return null;
     }
 
     @Override
@@ -73,11 +68,6 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
         if (TableUtils.isACID(let) && getConfigService().legacyMigration()) {
             tableMirror.setStrategy(DataStrategyEnum.ACID);
             if (getConfigService().getConfig().getMigrateACID().isOn()) {
-//                DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//                dsIt.setTableMirror(tableMirror);
-//                dsIt.setDBMirror(dbMirror);
-//                dsIt.setConfig(config);
-//                rtn = dsIt.execute();//doIntermediateTransfer();
                 rtn = intermediateDataStrategy.execute(tableMirror);
             } else {
                 let.addIssue(TableUtils.ACID_NOT_ON);
@@ -97,38 +87,18 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
                     tableMirror.setStrategy(DataStrategyEnum.SQL);
                     if (getConfigService().getConfig().getTransfer().getIntermediateStorage() != null
                             || getConfigService().getConfig().getTransfer().getCommonStorage() != null) {
-//                        DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//                        dsIt.setTableMirror(tableMirror);
-//                        dsIt.setDBMirror(dbMirror);
-//                        dsIt.setConfig(config);
-//                        rtn = dsIt.execute();//doIntermediateTransfer();
                         rtn = intermediateDataStrategy.execute(tableMirror);
                     } else {
-//                        DataStrategy dsSQL = DataStrategyEnum.SQL.getDataStrategy();
-//                        dsSQL.setTableMirror(tableMirror);
-//                        dsSQL.setDBMirror(dbMirror);
-//                        dsSQL.setConfig(config);
-//                        rtn = dsSQL.execute();// doSQL();
                         rtn = sqlDataStrategy.execute(tableMirror);
                     }
                 } else {
                     // EXPORT
                     tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
-//                    DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT.getDataStrategy();
-//                    dsEI.setTableMirror(tableMirror);
-//                    dsEI.setDBMirror(dbMirror);
-//                    dsEI.setConfig(config);
-//                    rtn = dsEI.execute();// doExportImport();
                     rtn = exportImportDataStrategy.execute(tableMirror);
                 }
             } else {
                 // EXPORT
                 tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
-//                DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT.getDataStrategy();
-//                dsEI.setTableMirror(tableMirror);
-//                dsEI.setDBMirror(dbMirror);
-//                dsEI.setConfig(config);
-//                rtn = dsEI.execute();// doExportImport();
                 rtn = exportImportDataStrategy.execute(tableMirror);
             }
         }
@@ -136,13 +106,18 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
 
     }
 
-    @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setExportImportDataStrategy(ExportImportDataStrategy exportImportDataStrategy) {
+        this.exportImportDataStrategy = exportImportDataStrategy;
     }
 
-    @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
+        this.intermediateDataStrategy = intermediateDataStrategy;
+    }
+
+    @Autowired
+    public void setSqlDataStrategy(SQLDataStrategy sqlDataStrategy) {
+        this.sqlDataStrategy = sqlDataStrategy;
     }
 }

@@ -18,69 +18,27 @@
 package com.cloudera.utils.hadoop.hms.mirror;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Properties;
 
+@Getter
+@Setter
 public class HiveServer2Config {
+    @JsonIgnore
     public static final String APACHE_HIVE_DRIVER_CLASS_NAME = "org.apache.hive.jdbc.HiveDriver";
     private String uri = null;
-    private Boolean disconnected = Boolean.FALSE;
+    private boolean disconnected = Boolean.FALSE;
     private Properties connectionProperties;
     private String driverClassName = APACHE_HIVE_DRIVER_CLASS_NAME; // default driver.
     private String jarFile = null;
-
-    public String getUri() {
-        return uri;
-    }
-
-    public void setUri(String uri) {
-        this.uri = uri;
-    }
-
-    public Boolean isDisconnected() {
-        return disconnected;
-    }
-
-    public void setDisconnected(Boolean disconnected) {
-        this.disconnected = disconnected;
-    }
 
     public Properties getConnectionProperties() {
         if (connectionProperties == null) {
             setConnectionProperties(new Properties());
         }
         return connectionProperties;
-    }
-
-    public void setConnectionProperties(Properties connectionProperties) {
-        this.connectionProperties = connectionProperties;
-    }
-
-    public String getDriverClassName() {
-        return driverClassName;
-    }
-
-    public void setDriverClassName(String driverClassName) {
-        this.driverClassName = driverClassName;
-    }
-
-    public String getJarFile() {
-        return jarFile;
-    }
-
-    public void setJarFile(String jarFile) {
-        this.jarFile = jarFile;
-    }
-
-    @JsonIgnore
-    public Boolean isValidUri() {
-        Boolean rtn = Boolean.TRUE;
-        if (!isDisconnected()) {
-            if (getUri() == null || !getUri().startsWith("jdbc:hive2://")) {
-                rtn = Boolean.FALSE;
-            }
-        }
-        return rtn;
     }
 
     @JsonIgnore
@@ -97,11 +55,23 @@ public class HiveServer2Config {
     }
 
     @JsonIgnore
-    public Boolean isZooKeeperConnection() {
+    public boolean isValidUri() {
+        Boolean rtn = Boolean.TRUE;
+        if (!isDisconnected()) {
+            if (getUri() == null || !getUri().startsWith("jdbc:hive2://")) {
+                rtn = Boolean.FALSE;
+            }
+        }
+        return rtn;
+    }
+
+    @JsonIgnore
+    public boolean isZooKeeperConnection() {
         if (getUri() != null && getUri().contains("serviceDiscoveryMode=zooKeeper")) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;
         }
     }
+
 }

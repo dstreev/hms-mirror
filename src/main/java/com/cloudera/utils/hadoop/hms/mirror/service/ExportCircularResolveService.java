@@ -15,15 +15,13 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
+package com.cloudera.utils.hadoop.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
-import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
-import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyBase;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +38,7 @@ import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.TRANSLATED_
 public class ExportCircularResolveService extends DataStrategyBase {
 
     @Getter
-    private ConfigService configService;
+    private final ConfigService configService;
     @Getter
     private TableService tableService;
     @Getter
@@ -50,14 +48,9 @@ public class ExportCircularResolveService extends DataStrategyBase {
         this.configService = configService;
     }
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
+    @Override
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
+        return null;
     }
 
     public Boolean buildOutExportImportSql(TableMirror tableMirror) {
@@ -160,11 +153,10 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 }
             }
 
-            if (ret.getExists()) {
+            if (ret.isExists()) {
                 if (getConfigService().getConfig().isSync()) {
                     // Need to Drop table first.
                     String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
-                    ;
                     if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
                         let.addSql(MirrorConf.DROP_TABLE_DESC, dropExistingTable);
                         let.addIssue(EXPORT_IMPORT_SYNC.getDesc());
@@ -205,19 +197,23 @@ public class ExportCircularResolveService extends DataStrategyBase {
         return rtn;
     }
 
+    @Override
+    public Boolean buildOutSql(TableMirror tableMirror) {
+        return null;
+    }
 
     @Override
     public Boolean execute(TableMirror tableMirror) {
         return null;
     }
 
-    @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 
-    @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 }

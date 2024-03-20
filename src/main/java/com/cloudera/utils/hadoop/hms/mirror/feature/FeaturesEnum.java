@@ -32,17 +32,17 @@ public enum FeaturesEnum {
 
     private Feature feature;
 
-    public Feature getFeature() {
-        return feature;
-    }
-
     FeaturesEnum(Class featureClass) {
         try {
-            feature = (Feature)featureClass.getDeclaredConstructor().newInstance();
+            feature = (Feature) featureClass.getDeclaredConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public Feature getFeature() {
+        return feature;
     }
 }

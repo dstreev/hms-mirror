@@ -39,90 +39,67 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Setter
 @Slf4j
 public class CliReporter implements Runnable {
-    //    private static final Logger log = LoggerFactory.getLogger(Reporter.class);
-//    private Config config;
-//    private Conversion conversion;
-    private Thread worker;
-    private Boolean retry = Boolean.FALSE;
-    private Boolean quiet = Boolean.FALSE;
     private final Date start = new Date();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final int sleepInterval = 1000;
-
-    private String reportOutputFile = null;
-    private String leftExecuteFile = null;
-    private String leftCleanUpFile = null;
-    private String rightExecuteFile = null;
-    private String rightCleanUpFile = null;
-
     private final List<String> reportTemplateHeader = new ArrayList<String>();
     private final List<String> reportTemplateTableDetail = new ArrayList<String>();
     private final List<String> reportTemplateFooter = new ArrayList<String>();
     private final List<String> reportTemplateOutput = new ArrayList<String>();
     private final Map<String, String> varMap = new TreeMap<String, String>();
-
     private final List<TableMirror> startedTables = new ArrayList<TableMirror>();
-
+    private Thread worker;
+    private Boolean retry = Boolean.FALSE;
+    private Boolean quiet = Boolean.FALSE;
+    private String reportOutputFile = null;
+    private String leftExecuteFile = null;
+    private String leftCleanUpFile = null;
+    private String rightExecuteFile = null;
+    private String rightCleanUpFile = null;
     private ConfigService configService;
     private Conversion conversion;
+    private boolean tiktok = false;
 
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
+    @Bean
+    CommandLineRunner configQuiet(Config config) {
+        return args -> {
+            setQuiet(config.isQuiet());
+        };
     }
 
-    @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
-    }
+    protected void displayReport(Boolean showAll) {
+        System.out.print(ReportingConf.CLEAR_CONSOLE);
+        StringBuilder report = new StringBuilder();
+        // Header
+        if (!quiet) {
+            report.append(ReportingConf.substituteAllVariables(reportTemplateHeader, varMap));
 
-//    public CliReporter(Config config, Conversion conversion) {
-//        this.config = config;
-//        this.conversion = conversion;
-//    }
+            // Table Processing
+            for (TableMirror tblMirror : startedTables) {
+                Map<String, String> tblVars = new TreeMap<String, String>();
+                tblVars.put("db.name", getConfigService().getResolvedDB(tblMirror.getParent().getName()));
+                tblVars.put("tbl.name", tblMirror.getName());
+                tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
+                tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
+                tblVars.put("tbl.strategy", tblMirror.getStrategy().toString());
+                report.append(ReportingConf.substituteAllVariables(reportTemplateTableDetail, tblVars));
+            }
+        }
 
+        // Footer
+        report.append(ReportingConf.substituteAllVariables(reportTemplateFooter, varMap));
 
-    /*
-            // Action Files
-        reportOutputFile = reportOutputDir + System.getProperty("file.separator") + "<db>_hms-mirror.md|html|yaml";
-        leftExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_execute.sql";
-        leftCleanUpFile = reportOutputDir + System.getProperty("file.separator") + "<db>_LEFT_CleanUp_execute.sql";
-        rightExecuteFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_execute.sql";
-        rightCleanUpFile = reportOutputDir + System.getProperty("file.separator") + "<db>_RIGHT_CleanUp_execute.sql";
+        // Output
+        if (showAll) {
+            report.append("\nDatabases(<db>):\n");
+            report.append(String.join(",", conversion.getDatabases().keySet()));
+            report.append("\n");
+            report.append(ReportingConf.substituteAllVariables(reportTemplateOutput, varMap));
+            log.info(report.toString());
+        }
 
-     */
-    //    public Boolean getRetry() {
-//        return retry;
-//    }
-//
-//    public void setRetry(Boolean retry) {
-//        this.retry = retry;
-//    }
-//
-//    public Boolean getQuiet() {
-//        return quiet;
-//    }
-//
-//    public void setQuiet(Boolean quiet) {
-//        this.quiet = quiet;
-//    }
+        System.out.print(report);
 
-//    public Reporter(Conversion conversion, int sleepInterval) {
-//        this.conversion = conversion;
-//        this.sleepInterval = sleepInterval;
-//    }
-
-    public void start() {
-        worker = new Thread(this);
-        worker.start();
-    }
-
-    public void stop() {
-        running.set(false);
-    }
-
-    public void setVariable(String key, String value) {
-        varMap.put(key, value);
     }
 
     private void fetchReportTemplates() throws IOException {
@@ -153,36 +130,6 @@ public class CliReporter implements Runnable {
         }
 
     }
-
-    @Override
-    public void run() {
-        try {
-            fetchReportTemplates();
-            running.set(true);
-            while (running.get()) {
-                refresh(Boolean.FALSE);
-                try {
-                    Thread.sleep(sleepInterval);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    System.out.println("Reporting thread interrupted");
-                }
-            }
-        } catch (IOException ioe) {
-            System.out.println("Missing Reporting Template");
-        }
-    }
-
-    public void refresh(Boolean showAll) {
-        try {
-            populateVarMap();
-            displayReport(showAll);
-        } catch (ConcurrentModificationException cme) {
-            log.error("Report Refresh", cme);
-        }
-    }
-
-    private boolean tiktok = false;
 
     /*
     Go through the Conversion object and set the variables.
@@ -241,49 +188,54 @@ public class CliReporter implements Runnable {
             varMap.put("elapsed.time", "\u001B[33m" + elapsedMS / 1000 + "[0m");
     }
 
-
-    protected void displayReport(Boolean showAll) {
-//        if (Context.getInstance().getInitializing()) {
-//            return;
-//        }
-        System.out.print(ReportingConf.CLEAR_CONSOLE);
-        StringBuilder report = new StringBuilder();
-        // Header
-        if (!quiet) {
-            report.append(ReportingConf.substituteAllVariables(reportTemplateHeader, varMap));
-
-            // Table Processing
-            for (TableMirror tblMirror : startedTables) {
-                Map<String, String> tblVars = new TreeMap<String, String>();
-                tblVars.put("db.name", getConfigService().getResolvedDB(tblMirror.getParent().getName()));
-                tblVars.put("tbl.name", tblMirror.getName());
-                tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
-                tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
-                tblVars.put("tbl.strategy", tblMirror.getStrategy().toString());
-                report.append(ReportingConf.substituteAllVariables(reportTemplateTableDetail, tblVars));
-            }
+    public void refresh(Boolean showAll) {
+        try {
+            populateVarMap();
+            displayReport(showAll);
+        } catch (ConcurrentModificationException cme) {
+            log.error("Report Refresh", cme);
         }
-
-        // Footer
-        report.append(ReportingConf.substituteAllVariables(reportTemplateFooter, varMap));
-
-        // Output
-        if (showAll) {
-            report.append("\nDatabases(<db>):\n");
-            report.append(String.join(",", conversion.getDatabases().keySet()));
-            report.append("\n");
-            report.append(ReportingConf.substituteAllVariables(reportTemplateOutput, varMap));
-            log.info(report.toString());
-        }
-
-        System.out.print(report);
-
     }
 
-    @Bean
-    CommandLineRunner configQuiet(Config config) {
-        return args -> {
-            setQuiet(config.isQuiet());
-        };
+    @Override
+    public void run() {
+        try {
+            fetchReportTemplates();
+            running.set(true);
+            while (running.get()) {
+                refresh(Boolean.FALSE);
+                try {
+                    Thread.sleep(sleepInterval);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("Reporting thread interrupted");
+                }
+            }
+        } catch (IOException ioe) {
+            System.out.println("Missing Reporting Template");
+        }
+    }
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setConversion(Conversion conversion) {
+        this.conversion = conversion;
+    }
+
+    public void setVariable(String key, String value) {
+        varMap.put(key, value);
+    }
+
+    public void start() {
+        worker = new Thread(this);
+        worker.start();
+    }
+
+    public void stop() {
+        running.set(false);
     }
 }

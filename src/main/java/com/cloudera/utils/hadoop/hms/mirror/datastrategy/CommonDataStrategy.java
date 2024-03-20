@@ -34,51 +34,14 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_
 @Component
 @Slf4j
 public class CommonDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(CommonDataStrategy.class);
 
     @Getter
     private TableService tableService;
     @Getter
     private TranslatorService translatorService;
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
-
     public CommonDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-
-        if (TableUtils.isACID(let)) {
-            rtn = Boolean.FALSE;
-            tableMirror.addIssue(Environment.RIGHT,
-                    "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
-        } else {
-            rtn = buildOutDefinition(tableMirror);
-        }
-
-        if (rtn) {
-            rtn = buildOutSql(tableMirror);
-        }
-        // Execute the RIGHT sql if config.execute.
-        if (rtn) {
-            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
-                    //getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
-        }
-
-        return rtn;
     }
 
     @Override
@@ -108,15 +71,15 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
             if (getConfigService().getConfig().isSync()) {
                 // We assume that the 'definitions' are only there if the
                 //     table exists.
-                if (!let.getExists() && ret.getExists()) {
+                if (!let.isExists() && ret.isExists()) {
                     // If left is empty and right is not, DROP RIGHT.
                     ret.addIssue("Schema doesn't exist in 'source'.  Will be DROPPED.");
                     ret.setCreateStrategy(CreateStrategy.DROP);
-                } else if (let.getExists() && !ret.getExists()) {
+                } else if (let.isExists() && !ret.isExists()) {
                     // If left is defined and right is not, CREATE RIGHT.
                     ret.addIssue("Schema missing, will be CREATED");
                     ret.setCreateStrategy(CreateStrategy.CREATE);
-                } else if (let.getExists() && ret.getExists()) {
+                } else if (let.isExists() && ret.isExists()) {
                     // If left and right, check schema change and replace if necessary.
                     // Compare Schemas.
                     if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
@@ -137,7 +100,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 // With sync, don't own data.
                 copySpec.setTakeOwnership(Boolean.FALSE);
             } else {
-                if (ret.getExists()) {
+                if (ret.isExists()) {
                     // Already exists, no action.
                     ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                     ret.setCreateStrategy(CreateStrategy.LEAVE);
@@ -220,7 +183,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 String tableParts = translatorService.buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (getConfigService().getConfig().getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {
+            } else if (getConfigService().getConfig().getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                 if (getConfigService().getConfig().getTransfer().getStorageMigration().isDistcp()) {
                     ret.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
@@ -232,5 +195,41 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
 
         rtn = Boolean.TRUE;
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+
+        if (TableUtils.isACID(let)) {
+            rtn = Boolean.FALSE;
+            tableMirror.addIssue(Environment.RIGHT,
+                    "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
+        } else {
+            rtn = buildOutDefinition(tableMirror);
+        }
+
+        if (rtn) {
+            rtn = buildOutSql(tableMirror);
+        }
+        // Execute the RIGHT sql if config.execute.
+        if (rtn) {
+            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+            //getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
+        }
+
+        return rtn;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 }

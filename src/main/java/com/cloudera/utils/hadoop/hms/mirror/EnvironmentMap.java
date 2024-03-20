@@ -24,6 +24,18 @@ import java.util.TreeMap;
 
 public class EnvironmentMap {
 
+    private final Map<Environment, Set<TranslationLevel>> environmentMap = new TreeMap<>();
+
+    public void addTranslationLocation(Environment environment, String original, String target, int level) {
+        Set<TranslationLevel> dbTranslationSet = environmentMap.computeIfAbsent(environment, k -> new HashSet<TranslationLevel>());
+        dbTranslationSet.add(new TranslationLevel(original, target, level));
+    }
+
+    public Set<TranslationLevel> getTranslationSet(Environment environment) {
+        Set<TranslationLevel> dbTranslationSet = environmentMap.computeIfAbsent(environment, k -> new HashSet<TranslationLevel>());
+        return dbTranslationSet;
+    }
+
     public class TranslationLevel {
         int level;
         String original, target;
@@ -45,30 +57,4 @@ public class EnvironmentMap {
         }
     }
 
-//    private final String database;
-    private final Map<Environment, Set<TranslationLevel>> environmentMap = new TreeMap<>();
-//    private final Set<TranslationLevel> environmentSet = new HashSet<>();
-
-//    public EnvironmentMap(String database) {
-//        this.database = database;
-//    }
-
-    public void addTranslationLocation(Environment environment, String original, String target, int level) {
-        Set<TranslationLevel> dbTranslationSet = environmentMap.computeIfAbsent(environment, k -> new HashSet<TranslationLevel>());
-        dbTranslationSet.add(new TranslationLevel(original, target, level));
-    }
-
-    public Set<TranslationLevel> getTranslationSet(Environment environment) {
-        Set<TranslationLevel> dbTranslationSet = environmentMap.computeIfAbsent(environment, k -> new HashSet<TranslationLevel>());
-        return dbTranslationSet;
-    }
-
-//    public synchronized Map<String, String> getLocationMap1(Environment environment) {
-//        Map<String, String> rtn = environmentMap.get(environment);
-//        if (rtn == null) {
-//            rtn = new TreeMap<String, String>();
-//            environmentMap.put(environment, rtn);
-//        }
-//        return rtn;
-//    }
 }

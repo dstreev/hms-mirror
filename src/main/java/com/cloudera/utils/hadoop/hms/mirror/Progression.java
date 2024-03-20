@@ -50,12 +50,12 @@ public class Progression {
         warnings.set(code, message);
     }
 
-    public String getWarningMessage(MessageCode code) {
-        return warnings.getMessage(code.getCode());
-    }
-
     public String getErrorMessage(MessageCode code) {
         return errors.getMessage(code.getCode());
+    }
+
+    public String getWarningMessage(MessageCode code) {
+        return warnings.getMessage(code.getCode());
     }
 
     public Boolean hasErrors() {

@@ -28,13 +28,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Slf4j
 public class ReportController {
 
-        @GetMapping(path = "/{id}")
-        public String getReport(@PathVariable String id) {
-            return "report";
-        }
+    @GetMapping(path = "/{id}")
+    public String getReport(@PathVariable String id) {
+        return "report";
+    }
 
-        @GetMapping(path = "/")
-        public String getReport() {
-            return "report";
-        }
+    @GetMapping(path = "/")
+    public String getReport() {
+        return "report";
+    }
 }

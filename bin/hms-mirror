@@ -69,7 +69,7 @@ STANDALONE="false"
 
 APP_JAVA_OPTS=${JAVA_OPTS:-"-Xms2048m -Xmx4096m -XX:+UseG1GC"}
 LOGGING_THRESHOLD=${LOGGING_THRESHOLD:-"DEBUG"}
-APP_LOG_FILE=${APP_LOG_FILE:-"hms-mirror.log"}
+APP_LOG_FILE=${APP_LOG_FILE:-"hms-mirror"}
 
 APP_OUTPUT_DIR=${HOME}/.hms-mirror/reports
 DIR_OVERRIDE=
@@ -167,7 +167,7 @@ echo "Using Java Version: "
 $(${JAVA} -version)
 echo ""
 
-CLI_CMD="${JAVA} -cp ${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=com.cloudera.utils.hadoop.hms.MirrorConsoleApp -jar ${APP_DIR}/../lib/* ${PRG_ARGS}"
+CLI_CMD="${JAVA} -cp ${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=com.cloudera.utils.hadoop.hms.Mirror -jar ${APP_DIR}/../lib/* ${PRG_ARGS}"
 
 echo "CLI_CMD: ${CLI_CMD}"
 

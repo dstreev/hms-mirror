@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+
 public enum Environment {
-//    LEFT2(Boolean.TRUE),
-//    RIGHT2(Boolean.TRUE),
     /*
     Table lives on RIGHT cluster and usually points to LEFT data.  Used to migrate
     data from the LEFT to the RIGHT.  Temp table and should be deleted after action.
@@ -44,7 +44,7 @@ public enum Environment {
         this.visible = visible;
     }
 
-    public Boolean isVisible() {
+    public boolean isVisible() {
         return visible;
     }
 }

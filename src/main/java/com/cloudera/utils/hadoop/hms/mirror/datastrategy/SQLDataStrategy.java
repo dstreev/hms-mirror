@@ -33,7 +33,6 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.*;
 @Component
 @Slf4j
 public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(SQLDataStrategy.class);
 
     @Getter
     private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
@@ -44,85 +43,8 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Getter
     private IntermediateDataStrategy intermediateDataStrategy;
 
-    @Autowired
-    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
-        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
-    }
-
-    @Autowired
-    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
-        this.intermediateDataStrategy = intermediateDataStrategy;
-    }
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
     public SQLDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-        Config config = getConfigService().getConfig();
-
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-
-        if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
-//            DataStrategy dsACIDDowngradeInplace = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//            dsACIDDowngradeInplace.setTableMirror(tableMirror);
-//            dsACIDDowngradeInplace.setDBMirror(dbMirror);
-//            dsACIDDowngradeInplace.setConfig(config);
-//            rtn = dsACIDDowngradeInplace.execute();//doSQLACIDDowngradeInplace();
-            rtn = getSqlAcidDowngradeInPlaceDataStrategy().execute(tableMirror);
-        } else if (config.getTransfer().getIntermediateStorage() != null
-                || config.getTransfer().getCommonStorage() != null
-                || (TableUtils.isACID(let)
-                && config.getMigrateACID().isOn())) {
-            if (TableUtils.isACID(let)) {
-                tableMirror.setStrategy(DataStrategyEnum.ACID);
-            }
-//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//            dsIt.setTableMirror(tableMirror);
-//            dsIt.setDBMirror(dbMirror);
-//            dsIt.setConfig(config);
-//            rtn = dsIt.execute();//doIntermediateTransfer();
-            rtn = getIntermediateDataStrategy().execute(tableMirror);
-        } else {
-
-            EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-            EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
-
-            // We should not get ACID tables in this routine.
-            rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLDefinition(config, dbMirror);
-
-            if (rtn)
-                rtn = AVROCheck(tableMirror);
-
-            if (rtn)
-                rtn = buildOutSql(tableMirror);//tableMirror.buildoutSQLSql(config, dbMirror);
-
-            // Construct Transfer SQL
-            if (rtn) {
-//                DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//                dsIt.setTableMirror(tableMirror);
-//                dsIt.setDBMirror(dbMirror);
-//                dsIt.setConfig(config);
-//                rtn = dsIt.buildOutSql();
-                // TODO: Double check this...
-                rtn = tableService.buildTransferSql(tableMirror, Environment.TRANSFER, Environment.SHADOW, Environment.RIGHT);
-//                        tableMirror.buildTransferSql(let, set, ret, config);
-
-                // Execute the RIGHT sql if config.execute.
-                if (rtn) {
-                    tableService.runTableSql(tableMirror, Environment.RIGHT);
-//                    config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
-                }
-            }
-        }
-        return rtn;
     }
 
     @Override
@@ -143,16 +65,10 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null ||
                 TableUtils.isACID(let)) {
-//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//            dsIt.setTableMirror(tableMirror);
-//            dsIt.setDBMirror(dbMirror);
-//            dsIt.setConfig(config);
-//            return dsIt.buildOutDefinition();
             return getIntermediateDataStrategy().buildOutDefinition(tableMirror);
-//            return buildoutIntermediateDefinition(config, dbMirror);
         }
 
-        if (ret.getExists()) {
+        if (ret.isExists()) {
             if (config.isSync() && config.getCluster(Environment.RIGHT).isCreateIfNotExists()) {
                 // sync with overwrite.
                 ret.addIssue(SQL_SYNC_W_CINE.getDesc());
@@ -183,7 +99,6 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 
             // Build Shadow from Source.
             rtn = tableService.buildTableSchema(shadowSpec);
-//                    tableMirror.buildTableSchema(shadowSpec);
         }
 
         // Create final table in right.
@@ -219,13 +134,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null) {
-//            DataStrategy dsIt = DataStrategyEnum.INTERMEDIATE.getDataStrategy();
-//            dsIt.setTableMirror(tableMirror);
-//            dsIt.setDBMirror(dbMirror);
-//            dsIt.setConfig(config);
-//            return dsIt.buildOutSql();
             return getIntermediateDataStrategy().buildOutSql(tableMirror);
-//            return buildoutIntermediateSql(config, dbMirror);
         }
 
         String useDb = null;
@@ -243,7 +152,6 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             // TODO: Hum... Not sure this is right.
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
-//        if (!isACIDDowngradeInPlace(config, let)) {
             database = getConfigService().getResolvedDB(tableMirror.getParent().getName());
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
@@ -279,12 +187,12 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                     dropStmt = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
                     ret.addSql(TableUtils.DROP_DESC, dropStmt);
                     String createStmt = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
-                            //tableMirror.getCreateStatement(Environment.RIGHT);
+                    //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt);
                     break;
                 case CREATE:
                     String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
-                            //tableMirror.getCreateStatement(Environment.RIGHT);
+                    //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
                     if (!config.getCluster(Environment.RIGHT).isLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
@@ -292,9 +200,68 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                     }
                     break;
             }
-
             rtn = Boolean.TRUE;
         }
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+
+        if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
+            rtn = getSqlAcidDowngradeInPlaceDataStrategy().execute(tableMirror);
+        } else if (config.getTransfer().getIntermediateStorage() != null
+                || config.getTransfer().getCommonStorage() != null
+                || (TableUtils.isACID(let)
+                && config.getMigrateACID().isOn())) {
+            if (TableUtils.isACID(let)) {
+                tableMirror.setStrategy(DataStrategyEnum.ACID);
+            }
+            rtn = getIntermediateDataStrategy().execute(tableMirror);
+        } else {
+
+            EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+            EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
+
+            // We should not get ACID tables in this routine.
+            rtn = buildOutDefinition(tableMirror);
+
+            if (rtn)
+                rtn = AVROCheck(tableMirror);
+
+            if (rtn)
+                rtn = buildOutSql(tableMirror);
+
+            // Construct Transfer SQL
+            if (rtn) {
+                // TODO: Double check this...
+                rtn = tableService.buildTransferSql(tableMirror, Environment.TRANSFER, Environment.SHADOW, Environment.RIGHT);
+
+                // Execute the RIGHT sql if config.execute.
+                if (rtn) {
+                    tableService.runTableSql(tableMirror, Environment.RIGHT);
+                }
+            }
+        }
+        return rtn;
+    }
+
+    @Autowired
+    public void setIntermediateDataStrategy(IntermediateDataStrategy intermediateDataStrategy) {
+        this.intermediateDataStrategy = intermediateDataStrategy;
+    }
+
+    @Autowired
+    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
+        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

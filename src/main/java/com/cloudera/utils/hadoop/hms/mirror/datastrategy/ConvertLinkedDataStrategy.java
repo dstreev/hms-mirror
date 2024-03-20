@@ -23,7 +23,6 @@ import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -35,7 +34,6 @@ import static com.cloudera.utils.hadoop.hms.mirror.TablePropertyVars.EXTERNAL_TA
 @Component
 @Slf4j
 public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(ConvertLinkedDataStrategy.class);
 
     @Getter
     private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
@@ -46,23 +44,18 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
     @Getter
     private TranslatorService translatorService;
 
-    @Autowired
-    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
-        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
-    }
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
-
     public ConvertLinkedDataStrategy(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Override
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
+        return null;
+    }
+
+    @Override
+    public Boolean buildOutSql(TableMirror tableMirror) {
+        return null;
     }
 
     @Override
@@ -73,8 +66,6 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
         try {
-//        tblMirror.setResolvedDbName(config.getResolvedDB(tblMirror.getParent().getName()));
-
             // If RIGHT doesn't exist, run SCHEMA_ONLY.
             if (ret == null) {
                 tableMirror.addIssue(Environment.RIGHT, "Table doesn't exist.  To transfer, run 'SCHEMA_ONLY'");
@@ -99,11 +90,6 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                     tableMirror.setStrategy(DataStrategyEnum.SCHEMA_ONLY);
                     // Set False that it doesn't exists, which it won't, since we're dropping it.
                     ret.setExists(Boolean.FALSE);
-                    // Fallback to SCHEMA_ONLY.
-//                    DataStrategy soDS = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
-//                    soDS.setTableMirror(tableMirror);
-//                    soDS.setDBMirror(dbMirror);
-//                    soDS.setConfig(config);
                     rtn = schemaOnlyDataStrategy.execute(tableMirror);
                 } else {
                     // - AVRO LOCATION
@@ -130,7 +116,6 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                         // Execute the RIGHT sql if config.execute.
                         if (rtn) {
                             rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
-                                    //config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
                         }
                     }
                 }
@@ -144,13 +129,18 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
         return rtn;
     }
 
-    @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
+        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
     }
 
-    @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 }

@@ -35,90 +35,12 @@ import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.TEZ_EXECUTION_DES
 @Component
 @Slf4j
 public class IntermediateDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(IntermediateDataStrategy.class);
+
     @Getter
     private TableService tableService;
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
     public IntermediateDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-        Config config = getConfigService().getConfig();
-
-        rtn = buildOutDefinition(tableMirror);
-//        rtn = tableMirror.buildoutIntermediateDefinition(config, dbMirror);
-        if (rtn)
-            rtn = buildOutSql(tableMirror);
-//            rtn = tableMirror.buildoutIntermediateSql(config, dbMirror);
-
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
-        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
-
-        if (rtn) {
-            // Construct Transfer SQL
-            if (config.getCluster(Environment.LEFT).isLegacyHive()
-                    && !config.getTransfer().getStorageMigration().isDistcp()) {
-                // We need to ensure that 'tez' is the execution engine.
-                let.addSql(new Pair(TEZ_EXECUTION_DESC, SET_TEZ_AS_EXECUTION_ENGINE));
-            }
-
-            Pair cleanUp = new Pair("Post Migration Cleanup", "-- To be run AFTER final RIGHT SQL statements.");
-            let.addCleanUpSql(cleanUp);
-
-            String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
-            Pair leftUsePair = new Pair(TableUtils.USE_DESC, useLeftDb);
-            let.addCleanUpSql(leftUsePair);
-
-            rtn = tableService.buildTransferSql(tableMirror, Environment.LEFT, Environment.TRANSFER, Environment.RIGHT);
-                    //tableMirror.buildTransferSql(let, set, ret, config);
-
-            // Execute the LEFT sql if config.execute.
-            if (rtn) {
-                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
-                        //config.getCluster(Environment.LEFT).runTableSql(tableMirror);
-            }
-
-            // Execute the RIGHT sql if config.execute.
-            if (rtn) {
-                rtn =  tableService.runTableSql(tableMirror, Environment.RIGHT);
-                        //config.getCluster(Environment.RIGHT).runTableSql(tableMirror);
-            }
-
-            if (rtn) {
-                // Run the Cleanup Scripts
-//                config.getCluster(Environment.LEFT).runTableSql(let.getCleanUpSql(), tableMirror, Environment.LEFT);
-                tableService.runTableSql(let.getCleanUpSql(), tableMirror, Environment.LEFT);
-            }
-
-            // RIGHT Shadow table
-//            if (set.getDefinition().size() > 0) {
-//                List<Pair> rightCleanup = new ArrayList<Pair>();
-//
-//                String useRightDb = MessageFormat.format(MirrorConf.USE, config.getResolvedDB(dbMirror.getName()));
-//                Pair rightUsePair = new Pair(TableUtils.USE_DESC, useRightDb);
-//                ret.addCleanUpSql(rightUsePair);
-//                String rightDropShadow = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
-//                Pair rightDropPair = new Pair(TableUtils.DROP_SHADOW_TABLE, rightDropShadow);
-//                ret.addCleanUpSql(rightDropPair);
-//                tblMirror.addStep("RIGHT ACID Shadow SQL Cleanup", "Built");
-//
-//                if (rtn) {
-//                    // Run the Cleanup Scripts
-//                    config.getCluster(Environment.RIGHT).runTableSql(ret.getCleanUpSql(), tblMirror, Environment.RIGHT);
-//                }
-//            }
-        }
-        return rtn;
     }
 
     @Override
@@ -135,18 +57,18 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
 
         CopySpec rightSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
 
-        if (ret.getExists()) {
+        if (ret.isExists()) {
             if (!TableUtils.isACID(ret) && config.getCluster(Environment.RIGHT).isCreateIfNotExists() && config.isSync()) {
                 ret.addIssue(CINE_WITH_EXIST.getDesc());
                 ret.setCreateStrategy(CreateStrategy.CREATE);
-            } else if(TableUtils.isACID(ret) && getConfigService().getConfig().isSync()) {
+            } else if (TableUtils.isACID(ret) && getConfigService().getConfig().isSync()) {
                 ret.addIssue(SCHEMA_EXISTS_SYNC_ACID.getDesc());
                 ret.setCreateStrategy(CreateStrategy.REPLACE);
             } else {
-                    // Already exists, no action.
-                    ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-                    ret.setCreateStrategy(CreateStrategy.NOTHING);
-                    return Boolean.FALSE;
+                // Already exists, no action.
+                ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+                ret.setCreateStrategy(CreateStrategy.NOTHING);
+                return Boolean.FALSE;
             }
         } else {
             ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -184,7 +106,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
 
         // Build Target from Source.
         rtn = tableService.buildTableSchema(rightSpec);
-                //tableMirror.buildTableSchema(rightSpec);
+        //tableMirror.buildTableSchema(rightSpec);
 
         // Build Transfer Spec.
         CopySpec transferSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.TRANSFER);
@@ -258,14 +180,12 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         // If acid and ma.isOn
         // if not downgrade
         if ((config.getTransfer().getIntermediateStorage() != null && !TableUtils.isACID(let)) ||
-                (TableUtils.isACID(let) &&config.getMigrateACID().isOn())) {
+                (TableUtils.isACID(let) && config.getMigrateACID().isOn())) {
             if (!config.getMigrateACID().isDowngrade() ||
                     // Is Downgrade but the downgraded location isn't available to the right.
                     (config.getMigrateACID().isDowngrade()
                             && config.getTransfer().getCommonStorage() == null)) {
-                if (!config.getTransfer().getStorageMigration().isDistcp()) { // ||
-//                (config.getMigrateACID().isOn() && TableUtils.isACID(let)
-//                        && !config.getMigrateACID().isDowngrade())) {
+                if (!config.getTransfer().getStorageMigration().isDistcp()) {
                     CopySpec shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
                     shadowSpec.setUpgrade(Boolean.TRUE);
                     shadowSpec.setMakeExternal(Boolean.TRUE);
@@ -371,5 +291,78 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
 
         rtn = Boolean.TRUE;
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+
+        rtn = buildOutDefinition(tableMirror);
+        if (rtn)
+            rtn = buildOutSql(tableMirror);
+
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
+        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+
+        if (rtn) {
+            // Construct Transfer SQL
+            if (config.getCluster(Environment.LEFT).isLegacyHive()
+                    && !config.getTransfer().getStorageMigration().isDistcp()) {
+                // We need to ensure that 'tez' is the execution engine.
+                let.addSql(new Pair(TEZ_EXECUTION_DESC, SET_TEZ_AS_EXECUTION_ENGINE));
+            }
+
+            Pair cleanUp = new Pair("Post Migration Cleanup", "-- To be run AFTER final RIGHT SQL statements.");
+            let.addCleanUpSql(cleanUp);
+
+            String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
+            Pair leftUsePair = new Pair(TableUtils.USE_DESC, useLeftDb);
+            let.addCleanUpSql(leftUsePair);
+
+            rtn = tableService.buildTransferSql(tableMirror, Environment.LEFT, Environment.TRANSFER, Environment.RIGHT);
+            //tableMirror.buildTransferSql(let, set, ret, config);
+
+            // Execute the LEFT sql if config.execute.
+            if (rtn) {
+                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
+            }
+
+            // Execute the RIGHT sql if config.execute.
+            if (rtn) {
+                rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+            }
+
+            if (rtn) {
+                // Run the Cleanup Scripts
+                tableService.runTableSql(let.getCleanUpSql(), tableMirror, Environment.LEFT);
+            }
+
+            // RIGHT Shadow table
+//            if (set.getDefinition().size() > 0) {
+//                List<Pair> rightCleanup = new ArrayList<Pair>();
+//
+//                String useRightDb = MessageFormat.format(MirrorConf.USE, config.getResolvedDB(dbMirror.getName()));
+//                Pair rightUsePair = new Pair(TableUtils.USE_DESC, useRightDb);
+//                ret.addCleanUpSql(rightUsePair);
+//                String rightDropShadow = MessageFormat.format(MirrorConf.DROP_TABLE, set.getName());
+//                Pair rightDropPair = new Pair(TableUtils.DROP_SHADOW_TABLE, rightDropShadow);
+//                ret.addCleanUpSql(rightDropPair);
+//                tblMirror.addStep("RIGHT ACID Shadow SQL Cleanup", "Built");
+//
+//                if (rtn) {
+//                    // Run the Cleanup Scripts
+//                    config.getCluster(Environment.RIGHT).runTableSql(ret.getCleanUpSql(), tblMirror, Environment.RIGHT);
+//                }
+//            }
+        }
+        return rtn;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

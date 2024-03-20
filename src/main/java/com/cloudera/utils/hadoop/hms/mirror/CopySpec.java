@@ -49,31 +49,11 @@ public class CopySpec {
         this.source = source;
     }
 
-    public Boolean isMakeExternal() {
-        return makeExternal;
-    }
-
-    public void setMakeExternal(Boolean makeExternal) {
-        this.makeExternal = makeExternal;
-    }
-
-    public Boolean isMakeNonTransactional() {
-        return makeNonTransactional;
-    }
-
-    public void setMakeNonTransactional(Boolean makeNonTransactional) {
-        this.makeNonTransactional = makeNonTransactional;
-    }
-
     public boolean renameTable() {
         if (tableNamePrefix != null)
             return Boolean.TRUE;
         else
             return Boolean.FALSE;
-    }
-
-    public Boolean isUpgrade() {
-        return upgrade;
     }
 
     public void setUpgrade(Boolean upgrade) {

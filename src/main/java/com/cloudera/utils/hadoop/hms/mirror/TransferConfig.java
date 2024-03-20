@@ -35,60 +35,18 @@ public class TransferConfig {
     private String commonStorage = null;
     private StorageMigration storageMigration = null;
     private WarehouseConfig warehouse = null;
-    // TODO:
-//    private List<Mapping> pathMappings = null;
 
-//    public int getConcurrency() {
-//        return concurrency;
-//    }
-//
-//    public void setConcurrency(int concurrency) {
-//        this.concurrency = concurrency;
-//    }
-//
-//    public String getTransferPrefix() {
-//        return transferPrefix;
-//    }
-//
-//    public void setTransferPrefix(String transferPrefix) {
-//        this.transferPrefix = transferPrefix;
-//    }
-//
-//    public String getShadowPrefix() {
-//        return shadowPrefix;
-//    }
-//
-//    public void setShadowPrefix(String shadowPrefix) {
-//        this.shadowPrefix = shadowPrefix;
-//    }
-//
-//    public String getExportBaseDirPrefix() {
-//        return exportBaseDirPrefix;
-//    }
-//
-//    public void setExportBaseDirPrefix(String exportBaseDirPrefix) {
-//        this.exportBaseDirPrefix = exportBaseDirPrefix;
-//    }
-//
-//    public String getRemoteWorkingDirectory() {
-//        return remoteWorkingDirectory;
-//    }
-//
-//    public void setRemoteWorkingDirectory(String remoteWorkingDirectory) {
-//        this.remoteWorkingDirectory = remoteWorkingDirectory;
-//    }
-//
-//    public String getIntermediateStorage() {
-//        return intermediateStorage;
-//    }
-//
-//    public void setIntermediateStorage(String intermediateStorage) {
-//        this.intermediateStorage = intermediateStorage;
-//    }
-//
-//    public String getCommonStorage() {
-//        return commonStorage;
-//    }
+    public StorageMigration getStorageMigration() {
+        if (storageMigration == null)
+            storageMigration = new StorageMigration();
+        return storageMigration;
+    }
+
+    public WarehouseConfig getWarehouse() {
+        if (warehouse == null)
+            warehouse = new WarehouseConfig();
+        return warehouse;
+    }
 
     public void setCommonStorage(String commonStorage) {
         if (commonStorage != null) {
@@ -102,31 +60,4 @@ public class TransferConfig {
         }
     }
 
-    public StorageMigration getStorageMigration() {
-        if (storageMigration == null)
-            storageMigration = new StorageMigration();
-        return storageMigration;
-    }
-
-//    public void setStorageMigration(StorageMigration storageMigration) {
-//        this.storageMigration = storageMigration;
-//    }
-
-    public WarehouseConfig getWarehouse() {
-        if (warehouse == null)
-            warehouse = new WarehouseConfig();
-        return warehouse;
-    }
-
-//    public void setWarehouse(WarehouseConfig warehouse) {
-//        this.warehouse = warehouse;
-//    }
-
-//    public List<Mapping> getPathMappings() {
-//        return pathMappings;
-//    }
-//
-//    public void setPathMappings(List<Mapping> pathMappings) {
-//        this.pathMappings = pathMappings;
-//    }
 }

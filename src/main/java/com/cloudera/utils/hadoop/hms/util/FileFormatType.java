@@ -21,18 +21,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public enum FileFormatType {
-    ORC("org.apache.hadoop.hive.ql.io.orc.OrcSerde","org.apache.hadoop.hive.ql.io.orc.OrcInputFormat", "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat"),
-    TEXTFILE("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe","org.apache.hadoop.mapred.TextInputFormat", "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"),
-    SEQUENCEFILE("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe","org.apache.hadoop.mapred.SequenceFileInputFormat", "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat"),
-    PARQUET("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe","org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat", "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
-    JSONFILE("org.apache.hadoop.hive.serde2.JsonSerDe","org.apache.hadoop.mapred.TextInputFormat","org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"),
-    RCFILE("org.apache.hadoop.hive.serde2.columnar.LazyBinaryColumnarSerDe","org.apache.hadoop.hive.ql.io.RCFileInputFormat","org.apache.hadoop.hive.ql.io.RCFileOutputFormat"),
-    AVRO("org.apache.hadoop.hive.serde2.avro.AvroSerDe","org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat", "org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat"),
+    ORC("org.apache.hadoop.hive.ql.io.orc.OrcSerde", "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat", "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat"),
+    TEXTFILE("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe", "org.apache.hadoop.mapred.TextInputFormat", "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"),
+    SEQUENCEFILE("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe", "org.apache.hadoop.mapred.SequenceFileInputFormat", "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat"),
+    PARQUET("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe", "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat", "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
+    JSONFILE("org.apache.hadoop.hive.serde2.JsonSerDe", "org.apache.hadoop.mapred.TextInputFormat", "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"),
+    RCFILE("org.apache.hadoop.hive.serde2.columnar.LazyBinaryColumnarSerDe", "org.apache.hadoop.hive.ql.io.RCFileInputFormat", "org.apache.hadoop.hive.ql.io.RCFileOutputFormat"),
+    AVRO("org.apache.hadoop.hive.serde2.avro.AvroSerDe", "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat", "org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat"),
     UNKNOWN("unknown", "unknown", "unknown");
 
-    private String rowFormatSerde;
-    private String inputFormat;
-    private String outputFormat;
+    private final String rowFormatSerde;
+    private final String inputFormat;
+    private final String outputFormat;
 
     FileFormatType(String rowFormatSerde, String inputFormat, String outputFormat) {
         this.rowFormatSerde = rowFormatSerde;

@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hadoop.hms;
+package com.cloudera.utils.hadoop.hms.mirror.config;
 
 import com.cloudera.utils.hadoop.hms.mirror.Cluster;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
@@ -28,6 +28,7 @@ import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,13 +38,6 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 @Slf4j
 class ConfigInitialization {
-
-    @Bean("config")
-    public Config loadConfig(Progression progression, @Value("${hms-mirror.config-filename}") String configFilename) {
-//        return args -> {
-            return initializeConfig(progression, configFilename);
-//        };
-    }
 
     private Config initializeConfig(Progression progression, String configFilename) {
         Config config = null;
@@ -60,7 +54,7 @@ class ConfigInitialization {
                 config.setProgression(progression);
                 // Link the translator to the config
                 config.getTranslator().setConfig(config);
-                for (Cluster cluster: config.getClusters().values()) {
+                for (Cluster cluster : config.getClusters().values()) {
                     cluster.setConfig(config);
                 }
 //                mapper.readerForUpdating(config).readValue(yamlCfgFile);
@@ -73,6 +67,12 @@ class ConfigInitialization {
         log.info("Config loaded.");
         log.info("Transfer Concurrency: " + config.getTransfer().getConcurrency());
         return config;
+    }
+
+    @Bean("config")
+    @Order(1)
+    public Config loadConfig(Progression progression, @Value("${hms-mirror.config-filename}") String configFilename) {
+        return initializeConfig(progression, configFilename);
     }
 
 }

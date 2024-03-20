@@ -22,7 +22,7 @@ import com.cloudera.utils.hadoop.hms.mirror.Cluster;
 import com.cloudera.utils.hadoop.hms.mirror.Config;
 import com.cloudera.utils.hadoop.hms.mirror.Environment;
 import com.cloudera.utils.hadoop.hms.mirror.HiveServer2Config;
-import com.cloudera.utils.hadoop.hms.mirror.datastrategy.*;
+import com.cloudera.utils.hadoop.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
@@ -30,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,9 +49,93 @@ public class ConfigService {
 
     private Config config = null;
 
-    @Autowired
-    public void setConfig(Config config) {
-        this.config = config;
+    public Boolean canDeriveDistcpPlan() {
+        Boolean rtn = Boolean.FALSE;
+        if (getConfig().getTransfer().getStorageMigration().isDistcp()) {
+            rtn = Boolean.TRUE;
+        } else {
+            getConfig().addWarning(DISTCP_OUTPUT_NOT_REQUESTED);
+        }
+        if (rtn && getConfig().isResetToDefaultLocation() &&
+                getConfig().getTransfer().getWarehouse().getExternalDirectory() == null) {
+            rtn = Boolean.FALSE;
+        }
+        return rtn;
+    }
+
+    public Boolean checkConnections() {
+        boolean rtn = Boolean.FALSE;
+        Set<Environment> envs = new HashSet<>();
+        if (!(getConfig().getDataStrategy() == DataStrategyEnum.DUMP ||
+                getConfig().getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION ||
+                getConfig().getDataStrategy() == DataStrategyEnum.ICEBERG_CONVERSION)) {
+            envs.add(Environment.LEFT);
+            envs.add(Environment.RIGHT);
+        } else {
+            envs.add(Environment.LEFT);
+        }
+
+        for (Environment env : envs) {
+            Cluster cluster = getConfig().getCluster(env);
+            if (cluster != null
+                    && cluster.getHiveServer2() != null
+                    && cluster.getHiveServer2().isValidUri()
+                    && !cluster.getHiveServer2().isDisconnected()) {
+                Connection conn = null;
+                try {
+                    conn = cluster.getConnection();
+                    // May not be set for DUMP strategy (RIGHT cluster)
+                    log.debug(env + ":" + ": Checking Hive Connection");
+                    if (conn != null) {
+//                        Statement stmt = null;
+//                        ResultSet resultSet = null;
+//                        try {
+//                            stmt = conn.createStatement();
+//                            resultSet = stmt.executeQuery("SHOW DATABASES");
+//                            resultSet = stmt.executeQuery("SELECT 'HIVE CONNECTION TEST PASSED' AS STATUS");
+                        log.debug(env + ":" + ": Hive Connection Successful");
+                        rtn = Boolean.TRUE;
+//                        } catch (SQLException sql) {
+                        // DB Doesn't Exists.
+//                            log.error(env + ": Hive Connection check failed.", sql);
+//                            rtn = Boolean.FALSE;
+//                        } finally {
+//                            if (resultSet != null) {
+//                                try {
+//                                    resultSet.close();
+//                                } catch (SQLException sqlException) {
+//                                     ignore
+//                                }
+//                            }
+//                            if (stmt != null) {
+//                                try {
+//                                    stmt.close();
+//                                } catch (SQLException sqlException) {
+                        // ignore
+//                                }
+//                            }
+//                        }
+                    } else {
+                        log.error(env + ": Hive Connection check failed.  Connection is null.");
+                        rtn = Boolean.FALSE;
+                    }
+                } catch (SQLException se) {
+                    rtn = Boolean.FALSE;
+                    log.error(env + ": Hive Connection check failed.", se);
+                    se.printStackTrace();
+                } finally {
+                    if (conn != null) {
+                        try {
+                            log.info(env + ": Closing Connection");
+                            conn.close();
+                        } catch (Throwable throwables) {
+                            log.error(env + ": Error closing connection.", throwables);
+                        }
+                    }
+                }
+            }
+        }
+        return rtn;
     }
 
     public String getResolvedDB(String database) {
@@ -64,6 +147,29 @@ public class ConfigService {
         // Rename overrides prefix, otherwise use lclDb as its been set.
         rtn = (getConfig().getDbRename() != null ? getConfig().getDbRename() : lclDb);
         return rtn;
+    }
+
+    public Boolean getSkipStatsCollection() {
+        // Reset skipStatsCollection to true if we're doing a dump or schema only. (and a few other conditions)
+        if (!getConfig().getOptimization().isSkipStatsCollection()) {
+            try {
+                switch (getConfig().getDataStrategy()) {
+                    case DUMP:
+                    case SCHEMA_ONLY:
+                    case EXPORT_IMPORT:
+                        getConfig().getOptimization().setSkipStatsCollection(Boolean.TRUE);
+                        break;
+                    case STORAGE_MIGRATION:
+                        if (getConfig().getTransfer().getStorageMigration().isDistcp()) {
+                            getConfig().getOptimization().setSkipStatsCollection(Boolean.TRUE);
+                        }
+                        break;
+                }
+            } catch (NullPointerException npe) {
+                // Ignore: Caused during 'setup' since the context and config don't exist.
+            }
+        }
+        return getConfig().getOptimization().isSkipStatsCollection();
     }
 
     @JsonIgnore
@@ -82,18 +188,121 @@ public class ConfigService {
         return rtn;
     }
 
-    public Boolean canDeriveDistcpPlan() {
+    public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
-        if (getConfig().getTransfer().getStorageMigration().isDistcp()) {
-            rtn = Boolean.TRUE;
-        } else {
-            getConfig().addWarning(DISTCP_OUTPUT_NOT_REQUESTED);
-        }
-        if (rtn && getConfig().isResetToDefaultLocation() &&
-                getConfig().getTransfer().getWarehouse().getExternalDirectory() == null) {
-            rtn = Boolean.FALSE;
+        if (getConfig().getCluster(Environment.LEFT).isLegacyHive() != getConfig().getCluster(Environment.RIGHT).isLegacyHive()) {
+            if (getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
+                rtn = Boolean.TRUE;
+            }
         }
         return rtn;
+    }
+
+    protected Boolean linkTest() {
+        Boolean rtn = Boolean.FALSE;
+        if (getConfig().isSkipLinkCheck() || getConfig().isLoadingTestData()) {
+            log.warn("Skipping Link Check.");
+            rtn = Boolean.TRUE;
+        } else {
+            HadoopSession session = null;
+            try {
+                session = getConfig().getCliPool().borrow();
+                log.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
+                // TODO: develop a test to copy data between clusters.
+                String leftHCFSNamespace = getConfig().getCluster(Environment.LEFT).getHcfsNamespace();
+                String rightHCFSNamespace = getConfig().getCluster(Environment.RIGHT).getHcfsNamespace();
+
+                // List User Directories on LEFT
+                String leftlsTestLine = "ls " + leftHCFSNamespace + "/user";
+                String rightlsTestLine = "ls " + rightHCFSNamespace + "/user";
+                log.info("LEFT ls testline: " + leftlsTestLine);
+                log.info("RIGHT ls testline: " + rightlsTestLine);
+
+                CommandReturn lcr = session.processInput(leftlsTestLine);
+                if (lcr.isError()) {
+                    throw new RuntimeException("Link to RIGHT cluster FAILED.\n " + lcr.getError() +
+                            "\nCheck configuration and hcfsNamespace value.  " +
+                            "Check the documentation about Linking clusters: https://github.com/cloudera-labs/hms-mirror#linking-clusters-storage-layers");
+                }
+                CommandReturn rcr = session.processInput(rightlsTestLine);
+                if (rcr.isError()) {
+                    throw new RuntimeException("Link to LEFT cluster FAILED.\n " + rcr.getError() +
+                            "\nCheck configuration and hcfsNamespace value.  " +
+                            "Check the documentation about Linking clusters: https://github.com/cloudera-labs/hms-mirror#linking-clusters-storage-layers");
+                }
+                rtn = Boolean.TRUE;
+            } finally {
+                if (session != null)
+                    getConfig().getCliPool().returnSession(session);
+            }
+        }
+        return rtn;
+    }
+
+    public Boolean loadPartitionMetadata() {
+        if (getConfig().isEvaluatePartitionLocation() ||
+                (getConfig().getDataStrategy() == STORAGE_MIGRATION &&
+                        getConfig().getTransfer().getStorageMigration().isDistcp())) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
+    @Autowired
+    public void setConfig(Config config) {
+        this.config = config;
+    }
+
+    public void setupGSS() {
+        try {
+            String CURRENT_USER_PROP = "current.user";
+
+            String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
+            String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml", "mapred-site.xml", "yarn-site.xml"};
+
+            // Get a value that over rides the default, if nothing then use default.
+            String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
+
+            // Set a default
+            if (hadoopConfDirProp == null)
+                hadoopConfDirProp = "/etc/hadoop/conf";
+
+            Configuration hadoopConfig = new Configuration(true);
+
+            File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
+            for (String file : HADOOP_CONF_FILES) {
+                File f = new File(hadoopConfDir, file);
+                if (f.exists()) {
+                    log.debug("Adding conf resource: '" + f.getAbsolutePath() + "'");
+                    try {
+                        // I found this new Path call failed on the Squadron Clusters.
+                        // Not sure why.  Anyhow, the above seems to work the same.
+                        hadoopConfig.addResource(new Path(f.getAbsolutePath()));
+                    } catch (Throwable t) {
+                        // This worked for the Squadron Cluster.
+                        // I think it has something to do with the Docker images.
+                        hadoopConfig.addResource("file:" + f.getAbsolutePath());
+                    }
+                }
+            }
+
+            // hadoop.security.authentication
+            if (hadoopConfig.get("hadoop.security.authentication", "simple").equalsIgnoreCase("kerberos")) {
+                try {
+                    UserGroupInformation.setConfiguration(hadoopConfig);
+                } catch (Throwable t) {
+                    // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
+                    log.error("Failed GSS Init.  Attempting different Group Mapping");
+                    hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
+                    UserGroupInformation.setConfiguration(hadoopConfig);
+                }
+            }
+        } catch (Throwable t) {
+            log.error("Issue initializing Kerberos", t);
+            t.printStackTrace();
+            throw t;
+        }
     }
 
     public Boolean validate() {
@@ -102,7 +311,6 @@ public class ConfigService {
         // Set distcp options.
         canDeriveDistcpPlan();
 
-//        if (getCluster(Environment.RIGHT).isInitialized()) {
         switch (getConfig().getDataStrategy()) {
             case DUMP:
             case STORAGE_MIGRATION:
@@ -124,7 +332,6 @@ public class ConfigService {
                     }
                 }
         }
-//        }
 
         if (getConfig().getCluster(Environment.LEFT).isHdpHive3() &&
                 getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
@@ -168,7 +375,7 @@ public class ConfigService {
 
 //                }
             }
-            if (getConfig().getTranslator().getForceExternalLocation()) {
+            if (getConfig().getTranslator().isForceExternalLocation()) {
                 getConfig().addWarning(RDL_FEL_OVERRIDES);
             }
         }
@@ -257,8 +464,8 @@ public class ConfigService {
             // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
             if (getConfig().getCluster(Environment.LEFT) != null) {
                 Cluster cluster = getConfig().getCluster(Environment.LEFT);
-                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString((Integer) getConfig().getTransfer().getConcurrency() / 2));
-                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString((Integer) getConfig().getTransfer().getConcurrency() / 2));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(getConfig().getTransfer().getConcurrency() / 2));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(getConfig().getTransfer().getConcurrency() / 2));
                 if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(getConfig().getTransfer().getConcurrency()));
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
@@ -268,8 +475,8 @@ public class ConfigService {
             if (getConfig().getCluster(Environment.RIGHT) != null) {
                 Cluster cluster = getConfig().getCluster(Environment.RIGHT);
                 if (cluster.getHiveServer2() != null) {
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString((Integer) getConfig().getTransfer().getConcurrency() / 2));
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString((Integer) getConfig().getTransfer().getConcurrency() / 2));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(getConfig().getTransfer().getConcurrency() / 2));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(getConfig().getTransfer().getConcurrency() / 2));
                     if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
                         cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(getConfig().getTransfer().getConcurrency()));
                         cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
@@ -280,10 +487,6 @@ public class ConfigService {
         }
 
         if (getConfig().getTransfer().getStorageMigration().isDistcp()) {
-//            if (resetToDefaultLocation && (getTransfer().getWarehouse().getManagedDirectory() == null || getTransfer().getWarehouse().getExternalDirectory() == null)) {
-//                addError(DISTCP_VALID_DISTCP_RESET_TO_DEFAULT_LOCATION);
-//                rtn = Boolean.FALSE;
-//            }
             if (getConfig().getDataStrategy() == DataStrategyEnum.EXPORT_IMPORT
                     || getConfig().getDataStrategy() == DataStrategyEnum.COMMON
                     || getConfig().getDataStrategy() == DataStrategyEnum.DUMP
@@ -303,11 +506,6 @@ public class ConfigService {
             } else {
                 getConfig().addWarning(DISTCP_WO_TABLE_FILTERS);
             }
-//            if (getDataStrategy() == DataStrategy.STORAGE_MIGRATION
-//                    && getMigrateACID().isOn() && !getEvaluatePartitionLocation()) {
-//                addError(STORAGE_MIGRATION_DISTCP_ACID);
-//                rtn = Boolean.FALSE;
-//            }
             if (getConfig().getDataStrategy() == DataStrategyEnum.SQL
                     && getConfig().getMigrateACID().isOn()
                     && getConfig().getMigrateACID().isDowngrade()
@@ -324,9 +522,7 @@ public class ConfigService {
                         rtn = Boolean.FALSE;
                     }
                 }
-                if (getConfig().getTransfer().getCommonStorage() != null
-//                        || getTransfer().getIntermediateStorage() != null)
-                ) {
+                if (getConfig().getTransfer().getCommonStorage() != null) {
                     getConfig().addError(SQL_DISTCP_ACID_W_STORAGE_OPTS);
                     rtn = Boolean.FALSE;
                 }
@@ -612,217 +808,6 @@ public class ConfigService {
             }
         }
         return rtn;
-    }
-
-    protected Boolean linkTest() {
-        Boolean rtn = Boolean.FALSE;
-        if (getConfig().isSkipLinkCheck() || getConfig().isLoadingTestData()) {
-            log.warn("Skipping Link Check.");
-            rtn = Boolean.TRUE;
-        } else {
-            HadoopSession session = null;
-            try {
-                session = getConfig().getCliPool().borrow();
-                log.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
-                // TODO: develop a test to copy data between clusters.
-                String leftHCFSNamespace = getConfig().getCluster(Environment.LEFT).getHcfsNamespace();
-                String rightHCFSNamespace = getConfig().getCluster(Environment.RIGHT).getHcfsNamespace();
-
-                // List User Directories on LEFT
-                String leftlsTestLine = "ls " + leftHCFSNamespace + "/user";
-                String rightlsTestLine = "ls " + rightHCFSNamespace + "/user";
-                log.info("LEFT ls testline: " + leftlsTestLine);
-                log.info("RIGHT ls testline: " + rightlsTestLine);
-
-                CommandReturn lcr = session.processInput(leftlsTestLine);
-                if (lcr.isError()) {
-                    throw new RuntimeException("Link to RIGHT cluster FAILED.\n " + lcr.getError() +
-                            "\nCheck configuration and hcfsNamespace value.  " +
-                            "Check the documentation about Linking clusters: https://github.com/cloudera-labs/hms-mirror#linking-clusters-storage-layers");
-                }
-                CommandReturn rcr = session.processInput(rightlsTestLine);
-                if (rcr.isError()) {
-                    throw new RuntimeException("Link to LEFT cluster FAILED.\n " + rcr.getError() +
-                            "\nCheck configuration and hcfsNamespace value.  " +
-                            "Check the documentation about Linking clusters: https://github.com/cloudera-labs/hms-mirror#linking-clusters-storage-layers");
-                }
-                rtn = Boolean.TRUE;
-            } finally {
-                if (session != null)
-                    getConfig().getCliPool().returnSession(session);
-            }
-        }
-        return rtn;
-    }
-
-
-    public Boolean checkConnections() {
-        boolean rtn = Boolean.FALSE;
-        Set<Environment> envs = new HashSet<>();
-        if (!(getConfig().getDataStrategy() == DataStrategyEnum.DUMP ||
-                getConfig().getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION ||
-                getConfig().getDataStrategy() == DataStrategyEnum.ICEBERG_CONVERSION)) {
-            envs.add(Environment.LEFT);
-            envs.add(Environment.RIGHT);
-        } else {
-            envs.add(Environment.LEFT);
-        }
-
-        for (Environment env : envs) {
-            Cluster cluster = getConfig().getCluster(env);
-            if (cluster != null
-                    && cluster.getHiveServer2() != null
-                    && cluster.getHiveServer2().isValidUri()
-                    && !cluster.getHiveServer2().isDisconnected()) {
-                Connection conn = null;
-                try {
-                    conn = cluster.getConnection();
-                    // May not be set for DUMP strategy (RIGHT cluster)
-                    log.debug(env + ":" + ": Checking Hive Connection");
-                    if (conn != null) {
-//                        Statement stmt = null;
-//                        ResultSet resultSet = null;
-//                        try {
-//                            stmt = conn.createStatement();
-//                            resultSet = stmt.executeQuery("SHOW DATABASES");
-//                            resultSet = stmt.executeQuery("SELECT 'HIVE CONNECTION TEST PASSED' AS STATUS");
-                        log.debug(env + ":" + ": Hive Connection Successful");
-                        rtn = Boolean.TRUE;
-//                        } catch (SQLException sql) {
-                        // DB Doesn't Exists.
-//                            log.error(env + ": Hive Connection check failed.", sql);
-//                            rtn = Boolean.FALSE;
-//                        } finally {
-//                            if (resultSet != null) {
-//                                try {
-//                                    resultSet.close();
-//                                } catch (SQLException sqlException) {
-//                                     ignore
-//                                }
-//                            }
-//                            if (stmt != null) {
-//                                try {
-//                                    stmt.close();
-//                                } catch (SQLException sqlException) {
-                        // ignore
-//                                }
-//                            }
-//                        }
-                    } else {
-                        log.error(env + ": Hive Connection check failed.  Connection is null.");
-                        rtn = Boolean.FALSE;
-                    }
-                } catch (SQLException se) {
-                    rtn = Boolean.FALSE;
-                    log.error(env + ": Hive Connection check failed.", se);
-                    se.printStackTrace();
-                } finally {
-                    if (conn != null) {
-                        try {
-                            log.info(env + ": Closing Connection");
-                            conn.close();
-                        } catch (Throwable throwables) {
-                            log.error(env + ": Error closing connection.", throwables);
-                        }
-                    }
-                }
-            }
-        }
-        return rtn;
-    }
-
-    public Boolean loadPartitionMetadata() {
-        if (getConfig().isEvaluatePartitionLocation() ||
-                (getConfig().getDataStrategy() == STORAGE_MIGRATION &&
-                        getConfig().getTransfer().getStorageMigration().isDistcp())) {
-            return Boolean.TRUE;
-        } else {
-            return Boolean.FALSE;
-        }
-    }
-
-    public Boolean legacyMigration() {
-        Boolean rtn = Boolean.FALSE;
-        if (getConfig().getCluster(Environment.LEFT).isLegacyHive() != getConfig().getCluster(Environment.RIGHT).isLegacyHive()) {
-            if (getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
-                rtn = Boolean.TRUE;
-            }
-        }
-        return rtn;
-    }
-
-    public Boolean getSkipStatsCollection() {
-        // Reset skipStatsCollection to true if we're doing a dump or schema only. (and a few other conditions)
-        if (!getConfig().getOptimization().isSkipStatsCollection()) {
-            try {
-                switch (getConfig().getDataStrategy()) {
-                    case DUMP:
-                    case SCHEMA_ONLY:
-                    case EXPORT_IMPORT:
-                        getConfig().getOptimization().setSkipStatsCollection(Boolean.TRUE);
-                        break;
-                    case STORAGE_MIGRATION:
-                        if (getConfig().getTransfer().getStorageMigration().isDistcp()) {
-                            getConfig().getOptimization().setSkipStatsCollection(Boolean.TRUE);
-                        }
-                        break;
-                }
-            } catch (NullPointerException npe) {
-                // Ignore: Caused during 'setup' since the context and config don't exist.
-            }
-        }
-        return getConfig().getOptimization().isSkipStatsCollection();
-    }
-
-    public void setupGSS() {
-        try {
-            String CURRENT_USER_PROP = "current.user";
-
-            String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
-            String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml", "mapred-site.xml", "yarn-site.xml"};
-
-            // Get a value that over rides the default, if nothing then use default.
-            String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
-
-            // Set a default
-            if (hadoopConfDirProp == null)
-                hadoopConfDirProp = "/etc/hadoop/conf";
-
-            Configuration hadoopConfig = new Configuration(true);
-
-            File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
-            for (String file : HADOOP_CONF_FILES) {
-                File f = new File(hadoopConfDir, file);
-                if (f.exists()) {
-                    log.debug("Adding conf resource: '" + f.getAbsolutePath() + "'");
-                    try {
-                        // I found this new Path call failed on the Squadron Clusters.
-                        // Not sure why.  Anyhow, the above seems to work the same.
-                        hadoopConfig.addResource(new Path(f.getAbsolutePath()));
-                    } catch (Throwable t) {
-                        // This worked for the Squadron Cluster.
-                        // I think it has something to do with the Docker images.
-                        hadoopConfig.addResource("file:" + f.getAbsolutePath());
-                    }
-                }
-            }
-
-            // hadoop.security.authentication
-            if (hadoopConfig.get("hadoop.security.authentication", "simple").equalsIgnoreCase("kerberos")) {
-                try {
-                    UserGroupInformation.setConfiguration(hadoopConfig);
-                } catch (Throwable t) {
-                    // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
-                    log.error("Failed GSS Init.  Attempting different Group Mapping");
-                    hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
-                    UserGroupInformation.setConfiguration(hadoopConfig);
-                }
-            }
-        } catch (Throwable t) {
-            log.error("Issue initializing Kerberos", t);
-            t.printStackTrace();
-            throw t;
-        }
     }
 
 }

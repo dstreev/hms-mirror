@@ -33,16 +33,6 @@ public class BadTextFileDefFeature extends BaseFeature implements Feature {
     private final String ROW_FORMAT_SERDE = "ROW FORMAT SERDE";
     private final String LAZY_SERDE = "'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'";
 
-//    private static final Logger log = LoggerFactory.getLogger(BadTextFileDefFeature.class);
-
-    public String getDescription() {
-        return "Table schema definitions that include both ROW FORMAT DELIMITED BY and " +
-                "WITH SERDEPROPERTIES in the declaration aren't valid as a new schema when you " +
-                "attempt to replay the schema.  This happens when tables are ALTERED with SERDEPROPERTIES " +
-                "after initial creation.  This process will migrate the FIELDS TERMINATED BY and " +
-                "LINES TERMINATED BY values into the SERDEPROPERTIES so the schema can be successfully created.";
-    }
-
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
         return applicable(envTable.getDefinition());
@@ -56,7 +46,6 @@ public class BadTextFileDefFeature extends BaseFeature implements Feature {
         }
         return rtn;
     }
-
 
     @Override
     public Boolean fixSchema(EnvironmentTable envTable) {
@@ -109,6 +98,14 @@ public class BadTextFileDefFeature extends BaseFeature implements Feature {
         } else {
             return Boolean.FALSE;
         }
+    }
+
+    public String getDescription() {
+        return "Table schema definitions that include both ROW FORMAT DELIMITED BY and " +
+                "WITH SERDEPROPERTIES in the declaration aren't valid as a new schema when you " +
+                "attempt to replay the schema.  This happens when tables are ALTERED with SERDEPROPERTIES " +
+                "after initial creation.  This process will migrate the FIELDS TERMINATED BY and " +
+                "LINES TERMINATED BY values into the SERDEPROPERTIES so the schema can be successfully created.";
     }
 
 }

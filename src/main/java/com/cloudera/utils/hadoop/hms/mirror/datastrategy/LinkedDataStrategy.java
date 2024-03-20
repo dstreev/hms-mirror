@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
-import com.amazonaws.services.glue.model.Table;
 import com.cloudera.utils.hadoop.hms.mirror.*;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
@@ -32,7 +31,6 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_
 @Component
 @Slf4j
 public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(LinkedDataStrategy.class);
 
     @Getter
     private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
@@ -40,48 +38,8 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Getter
     private TableService tableService;
 
-    @Autowired
-    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
-        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
-    }
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
     public LinkedDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable tet = getEnvironmentTable(Environment.TRANSFER, tableMirror);
-        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-
-        if (TableUtils.isACID(let)) {
-            tableMirror.addIssue(Environment.LEFT, "You can't 'LINK' ACID tables.");
-            rtn = Boolean.FALSE;
-        } else {
-            rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
-        }
-
-        if (rtn) {
-            rtn = buildOutSql(tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
-        }
-
-        // Execute the RIGHT sql if config.execute.
-        if (rtn) {
-            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
-                    //getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
-        }
-
-        return rtn;
-
     }
 
     @Override
@@ -108,15 +66,15 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
             if (getConfigService().getConfig().isSync()) {
                 // We assume that the 'definitions' are only there is the
                 //     table exists.
-                if (!let.getExists() && ret.getExists()) {
+                if (!let.isExists() && ret.isExists()) {
                     // If left is empty and right is not, DROP RIGHT.
                     ret.addIssue("Schema doesn't exist in 'source'.  Will be DROPPED.");
                     ret.setCreateStrategy(CreateStrategy.DROP);
-                } else if (let.getExists() && !ret.getExists()) {
+                } else if (let.isExists() && !ret.isExists()) {
                     // If left is defined and right is not, CREATE RIGHT.
                     ret.addIssue("Schema missing, will be CREATED");
                     ret.setCreateStrategy(CreateStrategy.CREATE);
-                } else if (let.getExists() && ret.getExists()) {
+                } else if (let.isExists() && ret.isExists()) {
                     // If left and right, check schema change and replace if necessary.
                     // Compare Schemas.
                     if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
@@ -136,7 +94,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
                 }
                 copySpec.setTakeOwnership(Boolean.FALSE);
             } else {
-                if (ret.getExists()) {
+                if (ret.isExists()) {
                     // Already exists, no action.
                     ret.addIssue("Schema exists already, no action. If you wish to rebuild the schema, " +
                             "drop it first and try again. <b>Any following messages MAY be irrelevant about schema adjustments.</b>");
@@ -158,11 +116,45 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
 
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
-//        DataStrategy dsSO = DataStrategyEnum.SCHEMA_ONLY.getDataStrategy();
-//        dsSO.setTableMirror(tableMirror);
-//        dsSO.setDBMirror(dbMirror);
-//        dsSO.setConfig(config);
         return schemaOnlyDataStrategy.execute(tableMirror);
-//        return dsSO.execute();
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable tet = getEnvironmentTable(Environment.TRANSFER, tableMirror);
+        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+
+        if (TableUtils.isACID(let)) {
+            tableMirror.addIssue(Environment.LEFT, "You can't 'LINK' ACID tables.");
+            rtn = Boolean.FALSE;
+        } else {
+            rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
+        }
+
+        if (rtn) {
+            rtn = buildOutSql(tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
+        }
+
+        // Execute the RIGHT sql if config.execute.
+        if (rtn) {
+            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+        }
+
+        return rtn;
+
+    }
+
+    @Autowired
+    public void setSchemaOnlyDataStrategy(SchemaOnlyDataStrategy schemaOnlyDataStrategy) {
+        this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

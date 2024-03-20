@@ -83,12 +83,13 @@ public enum CommandLineOptionsEnum {
     TABLE_FILTER_SIZE_LIMIT("tfs", "table-filter-size-limit", "size MB", ""),
     TRANSFER_OWNERSHIP("to", "transfer-ownership", null, ""),
     VIEW_ONLY("v", "views-only", null, ""),
-    WAREHOUSE_DIRECTORY("wd", "warehouse-directory", "path", "");
+    WAREHOUSE_DIRECTORY("wd", "warehouse-directory", "path", ""),
+    UI("wi", "web-interface", null, "");
 
-    private String shortName;
-    private String longName;
-    private String argumentName;
-    private String description;
+    private final String shortName;
+    private final String longName;
+    private final String argumentName;
+    private final String description;
 
     CommandLineOptionsEnum(String shortName, String longName, String argumentName, String description) {
         this.shortName = shortName;

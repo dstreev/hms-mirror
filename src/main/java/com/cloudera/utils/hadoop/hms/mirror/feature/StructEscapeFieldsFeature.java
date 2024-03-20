@@ -18,6 +18,7 @@
 package com.cloudera.utils.hadoop.hms.mirror.feature;
 
 import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -26,6 +27,7 @@ Review the fields of a table for "key/reserved" words.  If they are present, che
 escaped and if not escape the field name and post a WARNING that a reserved work was found in the tables
 field definition.
  */
+@Slf4j
 public class StructEscapeFieldsFeature extends BaseFeature implements Feature {
     private final String CREATE = "CREATE";
     private final String PARTITIONED_BY = "PARTITIONED BY";
@@ -60,35 +62,10 @@ public class StructEscapeFieldsFeature extends BaseFeature implements Feature {
             if (checkValue.matches(STRUCT)) {
                 // Found a Struct Type.
                 rtn = Boolean.TRUE;
+                break;
             }
         }
         return rtn;
-    }
-
-    public String fixStruct(String complexTypeDef) {
-        String[] parts = complexTypeDef.split(":");
-        StringBuffer sb = new StringBuffer();
-        for (String part : parts) {
-            int lComma = part.lastIndexOf(",");
-            int llt = part.lastIndexOf("<");
-            int marker = Math.max(lComma, llt);
-            if (marker > -1) {
-                String fieldName = part.substring(marker + 1);
-                if (fieldName.startsWith(ESCAPE) && fieldName.endsWith(ESCAPE)) {
-                    // nothing to do.
-                    sb.append(part).append(":");
-                } else if (!part.equals(parts[parts.length - 1])) {
-                    sb.append(part.substring(0, marker + 1)).append(ESCAPE).append(fieldName).append(ESCAPE).append(":");
-                } else {
-                    sb.append(part);
-                }
-            } else {
-                sb.append(part);
-            }
-        }
-        String struct2 = sb.toString();
-        String fixedStruct = struct2.substring(0, struct2.length());
-        return fixedStruct;
     }
 
     @Override
@@ -125,6 +102,32 @@ public class StructEscapeFieldsFeature extends BaseFeature implements Feature {
     @Override
     public Boolean fixSchema(EnvironmentTable envTable) {
         return fixSchema(envTable.getDefinition());
+    }
+
+    public String fixStruct(String complexTypeDef) {
+        String[] parts = complexTypeDef.split(":");
+        StringBuffer sb = new StringBuffer();
+        for (String part : parts) {
+            int lComma = part.lastIndexOf(",");
+            int llt = part.lastIndexOf("<");
+            int marker = Math.max(lComma, llt);
+            if (marker > -1) {
+                String fieldName = part.substring(marker + 1);
+                if (fieldName.startsWith(ESCAPE) && fieldName.endsWith(ESCAPE)) {
+                    // nothing to do.
+                    sb.append(part).append(":");
+                } else if (!part.equals(parts[parts.length - 1])) {
+                    sb.append(part, 0, marker + 1).append(ESCAPE).append(fieldName).append(ESCAPE).append(":");
+                } else {
+                    sb.append(part);
+                }
+            } else {
+                sb.append(part);
+            }
+        }
+        String struct2 = sb.toString();
+        String fixedStruct = struct2;
+        return fixedStruct;
     }
 
     @Override

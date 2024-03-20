@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy  {
+public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
 
     @Getter
     private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
@@ -36,18 +36,18 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
     @Getter
     private ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy;
 
-    @Autowired
-    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
-        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
-    }
-
-    @Autowired
-    public void setExportImportAcidDowngradeInPlaceDataStrategy(ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
-        this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
-    }
-
     public HybridAcidDowngradeInPlaceDataStrategy(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Override
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
+        return null;
+    }
+
+    @Override
+    public Boolean buildOutSql(TableMirror tableMirror) {
+        return null;
     }
 
     @Override
@@ -66,11 +66,6 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
             too many partitions.
          */
         if (getConfigService().getConfig().getCluster(Environment.LEFT).isLegacyHive()) {
-//            DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//            dsSADI.setTableMirror(tableMirror);
-//            dsSADI.setDBMirror(dbMirror);
-//            dsSADI.setConfig(config);
-//            rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
             rtn = sqlAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -78,40 +73,25 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
                 if (let.getPartitions().size() < getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() ||
                         getConfigService().getConfig().getHybrid().getExportImportPartitionLimit() <= 0) {
-//                    DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//                    dsEI.setTableMirror(tableMirror);
-//                    dsEI.setDBMirror(dbMirror);
-//                    dsEI.setConfig(config);
-//                    rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
                     rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
                 } else {
-//                    DataStrategy dsSADI = DataStrategyEnum.SQL_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//                    dsSADI.setTableMirror(tableMirror);
-//                    dsSADI.setDBMirror(dbMirror);
-//                    dsSADI.setConfig(config);
-//                    rtn = dsSADI.execute();// doSQLACIDDowngradeInplace();
                     rtn = sqlAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-//                DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//                dsEI.setTableMirror(tableMirror);
-//                dsEI.setDBMirror(dbMirror);
-//                dsEI.setConfig(config);
-//                rtn = dsEI.execute();// doEXPORTIMPORTACIDInplaceDowngrade();
                 rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
             }
         }
         return rtn;
     }
 
-    @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setExportImportAcidDowngradeInPlaceDataStrategy(ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
+        this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
     }
 
-    @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setSqlAcidDowngradeInPlaceDataStrategy(SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy) {
+        this.sqlAcidDowngradeInPlaceDataStrategy = sqlAcidDowngradeInPlaceDataStrategy;
     }
 }

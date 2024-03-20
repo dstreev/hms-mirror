@@ -22,6 +22,7 @@ import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hadoop.hms.mirror.MirrorConf;
 import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ExportCircularResolveService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import lombok.Getter;
@@ -34,7 +35,6 @@ import java.text.MessageFormat;
 @Component
 @Slf4j
 public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(ExportImportAcidDowngradeInPlaceDataStrategy.class);
     @Getter
     private ExportCircularResolveService exportCircularResolveService;
     @Getter
@@ -45,14 +45,14 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         this.configService = configService;
     }
 
-    @Autowired
-    public void setExportCircularResolveService(ExportCircularResolveService exportCircularResolveService) {
-        this.exportCircularResolveService = exportCircularResolveService;
+    @Override
+    public Boolean buildOutDefinition(TableMirror tableMirror) {
+        return null;
     }
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
+    @Override
+    public Boolean buildOutSql(TableMirror tableMirror) {
+        return null;
     }
 
     @Override
@@ -65,12 +65,7 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         write cleanup sql to drop original_archive.
          */
         // Check Partition Limits before proceeding.
-//        DataStrategy dsEI = DataStrategyEnum.EXPORT_IMPORT.getDataStrategy();
-//        dsEI.setTableMirror(tableMirror);
-//        dsEI.setDBMirror(dbMirror);
-//        dsEI.setConfig(config);
         rtn = getExportCircularResolveService().buildOutExportImportSql(tableMirror);
-//        rtn = super.buildOutSql(tableMirror);// tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
         if (rtn) {
             // Build cleanup Queries (drop archive table)
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -90,19 +85,18 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         // run queries.
         if (rtn) {
             getTableService().runTableSql(tableMirror, Environment.LEFT);
-//            getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
         }
 
         return rtn;
     }
 
-    @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setExportCircularResolveService(ExportCircularResolveService exportCircularResolveService) {
+        this.exportCircularResolveService = exportCircularResolveService;
     }
 
-    @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
-        return null;
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
     }
 }

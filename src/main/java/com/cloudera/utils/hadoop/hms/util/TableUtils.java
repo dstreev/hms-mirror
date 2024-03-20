@@ -75,9 +75,9 @@ public class TableUtils {
     public static final String IMPORT_TABLE = "IMPORT Table";
     public static final String RENAME_TABLE = "RENAME Table";
     public static final String ACID_NOT_ON = "This is an ACID table.  Turn on ACID migration `-ma|--migrate-acid`.";
-//    private static final Logger log = LoggerFactory.getLogger(TableUtils.class);
+    //    private static final Logger log = LoggerFactory.getLogger(TableUtils.class);
     private static final List<FileFormatType> validateIcebergFileFormats = new ArrayList<FileFormatType>(Arrays.asList(ORC, PARQUET, AVRO));
-//    public static Pattern dbdottable = Pattern.compile(".*`?\\.`?(.*)");
+    //    public static Pattern dbdottable = Pattern.compile(".*`?\\.`?(.*)");
     public static Pattern tableCreatePattern = Pattern.compile(".*TABLE `?([a-z,A-Z,_,0-9,_]+)`?\\.?`?([a-z,A-Z,_,0-9,_]+)?");
 
     public static String getLocation(String tableName, List<String> tableDefinition) {
@@ -296,7 +296,7 @@ public class TableUtils {
     }
 
     public static String toPartitionSpec(String simplePartName) {
-        String parts[] = simplePartName.split("/");
+        String[] parts = simplePartName.split("/");
         // Look at each parts and split on the equals sign, then concat the parts back together putting a single quote
         // around the value and a comma between each part. Do not leave a trailing comma.
         String partSpec = Arrays.stream(parts).map(
@@ -917,7 +917,7 @@ public class TableUtils {
             // Using the validateFileFormats list, check to see if the fileFormat is in it.
             if (validateIcebergFileFormats.contains(fileFormat)) {
                 // Check to see if the table is already converted.
-                    rtn = IcebergState.CONVERTABLE;
+                rtn = IcebergState.CONVERTABLE;
             } else {
                 envTable.addIssue("File format is not compatible with Iceberg.  Cannot convert to Iceberg.");
                 rtn = IcebergState.NOT_CONVERTABLE;
@@ -928,7 +928,7 @@ public class TableUtils {
         }
 
         return rtn;
-}
+    }
 
     public static String getTblProperty(String key, EnvironmentTable environmentTable) {
         return getTblProperty(key, environmentTable.getDefinition());

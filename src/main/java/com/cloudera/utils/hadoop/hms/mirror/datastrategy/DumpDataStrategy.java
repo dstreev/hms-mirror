@@ -33,35 +33,13 @@ import java.text.MessageFormat;
 @Slf4j
 public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
 
-//    private static final Logger log = LoggerFactory.getLogger(DumpDataStrategy.class);
     @Getter
     private TableService tableService;
     @Getter
     private TranslatorService translatorService;
 
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
-
     public DumpDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-
-        rtn = buildOutDefinition(tableMirror);//tblMirror.buildoutDUMPDefinition(config, dbMirror);
-        if (rtn) {
-            rtn = buildOutSql(tableMirror);//tblMirror.buildoutDUMPSql(config, dbMirror);
-        }
-        return rtn;
     }
 
     @Override
@@ -118,7 +96,7 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
                 String tableParts = getTranslatorService().buildPartitionAddStatement(let);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
                 let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (getConfigService().getConfig().getCluster(Environment.LEFT).getPartitionDiscovery().getInitMSCK()) {
+            } else if (getConfigService().getConfig().getCluster(Environment.LEFT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, let.getName());
                 if (getConfigService().getConfig().getTransfer().getStorageMigration().isDistcp()) {
                     let.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
@@ -131,5 +109,26 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
         rtn = Boolean.TRUE;
 
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+
+        rtn = buildOutDefinition(tableMirror);
+        if (rtn) {
+            rtn = buildOutSql(tableMirror);
+        }
+        return rtn;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 }

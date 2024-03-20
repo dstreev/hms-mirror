@@ -42,9 +42,9 @@ public class DriverUtils {
                 String[] files = jarFile.split(":");
                 URL[] urls = new URL[files.length];
                 File[] jarFiles = new File[files.length];
-                for (int i=0;i<files.length;i++) {
+                for (int i = 0; i < files.length; i++) {
                     jarFiles[i] = new File(files[i]);
-                    if (! jarFiles[i].exists()) {
+                    if (!jarFiles[i].exists()) {
                         throw new RuntimeException("Jarfile: " + files[i] + " can't be located.");
                     }
                     urls[i] = jarFiles[i].toURI().toURL();
@@ -70,8 +70,8 @@ public class DriverUtils {
             }
             DriverManager.registerDriver(hiveShim);
         } catch (SQLException | MalformedURLException |
-                ClassNotFoundException | InstantiationException |
-                IllegalAccessException throwables) {
+                 ClassNotFoundException | InstantiationException |
+                 IllegalAccessException throwables) {
             throwables.printStackTrace();
             log.error(throwables.getMessage(), throwables);
         } catch (InvocationTargetException | NoSuchMethodException e) {

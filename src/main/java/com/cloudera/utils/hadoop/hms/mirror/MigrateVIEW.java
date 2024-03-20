@@ -17,28 +17,16 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class MigrateVIEW {
 
     /*
     Whether or not we'll be migrating VIEWs.
     */
-    private Boolean on = Boolean.FALSE;
+    private boolean on = Boolean.FALSE;
 
-//    private Boolean dropFirst = Boolean.FALSE;
-
-    public Boolean isOn() {
-        return on;
-    }
-
-    public void setOn(Boolean on) {
-        this.on = on;
-    }
-
-//    public Boolean isDropFirst() {
-//        return dropFirst;
-//    }
-//
-//    public void setDropFirst(Boolean dropFirst) {
-//        this.dropFirst = dropFirst;
-//    }
 }

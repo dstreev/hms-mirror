@@ -17,6 +17,13 @@
 
 package com.cloudera.utils.hadoop.hms.mirror;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+@Getter
+@Setter
+@ToString
 public class Pair {
     private String description;
     private String action;
@@ -29,27 +36,4 @@ public class Pair {
         this.action = action;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public String getAction() {
-        return action;
-    }
-
-    @Override
-    public String toString() {
-        return "Pair{" +
-                "description='" + description + '\'' +
-                ", action='" + action + '\'' +
-                '}';
-    }
 }

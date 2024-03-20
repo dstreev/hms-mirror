@@ -32,14 +32,14 @@ public enum SerdeType {
             "org.apache.hadoop.mapred.TextInputFormat",
             "org.apache.hadoop.hive.serde2.avro.AvroSerDe",
             "org.apache.hadoop.hive.serde2.JsonSerDe"),
-    BINARY(134217728,"org.apache.hadoop.hive.serde2.columnar.LazyBinaryColumnarSerDe",
+    BINARY(134217728, "org.apache.hadoop.hive.serde2.columnar.LazyBinaryColumnarSerDe",
             "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"),
     UNKNOWN(268435456);
 
     Integer targetSize = null;
     List<String> serdeClasses = new ArrayList<String>();
 
-    private SerdeType(Integer targetSize, String... serdeClasses) {
+    SerdeType(Integer targetSize, String... serdeClasses) {
         this.targetSize = targetSize;
         Collections.addAll(this.serdeClasses, serdeClasses);
     }

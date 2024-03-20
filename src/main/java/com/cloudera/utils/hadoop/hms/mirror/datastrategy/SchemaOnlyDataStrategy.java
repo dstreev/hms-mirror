@@ -35,45 +35,13 @@ import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.SCHEMA_EXISTS_SYN
 @Component
 @Slf4j
 public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(SchemaOnlyDataStrategy.class);
-
+    @Getter
+    TranslatorService translatorService;
     @Getter
     private TableService tableService;
 
-    @Getter
-    TranslatorService translatorService;
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
-
     public SchemaOnlyDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-
-        rtn = this.buildOutDefinition(tableMirror);
-
-        if (rtn) {
-            rtn = AVROCheck(tableMirror);
-        }
-        if (rtn) {
-            rtn = this.buildOutSql(tableMirror);
-        }
-        if (rtn) {
-//            rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
-            rtn = getTableService().runTableSql(tableMirror, Environment.RIGHT);
-        }
-        return rtn;
     }
 
     @Override
@@ -116,15 +84,15 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         if (config.isSync()) {
             // We assume that the 'definitions' are only there is the
             //     table exists.
-            if (!let.getExists() && ret.getExists()) {
+            if (!let.isExists() && ret.isExists()) {
                 // If left is empty and right is not, DROP RIGHT.
                 ret.addIssue("Schema doesn't exist in 'source'.  Will be DROPPED.");
                 ret.setCreateStrategy(CreateStrategy.DROP);
-            } else if (let.getExists() && !ret.getExists()) {
+            } else if (let.isExists() && !ret.isExists()) {
                 // If left is defined and right is not, CREATE RIGHT.
                 ret.addIssue("Schema missing, will be CREATED");
                 ret.setCreateStrategy(CreateStrategy.CREATE);
-            } else if (let.getExists() && ret.getExists()) {
+            } else if (let.isExists() && ret.isExists()) {
                 // If left and right, check schema change and replace if necessary.
                 // Compare Schemas.
                 if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
@@ -149,7 +117,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
             }
             copySpec.setTakeOwnership(Boolean.FALSE);
         } else {
-            if (ret.getExists()) {
+            if (ret.isExists()) {
                 if (TableUtils.isView(ret)) {
                     ret.addIssue("View exists already.  Will REPLACE.");
                     ret.setCreateStrategy(CreateStrategy.REPLACE);
@@ -262,7 +230,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 String tableParts = getTranslatorService().buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().getInitMSCK()) {
+            } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                 // Add the MSCK repair to both initial and cleanup.
                 ret.addSql(TableUtils.REPAIR_DESC, msckStmt);
@@ -274,6 +242,34 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
 
         rtn = Boolean.TRUE;
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+
+        rtn = this.buildOutDefinition(tableMirror);
+
+        if (rtn) {
+            rtn = AVROCheck(tableMirror);
+        }
+        if (rtn) {
+            rtn = this.buildOutSql(tableMirror);
+        }
+        if (rtn) {
+            rtn = getTableService().runTableSql(tableMirror, Environment.RIGHT);
+        }
+        return rtn;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 
 

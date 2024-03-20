@@ -35,14 +35,12 @@ import java.util.TreeMap;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.HDPHIVE3_DB_LOCATION;
 import static com.cloudera.utils.hadoop.hms.mirror.MessageCode.RO_DB_DOESNT_EXIST;
 import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hadoop.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hadoop.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
 
 @Service
 @Slf4j
 public class DatabaseService {
-
 
     @Getter
     private ConnectionPoolService connectionPoolService;
@@ -51,29 +49,14 @@ public class DatabaseService {
     @Getter
     private Conversion conversion;
 
-    @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
-    }
-
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
-    }
-
-    @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
-    }
-
     public void buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         Config config = configService.getConfig();
         // Start with the LEFT definition.
-        Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);//getDBDefinition(Environment.LEFT);
-        Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);//getDBDefinition(Environment.LEFT);
-        String database = null; //config.getResolvedDB(getName());
-        String location = null; //dbDef.get(MirrorConf.DB_LOCATION);
+        Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
+        Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
+        String database = null;
+        String location = null;
         String managedLocation = null;
         String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
         String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
@@ -84,7 +67,6 @@ public class DatabaseService {
                 switch (config.getDataStrategy()) {
                     case CONVERT_LINKED:
                         // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
-//                        dbDefRight = getDBDefinition(Environment.RIGHT);
                         database = getConfigService().getResolvedDB(dbMirror.getName());
                         location = dbDefRight.get(DB_LOCATION);
                         managedLocation = dbDefRight.get(MirrorConf.DB_MANAGED_LOCATION);
@@ -181,7 +163,7 @@ public class DatabaseService {
                                                     "We've adjusted the DB to set the MANAGEDLOCATION setting instead, " +
                                                     "to avoid future conflicts. If your target environment is HDP3, this setting " +
                                                     "will FAIL since the MANAGEDLOCATION property for a Database doesn't exist. " +
-                                                    "Fix the source DB's location element to avoid this translation." );
+                                                    "Fix the source DB's location element to avoid this translation.");
                                         }
                                     }
 
@@ -283,8 +265,6 @@ public class DatabaseService {
                                                         testCr, testCr.getCommand(), dbMirror.getName());
                                                 dbMirror.addIssue(Environment.RIGHT, config.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
                                                 throw new RuntimeException(config.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
-//                                        } else {
-//                                            config.getCluster(Environment.RIGHT).databaseSql(config, database, dbCreate[0]);
                                             }
                                         } else {
                                             // Can't determine location.
@@ -389,7 +369,7 @@ public class DatabaseService {
                                     dbDefRight.put(DB_LOCATION, sbMngdLoc.toString());
                                 }
 
-                                dbMirror.addIssue(Environment.LEFT,"This process, when 'executed' will leave the original tables intact in their renamed " +
+                                dbMirror.addIssue(Environment.LEFT, "This process, when 'executed' will leave the original tables intact in their renamed " +
                                         "version.  They are NOT automatically cleaned up.  Run the produced '" +
                                         dbMirror.getName() + "_LEFT_CleanUp_execute.sql' " +
                                         "file to permanently remove them.  Managed and External/Purge table data will be " +
@@ -589,6 +569,21 @@ public class DatabaseService {
             }
         }
         return rtn;
+    }
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
+        this.connectionPoolService = connectionPoolService;
+    }
+
+    @Autowired
+    public void setConversion(Conversion conversion) {
+        this.conversion = conversion;
     }
 
 }

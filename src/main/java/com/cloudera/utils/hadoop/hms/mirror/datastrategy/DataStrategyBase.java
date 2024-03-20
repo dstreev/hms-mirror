@@ -18,7 +18,10 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.HadoopSession;
-import com.cloudera.utils.hadoop.hms.mirror.*;
+import com.cloudera.utils.hadoop.hms.mirror.Config;
+import com.cloudera.utils.hadoop.hms.mirror.Environment;
+import com.cloudera.utils.hadoop.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hadoop.hms.mirror.TableMirror;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
@@ -30,56 +33,13 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public abstract class DataStrategyBase implements DataStrategy {
-//    private static final Logger log = LoggerFactory.getLogger(DataStrategyBase.class);
+
     public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
     @Getter
     protected ConfigService configService;
-
-//    protected Config config;
-//    protected DBMirror dbMirror;
-//    protected TableMirror tableMirror;
-
-//    @Override
-//    public void setDBMirror(DBMirror dbMirror) {
-//        this.dbMirror = dbMirror;
-//    }
-
-//    @Override
-//    public DBMirror getDBMirror() {
-//        return dbMirror;
-//    }
-
-//    @Override
-//    public void setConfig(Config config) {
-//        this.config = config;
-//    }
-
-//    @Override
-//    public Config getConfig() {
-//        return config;
-//    }
-
-//    @Override
-//    public void setTableMirror(TableMirror tableMirror) {
-//        this.tableMirror = tableMirror;
-//    }
-
-//    @Override
-//    public TableMirror getTableMirror() {
-//        return tableMirror;
-//    }
-
-    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
-        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
-        if (et == null) {
-            et = new EnvironmentTable(tableMirror);
-            tableMirror.getEnvironments().put(environment, et);
-        }
-        return et;
-    }
 
     protected Boolean AVROCheck(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
@@ -193,6 +153,15 @@ public abstract class DataStrategyBase implements DataStrategy {
             rtn = Boolean.TRUE;
         }
         return rtn;
+    }
+
+    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
+        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
+        if (et == null) {
+            et = new EnvironmentTable(tableMirror);
+            tableMirror.getEnvironments().put(environment, et);
+        }
+        return et;
     }
 
 }

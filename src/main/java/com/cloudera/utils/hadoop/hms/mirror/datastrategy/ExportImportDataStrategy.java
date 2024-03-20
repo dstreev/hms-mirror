@@ -18,8 +18,8 @@
 package com.cloudera.utils.hadoop.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.hms.mirror.*;
-import com.cloudera.utils.hadoop.hms.mirror.service.ClusterService;
 import com.cloudera.utils.hadoop.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hadoop.hms.mirror.service.ExportCircularResolveService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TableService;
 import com.cloudera.utils.hadoop.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hadoop.hms.util.TableUtils;
@@ -46,80 +46,8 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
     @Getter
     private TableService tableService;
 
-    @Autowired
-    public void setExportCircularResolveService(ExportCircularResolveService exportCircularResolveService) {
-        this.exportCircularResolveService = exportCircularResolveService;
-    }
-
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
-
-    @Autowired
-    public void setExportImportAcidDowngradeInPlaceDataStrategy(ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
-        this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
-    }
-
-    @Autowired
-    public void setTableService(TableService tableService) {
-        this.tableService = tableService;
-    }
-
-
     public ExportImportDataStrategy(ConfigService configService) {
         this.configService = configService;
-    }
-
-    @Override
-    public Boolean execute(TableMirror tableMirror) {
-        Boolean rtn = Boolean.FALSE;
-        Config config = getConfigService().getConfig();
-        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
-        if (ret.getExists()) {
-            if (!getConfigService().getConfig().isSync()) {
-                let.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-                return Boolean.FALSE;
-            }
-        }
-
-        if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
-//            DataStrategy dsEIADI = DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE.getDataStrategy();
-//            dsEIADI.setTableMirror(tableMirror);
-//            dsEIADI.setDBMirror(dbMirror);
-//            dsEIADI.setConfig(config);
-            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().execute(tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
-        } else {
-            if (TableUtils.isACID(let)) {
-                if (getConfigService().getConfig().getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                    rtn = Boolean.FALSE;
-                    tableMirror.addIssue(Environment.LEFT, "ACID table EXPORTs are NOT compatible for IMPORT to clusters on a different major version of Hive.");
-                } else {
-                    rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
-                }
-
-            } else {
-                rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
-
-                if (rtn)
-                    rtn = AVROCheck(tableMirror);
-            }
-            // If EXPORT_IMPORT, need to run LEFT queries.
-            if (rtn) {
-//                rtn = getConfigService().getConfig().getCluster(Environment.LEFT).runTableSql(tableMirror);
-                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
-            }
-
-            // Execute the RIGHT sql if config.execute.
-            if (rtn) {
-                rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
-//                rtn = getConfigService().getConfig().getCluster(Environment.RIGHT).runTableSql(tableMirror);
-            }
-        }
-
-        return rtn;
-
     }
 
     @Override
@@ -160,7 +88,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
             copySpec.setTakeOwnership(Boolean.FALSE);
         }
 
-        if (ret.getExists()) {
+        if (ret.isExists()) {
             // Already exists, no action.
             ret.addIssue("Schema exists already, no action.  If you wish to rebuild the schema, " +
                     "drop it first and try again. <b>Any following messages MAY be irrelevant about schema adjustments.</b>");
@@ -199,7 +127,6 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                 exportLoc = isLoc + "/" +
                         getConfigService().getConfig().getTransfer().getRemoteWorkingDirectory() + "/" +
                         getConfigService().getConfig().getRunMarker() + "/" +
-//                    config.getTransfer().getTransferPrefix() + this.getUnique() + "_" +
                         tableMirror.getParent().getName() + "/" +
                         tableMirror.getName();
             } else if (getConfigService().getConfig().getTransfer().getCommonStorage() != null) {
@@ -208,7 +135,6 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + getConfigService().getConfig().getTransfer().getRemoteWorkingDirectory() + "/" +
                         getConfigService().getConfig().getRunMarker() + "/" +
-//                    config.getTransfer().getTransferPrefix() + this.getUnique() + "_" +
                         tableMirror.getParent().getName() + "/" +
                         tableMirror.getName();
             } else {
@@ -277,11 +203,10 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                 }
             }
 
-            if (ret.getExists()) {
+            if (ret.isExists()) {
                 if (getConfigService().getConfig().isSync()) {
                     // Need to Drop table first.
                     String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
-                    ;
                     if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
                         let.addSql(MirrorConf.DROP_TABLE_DESC, dropExistingTable);
                         let.addIssue(EXPORT_IMPORT_SYNC.getDesc());
@@ -320,5 +245,70 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
             rtn = Boolean.FALSE;
         }
         return rtn;
+    }
+
+    @Override
+    public Boolean execute(TableMirror tableMirror) {
+        Boolean rtn = Boolean.FALSE;
+        Config config = getConfigService().getConfig();
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        if (ret.isExists()) {
+            if (!getConfigService().getConfig().isSync()) {
+                let.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+                return Boolean.FALSE;
+            }
+        }
+
+        if (tableService.isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
+            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().execute(tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
+        } else {
+            if (TableUtils.isACID(let)) {
+                if (getConfigService().getConfig().getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                    rtn = Boolean.FALSE;
+                    tableMirror.addIssue(Environment.LEFT, "ACID table EXPORTs are NOT compatible for IMPORT to clusters on a different major version of Hive.");
+                } else {
+                    rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                }
+
+            } else {
+                rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+
+                if (rtn)
+                    rtn = AVROCheck(tableMirror);
+            }
+            // If EXPORT_IMPORT, need to run LEFT queries.
+            if (rtn) {
+                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
+            }
+
+            // Execute the RIGHT sql if config.execute.
+            if (rtn) {
+                rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
+            }
+        }
+
+        return rtn;
+
+    }
+
+    @Autowired
+    public void setExportCircularResolveService(ExportCircularResolveService exportCircularResolveService) {
+        this.exportCircularResolveService = exportCircularResolveService;
+    }
+
+    @Autowired
+    public void setExportImportAcidDowngradeInPlaceDataStrategy(ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
+        this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
+    }
+
+    @Autowired
+    public void setTableService(TableService tableService) {
+        this.tableService = tableService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 }
