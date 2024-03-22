@@ -18,7 +18,7 @@
 
 <configuration>
 
-    <property name="LOGS" value="${app.path.dir:${user.home}/.hms-mirror/logs}" />
+    <property name="LOGS" value="/tmp/.hms-mirror/logs" />
 
     <appender name="Console"
               class="ch.qos.logback.core.ConsoleAppender">
@@ -31,7 +31,7 @@
 
     <appender name="RollingFile"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS}/${app.log.file:hms-mirror}.log</file>
+        <file>${LOGS}/hms-mirror.log</file>
         <encoder
                 class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>

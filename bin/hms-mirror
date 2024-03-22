@@ -167,7 +167,7 @@ echo "Using Java Version: "
 $(${JAVA} -version)
 echo ""
 
-CLI_CMD="${JAVA} -cp ${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=com.cloudera.utils.hadoop.hms.Mirror -jar ${APP_DIR}/../lib/* ${PRG_ARGS}"
+CLI_CMD="${JAVA} -cp ${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=com.cloudera.utils.hms.Mirror -jar ${APP_DIR}/../lib/* ${PRG_ARGS}"
 
 echo "CLI_CMD: ${CLI_CMD}"
 
