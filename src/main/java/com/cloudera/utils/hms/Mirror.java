@@ -19,6 +19,7 @@ package com.cloudera.utils.hms;
 
 import com.cloudera.utils.hms.mirror.Progression;
 import com.cloudera.utils.hms.mirror.config.ApplicationConfig;
+import com.cloudera.utils.hms.mirror.service.ApplicationService;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
@@ -43,10 +44,16 @@ public class Mirror {
 //        ApplicationConfig applicationConfig = applicationContext.getBean(ApplicationConfig.class);
 //        int rtn = applicationConfig.start();
         Progression progression = applicationContext.getBean(Progression.class);
+        ApplicationService applicationService = applicationContext.getBean(ApplicationService.class);
         ConfigService configService = applicationContext.getBean(ConfigService.class);
         if (!configService.getConfig().isWebInterface()) {
-            Long returnCode = progression.getErrors().getReturnCode();
-            System.exit(returnCode.intValue());
+            long returnCode = applicationService.getReturnCode();
+            int rtnCode = (int) returnCode;
+            if (returnCode > Integer.MAX_VALUE) {
+                log.error("Return code is greater than Integer.MAX_VALUE.  Setting return code to Integer.MAX_VALUE. Check Logs for errors.");
+                rtnCode = Integer.MAX_VALUE;
+            }
+            System.exit(rtnCode);
         } else {
             log.info("The Application Workflow has completed");
             log.info("Use the web interface to review the results");

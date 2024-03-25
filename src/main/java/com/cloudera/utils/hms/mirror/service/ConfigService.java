@@ -19,10 +19,7 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.HadoopSession;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
-import com.cloudera.utils.hms.mirror.Cluster;
-import com.cloudera.utils.hms.mirror.Config;
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;

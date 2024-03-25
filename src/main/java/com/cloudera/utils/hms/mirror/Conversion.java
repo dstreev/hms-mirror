@@ -48,6 +48,18 @@ public class Conversion {
     private Progression progression;
     private Map<String, DBMirror> databases = new TreeMap<String, DBMirror>();
 
+    public int getUnsuccessfullTableCount() {
+        int count = 0;
+        for (DBMirror dbMirror : databases.values()) {
+            for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
+                if (tableMirror.getPhaseState() != PhaseState.SUCCESS) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     public String actionsSql(Environment env, String database) {
         StringBuilder sb = new StringBuilder();
         sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");

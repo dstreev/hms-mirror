@@ -33,7 +33,6 @@ public class Progression {
     @JsonIgnore
     private final Messages warnings = new Messages(100);
 
-
     public void addError(MessageCode code) {
         errors.set(code);
     }

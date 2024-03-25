@@ -67,7 +67,7 @@ public class Messages {
         for (long messageBit : messageSet) {
             rtn = rtn | messageBit;
         }
-        return rtn;
+        return rtn * -1;
     }
 
     public void set(MessageCode messageCode) {

@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.config;
 
-import com.cloudera.utils.hms.mirror.Config;
-import com.cloudera.utils.hms.mirror.Conversion;
+import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -28,6 +28,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
 
 @Configuration
 @Slf4j
@@ -95,4 +97,63 @@ class ConversionInitialization {
         return conversion;
     }
 
+    @Bean
+    // Needs to happen after all the configs have been set.
+    @Order(15)
+    public CommandLineRunner conversionPostProcessing(Config config, Conversion conversion) {
+        return args -> {
+            log.info("Post Processing Conversion");
+            if (config.isLoadingTestData()) {
+                for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                    String database = dbMirror.getName();
+                    for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
+                        String tableName = tableMirror.getName();
+                        if (TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))
+                                && !config.getMigrateACID().isOn()) {
+                            tableMirror.setRemove(true);
+                        } else if (!TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))
+                                && config.getMigrateACID().isOnly()) {
+                            tableMirror.setRemove(true);
+                        } else {
+                            // Same logic as in TableService.getTables to filter out tables that are not to be processed.
+                            if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
+                                log.info("Database: " + database + " Table: " + tableName + " was NOT added to list.  " +
+                                        "The name matches the transfer prefix and is most likely a remnant of a previous " +
+                                        "event. If this is a mistake, change the 'transferPrefix' to something more unique.");
+                                tableMirror.setRemove(true);
+                            } else if (tableName.endsWith("storage_migration")) {
+                                log.info("Database: " + database + " Table: " + tableName + " was NOT added to list.  " +
+                                        "The name is the result of a previous STORAGE_MIGRATION attempt that has not been " +
+                                        "cleaned up.");
+                                tableMirror.setRemove(true);
+                            } else {
+                                if (config.getFilter().getTblRegEx() != null) {
+                                    // Filter Tables
+                                    assert (config.getFilter().getTblFilterPattern() != null);
+                                    Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
+                                    if (!matcher.matches()) {
+                                        log.info(database + ":" + tableName + " didn't match table regex filter and " +
+                                                "will NOT be added to processing list.");
+                                        tableMirror.setRemove(true);
+                                    }
+                                } else if (config.getFilter().getTblExcludeRegEx() != null) {
+                                    assert (config.getFilter().getTblExcludeFilterPattern() != null);
+                                    Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
+                                    if (matcher.matches()) { // ANTI-MATCH
+                                        log.info(database + ":" + tableName + " matched exclude table regex filter and " +
+                                                "will NOT be added to processing list.");
+                                        tableMirror.setRemove(true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Remove Tables from Map.
+            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
+            }
+        };
+    }
 }

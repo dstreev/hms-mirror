@@ -52,7 +52,7 @@ import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED
 @Getter
 @Setter
 public class CommandLineOptions {
-    private String SPRING_CONFIG_PREFIX = "hms-mirror.config";
+    public static String SPRING_CONFIG_PREFIX = "hms-mirror.config";
 
     public static void main(String[] args) {
         CommandLineOptions pcli = new CommandLineOptions();
@@ -420,7 +420,8 @@ public class CommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    // So this happens AFTER migrate acid and migrate acid only are checked.
+    @Order(5)
     @ConditionalOnProperty(
             name = "hms-mirror.config.in-place")
     CommandLineRunner configInPlace(Config config, @Value("${hms-mirror.config.in-place}") String value) {
@@ -1596,7 +1597,11 @@ public class CommandLineOptions {
             }
 
             if (!configService.validate()) {
-                throw new RuntimeException("Configuration issues., check log (~/.hms-mirror/logs/hms-mirror.log) for details");
+                for (String message : progression.getErrors().getMessages()) {
+                    log.error(message);
+                }
+                return;
+//                throw new RuntimeException("Configuration issues., check log (~/.hms-mirror/logs/hms-mirror.log) for details");
             }
 
 
@@ -1691,7 +1696,7 @@ public class CommandLineOptions {
                             if (target == Environment.RIGHT && config.getCluster(target).getHiveServer2().isDisconnected()) {
                                 // Skip error.  Set Warning that we're disconnected.
                                 progression.addWarning(ENVIRONMENT_DISCONNECTED, target);
-                            } else {
+                            } else if (!config.isLoadingTestData()) {
                                 progression.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
 //                                return progression.getErrors().getReturnCode();
                             }

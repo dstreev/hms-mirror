@@ -78,6 +78,9 @@ public class Config {
     private DataStrategyEnum dataStrategy = DataStrategyEnum.SCHEMA_ONLY;
     private boolean databaseOnly = Boolean.FALSE;
     private boolean dumpTestData = Boolean.FALSE;
+    /*
+    See ConversionInitialization for more information on this load process.
+     */
     private String loadTestDataFile = null;
     private boolean evaluatePartitionLocation = Boolean.FALSE;
     private Filter filter = new Filter();

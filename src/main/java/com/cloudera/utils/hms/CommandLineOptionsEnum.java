@@ -17,6 +17,9 @@
 
 package com.cloudera.utils.hms;
 
+import lombok.Getter;
+
+@Getter
 public enum CommandLineOptionsEnum {
     ACID_PARTITION_COUNT("ap", "acid-partition-count", "count", ""),
     AVRO_SCHEMA_MIGRATION("asm", "avro-schema-migration", null, ""),
@@ -32,6 +35,7 @@ public enum CommandLineOptionsEnum {
     DATABASE_PREFIX("dbp", "db-prefix", "prefix", ""),
     DATABASE_RENAME("dbr", "db-rename", "rename", ""),
     DATABASE_REGEX("dbRegEx", "database-regex", "regex", ""),
+    //TODO: Double check conversion from legacy.
     DISTCP("dc", "distcp", "flow-direction default:PULL", ""),
     DECRYPT_PASSWORD("dp", "decrypt-password", "encrypted-password", ""),
     DUMP_SOURCE("ds", "dump-source", "source", ""),
