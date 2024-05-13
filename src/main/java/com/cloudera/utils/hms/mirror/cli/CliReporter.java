@@ -18,6 +18,11 @@
 package com.cloudera.utils.hms.mirror.cli;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import lombok.Getter;
 import lombok.Setter;
@@ -58,8 +63,13 @@ public class CliReporter {
     private String rightExecuteFile = null;
     private String rightCleanUpFile = null;
     private HmsMirrorCfgService hmsMirrorCfgService;
-    private Conversion conversion;
+    private RunStatus runStatus;
     private boolean tiktok = false;
+
+    @Autowired
+    public void setRunStatus(RunStatus runStatus) {
+        this.runStatus = runStatus;
+    }
 
     @Bean
     @Order(20)
@@ -70,6 +80,8 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
+        Conversion conversion = getRunStatus().getConversion();
+
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
         // Header
@@ -124,18 +136,18 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        Progression progression = hmsMirrorCfgService.getHmsMirrorConfig().getProgression();
+        RunStatus runStatus = hmsMirrorCfgService.getHmsMirrorConfig().getRunStatus();
 
-        if (progression.getErrors().getMessages().length > 0) {
+        if (runStatus.getErrorMessages().length > 0) {
             report.append("\n=== Errors ===\n");
-            for (String message : progression.getErrors().getMessages()) {
+            for (String message : runStatus.getErrorMessages()) {
                 report.append("\t").append(message).append("\n");
             }
         }
 
-        if (progression.getWarnings().getMessages().length > 0) {
+        if (runStatus.getWarningMessages().length > 0) {
             report.append("\n=== Warnings ===\n");
-            for (String message : progression.getWarnings().getMessages()) {
+            for (String message : runStatus.getWarningMessages()) {
                 report.append("\t").append(message).append("\n");
             }
         }
@@ -176,6 +188,8 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
+        Conversion conversion = getRunStatus().getConversion();
+
         tiktok = !tiktok;
         startedTables.clear();
         if (!retry)
@@ -290,11 +304,6 @@ public class CliReporter {
     @Autowired
     public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
         this.hmsMirrorCfgService = hmsMirrorCfgService;
-    }
-
-    @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
     }
 
     public void setVariable(String key, String value) {

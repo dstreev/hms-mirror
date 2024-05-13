@@ -17,9 +17,10 @@
 
 package com.cloudera.utils.hms;
 
+import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptionsEnum;
 import org.junit.Test;
 
-import static com.cloudera.utils.hms.HmsMirrorCommandLineOptions.SPRING_CONFIG_PREFIX;
+import static com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions.SPRING_CONFIG_PREFIX;
 
 public class CommandLineOptionsTest {
 

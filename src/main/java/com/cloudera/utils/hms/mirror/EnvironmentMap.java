@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror;
 
+import com.cloudera.utils.hms.mirror.domain.Translator;
 import lombok.Getter;
 
 import java.util.HashSet;

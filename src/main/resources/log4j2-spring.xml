@@ -54,7 +54,7 @@
 <!--        <Logger name="com.cloudera.utils.hms.mirror.DBMirror" level="info" additivity="false">-->
 <!--            <appender-ref ref="HmsMirrorConsole" />-->
 <!--        </Logger>-->
-<!--        <Logger name="com.cloudera.utils.hms.mirror.Cluster" level="info" additivity="false">-->
+<!--        <Logger name="com.cloudera.utils.hms.mirror.domain.Cluster" level="info" additivity="false">-->
 <!--            <appender-ref ref="HmsMirrorConsole" />-->
 <!--        </Logger>-->
 <!--        <Logger name="com.cloudera.utils.hms.mirror.service.GetTableMetadataService" level="debug" additivity="false">-->

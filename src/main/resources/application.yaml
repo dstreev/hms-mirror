@@ -2,6 +2,9 @@ server:
   port: 8090
   servlet:
     context-path: /hms-mirror
+springdoc:
+  swagger-ui:
+    path: "/swagger-ui.html"
 spring:
   main:
     banner-mode: "off"
@@ -15,3 +18,5 @@ hms-mirror:
     setup: "false"
   conversion:
     test-filename: "false"
+  api:
+    version: "2.2.0.0"

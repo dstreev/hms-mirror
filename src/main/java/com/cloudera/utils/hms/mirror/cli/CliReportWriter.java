@@ -18,6 +18,10 @@
 package com.cloudera.utils.hms.mirror.cli;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -53,8 +57,8 @@ public class CliReportWriter {
     private HmsMirrorCfgService hmsMirrorCfgService;
     private ConnectionPoolService connectionPoolService;
     private TranslatorService translatorService;
-    private Progression progression;
-    private Conversion conversion;
+    private RunStatus runStatus;
+//    private Conversion conversion;
 
     @Autowired
     public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
@@ -66,14 +70,14 @@ public class CliReportWriter {
         this.connectionPoolService = connectionPoolService;
     }
 
-    @Autowired
-    public void setConversion(Conversion conversion) {
-        this.conversion = conversion;
-    }
+//    @Autowired
+//    public void setConversion(Conversion conversion) {
+//        this.conversion = conversion;
+//    }
 
     @Autowired
-    public void setProgression(Progression progression) {
-        this.progression = progression;
+    public void setRunStatus(RunStatus runStatus) {
+        this.runStatus = runStatus;
     }
 
     @Autowired
@@ -85,6 +89,7 @@ public class CliReportWriter {
         HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
         log.info("Writing CLI report and artifacts to directory: {}", hmsMirrorConfig.getOutputDirectory());
 //        if (!setupError) {
+        Conversion conversion = runStatus.getConversion();
 
         // Remove the abstract environments from config before reporting output.
         hmsMirrorConfig.getClusters().remove(Environment.TRANSFER);
@@ -283,8 +288,7 @@ public class CliReportWriter {
                 }
                 int step = 1;
                 FileWriter reportFile = new FileWriter(dbReportOutputFile + ".md");
-                String mdReportStr = conversion.toReport(database);
-
+                String mdReportStr = conversion.toReport(database, getHmsMirrorCfgService());
 
                 File dbYamlFile = new File(dbReportOutputFile + ".yaml");
                 FileWriter dbYamlFileWriter = new FileWriter(dbYamlFile);
@@ -367,7 +371,7 @@ public class CliReportWriter {
                     runbookFile.write("\n");
                 }
 
-                String lcu = conversion.executeCleanUpSql(Environment.LEFT, database);
+                String lcu = conversion.executeCleanUpSql(Environment.LEFT, database, hmsMirrorCfgService);
                 if (lcu != null) {
                     FileWriter leftCleanUpOutput = new FileWriter(dbLeftCleanUpFile);
                     leftCleanUpOutput.write(lcu);
@@ -378,7 +382,7 @@ public class CliReportWriter {
                     runbookFile.write("\n");
                 }
 
-                String rcu = conversion.executeCleanUpSql(Environment.RIGHT, database);
+                String rcu = conversion.executeCleanUpSql(Environment.RIGHT, database, hmsMirrorCfgService);
                 if (rcu != null) {
                     FileWriter rightCleanUpOutput = new FileWriter(dbRightCleanUpFile);
                     rightCleanUpOutput.write(rcu);

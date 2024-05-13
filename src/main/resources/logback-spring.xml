@@ -54,7 +54,7 @@
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--        <appender-ref ref="Console"/>-->
 <!--    </root>-->
-    <root level="OFF">
+    <root level="DEBUG">
 <!--        <appender-ref ref="RollingFile"/>-->
         <appender-ref ref="Console"/>
     </root>
@@ -65,13 +65,13 @@
 <!--    <logger name="com.cloudera.utils.hadoop.cli" level="warn" additivity="false">-->
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--    </logger>-->
-<!--    <logger name="com.cloudera.utils.hms.HmsMirrorCommandLineOptions" level="debug" additivity="false">-->
+<!--    <logger name="com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions" level="debug" additivity="false">-->
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--    </logger>-->
 <!--    <logger name="com.cloudera.utils.hms.mirror.DBMirror" level="debug" additivity="false">-->
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--    </logger>-->
-<!--    <logger name="com.cloudera.utils.hms.mirror.Cluster" level="debug" additivity="false">-->
+<!--    <logger name="com.cloudera.utils.hms.mirror.domain.Cluster" level="debug" additivity="false">-->
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--    </logger>-->
 <!--    <logger name="com.cloudera.utils.hms.mirror.service.TableService" level="debug" additivity="false">-->
@@ -81,16 +81,19 @@
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--    </logger>-->
 
-    <logger name="com.cloudera.utils.hms.HmsMirrorCommandLineOptions" level="info" additivity="false">
+    <logger name="com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.DBMirror" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
-    <logger name="com.cloudera.utils.hms.mirror.Cluster" level="info" additivity="false">
+    <logger name="com.cloudera.utils.hms.mirror.domain.Cluster" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.service.TableService" level="info" additivity="false">
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="com.cloudera.utils.hms.mirror.web" level="debug" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.service.TransferService" level="warn" additivity="false">

@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hms.mirror.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

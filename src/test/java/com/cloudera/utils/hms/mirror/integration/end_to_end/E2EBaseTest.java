@@ -18,6 +18,9 @@
 package com.cloudera.utils.hms.mirror.integration.end_to_end;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -60,7 +63,7 @@ public class E2EBaseTest {
     }
 
     protected Conversion getConversion() {
-        return HMSMirrorAppService.getConversion();
+        return HMSMirrorAppService.getRunStatus().getConversion();
     }
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {
@@ -88,13 +91,14 @@ public class E2EBaseTest {
             throw new RuntimeException(e);
         }
         Conversion conversion = null;
+        String[] databases = null;
         try {
             conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
+            databases = conversion.getDatabases().keySet().toArray(new String[0]);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
         // Set Config Databases;
-        String[] databases = getConversion().getDatabases().keySet().toArray(new String[0]);
         return databases;
     }
 
@@ -135,8 +139,8 @@ public class E2EBaseTest {
         return expected * -1;
     }
 
-    protected Progression getProgression() {
-        return HMSMirrorAppService.getProgression();
+    protected RunStatus getProgression() {
+        return HMSMirrorAppService.getRunStatus();
     }
 
     protected DBMirror[] getResults(String outputDirBase, String sourceTestDataSet) {

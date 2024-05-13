@@ -17,8 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.Conversion;
-import com.cloudera.utils.hms.mirror.Progression;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,24 +28,21 @@ import org.springframework.stereotype.Service;
 public class HMSMirrorAppService {
 
     private final HmsMirrorCfgService hmsMirrorCfgService;
-    private final Conversion conversion;
-    private final Progression progression;
+    private final RunStatus runStatus;
 
-    public HMSMirrorAppService(HmsMirrorCfgService hmsMirrorCfgService, Conversion conversion, Progression progression) {
+    public HMSMirrorAppService(HmsMirrorCfgService hmsMirrorCfgService, RunStatus runStatus) {
         this.hmsMirrorCfgService = hmsMirrorCfgService;
-        this.conversion = conversion;
-        this.progression = progression;
+        this.runStatus = runStatus;
     }
 
     public long getReturnCode() {
         long rtn = 0L;
-        rtn = getProgression().getErrors().getReturnCode();
+        rtn = getRunStatus().getErrors().getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
-            rtn = getConversion().getUnsuccessfullTableCount();
+            rtn = getRunStatus().getConversion().getUnsuccessfullTableCount();
         }
         return rtn;
     }
-
 
 }

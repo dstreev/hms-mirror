@@ -20,11 +20,12 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
-import com.cloudera.utils.hms.mirror.Cluster;
-import com.cloudera.utils.hms.mirror.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,7 @@ import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAG
 @Getter
 public class HmsMirrorCfgService {
 
+    private RunStatus runStatus;
     private HmsMirrorConfig hmsMirrorConfig = null;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -258,14 +260,51 @@ public class HmsMirrorCfgService {
         }
     }
 
-//    @Autowired
-//    public void setHmsMirrorConfig(HmsMirrorConfig hmsMirrorConfig) {
-//        this.hmsMirrorConfig = hmsMirrorConfig;
-//    }
+    @Autowired
+    public void setHmsMirrorConfig(HmsMirrorConfig hmsMirrorConfig) {
+        this.hmsMirrorConfig = hmsMirrorConfig;
+    }
 
+    @Autowired
+    public void setRunStatus(RunStatus runStatus) {
+        this.runStatus = runStatus;
+        this.hmsMirrorConfig.setRunStatus(runStatus);
+    }
+
+    public HmsMirrorCfgService() {
+    }
 
     public HmsMirrorCfgService(HmsMirrorConfig hmsMirrorConfig) {
         this.hmsMirrorConfig = hmsMirrorConfig;
+    }
+
+    /*
+    Load a config for the default config directory.
+    Check that it is valid, if not, revert to the previous config.
+
+    TODO: Need to return an error that can be shown via the REST API.
+     */
+    public HmsMirrorConfig loadConfig(String configFileName) {
+        HmsMirrorConfig rtn = HmsMirrorConfig.loadConfig(configFileName);
+        HmsMirrorConfig cur = hmsMirrorConfig;
+        // Need to set progression to record any issues.
+        runStatus.getErrors().clear();
+        runStatus.getWarnings().clear();
+        rtn.setRunStatus(runStatus);
+        this.hmsMirrorConfig = rtn;
+        if (validate()) {
+            // Associate the progression with the config.
+            log.info("Config Loaded Successfully");
+        } else {
+            hmsMirrorConfig = cur;
+            rtn = hmsMirrorConfig;
+            log.error("Config had errors, restoring previous config.");
+        }
+        return rtn;
+    }
+
+    public boolean saveConfig(HmsMirrorConfig config, String configFileName) {
+        return HmsMirrorConfig.save(config, configFileName);
     }
 
     public void setupGSS() {
@@ -840,7 +879,7 @@ public class HmsMirrorCfgService {
 
         if (rtn) {
             // Last check for errors.
-            if (getHmsMirrorConfig().getProgression().getErrors().getReturnCode() != 0) {
+            if (getHmsMirrorConfig().getRunStatus().getErrors().getReturnCode() != 0) {
                 rtn = Boolean.FALSE;
             }
         }

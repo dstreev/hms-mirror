@@ -18,6 +18,8 @@
 package com.cloudera.utils.hms.util;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.SerdeType;
 import com.cloudera.utils.hms.mirror.feature.IcebergState;
 import lombok.extern.slf4j.Slf4j;
 

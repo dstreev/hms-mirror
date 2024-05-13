@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror;
 
+import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;

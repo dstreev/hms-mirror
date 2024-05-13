@@ -18,9 +18,9 @@
 package com.cloudera.utils.hms.mirror.utils;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.TableMirror;
-import com.cloudera.utils.hms.mirror.Translator;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
