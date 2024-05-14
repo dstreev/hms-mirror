@@ -33,7 +33,7 @@ import java.util.Map;
 @Getter
 public class ExecuteSessionService {
 
-    private final String DEFAULT = "default.yaml";
+    public static final String DEFAULT = "default.yaml";
 
     private ExecuteSession currentSession;
     private final Map<String, ExecuteSession> sessions = new HashMap<>();

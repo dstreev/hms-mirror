@@ -19,13 +19,45 @@ package com.cloudera.utils.hms.mirror.web.config;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
 
 @Configuration
+@Slf4j
 public class WebInit {
+
+    private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
+    }
+
+    @Bean
+    public CommandLineRunner initDefaultConfig() {
+        return args -> {
+            // Try to find and load the 'default.yaml' config.
+            String cfgFile = System.getProperty("user.home")
+                    + File.separator + ".hms-mirror/cfg/" + ExecuteSessionService.DEFAULT;
+            File cfg = new File(cfgFile);
+            if (cfg.exists()) {
+                log.info("Loading default config from: " + cfgFile);
+                HmsMirrorConfig hmsMirrorConfig = HmsMirrorConfig.loadConfig(cfgFile);
+                executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+            } else {
+                // Return empty config.  This will require the user to setup the config.
+                log.warn("No default config found.  Creating empty config.");
+                HmsMirrorConfig hmsMirrorConfig = new HmsMirrorConfig();
+                executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+            }
+        };
+    }
 
     @Bean
     public HmsMirrorConfig buildHmsMirrorConfig() {
@@ -38,10 +70,10 @@ public class WebInit {
         // Return empty config.  This will require the user to setup the config.
         return new HmsMirrorConfig();
     }
-
-    @Bean("runStatus")
-    public RunStatus buildRunStatus() {
-        return new RunStatus();
-    }
+//
+//    @Bean("runStatus")
+//    public RunStatus buildRunStatus() {
+//        return new RunStatus();
+//    }
 
 }

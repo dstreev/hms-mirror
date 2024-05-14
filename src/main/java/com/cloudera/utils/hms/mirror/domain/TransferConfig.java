@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Setter
 public class TransferConfig {
+    @Deprecated // Moved to Application Configuration *application.yml*
     private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";
     private String shadowPrefix = "hms_mirror_shadow_";
@@ -58,6 +60,11 @@ public class TransferConfig {
         } else {
             this.commonStorage = null;
         }
+    }
+
+    @JsonIgnore
+    public int getConcurrency() {
+        return concurrency;
     }
 
 }
