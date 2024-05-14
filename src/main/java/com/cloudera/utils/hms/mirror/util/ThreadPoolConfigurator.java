@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +30,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
+@Slf4j
 public class ThreadPoolConfigurator {
 
     @Bean("jobThreadPool")
@@ -37,8 +39,9 @@ public class ThreadPoolConfigurator {
             name = "hms-mirror.concurrency.max-threads")
     public TaskExecutor jobThreadPool(ExecuteSessionService executeSessionService,  @Value("${hms-mirror.concurrency.max-threads}") Integer value) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        // TODO: Need to remove this from the config that controls the migration and add
-        //       it to the application configuration.
+
+        log.info("Setting up jobThreadPool with max threads: {}", value);
+
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         executor.setCorePoolSize(value);
@@ -57,8 +60,9 @@ public class ThreadPoolConfigurator {
     public TaskExecutor metadataThreadPool(ExecuteSessionService executeSessionService,  @Value("${hms-mirror.concurrency.max-threads}") Integer value) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        // TODO: Need to remove this from the config that controls the migration and add
-        //       it to the application configuration.
+
+        log.info("Setting up metadataThreadPool with max threads: {}", value);
+
         executor.setCorePoolSize(value);
         executor.setMaxPoolSize(value);
 
@@ -73,6 +77,8 @@ public class ThreadPoolConfigurator {
     public TaskExecutor reportingThreadPool(ExecuteSessionService executeSessionService) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
+        log.info("Setting up reportingThreadPool with max threads: 1");
 
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(1);
