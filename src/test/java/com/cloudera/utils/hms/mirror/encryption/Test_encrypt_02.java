@@ -73,7 +73,7 @@ public class Test_encrypt_02 extends E2EBaseTest {
     public void validateEncryptPassword() {
         // Get Runtime Return Code.
         assertEquals("Encrypt Password Failure: ", "rV+HtIWliZn2CxB+BlWCbQ==",
-                getConfigService().getHmsMirrorConfig().getDecryptPassword());
+                getConfigService().getCurrentSession().getHmsMirrorConfig().getDecryptPassword());
     }
 
 

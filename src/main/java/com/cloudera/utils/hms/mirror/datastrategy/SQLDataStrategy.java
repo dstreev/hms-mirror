@@ -20,7 +20,8 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -37,20 +38,26 @@ import static com.cloudera.utils.hms.mirror.MessageCode.*;
 @Getter
 public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private ConfigService configService;
+
     private SQLAcidDowngradeInPlaceDataStrategy sqlAcidDowngradeInPlaceDataStrategy;
     private TableService tableService;
     private IntermediateDataStrategy intermediateDataStrategy;
 
-    public SQLDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    public SQLDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
-
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -128,7 +135,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         if (hmsMirrorConfig.getTransfer().getIntermediateStorage() != null ||
                 hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
@@ -150,7 +157,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             // TODO: Hum... Not sure this is right.
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
-            database = getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName());
+            database = configService.getResolvedDB(tableMirror.getParent().getName());
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
             ret.addSql(TableUtils.USE_DESC, useDb);
@@ -206,7 +213,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 

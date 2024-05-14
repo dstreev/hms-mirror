@@ -15,23 +15,16 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1;
+package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-public class ProgressController {
+public class ReportController {
 
-    public void getProgressSummary () {
-
-    }
-
-    public void getProgressDetail () {
+    public void getReportBundleForDatabase(String database) {
 
     }
 
-    public void getProgressForDatabase(String database) {
-
-    }
-
-    public void getProgressForTable(String database, String table) {
+    // Zip all reports and download.
+    public void getReportBundle() {
 
     }
 

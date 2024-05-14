@@ -30,7 +30,6 @@ import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.sql.*;
@@ -52,18 +51,20 @@ import static com.cloudera.utils.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
 public class DatabaseService {
 
     private ConnectionPoolService connectionPoolService;
-    private HmsMirrorCfgService hmsMirrorCfgService;
-    private RunStatus runStatus;
+    private ExecuteSessionService executeSessionService;
+    private ConfigService configService;
 
     @Autowired
-    public void setRunStatus(RunStatus runStatus) {
-        this.runStatus = runStatus;
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
     }
+
 
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        HmsMirrorConfig hmsMirrorConfig = hmsMirrorCfgService.getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
         // Start with the LEFT definition.
         Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
         Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
@@ -79,7 +80,7 @@ public class DatabaseService {
                 switch (hmsMirrorConfig.getDataStrategy()) {
                     case CONVERT_LINKED:
                         // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
-                        database = getHmsMirrorCfgService().getResolvedDB(dbMirror.getName());
+                        database = configService.getResolvedDB(dbMirror.getName());
                         location = dbDefRight.get(DB_LOCATION);
                         managedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
 
@@ -106,7 +107,7 @@ public class DatabaseService {
                     default:
                         // Start with the LEFT definition.
                         dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
-                        database = getHmsMirrorCfgService().getResolvedDB(dbMirror.getName());
+                        database = configService.getResolvedDB(dbMirror.getName());
                         location = dbDefLeft.get(DB_LOCATION);
                         if (hmsMirrorConfig.getTransfer().getWarehouse() != null
                                 && hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null) {
@@ -185,15 +186,17 @@ public class DatabaseService {
                                 if (hmsMirrorConfig.getDbPrefix() != null || hmsMirrorConfig.getDbRename() != null) {
                                     // adjust locations.
                                     if (location != null) {
-                                        location = Translator.removeLastDirFromUrl(location) + "/" + getHmsMirrorCfgService().getResolvedDB(dbMirror.getName()) + ".db";
+                                        location = Translator.removeLastDirFromUrl(location) + "/"
+                                                + configService.getResolvedDB(dbMirror.getName()) + ".db";
                                     }
                                     if (managedLocation != null) {
-                                        managedLocation = Translator.removeLastDirFromUrl(managedLocation) + "/" + getHmsMirrorCfgService().getResolvedDB(dbMirror.getName()) + ".db";
+                                        managedLocation = Translator.removeLastDirFromUrl(managedLocation) + "/"
+                                                + configService.getResolvedDB(dbMirror.getName()) + ".db";
                                     }
                                 }
                                 if (hmsMirrorConfig.isReadOnly() && !hmsMirrorConfig.isLoadingTestData()) {
                                     log.debug("Config set to 'read-only'.  Validating FS before continuing");
-                                    CliEnvironment cli = getHmsMirrorCfgService().getHmsMirrorConfig().getCliEnvironment();
+                                    CliEnvironment cli = hmsMirrorConfig.getCliEnvironment();
 
                                     // Check that location exists.
                                     String dbLocation = null;
@@ -213,7 +216,8 @@ public class DatabaseService {
                                         Statement stmt = null;
                                         ResultSet resultSet = null;
                                         try {
-                                            conn = hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
+                                            conn = connectionPoolService.getHS2EnvironmentConnection(Environment.RIGHT);
+                                                    //hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
 
                                             stmt = conn.createStatement();
 
@@ -262,9 +266,9 @@ public class DatabaseService {
                                             CommandReturn testCr = cli.processInput("test -d " + dbLocation);
                                             if (testCr.isError()) {
                                                 // Doesn't exist.  So we can't create the DB in a "read-only" mode.
-                                                hmsMirrorConfig.addError(RO_DB_DOESNT_EXIST, dbLocation,
+                                                runStatus.addError(RO_DB_DOESNT_EXIST, dbLocation,
                                                         testCr.getError(), testCr.getCommand(), dbMirror.getName());
-                                                dbMirror.addIssue(Environment.RIGHT, hmsMirrorConfig.getRunStatus().getErrorMessage(RO_DB_DOESNT_EXIST));
+                                                dbMirror.addIssue(Environment.RIGHT, runStatus.getErrorMessage(RO_DB_DOESNT_EXIST));
                                                 rtn = Boolean.FALSE;
 //                                                throw new RuntimeException(hmsMirrorConfig.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
                                             }
@@ -388,7 +392,7 @@ public class DatabaseService {
                 // Downgrade in place.
                 if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null) {
                     // Set the location to the external directory for the database.
-                    database = getHmsMirrorCfgService().getResolvedDB(dbMirror.getName());
+                    database = configService.getResolvedDB(dbMirror.getName());
                     location = hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace() + hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() +
                             "/" + database + ".db";
                     String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
@@ -398,7 +402,7 @@ public class DatabaseService {
             }
         } else {
             // Reset Right DB.
-            database = getHmsMirrorCfgService().getResolvedDB(dbMirror.getName());
+            database = configService.getResolvedDB(dbMirror.getName());
             String dropDb = MessageFormat.format(DROP_DB, database);
             dbMirror.getSql(Environment.RIGHT).add(new Pair(DROP_DB_DESC, dropDb));
         }
@@ -407,8 +411,9 @@ public class DatabaseService {
 
     public boolean createDatabases() {
         boolean rtn = true;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
-        Conversion conversion = getRunStatus().getConversion();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        Conversion conversion = runStatus.getConversion();
         for (String database : hmsMirrorConfig.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
             rtn = buildDBStatements(dbMirror);
@@ -428,13 +433,13 @@ public class DatabaseService {
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);//getConnection();
             if (conn != null) {
 
-                String database = (environment == Environment.LEFT ? dbMirror.getName() : getHmsMirrorCfgService().getResolvedDB(dbMirror.getName()));
+                String database = (environment == Environment.LEFT ? dbMirror.getName() : configService.getResolvedDB(dbMirror.getName()));
 
                 log.debug("{}:{}: Loading database definition.", environment, database);
 
@@ -509,7 +514,7 @@ public class DatabaseService {
     public Boolean runDatabaseSql(DBMirror dbMirror, Pair dbSqlPair, Environment environment) {
         // Open the connection and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         Boolean rtn = Boolean.TRUE;
         // Skip when running test data.
@@ -517,7 +522,8 @@ public class DatabaseService {
             try {
                 conn = connectionPoolService.getHS2EnvironmentConnection(environment);
 
-                if (conn == null && hmsMirrorConfig.isExecute() && !hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
+                if (conn == null && hmsMirrorConfig.isExecute()
+                        && !hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
                     // this is a problem.
                     rtn = Boolean.FALSE;
                     dbMirror.addIssue(environment, "Connection missing. This is a bug.");
@@ -580,8 +586,8 @@ public class DatabaseService {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Autowired

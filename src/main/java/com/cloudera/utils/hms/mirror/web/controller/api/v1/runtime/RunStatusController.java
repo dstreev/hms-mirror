@@ -15,16 +15,29 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1;
+package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-public class ReportController {
+import java.util.UUID;
 
-    public void getReportBundleForDatabase(String database) {
+public class RunStatusController {
+
+    public void getRunStatus(UUID runId) {
 
     }
 
-    // Zip all reports and download.
-    public void getReportBundle() {
+    public void getRunStatusDetail(UUID runId) {
+
+    }
+
+    public void getConversionSummary (UUID runId) {
+
+    }
+
+    public void getConversionSummaryForDatabase(UUID runId, String database) {
+
+    }
+
+    public void getConversionForTable(UUID runId, String database, String table) {
 
     }
 

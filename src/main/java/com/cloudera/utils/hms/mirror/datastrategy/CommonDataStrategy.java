@@ -18,8 +18,10 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -37,16 +39,24 @@ import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION_
 @Getter
 public class CommonDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private ConfigService configService;
+
     private TableService tableService;
     private TranslatorService translatorService;
 
-    public CommonDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    public CommonDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -60,15 +70,15 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
             copySpec.setReplaceLocation(Boolean.FALSE);
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().convertManaged())
+            if (hmsMirrorConfig.convertManaged())
                 copySpec.setUpgrade(Boolean.TRUE);
             // COMMON owns the data unless readonly specified.
-            if (!getHmsMirrorCfgService().getHmsMirrorConfig().isReadOnly())
+            if (!hmsMirrorConfig.isReadOnly())
                 copySpec.setTakeOwnership(Boolean.TRUE);
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().isNoPurge())
+            if (hmsMirrorConfig.isNoPurge())
                 copySpec.setTakeOwnership(Boolean.FALSE);
 
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().isSync()) {
+            if (hmsMirrorConfig.isSync()) {
                 // We assume that the 'definitions' are only there if the
                 //     table exists.
                 if (!let.isExists() && ret.isExists()) {
@@ -122,6 +132,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
 
         String useDb = null;
@@ -133,7 +144,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
 
         //ret.getSql().clear();
 
-        database = getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName());
+        database = configService.getResolvedDB(tableMirror.getParent().getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -162,8 +173,8 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 ret.addSql(TableUtils.USE_DESC, useDb);
                 String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!getHmsMirrorCfgService().getHmsMirrorConfig().getCluster(Environment.RIGHT).isLegacyHive()
-                        && getHmsMirrorCfgService().getHmsMirrorConfig().isTransferOwnership() && let.getOwner() != null) {
+                if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()
+                        && hmsMirrorConfig.isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
@@ -177,15 +188,15 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         if (let.getPartitioned() && !TableUtils.isACID(let) &&
                 (ret.getCreateStrategy() == CreateStrategy.REPLACE || ret.getCreateStrategy() == CreateStrategy.CREATE
                         || ret.getCreateStrategy() == CreateStrategy.AMEND_PARTS)) {
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().isEvaluatePartitionLocation()) {
+            if (hmsMirrorConfig.isEvaluatePartitionLocation()) {
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
                 String tableParts = translatorService.buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (getHmsMirrorCfgService().getHmsMirrorConfig().getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
+            } else if (hmsMirrorConfig.getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
-                if (getHmsMirrorCfgService().getHmsMirrorConfig().getTransfer().getStorageMigration().isDistcp()) {
+                if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
                     ret.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
                 } else {
                     ret.addSql(TableUtils.REPAIR_DESC, msckStmt);
@@ -200,6 +211,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 

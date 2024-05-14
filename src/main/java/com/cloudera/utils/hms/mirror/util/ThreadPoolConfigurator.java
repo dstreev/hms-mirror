@@ -17,7 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.util;
 
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -29,10 +33,17 @@ public class ThreadPoolConfigurator {
 
     @Bean("jobThreadPool")
     @Order(20)
-    public TaskExecutor jobThreadPool(HmsMirrorCfgService hmsMirrorCfgService) {
+    @ConditionalOnProperty(
+            name = "hms-mirror.concurrency.max-threads")
+    public TaskExecutor jobThreadPool(ExecuteSessionService executeSessionService,  @Value("${hms-mirror.concurrency.max-threads}") Integer value) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
-        executor.setMaxPoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
+        // TODO: Need to remove this from the config that controls the migration and add
+        //       it to the application configuration.
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
+        executor.setCorePoolSize(value);
+        executor.setMaxPoolSize(value);
+
         executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("job-");
         executor.initialize();
@@ -41,10 +52,16 @@ public class ThreadPoolConfigurator {
 
     @Bean("metadataThreadPool")
     @Order(20)
-    public TaskExecutor metadataThreadPool(HmsMirrorCfgService hmsMirrorCfgService) {
+    @ConditionalOnProperty(
+            name = "hms-mirror.concurrency.max-threads")
+    public TaskExecutor metadataThreadPool(ExecuteSessionService executeSessionService,  @Value("${hms-mirror.concurrency.max-threads}") Integer value) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
-        executor.setMaxPoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        // TODO: Need to remove this from the config that controls the migration and add
+        //       it to the application configuration.
+        executor.setCorePoolSize(value);
+        executor.setMaxPoolSize(value);
+
         executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("metadata-");
         executor.initialize();
@@ -53,10 +70,13 @@ public class ThreadPoolConfigurator {
 
     @Bean("reportingThreadPool")
     @Order(20)
-    public TaskExecutor reportingThreadPool(HmsMirrorCfgService hmsMirrorCfgService) {
+    public TaskExecutor reportingThreadPool(ExecuteSessionService executeSessionService) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
-        executor.setMaxPoolSize(hmsMirrorCfgService.getHmsMirrorConfig().getTransfer().getConcurrency());
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+
         executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("reporting-");
         executor.initialize();

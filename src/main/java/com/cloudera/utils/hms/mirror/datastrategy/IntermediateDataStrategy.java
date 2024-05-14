@@ -20,7 +20,8 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -39,16 +40,23 @@ import static com.cloudera.utils.hms.mirror.SessionVars.TEZ_EXECUTION_DESC;
 @Getter
 public class IntermediateDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private ConfigService configService;
+
     private TableService tableService;
 
-    public IntermediateDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    public IntermediateDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         log.debug("Table: {} buildout Intermediate Definition", tableMirror.getName());
         EnvironmentTable let = null;
@@ -63,7 +71,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             if (!TableUtils.isACID(ret) && hmsMirrorConfig.getCluster(Environment.RIGHT).isCreateIfNotExists() && hmsMirrorConfig.isSync()) {
                 ret.addIssue(CINE_WITH_EXIST.getDesc());
                 ret.setCreateStrategy(CreateStrategy.CREATE);
-            } else if (TableUtils.isACID(ret) && getHmsMirrorCfgService().getHmsMirrorConfig().isSync()) {
+            } else if (TableUtils.isACID(ret) && hmsMirrorConfig.isSync()) {
                 ret.addIssue(SCHEMA_EXISTS_SYNC_ACID.getDesc());
                 ret.setCreateStrategy(CreateStrategy.REPLACE);
             } else {
@@ -206,7 +214,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         log.debug("Table: {} buildout Intermediate SQL", tableMirror.getName());
 
@@ -234,7 +242,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         String transferCreateStmt = tableService.getCreateStatement(tableMirror, Environment.TRANSFER);
         let.addSql(TableUtils.CREATE_TRANSFER_DESC, transferCreateStmt);
 
-        database = getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName());
+        database = configService.getResolvedDB(tableMirror.getParent().getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
         ret.addSql(TableUtils.USE_DESC, useDb);
 
@@ -280,7 +288,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
                 if (let.getPartitioned()) {
-                    if (getHmsMirrorCfgService().getHmsMirrorConfig().getTransfer().getCommonStorage() != null) {
+                    if (hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
                         if (!TableUtils.isACID(let) || (TableUtils.isACID(let) && hmsMirrorConfig.getMigrateACID().isDowngrade())) {
                             String rightMSCKStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                             ret.addSql(TableUtils.REPAIR_DESC, rightMSCKStmt);
@@ -298,7 +306,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         rtn = buildOutDefinition(tableMirror);
         if (rtn)

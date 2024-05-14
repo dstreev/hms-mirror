@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsDBCP2Impl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHikariImpl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHybridImpl;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +40,13 @@ import java.sql.SQLException;
 @Slf4j
 public class ConnectionPoolService implements ConnectionPools {
 
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private ExecuteSessionService executeSessionService;
 
     private ConnectionPools connectionPools = null;
 
     @Autowired
-    public ConnectionPoolService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public ConnectionPoolService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -77,18 +78,20 @@ public class ConnectionPoolService implements ConnectionPools {
 
     private ConnectionPools getConnectionPoolsImpl() throws SQLException {
         ConnectionPools rtn = null;
-        switch (getHmsMirrorCfgService().getHmsMirrorConfig().getConnectionPoolLib()) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
+        switch (hmsMirrorConfig.getConnectionPoolLib()) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
-                rtn = new ConnectionPoolsDBCP2Impl(getHmsMirrorCfgService());
+                rtn = new ConnectionPoolsDBCP2Impl(getExecuteSessionService());
                 break;
             case HIKARICP:
                 log.info("Using HIKARICP Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHikariImpl(getHmsMirrorCfgService());
+                rtn = new ConnectionPoolsHikariImpl(getExecuteSessionService());
                 break;
             case HYBRID:
                 log.info("Using HYBRID Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHybridImpl(getHmsMirrorCfgService());
+                rtn = new ConnectionPoolsHybridImpl(getExecuteSessionService());
                 break;
         }
         // Initialize the connection pools

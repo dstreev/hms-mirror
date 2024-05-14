@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.service;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,13 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class ConfigService {
+public class WebConfigService {
 
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private ExecuteSessionService executeSessionService;
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     /*
@@ -61,11 +61,11 @@ public class ConfigService {
         return configList;
     }
 
-    public HmsMirrorConfig getCurrentConfig() {
-        return hmsMirrorCfgService.getHmsMirrorConfig();
-    }
-
-    public HmsMirrorConfig loadConfig(String configFileName) {
-        return hmsMirrorCfgService.loadConfig(configFileName);
-    }
+//    public HmsMirrorConfig getCurrentConfig() {
+//        return executeSessionService.getHmsMirrorConfig();
+//    }
+//
+//    public HmsMirrorConfig loadConfig(String configFileName) {
+//        return executeSessionService.loadConfig(configFileName);
+//    }
 }

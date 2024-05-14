@@ -20,9 +20,10 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.feature.IcebergState;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.FileFormatType;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -55,8 +56,8 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
 
     private TableService tableService;
 
-    public IcebergConversionDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public IcebergConversionDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -92,12 +93,14 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         log.debug("Table: {} buildout Iceberg Conversion SQL", tableMirror.getName());
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         try {
             String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             FileFormatType fileFormat = TableUtils.getFileFormatType(let.getDefinition());
-            Map<String, String> tableProperties = new HashMap<>(getHmsMirrorCfgService().getHmsMirrorConfig().getIcebergConfig().getTableProperties());
+            Map<String, String> tableProperties = new HashMap<>(hmsMirrorConfig.getIcebergConfig().getTableProperties());
 
             StringBuilder icebergProperties = new StringBuilder();
             if (fileFormat != FileFormatType.PARQUET) {
@@ -105,7 +108,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
             }
             tableProperties.put("storage_handler", "org.apache.iceberg.mr.hive.HiveIcebergStorageHandler");
 
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().getIcebergConfig().getVersion() == 2) {
+            if (hmsMirrorConfig.getIcebergConfig().getVersion() == 2) {
                 tableProperties.put("format-version", "2");
             }
             // Concatenate the table properties into a comma separated list.  Don't add the last comma
@@ -117,7 +120,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
             String convertToIceberg =
                     MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG, let.getName(), icebergProperties.toString());
             String convertToIcebergDesc =
-                    MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG_DESC, getHmsMirrorCfgService().getHmsMirrorConfig().getIcebergConfig().getVersion());
+                    MessageFormat.format(MirrorConf.CONVERT_TO_ICEBERG_DESC, hmsMirrorConfig.getIcebergConfig().getVersion());
             let.addSql(convertToIcebergDesc, convertToIceberg);
             return Boolean.TRUE;
         } catch (Exception e) {

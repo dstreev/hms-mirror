@@ -15,15 +15,18 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1;
+package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
-import com.cloudera.utils.hms.mirror.web.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @Slf4j
@@ -31,17 +34,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class RuntimeController {
 
     private ConfigService configService;
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private ExecuteSessionService executeSessionService;
     private ConnectionPoolService connectionPoolService;
 
     @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
+    public void setConfigService(ConfigService ConfigService) {
+        this.configService = ConfigService;
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Autowired
@@ -49,32 +52,40 @@ public class RuntimeController {
         this.connectionPoolService = connectionPoolService;
     }
 
-    public boolean validate() {
-        return hmsMirrorCfgService.validate();
-    }
+
+//    public RunStatus validate(String sessionId) {
+//        configService.validate(sessionId);
+//
+//        return executeSessionService.getSession(sessionId).getRunStatus();
+//    }
 
 
-    public void start(boolean dryrun) {
-        hmsMirrorCfgService.getHmsMirrorConfig().setExecute(!dryrun);
+    public RunStatus start(String sessionId, boolean dryrun) {
+        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setExecute(!dryrun);
 
         /////  Should we consider moving this to the RuntimeService?  /////
 
         // Close all connections, so we can ensure we have a clean start.
         connectionPoolService.close();
 
-        if (hmsMirrorCfgService.validate()) {
-//            hmsMirrorCfgService.start();
+        if (configService.validate()) {
+            // TODO: Execute the session.
+//            executeSessionService.start(sessionId);
         } else {
             log.error("Validation failed. Exiting.");
         }
+
+        return executeSessionService.getSession(sessionId).getRunStatus();
     }
 
-    public void status() {
-
+    public RunStatus status(String sessionId) {
+        return executeSessionService.getSession(sessionId).getRunStatus();
     }
 
-    public void stop() {
+    public RunStatus stop(String sessionId) {
+        // TODO: Stop a running session.
 
+        return executeSessionService.getSession(sessionId).getRunStatus();
     }
 
 }

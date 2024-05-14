@@ -20,7 +20,8 @@ package com.cloudera.utils.hms.mirror.connections;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -46,10 +47,10 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
     @Getter
-    private final HmsMirrorCfgService hmsMirrorCfgService;
+    private final ExecuteSessionService executeSessionService;
 
-    public ConnectionPoolsHybridImpl(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public ConnectionPoolsHybridImpl(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
@@ -129,13 +130,13 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!getHmsMirrorCfgService().getHmsMirrorConfig().isLoadingTestData()) {
+        if (!getExecuteSessionService().getCurrentSession().getHmsMirrorConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).
-            if (getHmsMirrorCfgService().loadPartitionMetadata()) {
+//            if (configService.loadPartitionMetadata()) {
                 initMetastoreDataSources();
-            }
+//            }
         }
     }
 
@@ -167,7 +168,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
                 // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (getHmsMirrorCfgService().getHmsMirrorConfig().getCluster(environment).isLegacyHive()) {
+                if (getExecuteSessionService().getCurrentSession().getHmsMirrorConfig().getCluster(environment).isLegacyHive()) {
                     ConnectionFactory connectionFactory =
                             new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 

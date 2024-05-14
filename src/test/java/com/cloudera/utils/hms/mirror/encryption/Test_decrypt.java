@@ -76,7 +76,7 @@ public class Test_decrypt extends E2EBaseTest {
     public void validatePassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getHmsMirrorConfig().getPassword());
+                getConfigService().getCurrentSession().getHmsMirrorConfig().getPassword());
     }
 
 }

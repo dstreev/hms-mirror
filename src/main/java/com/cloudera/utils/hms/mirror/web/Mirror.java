@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web;
 
-import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;

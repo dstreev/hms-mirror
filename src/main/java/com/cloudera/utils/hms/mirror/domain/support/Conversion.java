@@ -21,7 +21,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,7 +31,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -93,16 +92,15 @@ public class Conversion {
         }
     }
 
-    public String executeCleanUpSql(Environment environment, String database, HmsMirrorCfgService hmsMirrorCfgService) {
+    public String executeCleanUpSql(Environment environment, String database, String resolvedDB) {
         StringBuilder sb = new StringBuilder();
         boolean found = Boolean.FALSE;
         sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
         sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
 //        sb.append("-- These are the command run on the " + environment + " cluster when `-e` is used.\n");
-        String rDb = hmsMirrorCfgService.getResolvedDB(database);
         DBMirror dbMirror = databases.get(database);
 
-        sb.append("USE ").append(rDb).append(";\n");
+        sb.append("USE ").append(resolvedDB).append(";\n");
 
         Set<String> tables = dbMirror.getTableMirrors().keySet();
         for (String table : tables) {
@@ -168,9 +166,9 @@ public class Conversion {
         return databases.get(database);
     }
 
-    public String toReport(String database, HmsMirrorCfgService hmsMirrorCfgService) throws JsonProcessingException {
-        HmsMirrorConfig hmsMirrorConfig = hmsMirrorCfgService.getHmsMirrorConfig();
-        RunStatus runStatus = hmsMirrorCfgService.getRunStatus();
+    public String toReport(String database, ExecuteSessionService executeSessionService) throws JsonProcessingException {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
 
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

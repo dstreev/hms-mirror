@@ -21,9 +21,11 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -62,14 +64,17 @@ public class CliReporter {
     private String leftCleanUpFile = null;
     private String rightExecuteFile = null;
     private String rightCleanUpFile = null;
-    private HmsMirrorCfgService hmsMirrorCfgService;
-    private RunStatus runStatus;
+
+    private ConfigService configService;
+    private ExecuteSessionService executeSessionService;
+
     private boolean tiktok = false;
 
     @Autowired
-    public void setRunStatus(RunStatus runStatus) {
-        this.runStatus = runStatus;
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
     }
+
 
     @Bean
     @Order(20)
@@ -80,7 +85,9 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-        Conversion conversion = getRunStatus().getConversion();
+        ExecuteSession session = executeSessionService.getCurrentSession();
+        RunStatus runStatus = session.getRunStatus();
+        Conversion conversion = runStatus.getConversion();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -91,7 +98,7 @@ public class CliReporter {
             // Table Processing
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
-                tblVars.put("db.name", getHmsMirrorCfgService().getResolvedDB(tblMirror.getParent().getName()));
+                tblVars.put("db.name", configService.getResolvedDB(tblMirror.getParent().getName()));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
@@ -136,7 +143,7 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        RunStatus runStatus = hmsMirrorCfgService.getHmsMirrorConfig().getRunStatus();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
 
         if (runStatus.getErrorMessages().length > 0) {
             report.append("\n=== Errors ===\n");
@@ -188,7 +195,10 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
-        Conversion conversion = getRunStatus().getConversion();
+        ExecuteSession session = executeSessionService.getCurrentSession();
+        RunStatus runStatus = session.getRunStatus();
+        Conversion conversion = runStatus.getConversion();
+        HmsMirrorConfig hmsMirrorConfig = session.getHmsMirrorConfig();
 
         tiktok = !tiktok;
         startedTables.clear();
@@ -196,10 +206,10 @@ public class CliReporter {
             varMap.put("retry", "       ");
         else
             varMap.put("retry", "(RETRY)");
-        varMap.put("run.mode", getHmsMirrorCfgService().getHmsMirrorConfig().isExecute() ? "EXECUTE" : "DRYRUN");
+        varMap.put("run.mode", hmsMirrorConfig.isExecute() ? "EXECUTE" : "DRYRUN");
         varMap.put("HMS-Mirror-Version", ReportingConf.substituteVariablesFromManifest("${HMS-Mirror-Version}"));
-        varMap.put("config.file", getHmsMirrorCfgService().getHmsMirrorConfig().getConfigFilename());
-        varMap.put("config.strategy", getHmsMirrorCfgService().getHmsMirrorConfig().getDataStrategy().toString());
+        varMap.put("config.file", hmsMirrorConfig.getConfigFilename());
+        varMap.put("config.strategy", hmsMirrorConfig.getDataStrategy().toString());
         varMap.put("tik.tok", tiktok ? "*" : "");
         varMap.put("java.version", System.getProperty("java.version"));
         varMap.put("os.name", System.getProperty("os.name"));
@@ -270,11 +280,12 @@ public class CliReporter {
 
     @Async("reportingThreadPool")
     public void run() {
+        ExecuteSession session = executeSessionService.getCurrentSession();
         try {
             fetchReportTemplates();
             log.info("Starting Reporting Thread");
             // Wait for the main thread to start.
-            while (!getHmsMirrorCfgService().getRunning().get()) {
+            while (!session.getRunning().get()) {
                 try {
                     Thread.sleep(sleepInterval);
                 } catch (InterruptedException e) {
@@ -282,7 +293,7 @@ public class CliReporter {
                 }
             }
 //            getHmsMirrorCfgService().getRunning().set(true);
-            while (getHmsMirrorCfgService().getRunning().get()) {
+            while (session.getRunning().get()) {
                 refresh(Boolean.FALSE);
                 try {
                     Thread.sleep(sleepInterval);
@@ -302,8 +313,8 @@ public class CliReporter {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public void setVariable(String key, String value) {

@@ -46,8 +46,8 @@ public class Cluster implements Comparable<Cluster> {
     @JsonIgnore
     private HmsMirrorConfig hmsMirrorConfig;
 
-    @JsonIgnore
-    private ConnectionPools pools = null;
+//    @JsonIgnore
+//    private ConnectionPools pools = null;
 
     @JsonIgnore
     private boolean initialized = Boolean.FALSE;
@@ -129,33 +129,33 @@ public class Cluster implements Comparable<Cluster> {
         return hiveServer2.equals(cluster.hiveServer2);
     }
 
-    @JsonIgnore
-    public Connection getConnection() throws SQLException {
-        Connection conn = null;
-        if (pools != null) {
-            try {
-                conn = pools.getHS2EnvironmentConnection(getEnvironment());
-            } catch (RuntimeException rte) {
-                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
-                throw rte;
-            }
-        }
-        return conn;
-    }
+//    @JsonIgnore
+//    public Connection getConnection() throws SQLException {
+//        Connection conn = null;
+//        if (pools != null) {
+//            try {
+//                conn = pools.getHS2EnvironmentConnection(getEnvironment());
+//            } catch (RuntimeException rte) {
+//                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
+//                throw rte;
+//            }
+//        }
+//        return conn;
+//    }
 
-    @JsonIgnore
-    public Connection getMetastoreDirectConnection() throws SQLException {
-        Connection conn = null;
-        if (pools != null) {
-            try {
-                conn = pools.getMetastoreDirectEnvironmentConnection(getEnvironment());
-            } catch (RuntimeException rte) {
-                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
-                throw rte;
-            }
-        }
-        return conn;
-    }
+//    @JsonIgnore
+//    public Connection getMetastoreDirectConnection() throws SQLException {
+//        Connection conn = null;
+//        if (pools != null) {
+//            try {
+//                conn = pools.getMetastoreDirectEnvironmentConnection(getEnvironment());
+//            } catch (RuntimeException rte) {
+//                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
+//                throw rte;
+//            }
+//        }
+//        return conn;
+//    }
 
     @Override
     public int hashCode() {

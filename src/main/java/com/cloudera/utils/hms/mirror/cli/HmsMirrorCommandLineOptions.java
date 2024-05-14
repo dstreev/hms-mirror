@@ -23,16 +23,19 @@ import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
 import com.cloudera.utils.hms.mirror.domain.WarehouseConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.Protect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -60,6 +63,13 @@ import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED
 @Setter
 public class HmsMirrorCommandLineOptions {
     public static String SPRING_CONFIG_PREFIX = "hms-mirror.config";
+
+    private ConfigService configService;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     public static void main(String[] args) {
         HmsMirrorCommandLineOptions pcli = new HmsMirrorCommandLineOptions();
@@ -1534,11 +1544,12 @@ public class HmsMirrorCommandLineOptions {
      */
     @Bean
     @Order(20)
-    CommandLineRunner postHmsCmdLnOptConfigProcessing(HmsMirrorCfgService hmsMirrorCfgService,
-                                                      ConnectionPoolService connectionPoolService,
-                                                      RunStatus runStatus) {
+    CommandLineRunner postHmsCmdLnOptConfigProcessing(ExecuteSessionService executeSessionService,
+                                                      ConnectionPoolService connectionPoolService) {
         return args -> {
-            HmsMirrorConfig hmsMirrorConfig = hmsMirrorCfgService.getHmsMirrorConfig();
+            HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+            ExecuteSession executeSession = executeSessionService.getCurrentSession();
+            RunStatus runStatus = executeSession.getRunStatus();
 
             // Decode Password if necessary.
             if (hmsMirrorConfig.getPassword() != null || hmsMirrorConfig.getDecryptPassword() != null) {
@@ -1546,28 +1557,28 @@ public class HmsMirrorCommandLineOptions {
                 if (hmsMirrorConfig.getPasswordKey() != null) {
                     Protect protect = new Protect(hmsMirrorConfig.getPasswordKey());
                     // Set to control execution flow.
-                    hmsMirrorConfig.addError(MessageCode.PASSWORD_CFG);
+                    executeSession.addError(MessageCode.PASSWORD_CFG);
                     if (hmsMirrorConfig.getPassword() != null) {
                         String epassword = null;
                         try {
                             epassword = protect.encrypt(hmsMirrorConfig.getPassword());
                             hmsMirrorConfig.setDecryptPassword(epassword);
-                            hmsMirrorConfig.addWarning(MessageCode.ENCRYPTED_PASSWORD, epassword);
+                            executeSession.addWarning(MessageCode.ENCRYPTED_PASSWORD, epassword);
                         } catch (Exception e) {
-                            hmsMirrorConfig.addError(MessageCode.ENCRYPT_PASSWORD_ISSUE);
+                            executeSession.addError(MessageCode.ENCRYPT_PASSWORD_ISSUE);
                         }
                     } else {
                         String password = null;
                         try {
                             password = protect.decrypt(hmsMirrorConfig.getDecryptPassword());
                             hmsMirrorConfig.setPassword(password);
-                            hmsMirrorConfig.addWarning(MessageCode.DECRYPTED_PASSWORD, password);
+                            executeSession.addWarning(MessageCode.DECRYPTED_PASSWORD, password);
                         } catch (Exception e) {
-                            hmsMirrorConfig.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE);
+                            executeSession.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE);
                         }
                     }
                 } else {
-                    hmsMirrorConfig.addError(MessageCode.PKEY_PASSWORD_CFG);
+                    executeSession.addError(MessageCode.PKEY_PASSWORD_CFG);
                 }
             } else if (hmsMirrorConfig.getPasswordKey() != null) {
                 // Decrypt Passwords
@@ -1579,9 +1590,9 @@ public class HmsMirrorCommandLineOptions {
                         hmsMirrorConfig.getCluster(Environment.LEFT).getHiveServer2()
                                 .getConnectionProperties().setProperty("password",
                                         protect.decrypt(hmsMirrorConfig.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password")));
-                        hmsMirrorConfig.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
+                        executeSession.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
                     } catch (Exception e) {
-                        hmsMirrorConfig.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "LEFT HiveServer2");
+                        executeSession.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "LEFT HiveServer2");
                     }
                 }
                 if (hmsMirrorConfig.getCluster(Environment.RIGHT) != null
@@ -1591,9 +1602,9 @@ public class HmsMirrorCommandLineOptions {
                         hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2()
                                 .getConnectionProperties().setProperty("password",
                                         protect.decrypt(hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password")));
-                        hmsMirrorConfig.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
+                        executeSession.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
                     } catch (Exception e) {
-                        hmsMirrorConfig.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "RIGHT HiveServer2");
+                        executeSession.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "RIGHT HiveServer2");
                     }
                 }
                 if (hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect() != null
@@ -1602,15 +1613,15 @@ public class HmsMirrorCommandLineOptions {
                         hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect()
                                 .getConnectionProperties().setProperty("password",
                                         protect.decrypt(hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password")));
-                        hmsMirrorConfig.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
+                        executeSession.addWarning(MessageCode.DECRYPTED_PASSWORD, "*******");
                     } catch (Exception e) {
-                        hmsMirrorConfig.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "LEFT MetastoreDirect");
+                        executeSession.addError(MessageCode.DECRYPTING_PASSWORD_ISSUE, "LEFT MetastoreDirect");
                     }
                 }
             }
 
             // Before Proceeding, check if we are just working with password encryption/decryption.
-            long errorCode = hmsMirrorConfig.getRunStatus().getErrors().getReturnCode() * -1;
+            long errorCode = executeSession.getRunStatus().getErrors().getReturnCode() * -1;
 
             if (BigInteger.valueOf(errorCode).testBit(MessageCode.DECRYPTING_PASSWORD_ISSUE.getCode())) {//|| BigInteger.valueOf(passcodeError).testBit(MessageCode.PASSWORD_CFG)) {
                 // Print Warnings to show the results of the password encryption/decryption.
@@ -1627,7 +1638,7 @@ public class HmsMirrorCommandLineOptions {
                 return;
             }
 
-            if (!hmsMirrorCfgService.validate()) {
+            if (!configService.validate()) {
                 for (String message : runStatus.getErrors().getMessages()) {
                     log.error(message);
                 }
@@ -1674,7 +1685,7 @@ public class HmsMirrorCommandLineOptions {
                     hs2Envs.add(Environment.LEFT);
                     break;
             }
-            if (hmsMirrorCfgService.loadPartitionMetadata()) {
+            if (configService.loadPartitionMetadata()) {
                 if (hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect() != null) {
                     connectionPoolService.getConnectionPools().addMetastoreDirect(Environment.LEFT, hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect());
                 }
@@ -1725,27 +1736,27 @@ public class HmsMirrorCommandLineOptions {
                 log.error("Issue initializing connections.  Check driver locations", cnfe);
                 throw new RuntimeException(cnfe);
             }
-
-            hmsMirrorConfig.getCluster(Environment.LEFT).setPools(connectionPoolService.getConnectionPools());
+//            hmsMirrorConfig.getCluster(Environment.LEFT).setPools(connectionPoolService.getConnectionPools());
             switch (hmsMirrorConfig.getDataStrategy()) {
                 case DUMP:
                     // Don't load the datasource for the right with DUMP strategy.
                     break;
                 default:
                     // Don't set the Pools when Disconnected.
-                    if (hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2() != null && !hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
-                        hmsMirrorConfig.getCluster(Environment.RIGHT).setPools(connectionPoolService.getConnectionPools());
+                    if (hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2() !=
+                            null && !hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+//                        hmsMirrorConfig.getCluster(Environment.RIGHT).setPools(connectionPoolService.getConnectionPools());
                     }
             }
 
-            if (hmsMirrorCfgService.isConnectionKerberized()) {
+            if (configService.isConnectionKerberized()) {
                 log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
-                hmsMirrorCfgService.setupGSS();
+                configService.setupGSS();
             }
             log.debug("Checking Hive Connections");
-            if (!hmsMirrorConfig.isLoadingTestData() && !hmsMirrorCfgService.checkConnections()) {
+            if (!hmsMirrorConfig.isLoadingTestData() && !configService.checkConnections()) {
                 log.error("Check Hive Connections Failed.");
-                if (hmsMirrorCfgService.isConnectionKerberized()) {
+                if (configService.isConnectionKerberized()) {
                     log.error("Check Kerberos configuration if GSS issues are encountered.  See the running.md docs for details.");
                 }
                 throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");

@@ -42,7 +42,14 @@ import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 public class TranslatorService {
 
     @Getter
-    private HmsMirrorCfgService hmsMirrorCfgService = null;
+    private ExecuteSessionService executeSessionService = null;
+
+    private ConfigService configService;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     /**
      * @param consolidationLevel how far up the directory hierarchy to go to build the distcp list based on the sources
@@ -53,13 +60,16 @@ public class TranslatorService {
     public synchronized Map<String, Map<String, Set<String>>> buildDistcpList(String database, Environment environment, int consolidationLevel) {
         Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
 
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
         // get the map for a db.
-        Set<String> databases = getHmsMirrorCfgService().getHmsMirrorConfig().getTranslator().getDbLocationMap().keySet();
+        Set<String> databases = hmsMirrorConfig.getTranslator().getDbLocationMap().keySet();
 
         // get the map.entry
         Map<String, Set<String>> reverseMap = new TreeMap<>();
         // Get a static view of set to avoid concurrent modification.
-        Set<EnvironmentMap.TranslationLevel> dbTranslationLevel = new HashSet<>(getHmsMirrorCfgService().getHmsMirrorConfig().getTranslator().getDbLocationMap(database, environment));
+        Set<EnvironmentMap.TranslationLevel> dbTranslationLevel =
+                new HashSet<>(hmsMirrorConfig.getTranslator().getDbLocationMap(database, environment));
 
         Map<String, String> dbLocationMap = new TreeMap<>();
 
@@ -107,11 +117,13 @@ public class TranslatorService {
 
     public String processGlobalLocationMap(String originalLocation) {
         String newLocation = null;
-        if (!getHmsMirrorCfgService().getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
+        if (!hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
             log.debug("Checking location: {} for replacement element in global location map.", originalLocation);
-            for (String key : getHmsMirrorCfgService().getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap().keySet()) {
+            for (String key : hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().keySet()) {
                 if (originalLocation.startsWith(key)) {
-                    String rLoc = getHmsMirrorCfgService().getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap().get(key);
+                    String rLoc = hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().get(key);
                     newLocation = originalLocation.replace(key, rLoc);
                     log.info("Location Map Found. {}:{} New Location: {}", key, rLoc, newLocation);
                     // Stop Processing
@@ -126,15 +138,14 @@ public class TranslatorService {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public Boolean translatePartitionLocations(TableMirror tblMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
-//        Config config = EnvironmentConnectionPools.getInstance().getConfig();
         Map<String, String> dbRef = tblMirror.getParent().getDBDefinition(Environment.RIGHT);
         Boolean chkLocation = hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null && hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null;
         if (hmsMirrorConfig.isEvaluatePartitionLocation()
@@ -182,7 +193,7 @@ public class TranslatorService {
                     }
                     entry.setValue(newPartitionLocation);
                     // For distcp.
-                    hmsMirrorConfig.getTranslator().addLocation(getHmsMirrorCfgService().getResolvedDB(tblMirror.getParent().getName()), Environment.RIGHT, partitionLocation,
+                    hmsMirrorConfig.getTranslator().addLocation(configService.getResolvedDB(tblMirror.getParent().getName()), Environment.RIGHT, partitionLocation,
                             newPartitionLocation, ++level);
 
                     // Check and warn against warehouse locations if specified.
@@ -221,12 +232,9 @@ public class TranslatorService {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
-        String dbName = getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName());
-
-//        Config config = Context.getInstance().getConfig();
-
+        String dbName = configService.getResolvedDB(tableMirror.getParent().getName());
 
         String leftNS = hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace();
         // Set base on rightNS or Common Storage, if specified

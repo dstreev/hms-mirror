@@ -24,7 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -40,12 +40,12 @@ public abstract class DataStrategyBase implements DataStrategy {
     // Pattern to find the value of the last directory in a url.
     public static final Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
-    protected HmsMirrorCfgService hmsMirrorCfgService;
+    protected ExecuteSessionService executeSessionService;
 
     protected Boolean AVROCheck(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         Boolean relative = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         // Check for AVRO
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);

@@ -19,19 +19,20 @@ package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -41,42 +42,104 @@ import org.springframework.core.annotation.Order;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 
 @Configuration
 @Slf4j
-@Getter
-@Setter
-class RunStateInitialization {
+public class CliInit {
 
-    @Bean(name = "runStatus")
-    @Order(10)
-    @ConditionalOnProperty(
-            name = "hms-mirror.conversion.test-filename",
-            havingValue = "false")
-    public RunStatus buildRunStatus() {
-        log.info("Building Clean RunStatus Instance");
-        return new RunStatus();
+    private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
-    //    @Bean(name = "conversion")
+    private HmsMirrorConfig initializeConfig(String configFilename) {
+        HmsMirrorConfig hmsMirrorConfig;
+        log.info("Initializing Config.");
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        URL cfgUrl = null;
+        try {
+            // Load file from classpath and convert to string
+            File cfgFile = new File(configFilename);
+            if (!cfgFile.exists()) {
+                // Try loading from resource (classpath).  Mostly for testing.
+                cfgUrl = this.getClass().getResource(configFilename);
+                if (cfgUrl == null) {
+                    throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
+                }
+                log.info("Using 'classpath' config: {}", configFilename);
+            } else {
+                log.info("Using filesystem config: {}", configFilename);
+                try {
+                    cfgUrl = cfgFile.toURI().toURL();
+                } catch (MalformedURLException mfu) {
+                    throw new RuntimeException("Couldn't locate configuration file: "
+                            + configFilename, mfu);
+                }
+            }
+
+            String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
+            hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
+//            hmsMirrorConfig.setRunStatus(runStatus);
+            // Link the translator to the config
+            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
+            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
+                cluster.setHmsMirrorConfig(hmsMirrorConfig);
+            }
+            hmsMirrorConfig.setConfigFilename(configFilename);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("Config loaded.");
+        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
+        return hmsMirrorConfig;
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.setup",
+            havingValue = "false")
+    public HmsMirrorConfig loadConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
+        return HmsMirrorConfig.loadConfig(configFilename);
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.setup",
+            havingValue = "true")
+    /*
+    Init empty for framework to fill in.
+     */
+    public HmsMirrorConfig loadSetupConfig() {
+        return new HmsMirrorConfig();
+    }
+
+//    @Bean(name = "runStatus")
 //    @Order(10)
 //    @ConditionalOnProperty(
 //            name = "hms-mirror.conversion.test-filename",
 //            havingValue = "false")
-//    public Conversion buildConversion() {
-//        log.info("Building Clean Conversion Instance");
-//        return new Conversion();
+//    public RunStatus buildRunStatus() {
+//        log.info("Building Clean RunStatus Instance");
+//        return new RunStatus();
 //    }
-//
-    @Bean(name = "runStatus")
+
+    @Bean
     @Order(500)
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename")
-    public RunStatus loadTestData(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
-        RunStatus runStatus = new RunStatus();
+    public CommandLineRunner loadTestData(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
+//        RunStatus runStatus = new RunStatus();
+        return args -> {
+
             hmsMirrorConfig.setLoadTestDataFile(filename);
             log.info("Reconstituting Conversion from test data file: {}", filename);
             try {
@@ -96,7 +159,8 @@ class RunStateInitialization {
                 Conversion conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
                 // Set Config Databases;
                 hmsMirrorConfig.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
-                runStatus.setConversion(conversion);
+                executeSessionService.getCurrentSession().getRunStatus().setConversion(conversion);
+//            runStatus.setConversion(conversion);
             } catch (UnrecognizedPropertyException upe) {
                 throw new RuntimeException("\nThere may have been a breaking change in the configuration since the previous " +
                         "release. Review the note below and remove the 'Unrecognized field' from the configuration and try " +
@@ -111,15 +175,19 @@ class RunStateInitialization {
                     throw new RuntimeException("A configuration element is no longer valid, progress.  Please remove the element from the configuration yaml and try again.", t);
                 }
             }
-            return runStatus;
+        };
+//        return runStatus;
     }
 
     @Bean
     // Needs to happen after all the configs have been set.
     @Order(15)
-    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig hmsMirrorConfig, RunStatus runStatus) {
+    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
+            executeSessionService.getCurrentSession().setHmsMirrorConfig(hmsMirrorConfig);
+            RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
             Conversion conversion = runStatus.getConversion();
+
             log.info("Post Processing Conversion");
             if (hmsMirrorConfig.isLoadingTestData()) {
                 for (DBMirror dbMirror : conversion.getDatabases().values()) {
@@ -168,4 +236,5 @@ class RunStateInitialization {
             }
         };
     }
+
 }

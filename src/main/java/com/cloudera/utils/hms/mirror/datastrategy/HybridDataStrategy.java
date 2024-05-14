@@ -21,7 +21,8 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +34,19 @@ import org.springframework.stereotype.Component;
 @Getter
 public class HybridDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private ConfigService configService;
+
     private IntermediateDataStrategy intermediateDataStrategy;
     private SQLDataStrategy sqlDataStrategy;
     private ExportImportDataStrategy exportImportDataStrategy;
 
-    public HybridDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    public HybridDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -54,16 +62,15 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
-
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         // Need to look at table.  ACID tables go to doACID()
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         // Acid tables between legacy and non-legacy are forced to intermediate
-        if (TableUtils.isACID(let) && getHmsMirrorCfgService().legacyMigration()) {
+        if (TableUtils.isACID(let) && configService.legacyMigration()) {
             tableMirror.setStrategy(DataStrategyEnum.ACID);
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().getMigrateACID().isOn()) {
+            if (hmsMirrorConfig.getMigrateACID().isOn()) {
                 rtn = intermediateDataStrategy.execute(tableMirror);
             } else {
                 let.addIssue(TableUtils.ACID_NOT_ON);
@@ -81,8 +88,8 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
                             ".  Hence, the SQL method has been selected for the migration.");
 
                     tableMirror.setStrategy(DataStrategyEnum.SQL);
-                    if (getHmsMirrorCfgService().getHmsMirrorConfig().getTransfer().getIntermediateStorage() != null
-                            || getHmsMirrorCfgService().getHmsMirrorConfig().getTransfer().getCommonStorage() != null) {
+                    if (hmsMirrorConfig.getTransfer().getIntermediateStorage() != null
+                            || hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
                         rtn = intermediateDataStrategy.execute(tableMirror);
                     } else {
                         rtn = sqlDataStrategy.execute(tableMirror);

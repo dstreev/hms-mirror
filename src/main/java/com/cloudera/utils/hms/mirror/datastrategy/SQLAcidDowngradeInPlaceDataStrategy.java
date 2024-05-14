@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -43,14 +43,14 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     private TableService tableService;
     private StatsCalculatorService statsCalculatorService;
 
-    public SQLAcidDowngradeInPlaceDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public SQLAcidDowngradeInPlaceDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -105,7 +105,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         // Check to see if there are partitions.
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
@@ -175,12 +175,13 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         /*
         In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
         the RIGHT cluster is configured the same as the LEFT.
          */
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+
         /*
         rename original table
         remove artificial bucket in new table def

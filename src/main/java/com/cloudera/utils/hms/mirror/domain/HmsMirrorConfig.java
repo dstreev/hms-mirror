@@ -120,8 +120,8 @@ public class HmsMirrorConfig {
     private String password;
     @JsonIgnore
     private String passwordKey;
-    @JsonIgnore
-    private RunStatus runStatus;
+//    @JsonIgnore
+//    private RunStatus runStatus;
     private boolean quiet = Boolean.FALSE;
     /*
     Used when a schema is transferred and has 'purge' properties for the table.
@@ -318,21 +318,21 @@ public class HmsMirrorConfig {
 
     }
 
-    public void addError(MessageCode code) {
-        getRunStatus().addError(code);
-    }
-
-    public void addError(MessageCode code, Object... args) {
-        getRunStatus().addError(code, args);
-    }
-
-    public void addWarning(MessageCode code) {
-        getRunStatus().addWarning(code);
-    }
-
-    public void addWarning(MessageCode code, Object... args) {
-        getRunStatus().addWarning(code, args);
-    }
+//    public void addError(MessageCode code) {
+//        getRunStatus().addError(code);
+//    }
+//
+//    public void addError(MessageCode code, Object... args) {
+//        getRunStatus().addError(code, args);
+//    }
+//
+//    public void addWarning(MessageCode code) {
+//        getRunStatus().addWarning(code);
+//    }
+//
+//    public void addWarning(MessageCode code, Object... args) {
+//        getRunStatus().addWarning(code, args);
+//    }
 
     public boolean convertManaged() {
         if (getCluster(Environment.LEFT).isLegacyHive() && !getCluster(Environment.RIGHT).isLegacyHive()) {

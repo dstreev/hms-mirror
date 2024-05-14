@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,15 +55,15 @@ public class E2EBaseTest {
     protected HMSMirrorAppService HMSMirrorAppService;
 
     protected HmsMirrorConfig getConfig() {
-        return getConfigService().getHmsMirrorConfig();
+        return getConfigService().getCurrentSession().getHmsMirrorConfig();
     }
 
-    protected HmsMirrorCfgService getConfigService() {
-        return HMSMirrorAppService.getHmsMirrorCfgService();
+    protected ExecuteSessionService getConfigService() {
+        return HMSMirrorAppService.getExecuteSessionService();
     }
 
     protected Conversion getConversion() {
-        return HMSMirrorAppService.getRunStatus().getConversion();
+        return HMSMirrorAppService.getExecuteSessionService().getCurrentSession().getRunStatus().getConversion();
     }
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {
@@ -139,9 +139,9 @@ public class E2EBaseTest {
         return expected * -1;
     }
 
-    protected RunStatus getProgression() {
-        return HMSMirrorAppService.getRunStatus();
-    }
+//    protected RunStatus getProgression() {
+//        return HMSMirrorAppService.getRunStatus();
+//    }
 
     protected DBMirror[] getResults(String outputDirBase, String sourceTestDataSet) {
         List<DBMirror> dbMirrorList = new ArrayList<>();

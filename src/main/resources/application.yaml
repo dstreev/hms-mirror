@@ -18,5 +18,7 @@ hms-mirror:
     setup: "false"
   conversion:
     test-filename: "false"
+  concurrency:
+    max-threads: 10
   api:
     version: "2.2.0.0"

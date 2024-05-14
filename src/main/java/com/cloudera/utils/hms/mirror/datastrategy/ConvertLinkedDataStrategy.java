@@ -20,7 +20,8 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -38,12 +39,18 @@ import static com.cloudera.utils.hms.mirror.TablePropertyVars.EXTERNAL_TABLE_PUR
 @Getter
 public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private ConfigService configService;
     private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
     private TableService tableService;
     private TranslatorService translatorService;
 
-    public ConvertLinkedDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    public ConvertLinkedDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -59,7 +66,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
@@ -74,7 +81,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                 } else if (tableMirror.isPartitioned(Environment.LEFT)) {
                     // We need to drop the RIGHT and RECREATE.
                     ret.addIssue("Table is partitioned.  Need to change data strategy to drop and recreate.");
-                    String useDb = MessageFormat.format(MirrorConf.USE, getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName()));
+                    String useDb = MessageFormat.format(MirrorConf.USE, configService.getResolvedDB(tableMirror.getParent().getName()));
                     ret.addSql(MirrorConf.USE_DESC, useDb);
 
                     // Make sure the table is NOT set to purge.
@@ -92,7 +99,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                 } else {
                     // - AVRO LOCATION
                     if (AVROCheck(tableMirror)) {
-                        String useDb = MessageFormat.format(MirrorConf.USE, getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName()));
+                        String useDb = MessageFormat.format(MirrorConf.USE, configService.getResolvedDB(tableMirror.getParent().getName()));
                         ret.addSql(MirrorConf.USE_DESC, useDb);
                         // Look at the table definition and get.
                         // - LOCATION

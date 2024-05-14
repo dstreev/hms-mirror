@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
 import java.io.File;
 
 @Configuration
-public class HmsMirrorConfigWebInit {
+public class WebInit {
 
     @Bean
     public HmsMirrorConfig buildHmsMirrorConfig() {
@@ -41,7 +40,7 @@ public class HmsMirrorConfigWebInit {
     }
 
     @Bean("runStatus")
-    RunStatus buildRunStatus() {
+    public RunStatus buildRunStatus() {
         return new RunStatus();
     }
 

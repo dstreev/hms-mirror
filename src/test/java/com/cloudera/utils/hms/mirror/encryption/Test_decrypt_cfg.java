@@ -68,21 +68,21 @@ public class Test_decrypt_cfg extends E2EBaseTest {
     public void validateLeftPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getHmsMirrorConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateLeftMSPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "cdpprivaatebase",
-                getConfigService().getHmsMirrorConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateRightPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getHmsMirrorConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
 }

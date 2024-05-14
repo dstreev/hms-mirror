@@ -18,8 +18,9 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -37,13 +38,15 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     private SchemaOnlyDataStrategy schemaOnlyDataStrategy;
     private TableService tableService;
 
-    public LinkedDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public LinkedDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
         log.debug("Table: {} buildout LINKED Definition", tableMirror.getName());
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -57,12 +60,12 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
         if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
             // Swap out the namespace of the LEFT with the RIGHT.
             copySpec.setReplaceLocation(Boolean.FALSE);
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().convertManaged())
+            if (hmsMirrorConfig.convertManaged())
                 copySpec.setUpgrade(Boolean.TRUE);
             // LINKED doesn't own the data.
             copySpec.setTakeOwnership(Boolean.FALSE);
 
-            if (getHmsMirrorCfgService().getHmsMirrorConfig().isSync()) {
+            if (hmsMirrorConfig.isSync()) {
                 // We assume that the 'definitions' are only there is the
                 //     table exists.
                 if (!let.isExists() && ret.isExists()) {
@@ -121,6 +124,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable tet = getEnvironmentTable(Environment.TRANSFER, tableMirror);

@@ -15,11 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1;
+package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
-import com.cloudera.utils.hms.mirror.web.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,17 +36,17 @@ import java.util.*;
 @RequestMapping(path = "/api/v1/translator")
 public class TranslatorController {
 
-    private ConfigService configService;
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private WebConfigService webConfigService;
+    private ExecuteSessionService executeSessionService;
 
     @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
+    public void setConfigService(WebConfigService webConfigService) {
+        this.webConfigService = webConfigService;
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Operation(summary = "Get Translator Details")
@@ -58,7 +58,7 @@ public class TranslatorController {
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public Translator getTransfer() {
         log.debug("Getting Translator Details");
-        return hmsMirrorCfgService.getHmsMirrorConfig().getTranslator();
+        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator();
     }
 
     // Translator
@@ -73,9 +73,9 @@ public class TranslatorController {
             @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation) {
         if (forceExternalLocation != null) {
             log.info("Setting Translator 'forceExternalLocation' to: {}", forceExternalLocation);
-            hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
+            executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
         }
-        return hmsMirrorCfgService.getHmsMirrorConfig().getTranslator();
+        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator();
     }
 
     // Translator / Global Location Map
@@ -90,8 +90,8 @@ public class TranslatorController {
     public Map<String, String> addGLMEntries(
             @RequestParam() Map<String, String> map) {
         log.info("Adding Global Location Map Entries: {}", map);
-        map.forEach((k, v) -> hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().addGlobalLocationMap(k, v));
-        return hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap();
+        map.forEach((k, v) -> executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().addGlobalLocationMap(k, v));
+        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap();
     }
 
     @Operation(summary = "Remove Global Location Map Value(s)")
@@ -107,11 +107,11 @@ public class TranslatorController {
         List<String> removeList = Collections.emptyList();
         if (keyList != null) {
             log.info("Removing Global Location Map Entries: {}", keyList);
-            removeList = hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(keyList);
+            removeList = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(keyList);
         }
         if (key != null) {
             log.info("Removing Global Location Map Entry: {}", key);
-            String removedItem = hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(key);
+            String removedItem = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(key);
             removeList = new ArrayList<>();
             removeList.add(removedItem);
         }
@@ -130,6 +130,6 @@ public class TranslatorController {
 
         // Pull all unique locations from databases/tables.  Requires Metastore Direct connection.
 
-        return hmsMirrorCfgService.getHmsMirrorConfig().getTranslator().getGlobalLocationMap();
+        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getGlobalLocationMap();
     }
 }

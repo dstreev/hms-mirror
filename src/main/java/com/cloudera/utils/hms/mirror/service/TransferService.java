@@ -53,7 +53,8 @@ public class TransferService {
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
     private final DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
     private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private ConfigService configService;
+    private ExecuteSessionService executeSessionService;
     private TableService tableService;
     private DatabaseService databaseService;
     private DataStrategyService dataStrategyService;
@@ -61,8 +62,13 @@ public class TransferService {
     private HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy;
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Autowired
@@ -95,7 +101,7 @@ public class TransferService {
         ReturnStatus rtn = new ReturnStatus();
 //        rtn.setStatus(ReturnStatus.Status.SUCCESS);
 //        Boolean successful = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         try {
             Date start = new Date();
@@ -173,7 +179,7 @@ public class TransferService {
                                     sbDir.append(hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace());
                                 }
                                 sbDir.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory()).append("/");
-                                sbDir.append(getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
+                                sbDir.append(configService.getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
                                 fnlLoc = sbDir.toString();
                             }
                         }
@@ -198,7 +204,7 @@ public class TransferService {
                         if (newLoc == null && hmsMirrorConfig.isResetToDefaultLocation()) {
                             String sbDir = hmsMirrorConfig.getTransfer().getCommonStorage() +
                                     hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() + "/" +
-                                    getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName()) + ".db" + "/" + tableMirror.getName();
+                                    configService.getResolvedDB(tableMirror.getParent().getName()) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;
                         }
                         hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.LEFT,
@@ -220,7 +226,7 @@ public class TransferService {
                                     sbDir.append(hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace());
                                 }
                                 sbDir.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory()).append("/");
-                                sbDir.append(getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
+                                sbDir.append(configService.getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
                             hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
@@ -236,7 +242,7 @@ public class TransferService {
                                     sbDir.append(hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace());
                                 }
                                 sbDir.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory()).append("/");
-                                sbDir.append(getHmsMirrorCfgService().getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
+                                sbDir.append(configService.getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
                             hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,

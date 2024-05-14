@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.cli;
 
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -55,22 +55,21 @@ public class Mirror {
         ConfigurableApplicationContext applicationContext = SpringApplication.run(Mirror.class, springArgs);
 
         HMSMirrorAppService appService = applicationContext.getBean(HMSMirrorAppService.class);
-        HmsMirrorCfgService configService = applicationContext.getBean(HmsMirrorCfgService.class);
-        if (!configService.getHmsMirrorConfig().isWebInterface()) {
-            long returnCode = appService.getReturnCode();
-            int rtnCode = (int) returnCode;
-            if ((returnCode * -1) > Integer.MAX_VALUE) {
-                log.error("Return code is greater than Integer.MAX_VALUE.  Setting return code to Integer.MAX_VALUE. Check Logs for errors.");
-                for (String message: appService.getRunStatus().getErrors().getMessages()) {
-                    log.error(message);
-                }
-                rtnCode = Integer.MAX_VALUE;
+        ExecuteSessionService executeSessionService = applicationContext.getBean(ExecuteSessionService.class);
+
+        long returnCode = appService.getReturnCode();
+        int rtnCode = (int) returnCode;
+        if ((returnCode * -1) > Integer.MAX_VALUE) {
+            log.error("Return code is greater than Integer.MAX_VALUE.  Setting return code to Integer.MAX_VALUE. Check Logs for errors.");
+            for (String message: executeSessionService.getCurrentSession().getRunStatus().getErrors().getMessages()) {
+                log.error(message);
             }
-            System.exit(rtnCode);
-        } else {
-            log.info("The Application Workflow has completed");
-            log.info("Use the web interface to review the results");
+            rtnCode = Integer.MAX_VALUE;
         }
+
         log.info("APPLICATION FINISHED");
+
+        System.exit(rtnCode);
+
     }
 }

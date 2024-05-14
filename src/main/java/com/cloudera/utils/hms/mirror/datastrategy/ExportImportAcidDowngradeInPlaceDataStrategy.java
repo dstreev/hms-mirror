@@ -20,8 +20,9 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.ExportCircularResolveService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -41,8 +42,8 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     private TableService tableService;
 
 
-    public ExportImportAcidDowngradeInPlaceDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public ExportImportAcidDowngradeInPlaceDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -58,6 +59,8 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
         /*
         rename original to archive
         export original table
@@ -73,10 +76,10 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 
             // Check Partition Counts.
-            if (let.getPartitioned() && let.getPartitions().size() > getHmsMirrorCfgService().getHmsMirrorConfig().getHybrid().getExportImportPartitionLimit()) {
+            if (let.getPartitioned() && let.getPartitions().size() > hmsMirrorConfig.getHybrid().getExportImportPartitionLimit()) {
                 let.addIssue("The number of partitions: " + let.getPartitions().size() + " exceeds the EXPORT_IMPORT " +
                         "partition limit (hybrid->exportImportPartitionLimit) of " +
-                        getHmsMirrorCfgService().getHmsMirrorConfig().getHybrid().getExportImportPartitionLimit() +
+                        hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() +
                         ".  The queries will NOT be automatically run.");
                 rtn = Boolean.FALSE;
             }

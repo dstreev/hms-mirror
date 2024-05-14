@@ -38,7 +38,7 @@ Provide a class where rules can be generated based on the hms-mirror stats colle
 @Slf4j
 @Getter
 public class StatsCalculatorService {
-    private HmsMirrorCfgService hmsMirrorCfgService;
+    private ExecuteSessionService executeSessionService;
 
     protected static Long getTezMaxGrouping(EnvironmentTable envTable) {
         SerdeType serdeType = serdeFromStats(envTable.getStatistics());
@@ -76,7 +76,7 @@ public class StatsCalculatorService {
 
     public String getDistributedPartitionElements(EnvironmentTable envTable) {
         StringBuilder sb = new StringBuilder();
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         if (envTable.getPartitioned()) {
 
@@ -112,7 +112,7 @@ public class StatsCalculatorService {
      */
     protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         if (!hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
             try {
@@ -128,12 +128,12 @@ public class StatsCalculatorService {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         // Skip if no stats collection.
         if (hmsMirrorConfig.getOptimization().isSkipStatsCollection())

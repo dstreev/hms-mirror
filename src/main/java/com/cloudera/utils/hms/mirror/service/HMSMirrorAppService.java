@@ -27,20 +27,19 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class HMSMirrorAppService {
 
-    private final HmsMirrorCfgService hmsMirrorCfgService;
-    private final RunStatus runStatus;
+    private final ExecuteSessionService executeSessionService;
 
-    public HMSMirrorAppService(HmsMirrorCfgService hmsMirrorCfgService, RunStatus runStatus) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
-        this.runStatus = runStatus;
+    public HMSMirrorAppService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public long getReturnCode() {
         long rtn = 0L;
-        rtn = getRunStatus().getErrors().getReturnCode();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        rtn = runStatus.getErrors().getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
-            rtn = getRunStatus().getConversion().getUnsuccessfullTableCount();
+            rtn = runStatus.getConversion().getUnsuccessfullTableCount();
         }
         return rtn;
     }

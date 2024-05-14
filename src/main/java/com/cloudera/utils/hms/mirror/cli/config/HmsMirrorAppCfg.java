@@ -70,9 +70,7 @@ public class HmsMirrorAppCfg {
     @Getter
     private HmsMirrorCommandLineOptions hmsMirrorCommandLineOptions = null;
     @Getter
-    private HmsMirrorCfgService hmsMirrorCfgService = null;
-    @Getter
-    private RunStatus runStatus = null;
+    private ExecuteSessionService executeSessionService = null;
     @Getter
     private ConnectionPoolService connectionPoolService = null;
     @Getter
@@ -91,12 +89,13 @@ public class HmsMirrorAppCfg {
             matchIfMissing = true)
     public CommandLineRunner start() {
         return args -> {
-            Conversion conversion = getRunStatus().getConversion();
-
-            HmsMirrorConfig config = getHmsMirrorCfgService().getHmsMirrorConfig();
+            HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+            RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+            Conversion conversion = runStatus.getConversion();
 
             // Correct the load data issue ordering.
-            if (config.isLoadingTestData() && (!config.isEvaluatePartitionLocation() && config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
+            if (hmsMirrorConfig.isLoadingTestData() &&
+                    (!hmsMirrorConfig.isEvaluatePartitionLocation() && hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
                 // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
                 for (DBMirror dbMirror : conversion.getDatabases().values()) {
                     for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
@@ -110,19 +109,19 @@ public class HmsMirrorAppCfg {
             log.info("Starting Application Workflow");
             Boolean rtn = Boolean.TRUE;
 
-            if (!config.isValidated()) {
+            if (!hmsMirrorConfig.isValidated()) {
                 log.error("Configuration is not valid.  Exiting.");
                 getCliReporter().getMessages();
                 return;
             }
             log.info("Setting 'running' to TRUE");
-            getHmsMirrorCfgService().getRunning().set(Boolean.TRUE);
+            getExecuteSessionService().getCurrentSession().getRunning().set(Boolean.TRUE);
 
             Date startTime = new Date();
-            log.info("GATHERING METADATA: Start Processing for databases: {}", Arrays.toString((config.getDatabases())));
+            log.info("GATHERING METADATA: Start Processing for databases: {}", Arrays.toString((hmsMirrorConfig.getDatabases())));
 
             // Check dbRegEx
-            if (config.getFilter().getDbRegEx() != null && !config.isLoadingTestData()) {
+            if (hmsMirrorConfig.getFilter().getDbRegEx() != null && !hmsMirrorConfig.isLoadingTestData()) {
                 // Look for the dbRegEx.
                 Connection conn = null;
                 Statement stmt = null;
@@ -136,18 +135,18 @@ public class HmsMirrorAppCfg {
                         ResultSet rs = stmt.executeQuery(MirrorConf.SHOW_DATABASES);
                         while (rs.next()) {
                             String db = rs.getString(1);
-                            Matcher matcher = config.getFilter().getDbFilterPattern().matcher(db);
+                            Matcher matcher = hmsMirrorConfig.getFilter().getDbFilterPattern().matcher(db);
                             if (matcher.find()) {
                                 databases.add(db);
                             }
                         }
                         String[] dbs = databases.toArray(new String[0]);
-                        config.setDatabases(dbs);
+                        hmsMirrorConfig.setDatabases(dbs);
                     }
                 } catch (SQLException se) {
                     // Issue
                     log.error("Issue getting databases for dbRegEx", se);
-                    config.addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
+                    executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
                     wrapup();
                     return;
                 } finally {
@@ -156,13 +155,13 @@ public class HmsMirrorAppCfg {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing connection for LEFT", e);
-                            config.addError(MISC_ERROR, "LEFT:Issue closing connection.");
+                            executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
                         }
                     }
                 }
             }
 
-            if (!config.isLoadingTestData()) {
+            if (!hmsMirrorConfig.isLoadingTestData()) {
                 // Look for the dbRegEx.
                 Connection conn = null;
                 Statement stmt = null;
@@ -177,13 +176,13 @@ public class HmsMirrorAppCfg {
                         ResultSet rs = stmt.executeQuery(MirrorConf.GET_ENV_VARS);
                         while (rs.next()) {
                             String envVarSet = rs.getString(1);
-                            config.getCluster(Environment.LEFT).addEnvVar(envVarSet);
+                            hmsMirrorConfig.getCluster(Environment.LEFT).addEnvVar(envVarSet);
                         }
                     }
                 } catch (SQLException se) {
                     // Issue
                     log.error("Issue getting LEFT database connection", se);
-                    config.addError(MISC_ERROR, "LEFT:Issue getting database connection");
+                    executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue getting database connection");
                     wrapup();
                     return;
                 } finally {
@@ -192,7 +191,7 @@ public class HmsMirrorAppCfg {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing LEFT database connection", e);
-                            config.addError(MISC_ERROR, "LEFT:Issue closing database connection");
+                            executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue closing database connection");
                         }
                     }
                 }
@@ -206,13 +205,13 @@ public class HmsMirrorAppCfg {
                         ResultSet rs = stmt.executeQuery(MirrorConf.GET_ENV_VARS);
                         while (rs.next()) {
                             String envVarSet = rs.getString(1);
-                            config.getCluster(Environment.RIGHT).addEnvVar(envVarSet);
+                            hmsMirrorConfig.getCluster(Environment.RIGHT).addEnvVar(envVarSet);
                         }
                     }
                 } catch (SQLException se) {
                     // Issue
                     log.error("Issue getting RIGHT databases connection", se);
-                    config.addError(MISC_ERROR, "RIGHT:Issue getting database connection");
+                    executeSessionService.getCurrentSession().addError(MISC_ERROR, "RIGHT:Issue getting database connection");
                     wrapup();
                     return;
                 } finally {
@@ -221,15 +220,15 @@ public class HmsMirrorAppCfg {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing RIGHT databases connection", e);
-                            config.addError(MISC_ERROR, "RIGHT:Issue closing database connection");
+                            executeSessionService.getCurrentSession().addError(MISC_ERROR, "RIGHT:Issue closing database connection");
                         }
                     }
                 }
             }
 
-            if (config.getDatabases() == null || config.getDatabases().length == 0) {
+            if (hmsMirrorConfig.getDatabases() == null || hmsMirrorConfig.getDatabases().length == 0) {
                 log.error("No databases specified OR found if you used dbRegEx");
-                config.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
+                runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
                 wrapup();
                 return;
             }
@@ -238,8 +237,8 @@ public class HmsMirrorAppCfg {
             // ========================================
             // Get the Database definitions for the LEFT and RIGHT clusters.
             // ========================================
-            if (!config.isLoadingTestData()) {
-                for (String database : config.getDatabases()) {
+            if (!hmsMirrorConfig.isLoadingTestData()) {
+                for (String database : hmsMirrorConfig.getDatabases()) {
                     DBMirror dbMirror = conversion.addDatabase(database);
                     try {
                         // Get the Database definitions for the LEFT and RIGHT clusters.
@@ -254,13 +253,13 @@ public class HmsMirrorAppCfg {
                         }
                     } catch (SQLException se) {
                         log.error("Issue getting databases", se);
-                        config.addError(MISC_ERROR, "Issue getting databases");
+                        executeSessionService.getCurrentSession().addError(MISC_ERROR, "Issue getting databases");
                         wrapup();
                         return;
                     }
 
                     // Build out the table in a database.
-                    if (!config.isDatabaseOnly()) {
+                    if (!hmsMirrorConfig.isDatabaseOnly()) {
                         Future<ReturnStatus> gt = getTableService().getTables(dbMirror);
                         gtf.add(gt);
                     }
@@ -292,14 +291,14 @@ public class HmsMirrorAppCfg {
 
                 // Failure, report and exit with FALSE
                 if (!rtn) {
-                    getRunStatus().getErrors().set(MessageCode.COLLECTING_TABLES);
+                    runStatus.getErrors().set(MessageCode.COLLECTING_TABLES);
                     wrapup();
                     return; //rtn = Boolean.FALSE;
                 }
             }
 
             if (!getDatabaseService().createDatabases()) {
-                getRunStatus().getErrors().set(MessageCode.DATABASE_CREATION);
+                runStatus.getErrors().set(MessageCode.DATABASE_CREATION);
                 wrapup();
                 return; //rtn = Boolean.FALSE;
             }
@@ -339,7 +338,7 @@ public class HmsMirrorAppCfg {
 //        }
 
             // Shortcut.  Only DB's.
-            if (!config.isDatabaseOnly()) {
+            if (!hmsMirrorConfig.isDatabaseOnly()) {
                 // ========================================
                 // Get the table METADATA for the tables collected in the databases.
                 // ========================================
@@ -419,7 +418,7 @@ public class HmsMirrorAppCfg {
                 }
 
                 if (!rtn) {
-                    getRunStatus().getErrors().set(MessageCode.COLLECTING_TABLE_DEFINITIONS);
+                    runStatus.getErrors().set(MessageCode.COLLECTING_TABLE_DEFINITIONS);
                 }
 
                 // Check the Migration Futures are done.
@@ -450,10 +449,11 @@ public class HmsMirrorAppCfg {
     }
 
     protected void wrapup () {
-        Conversion conversion = getRunStatus().getConversion();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        Conversion conversion = runStatus.getConversion();
         log.info("Wrapping up the Application Workflow");
         log.info("Setting 'running' to FALSE");
-        getHmsMirrorCfgService().getRunning().set(Boolean.FALSE);
+        executeSessionService.getCurrentSession().getRunning().set(Boolean.FALSE);
 
         // Give the underlying threads a chance to finish.
         try {
@@ -488,8 +488,8 @@ public class HmsMirrorAppCfg {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Autowired
@@ -500,11 +500,6 @@ public class HmsMirrorAppCfg {
     @Autowired
     public void setDatabaseService(DatabaseService databaseService) {
         this.databaseService = databaseService;
-    }
-
-    @Autowired
-    public void setRunStatus(RunStatus runStatus) {
-        this.runStatus = runStatus;
     }
 
     @Autowired

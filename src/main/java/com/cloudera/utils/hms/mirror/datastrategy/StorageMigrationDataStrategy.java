@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.service.HmsMirrorCfgService;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -53,8 +53,8 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     private TranslatorService translatorService;
     private StatsCalculatorService statsCalculatorService;
 
-    public StorageMigrationDataStrategy(HmsMirrorCfgService hmsMirrorCfgService) {
-        this.hmsMirrorCfgService = hmsMirrorCfgService;
+    public StorageMigrationDataStrategy(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     @Override
@@ -62,7 +62,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -119,7 +119,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         String useDb = null;
         String database = null;
@@ -164,7 +164,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = getHmsMirrorCfgService().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
