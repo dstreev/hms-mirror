@@ -54,7 +54,7 @@
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--        <appender-ref ref="Console"/>-->
 <!--    </root>-->
-    <root level="DEBUG">
+    <root level="WARN">
 <!--        <appender-ref ref="RollingFile"/>-->
         <appender-ref ref="Console"/>
     </root>
@@ -88,6 +88,9 @@
         <appender-ref ref="Console"/>
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.domain.Cluster" level="info" additivity="false">
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="com.cloudera.utils.hms.mirror.password" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.service.TableService" level="info" additivity="false">

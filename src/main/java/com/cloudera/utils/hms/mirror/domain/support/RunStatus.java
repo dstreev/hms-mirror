@@ -23,9 +23,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-//@Component - Initialized through @Bean in RunStateInitialization
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @Slf4j
 @Getter
 @Setter
@@ -34,8 +35,32 @@ public class RunStatus {
     private final Messages errors = new Messages(150);
     @JsonIgnore
     private final Messages warnings = new Messages(150);
-    @JsonIgnore
-    private Conversion conversion = new Conversion();
+
+    private boolean configValidated = false;
+
+    private Map<StageEnum, CollectionEnum> stages = new LinkedHashMap<>();
+
+    private OperationStatistics operationStatistics = new OperationStatistics();
+
+    public RunStatus() {
+        for (StageEnum stage : StageEnum.values()) {
+            stages.put(stage, CollectionEnum.EMPTY);
+        }
+    }
+    /*
+    reset the state of the RunStatus.
+     */
+    public void reset() {
+        errors.clear();
+        warnings.clear();
+        configValidated = false;
+        stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
+        operationStatistics.reset();
+    }
+
+    public void setStage(StageEnum stage, CollectionEnum collection) {
+        stages.put(stage, collection);
+    }
 
     public void addError(MessageCode code) {
         errors.set(code);

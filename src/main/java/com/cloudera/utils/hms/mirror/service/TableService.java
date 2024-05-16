@@ -1281,7 +1281,7 @@ public class TableService {
         String[] locationParts = location.split(":");
         String protocol = locationParts[0];
         if (hmsMirrorConfig.getSupportFileSystems().contains(protocol)) {
-            CliEnvironment cli = hmsMirrorConfig.getCliEnvironment();
+            CliEnvironment cli = executeSessionService.getCliEnvironment();
 
             String countCmd = "count " + location;
             CommandReturn cr = cli.processInput(countCmd);

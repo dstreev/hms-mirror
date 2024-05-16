@@ -246,7 +246,7 @@ public class ConfigService {
             log.warn("Skipping Link Check.");
             rtn = Boolean.TRUE;
         } else {
-            CliEnvironment cli = hmsMirrorConfig.getCliEnvironment();
+            CliEnvironment cli = executeSessionService.getCliEnvironment();
 
             log.info("Performing Cluster Link Test to validate cluster 'hcfsNamespace' availability.");
             // TODO: develop a test to copy data between clusters.
@@ -359,6 +359,8 @@ public class ConfigService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        // Reset the config validated flag.
+        runStatus.setConfigValidated(Boolean.FALSE);
 
         // Set distcp options.
         canDeriveDistcpPlan();
@@ -883,6 +885,7 @@ public class ConfigService {
                 rtn = Boolean.FALSE;
             }
         }
+        runStatus.setConfigValidated(rtn);
         return rtn;
     }
 

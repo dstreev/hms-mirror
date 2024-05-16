@@ -106,7 +106,7 @@ public class CliInit {
     @ConditionalOnProperty(
             name = "hms-mirror.config.setup",
             havingValue = "false")
-    public HmsMirrorConfig loadConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
+    public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
         return HmsMirrorConfig.loadConfig(configFilename);
     }
 
@@ -118,7 +118,7 @@ public class CliInit {
     /*
     Init empty for framework to fill in.
      */
-    public HmsMirrorConfig loadSetupConfig() {
+    public HmsMirrorConfig loadHmsMirrorConfigWithSetup() {
         return new HmsMirrorConfig();
     }
 
@@ -159,7 +159,7 @@ public class CliInit {
                 Conversion conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
                 // Set Config Databases;
                 hmsMirrorConfig.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
-                executeSessionService.getCurrentSession().getRunStatus().setConversion(conversion);
+                executeSessionService.getCurrentSession().setConversion(conversion);
 //            runStatus.setConversion(conversion);
             } catch (UnrecognizedPropertyException upe) {
                 throw new RuntimeException("\nThere may have been a breaking change in the configuration since the previous " +
@@ -186,7 +186,7 @@ public class CliInit {
         return args -> {
             executeSessionService.getCurrentSession().setHmsMirrorConfig(hmsMirrorConfig);
             RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-            Conversion conversion = runStatus.getConversion();
+            Conversion conversion = executeSessionService.getCurrentSession().getConversion();
 
             log.info("Post Processing Conversion");
             if (hmsMirrorConfig.isLoadingTestData()) {

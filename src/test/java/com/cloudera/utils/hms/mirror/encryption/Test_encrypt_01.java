@@ -18,9 +18,10 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,7 +30,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Mirror.class,
+@SpringBootTest(classes = Password.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -53,27 +54,24 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/encryption/encrypt_test_01"
         })
 @Slf4j
-public class Test_encrypt_01 extends E2EBaseTest {
-//        String[] args = new String[]{"-pkey", PKEY,
-//                "-p", "myspecialpassword",
-//                "-cfg", ENCRYPTED
-//        };
+public class Test_encrypt_01 extends PasswordTestBase {
 
-    @Test
-    public void returnCodeTest() {
-        // Get Runtime Return Code.
-        long actual = getReturnCode();
-        // Verify the return code.
-        long expected = getCheckCode(MessageCode.PASSWORD_CFG);
+    @Before
+    public void setUp() {
+        log.info("Test_encrypt_01: setUp");
 
-        assertEquals("Return Code Failure: ", expected, actual);
     }
+
 
     @Test
     public void validateEncryptPassword() {
+        String encryptedPassword = getPasswordService().encryptPassword(
+                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
+                getExecuteSession().getHmsMirrorConfig().getPassword());
+
         // Get Runtime Return Code.
         assertEquals("Encrypt Password Failure: ", "FNLmFEI0F/n8acz45c3jVExMounSBklX",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getDecryptPassword());
+                encryptedPassword);
     }
 
 

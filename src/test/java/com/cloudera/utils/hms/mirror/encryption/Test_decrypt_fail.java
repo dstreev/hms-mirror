@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,9 +27,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Mirror.class,
+@SpringBootTest(classes = Password.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -52,33 +53,18 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/encryption/decrypt_fail_test"
         })
 @Slf4j
-public class Test_decrypt_fail extends E2EBaseTest {
-//        String[] args = new String[]{"-pkey", PKEY,
-//                "-dp", "badencryptedpassword",
-//                "-cfg", ENCRYPTED
-//        };
-//
-//        long rtn = 0;
-//        CommandLineOptions commandLineOptions = new CommandLineOptions();
-//        CommandLine cmd = commandLineOptions.getCommandLine(args);
-//        // TODO: Need to handle loading config for test.
-//
+public class Test_decrypt_fail extends PasswordTestBase {
 
     @Test
-    public void returnCodeTest() {
-        // Get Runtime Return Code.
-        long actual = getReturnCode();
-        // Verify the return code.
-        long expected = getCheckCode(MessageCode.PASSWORD_CFG, MessageCode.DECRYPTING_PASSWORD_ISSUE);
+    public void validatePassword() {
 
-        assertEquals("Return Code Failure: ", expected, actual);
+        String decryptedPassword = getPasswordService().decryptPassword(
+                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
+                getExecuteSession().getHmsMirrorConfig().getEncryptedPassword());
+
+        // The decrypt value should be null because the password is not encrypted correctly.
+        assertNull("Decrypt Password Failure",  decryptedPassword);
+
     }
-
-//    @Test
-//    public void validatePassword() {
-//        // Get Runtime Return Code.
-//        assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-//                getConfigService().getConfig().getPassword());
-//    }
 
 }

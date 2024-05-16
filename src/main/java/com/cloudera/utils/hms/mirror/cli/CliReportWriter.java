@@ -21,7 +21,6 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
@@ -84,7 +83,7 @@ public class CliReportWriter {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
         log.info("Writing CLI report and artifacts to directory: {}", hmsMirrorConfig.getOutputDirectory());
 //        if (!setupError) {
-        Conversion conversion = executeSessionService.getCurrentSession().getRunStatus().getConversion();
+        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
 
         // Remove the abstract environments from config before reporting output.
         hmsMirrorConfig.getClusters().remove(Environment.TRANSFER);

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
@@ -38,15 +39,18 @@ import java.util.Map;
 @Slf4j
 public class QueryDefinitionsService {
 
-    private final HmsMirrorConfig hmsMirrorConfig;
+    private ExecuteSessionService executeSessionService;
 
     private final Map<Environment, QueryDefinitions> queryDefinitionsMap = new HashMap<>();
 
-    public QueryDefinitionsService(HmsMirrorConfig hmsMirrorConfig) {
-        this.hmsMirrorConfig = hmsMirrorConfig;
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
     public QueryDefinitions getQueryDefinitions(Environment environment) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+
         QueryDefinitions queryDefinitions = queryDefinitionsMap.get(environment);
         if (queryDefinitions == null) {
             Cluster cluster = hmsMirrorConfig.getCluster(environment);

@@ -18,18 +18,21 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Mirror.class,
+@SpringBootTest(classes = Password.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -52,37 +55,32 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/encryption/decrypt_cfg_test"
         })
 @Slf4j
-public class Test_decrypt_cfg extends E2EBaseTest {
+public class Test_decrypt_cfg extends PasswordTestBase {
 
-    @Test
-    public void returnCodeTest() {
-        // Get Runtime Return Code.
-        long actual = getReturnCode();
-        // Verify the return code.
-        long expected = getCheckCode();
-
-        assertEquals("Return Code Failure: ", expected, actual);
+    @Before
+    public void setup() {
+        passwordService.decryptConfigPasswords(getExecuteSession().getHmsMirrorConfig());
     }
 
     @Test
     public void validateLeftPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateLeftMSPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "cdpprivaatebase",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateRightPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
 }

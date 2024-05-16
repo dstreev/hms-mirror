@@ -85,9 +85,8 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-        ExecuteSession session = executeSessionService.getCurrentSession();
-        RunStatus runStatus = session.getRunStatus();
-        Conversion conversion = runStatus.getConversion();
+//        ExecuteSession session = executeSessionService.getCurrentSession();
+        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -196,8 +195,7 @@ public class CliReporter {
      */
     private void populateVarMap() {
         ExecuteSession session = executeSessionService.getCurrentSession();
-        RunStatus runStatus = session.getRunStatus();
-        Conversion conversion = runStatus.getConversion();
+        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
         HmsMirrorConfig hmsMirrorConfig = session.getHmsMirrorConfig();
 
         tiktok = !tiktok;

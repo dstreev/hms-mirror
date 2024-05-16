@@ -17,28 +17,45 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-import java.util.UUID;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
+@RestController
+@Slf4j
+@RequestMapping(path = "/api/v1/runStatus")
 public class RunStatusController {
 
-    public void getRunStatus(UUID runId) {
+    private ExecuteSessionService executeSessionService;
 
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
-    public void getRunStatusDetail(UUID runId) {
 
+    @Operation(summary = "Get the RunStatus")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Current RunStatus",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = RunStatus.class))})
+//            , @ApiResponse(responseCode = "400", description = "Invalid id supplied",
+//                    content = @Content)
+//            , @ApiResponse(responseCode = "404", description = "Config not found",
+//                    content = @Content)
+    })
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/")
+    public RunStatus getRunStatus(@RequestParam(name = "sessionId", required = false) String sessionId) {
+        return executeSessionService.getSession(sessionId).getRunStatus();
     }
 
-    public void getConversionSummary (UUID runId) {
-
-    }
-
-    public void getConversionSummaryForDatabase(UUID runId, String database) {
-
-    }
-
-    public void getConversionForTable(UUID runId, String database, String table) {
-
-    }
 
 }

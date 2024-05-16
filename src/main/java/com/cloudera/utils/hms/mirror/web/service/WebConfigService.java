@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web.service;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

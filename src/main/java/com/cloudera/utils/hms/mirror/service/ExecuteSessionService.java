@@ -17,12 +17,14 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -35,14 +37,22 @@ public class ExecuteSessionService {
 
     public static final String DEFAULT = "default.yaml";
 
+    private CliEnvironment cliEnvironment;
     private ExecuteSession currentSession;
     private final Map<String, ExecuteSession> sessions = new HashMap<>();
+
+    @Autowired
+    public void setCliEnvironment(CliEnvironment cliEnvironment) {
+        this.cliEnvironment = cliEnvironment;
+    }
 
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
         String sessionName = sessionId != null? sessionId : DEFAULT;
 
         if (sessions.containsKey(sessionName)) {
-            return sessions.get(sessionName);
+            ExecuteSession session = sessions.get(sessionName);
+            session.setHmsMirrorConfig(hmsMirrorConfig);
+            return session;
         } else {
             ExecuteSession session = new ExecuteSession();
             session.setSessionId(sessionName);

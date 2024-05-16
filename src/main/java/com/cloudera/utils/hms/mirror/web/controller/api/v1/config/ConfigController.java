@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
@@ -33,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -42,13 +42,13 @@ import java.util.Map;
 @RequestMapping(path = "/api/v1/config")
 public class ConfigController {
 
-    private ConfigService configService2;
+    private ConfigService configService;
     private WebConfigService webConfigService;
     private ExecuteSessionService executeSessionService;
 
     @Autowired
     public void setConfigService(ConfigService configService) {
-        this.configService2 = configService;
+        this.configService = configService;
     }
 
     @Autowired
@@ -108,7 +108,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.GET, value = "/{id}")
     public HmsMirrorConfig getById(@PathVariable @NotNull String id) {
         log.info("Getting Config by id: {}", id);
-        return configService2.loadConfig(id);
+        return configService.loadConfig(id);
     }
 
     @Operation(summary = "Load a config by id")
@@ -123,9 +123,25 @@ public class ConfigController {
     public HmsMirrorConfig load(@RequestParam(name = "sessionId", required = false) String sessionId,
                                 @PathVariable @NotNull String id) {
         log.info("{}: Loading Config by id: {}", sessionId, id);
-        HmsMirrorConfig config = configService2.loadConfig(id);
+        HmsMirrorConfig config = configService.loadConfig(id);
         executeSessionService.getSession(sessionId).setHmsMirrorConfig(config);
         return config;
+    }
+
+    @Operation(summary = "Validate Config")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Validate Config",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = HmsMirrorConfig.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid input",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/validate")
+    public RunStatus validate(@RequestParam(name = "sessionId", required = false) String sessionId) {
+        log.info("{}: Validate config", sessionId);
+        configService.validate();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        return runStatus;
     }
 
     @Operation(summary = "Save current config to id")
@@ -141,7 +157,7 @@ public class ConfigController {
                         @PathVariable @NotNull String id) {
         log.info("{}: Save current config to: {}", sessionId, id);
         HmsMirrorConfig config = executeSessionService.getSession(sessionId).getHmsMirrorConfig();
-        return configService2.saveConfig(config, id);
+        return configService.saveConfig(config, id);
     }
 
     @Operation(summary = "Get the configs clusters")
@@ -179,60 +195,144 @@ public class ConfigController {
         return executeSessionService.getSession(sessionId).getHmsMirrorConfig().getClusters().get(env);
     }
 
-    /**
-     * Complete the implementation for getting details for the current config.
-     * 1. filter
-     * 2. ...
-     **/
+    /*
+    copyAvroSchemaUrls
+    dataStrategy
+    databaseOnly
+    databases
+    dbPrefix
+    dbRename
+    flip
+    migratedNonNative
+    outputDirectory
+    readOnly
+    noPurge
+    replace
+    resetToDefaultLocation
+    skipFeatures
+    skipLegacyTranslation
+    sync
+    transferOwnership
+     */
 
-    // Setting the current config values.
-    @Operation(summary = "Set the Data Strategy")
+    @Operation(summary = "Set Config Properties")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Data Strategy set",
+            @ApiResponse(responseCode = "200", description = "Set Properties",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = DataStrategyEnum.class))}),
-            @ApiResponse(responseCode = "400", description = "Invalid DataStrategy supplied",
+                            schema = @Schema(implementation = HmsMirrorConfig.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid id supplied",
                     content = @Content),
-            @ApiResponse(responseCode = "404", description = "DataStrategy not found",
+            @ApiResponse(responseCode = "404", description = "Cluster not found",
                     content = @Content)})
     @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/datastrategy")
-    public DataStrategyEnum setDataStrategy(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                            @RequestParam("value") String value) {
-        log.info("{}: Setting Data Strategy to: {}", sessionId, value);
-        String valueStr = value.toUpperCase();
-        DataStrategyEnum dataStrategyEnum = DataStrategyEnum.valueOf(valueStr);
-        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setDataStrategy(dataStrategyEnum);
-        return dataStrategyEnum;
+    @RequestMapping(method = RequestMethod.PUT, value = "/properties")
+    public HmsMirrorConfig setConfigProperties (
+            @RequestParam(name = "sessionId", required = false) String sessionId,
+            @RequestParam(value = "copyAvroSchemaUrls", required = false) Boolean copyAvroSchemaUrls,
+            @RequestParam(value = "dataStrategy", required = false) DataStrategyEnum dataStrategy,
+            @RequestParam(value = "databaseOnly", required = false) Boolean databaseOnly,
+            @RequestParam(value = "databases", required = false) List<String> databases,
+            @RequestParam(value = "dbPrefix", required = false) String dbPrefix,
+            @RequestParam(value = "dbRename", required = false) String dbRename,
+            @RequestParam(value = "evaluatePartitionLocation", required = false) Boolean evaluatePartitionLocation,
+            @RequestParam(value = "flip", required = false) Boolean flip,
+            @RequestParam(value = "migratedNonNative", required = false) Boolean migratedNonNative,
+            @RequestParam(value = "outputDirectory", required = false) String outputDirectory,
+            @RequestParam(value = "readOnly", required = false) Boolean readOnly,
+            @RequestParam(value = "noPurge", required = false) Boolean noPurge,
+            @RequestParam(value = "replace", required = false) Boolean replace,
+            @RequestParam(value = "resetToDefaultLocation", required = false) Boolean resetToDefaultLocation,
+            @RequestParam(value = "skipFeatures", required = false) Boolean skipFeatures,
+            @RequestParam(value = "skipLegacyTranslation", required = false) Boolean skipLegacyTranslation,
+            @RequestParam(value = "sync", required = false) Boolean sync,
+            @RequestParam(value = "transferOwnership", required = false) Boolean transferOwnership
+    )   {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession(sessionId).getHmsMirrorConfig();
+        if (copyAvroSchemaUrls != null) {
+            log.info("{}: Setting Copy Avro Schema Urls to: {}", sessionId, copyAvroSchemaUrls);
+            hmsMirrorConfig.setCopyAvroSchemaUrls(copyAvroSchemaUrls);
+        }
+        if (dataStrategy != null) {
+            log.info("{}: Setting Data Strategy to: {}", sessionId, dataStrategy);
+            hmsMirrorConfig.setDataStrategy(dataStrategy);
+        }
+        if (databaseOnly != null) {
+            log.info("{}: Setting Database Only to: {}", sessionId, databaseOnly);
+            hmsMirrorConfig.setDatabaseOnly(databaseOnly);
+        }
+        if (databases != null) {
+            log.info("{}: Setting Databases to: {}", sessionId, databases);
+            hmsMirrorConfig.setDatabases(databases.toArray(new String[0]));
+        }
+        if (dbPrefix != null) {
+            log.info("{}: Setting Database Prefix to: {}", sessionId, dbPrefix);
+            hmsMirrorConfig.setDbPrefix(dbPrefix);
+        }
+        if (dbRename != null) {
+            log.info("{}: Setting Database Rename to: {}", sessionId, dbRename);
+            hmsMirrorConfig.setDbRename(dbRename);
+        }
+        if (evaluatePartitionLocation != null) {
+            log.info("{}: Setting Evaluate Partition Location to: {}", sessionId, evaluatePartitionLocation);
+            hmsMirrorConfig.setEvaluatePartitionLocation(evaluatePartitionLocation);
+        }
+        if (flip != null) {
+            log.info("{}: Setting Flip to: {}", sessionId, flip);
+            hmsMirrorConfig.setFlip(flip);
+        }
+        if (migratedNonNative != null) {
+            log.info("{}: Setting Migrated Non Native to: {}", sessionId, migratedNonNative);
+            hmsMirrorConfig.setMigratedNonNative(migratedNonNative);
+        }
+        if (outputDirectory != null) {
+            log.info("{}: Setting Output Directory to: {}", sessionId, outputDirectory);
+            hmsMirrorConfig.setOutputDirectory(outputDirectory);
+        }
+        if (readOnly != null) {
+            log.info("{}: Setting Read Only to: {}", sessionId, readOnly);
+            hmsMirrorConfig.setReadOnly(readOnly);
+        }
+        if (noPurge != null) {
+            log.info("{}: Setting No Purge to: {}", sessionId, noPurge);
+            hmsMirrorConfig.setNoPurge(noPurge);
+        }
+        if (replace != null) {
+            log.info("{}: Setting Replace to: {}", sessionId, replace);
+            hmsMirrorConfig.setReplace(replace);
+        }
+        if (resetToDefaultLocation != null) {
+            log.info("{}: Setting Reset To Default Location to: {}", sessionId, resetToDefaultLocation);
+            hmsMirrorConfig.setResetToDefaultLocation(resetToDefaultLocation);
+        }
+        if (skipFeatures != null) {
+            log.info("{}: Setting Skip Features to: {}", sessionId, skipFeatures);
+            hmsMirrorConfig.setSkipFeatures(skipFeatures);
+        }
+        if (skipLegacyTranslation != null) {
+            log.info("{}: Setting Skip Legacy Translation to: {}", sessionId, skipLegacyTranslation);
+            hmsMirrorConfig.setSkipLegacyTranslation(skipLegacyTranslation);
+        }
+        if (sync != null) {
+            log.info("{}: Setting Sync to: {}", sessionId, sync);
+            hmsMirrorConfig.setSync(sync);
+        }
+        if (transferOwnership != null) {
+            log.info("{}: Setting Transfer Ownership to: {}", sessionId, transferOwnership);
+            hmsMirrorConfig.setTransferOwnership(transferOwnership);
+        }
+        return hmsMirrorConfig;
     }
 
-    @Operation(summary = "Set the Databases.  Comma Separated List of Metastore Database names")
+    @Operation(summary = "Set the Table Filters")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Databases set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = List.class))}),
-            @ApiResponse(responseCode = "400", description = "Invalid Database list",
-                    content = @Content)})
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/databases")
-    public List<String> setDatabases(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                     @RequestParam("value") String value) {
-        log.info("{}: Setting Databases to: {}", sessionId, value);
-        String[] dbs = value.split(",");
-        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setDatabases(dbs);
-        return Arrays.asList(executeSessionService.getSession(sessionId).getHmsMirrorConfig().getDatabases());
-    }
-
-    @Operation(summary = "Set the Database Filters")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Databases set",
+            @ApiResponse(responseCode = "200", description = "Table Filter set",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = Filter.class))}),
             @ApiResponse(responseCode = "400", description = "Invalid Database list",
                     content = @Content)})
     @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/filter")
-    public Filter setDatabaseFilter(@RequestParam(name = "sessionId", required = false) String sessionId,
+    @RequestMapping(method = RequestMethod.PUT, value = "/tableFilter")
+    public Filter setTableFilter(@RequestParam(name = "sessionId", required = false) String sessionId,
                                     @RequestParam(value = "tblExcludeRegEx", required = false) String excludeRegEx,
                                     @RequestParam(value = "tblRegEx", required = false) String regEx,
                                     @RequestParam(value = "tblSizeLimit", required = false) String tblSizeLimit,
@@ -256,62 +356,32 @@ public class ConfigController {
         return executeSessionService.getSession(sessionId).getHmsMirrorConfig().getFilter();
     }
 
-    @Operation(summary = "Set Evaluate Partition Locations")
+
+    @Operation(summary = "Set the Migrate Options")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Evaluated Partition Locations set",
+            @ApiResponse(responseCode = "200", description = "Migrate Options set",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Boolean.class))})
-    })
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/evaluatePartitionLocation")
-    public Boolean setEvaluatePartitionLocation(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                                @RequestParam("value") String value) {
-        log.info("{}: Setting Evaluate Partition Location to: {}", sessionId, value);
-        boolean boolValue = Boolean.parseBoolean(value);
-        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setEvaluatePartitionLocation(boolValue);
-        return executeSessionService.getSession(sessionId).getHmsMirrorConfig().isEvaluatePartitionLocation();
-    }
-
-
-//    @Operation(summary = "Set Execute")
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "Execute set",
-//                    content = {@Content(mediaType = "application/json",
-//                            schema = @Schema(implementation = Boolean.class))})
-//    })
-//    @ResponseBody
-//    @RequestMapping(method = RequestMethod.PUT, value = "/execute")
-//    public Boolean setExecute(@RequestParam("value") String value) {
-//        log.info("Setting Execute to: {}", value);
-//        Boolean boolValue = Boolean.parseBoolean(value);
-//        executeSessionService.getHmsMirrorConfig().setExecute(boolValue);
-//        return executeSessionService.getHmsMirrorConfig().isExecute();
-//    }
-
-    @Operation(summary = "Set the ACID Migrations")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "ACID Migrations set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MigrateACID.class))}),
+                            schema = @Schema(implementation = HmsMirrorConfig.class))}),
             @ApiResponse(responseCode = "400", description = "Invalid Database list",
                     content = @Content)})
     @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/migrateACID")
-    public MigrateACID setDatabaseFilter(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                         @RequestParam(value = "on", required = false) Boolean on,
-                                         @RequestParam(value = "only", required = false) Boolean only,
-                                         @RequestParam(value = "artificialBucketThreshold", required = false) String artificialBucketThreshold,
-                                         @RequestParam(value = "partitionLimit", required = false) String partitionLimit,
-                                         @RequestParam(value = "downgrade", required = false) Boolean downgrade,
-                                         @RequestParam(value = "inplace", required = false) Boolean inplace
-    ) {
-        if (on != null) {
-            log.info("{}: Setting Migrate ACID 'on' to: {}", sessionId, on);
-            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID().setOn(on);
+    @RequestMapping(method = RequestMethod.PUT, value = "/migrate")
+    public HmsMirrorConfig setMigrate(@RequestParam(name = "sessionId", required = false) String sessionId,
+                                         @RequestParam(value = "acid", required = false) Boolean acid,
+                                         @RequestParam(value = "acid-only", required = false) Boolean acidOnly,
+                                         @RequestParam(value = "acid-artificialBucketThreshold", required = false) String artificialBucketThreshold,
+                                         @RequestParam(value = "acid-partitionLimit", required = false) String partitionLimit,
+                                         @RequestParam(value = "acid-downgrade", required = false) Boolean downgrade,
+                                         @RequestParam(value = "acid-inplace-downgrade", required = false) Boolean inplace,
+                                         @RequestParam(value = "non-native", required = false) Boolean nonNative,
+                                         @RequestParam(value = "views", required = false) Boolean views) {
+        if (acid != null) {
+            log.info("{}: Setting Migrate ACID 'on' to: {}", sessionId, acid);
+            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID().setOn(acid);
         }
-        if (only != null) {
-            log.info("{}: Setting Migrate ACID 'only' to: {}", sessionId, only);
-            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID().setOnly(only);
+        if (acidOnly != null) {
+            log.info("{}: Setting Migrate ACID 'only' to: {}", sessionId, acidOnly);
+            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID().setOnly(acidOnly);
         }
         if (artificialBucketThreshold != null) {
             log.info("{}: Setting Migrate ACID 'artificialBucketThreshold' to: {}", sessionId, artificialBucketThreshold);
@@ -329,22 +399,15 @@ public class ConfigController {
             log.info("{}: Setting Migrate ACID 'inplace' to: {}", sessionId, inplace);
             executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID().setInplace(inplace);
         }
-        return executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateACID();
-    }
-
-    @Operation(summary = "Set Report Output Directory")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Report Output Directory set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = String.class))})
-    })
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.PUT, value = "/outputDirectory")
-    public String setOutputDirectory(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                     @RequestParam("value") String value) {
-        log.info("{}: Setting Output Directory to: {}", sessionId, value);
-        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setOutputDirectory(value);
-        return executeSessionService.getSession(sessionId).getHmsMirrorConfig().getOutputDirectory();
+        if (nonNative != null) {
+            log.info("{}: Setting Migrate ACID 'nonNative' to: {}", sessionId, nonNative);
+            executeSessionService.getSession(sessionId).getHmsMirrorConfig().setMigratedNonNative(nonNative);
+        }
+        if (views != null) {
+            log.info("{}: Setting Migrate ACID 'views' to: {}", sessionId, views);
+            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getMigrateVIEW().setOn(views);
+        }
+        return executeSessionService.getSession(sessionId).getHmsMirrorConfig();
     }
 
     // Transfer

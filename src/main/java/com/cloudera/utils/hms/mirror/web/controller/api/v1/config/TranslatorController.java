@@ -118,7 +118,7 @@ public class TranslatorController {
         return removeList;
     }
 
-    @Operation(summary = "Build Global Location Map from Databases")
+    @Operation(summary = "Build Global Location Map from Databases.  Resets list!")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "GLM Details set",
                     content = {@Content(mediaType = "application/json",
@@ -127,7 +127,7 @@ public class TranslatorController {
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public Map<String, String> buildGLMFromDatabase () {
         // Clear current List
-
+        executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getGlobalLocationMap().clear();
         // Pull all unique locations from databases/tables.  Requires Metastore Direct connection.
 
         return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getGlobalLocationMap();

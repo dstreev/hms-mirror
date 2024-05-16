@@ -195,7 +195,9 @@ public enum MessageCode {
     SCHEMA_EXISTS_SYNC_PARTS(94, "Schema exists already and matches. `--sync` and `-epl` specified, adding partition sync."),
     SCHEMA_EXISTS_SYNC_ACID(95, "Schema already exists.  You've specified '--sync', the target table will be dropped and " +
             "re-created.  The data will be overwritten."),
-    RO_VALID_STRATEGIES(96, "Read-Only (RO) option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies.");
+    RO_VALID_STRATEGIES(96, "Read-Only (RO) option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies."),
+    DECRYPTED_CONFIG_PASSWORDS(97, "Decrypted Config Passwords"),
+    DECRYPTING_CONFIG_PASSWORDS_ISSUE(98, "Issue decrypting config passwords");
 
     private int code = 0;
     private String desc = null;

@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +45,11 @@ public class TestTranslator01 extends TranslatorTestBase {
         config.setTranslator(translator);
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
         executeSessionService.getCurrentSession().setHmsMirrorConfig(config);
-//        hmsMirrorCfgService.setHmsMirrorConfig(config);
+        ConfigService configService = new ConfigService();
+        configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();
         translatorService.setExecuteSessionService(executeSessionService);
+        translatorService.setConfigService(configService);
     }
 
     @Test
@@ -124,14 +127,14 @@ public class TestTranslator01 extends TranslatorTestBase {
 
     @Test
     public void translateTableLocation_consolidate_01() throws IOException {
-        Translator translator = deserializeResource("/translator/testcase_01.yaml");
-        HmsMirrorConfig config = ConfigTest.deserializeResource("/config/default_01.yaml");
-        config.setTranslator(translator);
-        ExecuteSessionService executeSessionService = new ExecuteSessionService();
-        executeSessionService.getCurrentSession().setHmsMirrorConfig(config);
-//        hmsMirrorCfgService.setHmsMirrorConfig(config);
-        TranslatorService translatorService = new TranslatorService();
-        translatorService.setExecuteSessionService(executeSessionService);
+//        Translator translator = deserializeResource("/translator/testcase_01.yaml");
+//        HmsMirrorConfig config = ConfigTest.deserializeResource("/config/default_01.yaml");
+//        config.setTranslator(translator);
+//        ExecuteSessionService executeSessionService = new ExecuteSessionService();
+//        executeSessionService.getCurrentSession().setHmsMirrorConfig(config);
+////        hmsMirrorCfgService.setHmsMirrorConfig(config);
+//        TranslatorService translatorService = new TranslatorService();
+//        translatorService.setExecuteSessionService(executeSessionService);
 
         DBMirror dbMirror = new DBMirror();
         dbMirror.setName("tpcds_10");
@@ -144,7 +147,7 @@ public class TestTranslator01 extends TranslatorTestBase {
         try {
             String translatedLocation =
                     translatorService.translateTableLocation(tableMirror, originalLoc, 1, null);
-            Assert.assertEquals("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " +
+            Assert.assertEquals("Table Location Assertion Failed: " + originalLoc + " : " + expectedLoc + " : " +
                     translatedLocation, expectedLoc, translatedLocation);
         } catch (Throwable t) {
             Assert.fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " +

@@ -18,10 +18,10 @@
 package com.cloudera.utils.hms.mirror.web.config;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,40 +40,24 @@ public class WebInit {
     }
 
     @Bean
-    public CommandLineRunner initDefaultConfig() {
+    public CommandLineRunner initDefaultConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
         return args -> {
-            // Try to find and load the 'default.yaml' config.
-            String cfgFile = System.getProperty("user.home")
-                    + File.separator + ".hms-mirror/cfg/" + ExecuteSessionService.DEFAULT;
-            File cfg = new File(cfgFile);
+            // hms-mirror.config-filename is set in the application.yaml file with the
+            //    default location.  It can be overridden by setting the commandline
+            //    --hms-mirror.config-filename=<filename>.
+
+            File cfg = new File(configFilename);
+            HmsMirrorConfig hmsMirrorConfig;
             if (cfg.exists()) {
-                log.info("Loading default config from: " + cfgFile);
-                HmsMirrorConfig hmsMirrorConfig = HmsMirrorConfig.loadConfig(cfgFile);
-                executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+                log.info("Loading default config from: " + configFilename);
+                hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);
             } else {
                 // Return empty config.  This will require the user to setup the config.
                 log.warn("No default config found.  Creating empty config.");
-                HmsMirrorConfig hmsMirrorConfig = new HmsMirrorConfig();
-                executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+                hmsMirrorConfig = new HmsMirrorConfig();
             }
+            executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
         };
     }
-
-    @Bean
-    public HmsMirrorConfig buildHmsMirrorConfig() {
-        // Try to find and load the 'default.yaml' config.
-        String cfgFile = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg/default.yaml";
-        File cfg = new File(cfgFile);
-        if (cfg.exists()) {
-            return HmsMirrorConfig.loadConfig(cfgFile);
-        }
-        // Return empty config.  This will require the user to setup the config.
-        return new HmsMirrorConfig();
-    }
-//
-//    @Bean("runStatus")
-//    public RunStatus buildRunStatus() {
-//        return new RunStatus();
-//    }
 
 }

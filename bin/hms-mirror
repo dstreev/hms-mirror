@@ -111,6 +111,18 @@ while [[ $# -gt 0 ]]; do
     DIR_OVERRIDE="x"
     shift
     ;;
+  -dp|--decrypt-password)
+    shift
+    APP_MAIN_CLASS="com.cloudera.utils.hms.mirror.password.Password"
+    PRG_ARGS="${PRG_ARGS} -dp $1"
+    shift
+    ;;
+  -p|--password)
+    shift
+    APP_MAIN_CLASS="com.cloudera.utils.hms.mirror.password.Password"
+    PRG_ARGS="${PRG_ARGS} -p $1"
+    shift
+    ;;
   *)
     PRG_ARGS="${PRG_ARGS} $1"
     shift

@@ -20,7 +20,6 @@ package com.cloudera.utils.hms.mirror.integration.end_to_end;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -52,18 +51,20 @@ import static org.junit.Assert.*;
 @ActiveProfiles("no-cli")
 public class E2EBaseTest {
 
-    protected HMSMirrorAppService HMSMirrorAppService;
+    protected HMSMirrorAppService hmsMirrorAppService;
+    protected ExecuteSessionService executeSessionService;
+    //HMSMirrorAppService;
 
     protected HmsMirrorConfig getConfig() {
-        return getConfigService().getCurrentSession().getHmsMirrorConfig();
+        return executeSessionService.getCurrentSession().getHmsMirrorConfig();
     }
 
-    protected ExecuteSessionService getConfigService() {
-        return HMSMirrorAppService.getExecuteSessionService();
+    protected ExecuteSessionService getExecuteSessionService() {
+        return executeSessionService;
     }
 
     protected Conversion getConversion() {
-        return HMSMirrorAppService.getExecuteSessionService().getCurrentSession().getRunStatus().getConversion();
+        return executeSessionService.getCurrentSession().getConversion();
     }
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {
@@ -180,12 +181,18 @@ public class E2EBaseTest {
     }
 
     protected Long getReturnCode() {
-        return getHMSMirrorAppService().getReturnCode();
+        return hmsMirrorAppService.getReturnCode();
+//        return executeSessionService.getCurrentSession().getRunStatus().getErrors().getReturnCode();
     }
 
     @Autowired
-    public void setHMSMirrorAppService(HMSMirrorAppService HMSMirrorAppService) {
-        this.HMSMirrorAppService = HMSMirrorAppService;
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
+    }
+
+    @Autowired
+    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
+        this.hmsMirrorAppService = hmsMirrorAppService;
     }
 
     protected void validateDBLocation(String database, Environment environment, String expectedLocation) {

@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,7 +29,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Mirror.class,
+@SpringBootTest(classes = Password.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -53,27 +53,21 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/encryption/encrypt_test_02"
         })
 @Slf4j
-public class Test_encrypt_02 extends E2EBaseTest {
+public class Test_encrypt_02 extends PasswordTestBase {
 //        String[] args = new String[]{"-pkey", PKEY,
 //                "-p", "myspecialpassword",
 //                "-cfg", ENCRYPTED
 //        };
 
     @Test
-    public void returnCodeTest() {
-        // Get Runtime Return Code.
-        long actual = getReturnCode();
-        // Verify the return code.
-        long expected = getCheckCode(MessageCode.PASSWORD_CFG);
-
-        assertEquals("Return Code Failure: ", expected, actual);
-    }
-
-    @Test
     public void validateEncryptPassword() {
-        // Get Runtime Return Code.
+
+        String encryptedPassword = getPasswordService().encryptPassword(
+                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
+                getExecuteSession().getHmsMirrorConfig().getPassword());
+
         assertEquals("Encrypt Password Failure: ", "rV+HtIWliZn2CxB+BlWCbQ==",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getDecryptPassword());
+                encryptedPassword);
     }
 
 

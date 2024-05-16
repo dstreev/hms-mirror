@@ -17,13 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolTypes;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,7 +31,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -68,8 +64,8 @@ public class HmsMirrorConfig {
     private Date initDate = new Date();
     private Acceptance acceptance = new Acceptance();
 
-    @JsonIgnore
-    private CliEnvironment cliEnvironment;
+//    @JsonIgnore
+//    private CliEnvironment cliEnvironment;
 
     @Setter
     private Map<Environment, Cluster> clusters = new TreeMap<Environment, Cluster>();
@@ -92,7 +88,7 @@ public class HmsMirrorConfig {
     private boolean skipLinkCheck = Boolean.FALSE;
     private String[] databases = new String[0];
     @JsonIgnore
-    private String decryptPassword;
+    private String encryptedPassword;
     private LegacyTranslations legacyTranslations = new LegacyTranslations();
     /*
    Prefix the DB with this to create an alternate db.
@@ -447,11 +443,6 @@ public class HmsMirrorConfig {
                 }
             }
         }
-    }
-
-    @Autowired
-    public void setCliEnvironment(CliEnvironment cliEnvironment) {
-        this.cliEnvironment = cliEnvironment;
     }
 
     public static HmsMirrorConfig loadConfig(String configFilename) {

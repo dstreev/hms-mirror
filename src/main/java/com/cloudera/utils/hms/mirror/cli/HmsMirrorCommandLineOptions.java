@@ -73,7 +73,7 @@ public class HmsMirrorCommandLineOptions {
 
     public static void main(String[] args) {
         HmsMirrorCommandLineOptions pcli = new HmsMirrorCommandLineOptions();
-        String[] convertedArgs = pcli.toSpringBootOption(args);
+        String[] convertedArgs = pcli.toSpringBootOption(Boolean.TRUE, args);
         String newCmdLn = String.join(" ", convertedArgs);
         System.out.println(newCmdLn);
     }
@@ -232,11 +232,11 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.decrypt-password")
-    CommandLineRunner configDecryptPassword(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.decrypt-password}") String value) {
+            name = "hms-mirror.config.encrypted-password")
+    CommandLineRunner configEncryptPassword(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.encrypted-password}") String value) {
         return args -> {
             log.info("decrypt-password: {}", value);
-            hmsMirrorConfig.setDecryptPassword(value);
+            hmsMirrorConfig.setEncryptedPassword(value);
         };
     }
 
@@ -1552,7 +1552,7 @@ public class HmsMirrorCommandLineOptions {
             RunStatus runStatus = executeSession.getRunStatus();
 
             // Decode Password if necessary.
-            if (hmsMirrorConfig.getPassword() != null || hmsMirrorConfig.getDecryptPassword() != null) {
+            if (hmsMirrorConfig.getPassword() != null || hmsMirrorConfig.getEncryptedPassword() != null) {
                 // Used to generate encrypted password.
                 if (hmsMirrorConfig.getPasswordKey() != null) {
                     Protect protect = new Protect(hmsMirrorConfig.getPasswordKey());
@@ -1562,7 +1562,7 @@ public class HmsMirrorCommandLineOptions {
                         String epassword = null;
                         try {
                             epassword = protect.encrypt(hmsMirrorConfig.getPassword());
-                            hmsMirrorConfig.setDecryptPassword(epassword);
+                            hmsMirrorConfig.setEncryptedPassword(epassword);
                             executeSession.addWarning(MessageCode.ENCRYPTED_PASSWORD, epassword);
                         } catch (Exception e) {
                             executeSession.addError(MessageCode.ENCRYPT_PASSWORD_ISSUE);
@@ -1570,7 +1570,7 @@ public class HmsMirrorCommandLineOptions {
                     } else {
                         String password = null;
                         try {
-                            password = protect.decrypt(hmsMirrorConfig.getDecryptPassword());
+                            password = protect.decrypt(hmsMirrorConfig.getEncryptedPassword());
                             hmsMirrorConfig.setPassword(password);
                             executeSession.addWarning(MessageCode.DECRYPTED_PASSWORD, password);
                         } catch (Exception e) {
@@ -1638,15 +1638,15 @@ public class HmsMirrorCommandLineOptions {
                 return;
             }
 
-            if (!configService.validate()) {
-                for (String message : runStatus.getErrors().getMessages()) {
-                    log.error(message);
-                }
-                return;
-            } else {
-                // Set to true so downstream will continue.
-                hmsMirrorConfig.setValidated(Boolean.TRUE);
-            }
+//            if (!configService.validate()) {
+//                for (String message : runStatus.getErrors().getMessages()) {
+//                    log.error(message);
+//                }
+//                return;
+//            } else {
+//                // Set to true so downstream will continue.
+//                hmsMirrorConfig.setValidated(Boolean.TRUE);
+//            }
 
             if (hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP) {
                 hmsMirrorConfig.setExecute(Boolean.FALSE); // No Actions.
@@ -1765,9 +1765,13 @@ public class HmsMirrorCommandLineOptions {
         };
     }
 
-    public String[] toSpringBootOption(String[] args) {
+    public String[] toSpringBootOption(Boolean withoutWeb, String[] args) {
         CommandLine cmd = getCommandLine(args);
         List<String> springOptions = new ArrayList<>();
+        // Turn off web ui
+        if (withoutWeb) {
+            springOptions.add("--spring.main.web-application-type=none");
+        }
         for (Option option : cmd.getOptions()) {
             String opt = option.getLongOpt();
             String[] values = option.getValues();

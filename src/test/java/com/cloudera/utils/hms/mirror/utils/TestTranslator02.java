@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.utils;
 import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +45,11 @@ public class TestTranslator02 extends TranslatorTestBase {
         config.setTranslator(translator);
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
         executeSessionService.getCurrentSession().setHmsMirrorConfig(config);
-//        hmsMirrorCfgService.setHmsMirrorConfig(config);
+        ConfigService configService = new ConfigService();
+        configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();
         translatorService.setExecuteSessionService(executeSessionService);
+        translatorService.setConfigService(configService);
     }
 
     @Test

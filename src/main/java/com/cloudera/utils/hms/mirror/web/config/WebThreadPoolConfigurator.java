@@ -27,17 +27,17 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class WebThreadPoolConfigurator {
 
-    @Bean("executionThreadPool")
-    @Order(20)
-    public TaskExecutor metadataThreadPool(RuntimeService runtimeService) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        // We only want 1 running at a time.
-        executor.setCorePoolSize(1);
-        executor.setMaxPoolSize(1);
-        executor.setQueueCapacity(Integer.MAX_VALUE);
-        executor.setThreadNamePrefix("execution-");
-        executor.initialize();
-        return executor;
-    }
+//    @Bean("executionThreadPool")
+//    @Order(20)
+//    public TaskExecutor metadataThreadPool(RuntimeService runtimeService) {
+//        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+//        // We only want 1 running at a time.
+//        executor.setCorePoolSize(1);
+//        executor.setMaxPoolSize(1);
+//        executor.setQueueCapacity(Integer.MAX_VALUE);
+//        executor.setThreadNamePrefix("execution-");
+//        executor.initialize();
+//        return executor;
+//    }
 
 }

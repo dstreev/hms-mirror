@@ -34,13 +34,10 @@ import org.springframework.stereotype.Service;
 
 import java.sql.*;
 import java.text.MessageFormat;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.HDPHIVE3_DB_LOCATION;
-import static com.cloudera.utils.hms.mirror.MessageCode.RO_DB_DOESNT_EXIST;
+import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static com.cloudera.utils.hms.mirror.MessageCode.MISC_ERROR;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
@@ -59,6 +56,49 @@ public class DatabaseService {
         this.configService = configService;
     }
 
+    public boolean loadEnvironmentVars() {
+        boolean rtn = Boolean.TRUE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
+        for (Environment environment : environments) {
+            if (hmsMirrorConfig.getCluster(environment) != null) {
+                Connection conn = null;
+                Statement stmt = null;
+                // Clear current variables.
+                hmsMirrorConfig.getCluster(environment).getEnvVars().clear();
+                log.info("Loading {} Environment Variables", environment);
+                try {
+                    conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
+                    //getConfig().getCluster(Environment.LEFT).getConnection();
+                    if (conn != null) {
+                        log.info("Retrieving {} Cluster Connection", environment);
+                        stmt = conn.createStatement();
+                        // Load Session Environment Variables.
+                        ResultSet rs = stmt.executeQuery(MirrorConf.GET_ENV_VARS);
+                        while (rs.next()) {
+                            String envVarSet = rs.getString(1);
+                            hmsMirrorConfig.getCluster(environment).addEnvVar(envVarSet);
+                        }
+                    }
+                } catch (SQLException se) {
+                    // Issue
+                    rtn = Boolean.FALSE;
+                    log.error("Issue getting database connection", se);
+                    executeSessionService.getCurrentSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
+                } finally {
+                    if (conn != null) {
+                        try {
+                            conn.close();
+                        } catch (SQLException e) {
+                            log.error("Issue closing LEFT database connection", e);
+                            executeSessionService.getCurrentSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
+                        }
+                    }
+                }
+            }
+        }
+        return rtn;
+    }
 
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
@@ -196,7 +236,7 @@ public class DatabaseService {
                                 }
                                 if (hmsMirrorConfig.isReadOnly() && !hmsMirrorConfig.isLoadingTestData()) {
                                     log.debug("Config set to 'read-only'.  Validating FS before continuing");
-                                    CliEnvironment cli = hmsMirrorConfig.getCliEnvironment();
+                                    CliEnvironment cli = executeSessionService.getCliEnvironment();
 
                                     // Check that location exists.
                                     String dbLocation = null;
@@ -412,8 +452,7 @@ public class DatabaseService {
     public boolean createDatabases() {
         boolean rtn = true;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-        Conversion conversion = runStatus.getConversion();
+        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
         for (String database : hmsMirrorConfig.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
             rtn = buildDBStatements(dbMirror);
@@ -429,6 +468,8 @@ public class DatabaseService {
         }
         return rtn;
     }
+
+
 
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;

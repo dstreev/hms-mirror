@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import lombok.Getter;
@@ -34,6 +35,7 @@ public class ExecuteSession {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private RunStatus runStatus;
     private HmsMirrorConfig hmsMirrorConfig;
+    private CliEnvironment cliEnvironment;
     private Conversion conversion;
 
     public void addError(MessageCode code) {

@@ -110,7 +110,7 @@ public abstract class DataStrategyBase implements DataStrategy {
             if (leftPath != null && rightPath != null && hmsMirrorConfig.isCopyAvroSchemaUrls() && hmsMirrorConfig.isExecute()) {
                 // Copy over.
                 log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
-                CliEnvironment cli = hmsMirrorConfig.getCliEnvironment();
+                CliEnvironment cli = executeSessionService.getCliEnvironment();
                 try {
                     CommandReturn cr = null;
                     if (relative) {

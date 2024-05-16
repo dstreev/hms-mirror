@@ -48,7 +48,7 @@ public class Mirror {
         //    before starting the application.
         log.info("Translating command line arguments to Spring Boot arguments");
         HmsMirrorCommandLineOptions hmsMirrorCommandLineOptions = new HmsMirrorCommandLineOptions();
-        String[] springArgs = hmsMirrorCommandLineOptions.toSpringBootOption(args);
+        String[] springArgs = hmsMirrorCommandLineOptions.toSpringBootOption(Boolean.TRUE, args);
         log.info("Translated Spring Boot arguments: {}", String.join(" ", springArgs));
         log.info("STARTING THE APPLICATION");
 

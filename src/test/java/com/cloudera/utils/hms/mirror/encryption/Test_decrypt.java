@@ -17,9 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.cli.Mirror;
-import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,7 +27,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Mirror.class,
+@SpringBootTest(classes = Password.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -48,35 +46,21 @@ import static org.junit.Assert.assertEquals;
 //                "--hms-mirror.config.reset-to-default-location=true",
 //                "--hms-mirror.config.distcp=true",
 //                "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.encrypted",
+//                "--hms-mirror.config-filename=/config/default.yaml.encrypted",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/encryption/decrypt_test"
         })
 @Slf4j
-public class Test_decrypt extends E2EBaseTest {
-    //        String[] args = new String[]{"-pkey", PKEY,
-//                "-dp", "FNLmFEI0F/n8acz45c3jVExMounSBklX",
-//                "-cfg", ENCRYPTED
-//        };
-//
-//        long rtn = 0;
-//        CommandLineOptions commandLineOptions = new CommandLineOptions();
-//        CommandLine cmd = commandLineOptions.getCommandLine(args);
-
-    @Test
-    public void returnCodeTest() {
-        // Get Runtime Return Code.
-        long actual = getReturnCode();
-        // Verify the return code.
-        long expected = getCheckCode(MessageCode.PASSWORD_CFG);
-
-        assertEquals("Return Code Failure: ", expected, actual);
-    }
+public class Test_decrypt extends PasswordTestBase {
 
     @Test
     public void validatePassword() {
-        // Get Runtime Return Code.
+
+        String decryptedPassword = getPasswordService().decryptPassword(
+                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
+                getExecuteSession().getHmsMirrorConfig().getEncryptedPassword());
+
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getConfigService().getCurrentSession().getHmsMirrorConfig().getPassword());
+                decryptedPassword);
     }
 
 }

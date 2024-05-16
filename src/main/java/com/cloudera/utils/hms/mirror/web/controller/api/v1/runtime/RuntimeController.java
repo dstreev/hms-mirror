@@ -26,8 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
-
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/runtime")
@@ -51,13 +49,6 @@ public class RuntimeController {
     public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
         this.connectionPoolService = connectionPoolService;
     }
-
-
-//    public RunStatus validate(String sessionId) {
-//        configService.validate(sessionId);
-//
-//        return executeSessionService.getSession(sessionId).getRunStatus();
-//    }
 
 
     public RunStatus start(String sessionId, boolean dryrun) {

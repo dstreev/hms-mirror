@@ -17,11 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.util;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,8 +40,6 @@ public class ThreadPoolConfigurator {
 
         log.info("Setting up jobThreadPool with max threads: {}", value);
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-
         executor.setCorePoolSize(value);
         executor.setMaxPoolSize(value);
 
@@ -59,7 +55,6 @@ public class ThreadPoolConfigurator {
             name = "hms-mirror.concurrency.max-threads")
     public TaskExecutor metadataThreadPool(ExecuteSessionService executeSessionService,  @Value("${hms-mirror.concurrency.max-threads}") Integer value) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         log.info("Setting up metadataThreadPool with max threads: {}", value);
 
@@ -74,9 +69,8 @@ public class ThreadPoolConfigurator {
 
     @Bean("reportingThreadPool")
     @Order(20)
-    public TaskExecutor reportingThreadPool(ExecuteSessionService executeSessionService) {
+    public TaskExecutor reportingThreadPool() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
 
         log.info("Setting up reportingThreadPool with max threads: 1");
 
@@ -85,6 +79,19 @@ public class ThreadPoolConfigurator {
 
         executor.setQueueCapacity(Integer.MAX_VALUE);
         executor.setThreadNamePrefix("reporting-");
+        executor.initialize();
+        return executor;
+    }
+
+    @Bean("executionThreadPool")
+    @Order(20)
+    public TaskExecutor executionThreadPool() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        // We only want 1 running at a time.
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(Integer.MAX_VALUE);
+        executor.setThreadNamePrefix("execution-");
         executor.initialize();
         return executor;
     }
