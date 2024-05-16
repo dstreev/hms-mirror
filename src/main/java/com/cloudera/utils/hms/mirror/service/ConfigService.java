@@ -50,8 +50,15 @@ import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAG
 @Getter
 public class ConfigService {
 
+    private org.springframework.core.env.Environment springEnv;
+
     private ConnectionPoolService connectionPoolService;
     private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setSpringEnv(org.springframework.core.env.Environment springEnv) {
+        this.springEnv = springEnv;
+    }
 
     @Autowired
     public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {

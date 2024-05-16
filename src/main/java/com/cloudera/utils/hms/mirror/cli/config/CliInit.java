@@ -106,8 +106,16 @@ public class CliInit {
     @ConditionalOnProperty(
             name = "hms-mirror.config.setup",
             havingValue = "false")
-    public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
-        return HmsMirrorConfig.loadConfig(configFilename);
+    public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config.path}") String configPath,
+                                               @Value("${hms-mirror.config.file}") String configFile) {
+        String fullConfigPath;
+        // If file is absolute, use it.  Otherwise, use the path.
+        if (configFile.startsWith(File.separator)) {
+            fullConfigPath = configFile;
+        } else {
+            fullConfigPath = configPath + File.separator + configFile;
+        }
+        return HmsMirrorConfig.loadConfig(fullConfigPath);
     }
 
     @Bean

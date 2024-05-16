@@ -29,11 +29,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -42,9 +46,16 @@ import java.util.Map;
 @RequestMapping(path = "/api/v1/config")
 public class ConfigController {
 
+    private org.springframework.core.env.Environment springEnv;
+
     private ConfigService configService;
     private WebConfigService webConfigService;
     private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setSpringEnv(org.springframework.core.env.Environment springEnv) {
+        this.springEnv = springEnv;
+    }
 
     @Autowired
     public void setConfigService(ConfigService configService) {
@@ -108,7 +119,9 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.GET, value = "/{id}")
     public HmsMirrorConfig getById(@PathVariable @NotNull String id) {
         log.info("Getting Config by id: {}", id);
-        return configService.loadConfig(id);
+        String configPath = springEnv.getProperty("hms-mirror.config.path");
+        String configFileName = configPath + File.separator + id;
+        return configService.loadConfig(configFileName);
     }
 
     @Operation(summary = "Load a config by id")
@@ -157,7 +170,10 @@ public class ConfigController {
                         @PathVariable @NotNull String id) {
         log.info("{}: Save current config to: {}", sessionId, id);
         HmsMirrorConfig config = executeSessionService.getSession(sessionId).getHmsMirrorConfig();
-        return configService.saveConfig(config, id);
+        // Save to the hms-mirror.config.path as 'id'.
+        String configPath = springEnv.getProperty("hms-mirror.config.path");
+        String configFullFilename = configPath + File.separator + id;
+        return configService.saveConfig(config, configFullFilename);
     }
 
     @Operation(summary = "Get the configs clusters")
@@ -419,7 +435,6 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer")
     public TransferConfig setTransfer(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                      @RequestParam(value = "concurrency", required = false) Integer concurrency,
                                       @RequestParam(value = "transferPrefix", required = false) String transferPrefix,
                                       @RequestParam(value = "shadowPrefix", required = false) String shadowPrefix,
                                       @RequestParam(value = "exportBaseDirPrefix", required = false) String exportBaseDirPrefix,
@@ -427,10 +442,6 @@ public class ConfigController {
                                       @RequestParam(value = "intermediateStorage", required = false) String intermediateStorage,
                                       @RequestParam(value = "commonStorage", required = false) String commonStorage
     ) {
-        if (concurrency != null) {
-            log.info("{}: Setting Transfer 'concurrency' to: {}", sessionId, concurrency);
-            executeSessionService.getSession(sessionId).getHmsMirrorConfig().getTransfer().setConcurrency(concurrency);
-        }
         if (transferPrefix != null) {
             log.info("{}: Setting Transfer 'transferPrefix' to: {}", sessionId, transferPrefix);
             executeSessionService.getSession(sessionId).getHmsMirrorConfig().getTransfer().setTransferPrefix(transferPrefix);

@@ -40,20 +40,21 @@ public class WebInit {
     }
 
     @Bean
-    public CommandLineRunner initDefaultConfig(@Value("${hms-mirror.config-filename}") String configFilename) {
+    public CommandLineRunner initDefaultConfig(@Value("${hms-mirror.config.path}") String configPath,
+                                               @Value("${hms-mirror.config.filename}") String configFilename) {
         return args -> {
             // hms-mirror.config-filename is set in the application.yaml file with the
             //    default location.  It can be overridden by setting the commandline
             //    --hms-mirror.config-filename=<filename>.
-
-            File cfg = new File(configFilename);
+            String configFullFilename = configPath + File.separator + configFilename;
+            File cfg = new File(configFullFilename);
             HmsMirrorConfig hmsMirrorConfig;
             if (cfg.exists()) {
-                log.info("Loading default config from: " + configFilename);
-                hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);
+                log.info("Loading config from: " + configFullFilename);
+                hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFullFilename);
             } else {
                 // Return empty config.  This will require the user to setup the config.
-                log.warn("No default config found.  Creating empty config.");
+                log.warn("No config found.  Creating empty config.");
                 hmsMirrorConfig = new HmsMirrorConfig();
             }
             executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);

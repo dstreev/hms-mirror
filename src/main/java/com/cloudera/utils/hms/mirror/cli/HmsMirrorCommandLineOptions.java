@@ -1777,7 +1777,7 @@ public class HmsMirrorCommandLineOptions {
             String[] values = option.getValues();
             if (opt.equals("config")) {
                 // Handle the config file differently
-                springOptions.add("--hms-mirror.config-filename" + opt + "=\"" + String.join(",", values) + "\"");
+                springOptions.add("--hms-mirror.config.filename" +"=\"" + String.join(",", values) + "\"");
             } else {
                 if (values != null && values.length > 0) {
                     springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + String.join(",", values));

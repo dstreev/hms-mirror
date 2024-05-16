@@ -12,9 +12,10 @@ hadoop:
   cli:
     api: "true"
 hms-mirror:
-  config-filename: ${HOME}/.hms-mirror/cfg/default.yaml
   config:
     output-dir: "false"
+    path: ${HOME}/.hms-mirror/cfg
+    filename: "default.yaml"
     setup: "false"
   conversion:
     test-filename: "false"

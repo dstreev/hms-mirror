@@ -17,8 +17,13 @@
 
 package com.cloudera.utils.hms.mirror.web.service;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -29,12 +34,29 @@ import java.util.List;
 @Service
 public class WebConfigService {
 
+    private String configPath = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg";
+
     private ExecuteSessionService executeSessionService;
+
+    @Bean
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.path")
+    CommandLineRunner setConfigPath(@Value("${hms-mirror.config.path}") String value) {
+        // Check that directory exists.
+        return args -> {
+            File file = new File(value);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+            this.configPath = value;
+        };
+    }
 
     @Autowired
     public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
+
 
     /*
     Scan the config directory and return a list of all the config files.
@@ -42,6 +64,7 @@ public class WebConfigService {
     public List<String> getConfigList() {
         // Scan a directory and return a list of all the files with a .yaml extension.
         List<String> configList = new ArrayList<>();
+
         // Users home directory
         String cfgPath = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg";
 
