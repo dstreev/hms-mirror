@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 @Slf4j
 @Getter
@@ -36,26 +37,72 @@ public class RunStatus {
     @JsonIgnore
     private final Messages warnings = new Messages(150);
 
-    private boolean configValidated = false;
+    @JsonIgnore
+    Future<Boolean> runningTask = null;
 
+    /*
+    Flag to indicate if the configuration has been validated.
+    This should be reset before each run to ensure the configuration is validated.
+     */
+    private boolean configValidated = false;
+    /*
+    Keep track of the current running state.
+     */
+    private ProgressEnum progress = ProgressEnum.INITIALIZED;
+
+    /*
+    Track the current progress across the various stages of the operation.
+     */
     private Map<StageEnum, CollectionEnum> stages = new LinkedHashMap<>();
 
+    /*
+    Maintain statistics on the operation.
+     */
     private OperationStatistics operationStatistics = new OperationStatistics();
+
+    public ProgressEnum getProgress() {
+        // If the task is still running, then the progress is still in progress.
+        if (runningTask != null) {
+            if (!runningTask.isDone()) {
+                return ProgressEnum.IN_PROGRESS;
+            }
+        } else {
+            return progress;
+        }
+    }
 
     public RunStatus() {
         for (StageEnum stage : StageEnum.values()) {
             stages.put(stage, CollectionEnum.EMPTY);
         }
     }
+
     /*
     reset the state of the RunStatus.
      */
     public void reset() {
         errors.clear();
         warnings.clear();
+        progress = ProgressEnum.INITIALIZED;
         configValidated = false;
         stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
         operationStatistics.reset();
+        cancel();
+    }
+
+    public boolean cancel() {
+        boolean rtn = Boolean.TRUE;
+        if (runningTask != null && !runningTask.isDone()) {
+            if (runningTask.cancel(true)) {
+                log.info("Task cancelled.");
+                this.progress = ProgressEnum.CANCELLED;
+            } else {
+                log.error("Task could not be cancelled.");
+                this.progress = ProgressEnum.CANCEL_FAILED;
+                rtn = Boolean.FALSE;
+            };
+        }
+        return rtn;
     }
 
     public void setStage(StageEnum stage, CollectionEnum collection) {

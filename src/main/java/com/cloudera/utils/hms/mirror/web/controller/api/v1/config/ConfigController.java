@@ -167,13 +167,14 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/save/{id}")
     public boolean save(@RequestParam(name = "sessionId", required = false) String sessionId,
-                        @PathVariable @NotNull String id) {
+                        @PathVariable @NotNull String id,
+                        @RequestParam(value = "overwrite", required = false) Boolean overwrite) {
         log.info("{}: Save current config to: {}", sessionId, id);
         HmsMirrorConfig config = executeSessionService.getSession(sessionId).getHmsMirrorConfig();
         // Save to the hms-mirror.config.path as 'id'.
         String configPath = springEnv.getProperty("hms-mirror.config.path");
         String configFullFilename = configPath + File.separator + id;
-        return configService.saveConfig(config, configFullFilename);
+        return configService.saveConfig(config, configFullFilename, overwrite);
     }
 
     @Operation(summary = "Get the configs clusters")

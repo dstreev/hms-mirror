@@ -107,7 +107,7 @@ public class CliInit {
             name = "hms-mirror.config.setup",
             havingValue = "false")
     public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config.path}") String configPath,
-                                               @Value("${hms-mirror.config.file}") String configFile) {
+                                               @Value("${hms-mirror.config.filename}") String configFile) {
         String fullConfigPath;
         // If file is absolute, use it.  Otherwise, use the path.
         if (configFile.startsWith(File.separator)) {

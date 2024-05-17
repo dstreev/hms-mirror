@@ -87,6 +87,9 @@
     <logger name="com.cloudera.utils.hms.mirror.DBMirror" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>
+    <logger name="com.cloudera.utils.hms.mirror.domain" level="warn" additivity="false">
+        <appender-ref ref="Console"/>
+    </logger>
     <logger name="com.cloudera.utils.hms.mirror.domain.Cluster" level="info" additivity="false">
         <appender-ref ref="Console"/>
     </logger>

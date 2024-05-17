@@ -17,14 +17,19 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.concurrent.Future;
 
 @RestController
 @Slf4j
@@ -34,6 +39,7 @@ public class RuntimeController {
     private ConfigService configService;
     private ExecuteSessionService executeSessionService;
     private ConnectionPoolService connectionPoolService;
+    private HMSMirrorAppService hmsMirrorAppService;
 
     @Autowired
     public void setConfigService(ConfigService ConfigService) {
@@ -50,33 +56,54 @@ public class RuntimeController {
         this.connectionPoolService = connectionPoolService;
     }
 
+    @Autowired
+    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
+        this.hmsMirrorAppService = hmsMirrorAppService;
+    }
 
-    public RunStatus start(String sessionId, boolean dryrun) {
+
+    public RunStatus start(String sessionId, Boolean dryrun) {
+        // Check the current RunStatus.  If it is not STOPPED, then we cannot start.
+        ExecuteSession session = executeSessionService.getSession(sessionId);
+        RunStatus runStatus = session.getRunStatus();
+        if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
+                || runStatus.getProgress() == ProgressEnum.STARTED) {
+            log.error("The session is currently running. Cannot start until operation has completed.");
+            return false;
+        } else {
+            log.info("Starting session: " + sessionId);
+
+        }
+        runStatus.reset();
+        runStatus.setProgress(ProgressEnum.STARTED);
+        // Set the dryrun flag.
         executeSessionService.getSession(sessionId).getHmsMirrorConfig().setExecute(!dryrun);
-
-        /////  Should we consider moving this to the RuntimeService?  /////
 
         // Close all connections, so we can ensure we have a clean start.
         connectionPoolService.close();
 
-        if (configService.validate()) {
-            // TODO: Execute the session.
-//            executeSessionService.start(sessionId);
-        } else {
-            log.error("Validation failed. Exiting.");
-        }
+        // Start job in a separate thread.
+        Future<Boolean> runningTask = hmsMirrorAppService.run();
 
-        return executeSessionService.getSession(sessionId).getRunStatus();
+        // Set state to in progress.
+        runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+
+        // Set the running task reference in the RunStatus.
+        runStatus.setRunningTask(runningTask);
+
+        return runStatus;
     }
 
     public RunStatus status(String sessionId) {
         return executeSessionService.getSession(sessionId).getRunStatus();
     }
 
-    public RunStatus stop(String sessionId) {
+    public RunStatus cancel(String sessionId) {
         // TODO: Stop a running session.
 
         return executeSessionService.getSession(sessionId).getRunStatus();
     }
+
+
 
 }

@@ -181,7 +181,7 @@ public class HmsMirrorConfig {
     public HmsMirrorConfig() {
     }
 
-    public static boolean save(HmsMirrorConfig config, String configFilename) {
+    public static boolean save(HmsMirrorConfig config, String configFilename, Boolean overwrite) {
         boolean rtn = Boolean.FALSE;
         try {
             ObjectMapper mapper;
@@ -190,6 +190,10 @@ public class HmsMirrorConfig {
 
             String configStr = mapper.writeValueAsString(config);
             File cfgFile = new File(configFilename);
+            if (cfgFile.exists() && (overwrite == null || !overwrite)) {
+                log.error("Config file already exists.  Use 'overwrite' to replace.");
+                return rtn;
+            }
             FileWriter cfgFileWriter = null;
             try {
                 cfgFileWriter = new FileWriter(cfgFile);
@@ -310,7 +314,7 @@ public class HmsMirrorConfig {
             }
         }
 
-        save(hmsMirrorConfig, configFile);
+        save(hmsMirrorConfig, configFile, Boolean.FALSE);
 
     }
 

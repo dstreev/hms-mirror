@@ -306,8 +306,8 @@ public class ConfigService {
         return rtn;
     }
 
-    public boolean saveConfig(HmsMirrorConfig config, String configFileName) {
-        return HmsMirrorConfig.save(config, configFileName);
+    public boolean saveConfig(HmsMirrorConfig config, String configFileName, Boolean overwrite) {
+        return HmsMirrorConfig.save(config, configFileName, overwrite);
     }
 
     public void setupGSS() {
