@@ -67,12 +67,12 @@ public class RuntimeController {
         ExecuteSession session = executeSessionService.getSession(sessionId);
         RunStatus runStatus = session.getRunStatus();
         if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
-                || runStatus.getProgress() == ProgressEnum.STARTED) {
+                || runStatus.getProgress() == ProgressEnum.STARTED
+                || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
             log.error("The session is currently running. Cannot start until operation has completed.");
-            return false;
+            throw new RuntimeException("Session already running.");
         } else {
             log.info("Starting session: " + sessionId);
-
         }
         runStatus.reset();
         runStatus.setProgress(ProgressEnum.STARTED);
@@ -103,7 +103,6 @@ public class RuntimeController {
 
         return executeSessionService.getSession(sessionId).getRunStatus();
     }
-
 
 
 }

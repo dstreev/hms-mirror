@@ -64,11 +64,10 @@ public class RunStatus {
         // If the task is still running, then the progress is still in progress.
         if (runningTask != null) {
             if (!runningTask.isDone()) {
-                return ProgressEnum.IN_PROGRESS;
+                progress = ProgressEnum.IN_PROGRESS;
             }
-        } else {
-            return progress;
         }
+        return progress;
     }
 
     public RunStatus() {
@@ -100,7 +99,8 @@ public class RunStatus {
                 log.error("Task could not be cancelled.");
                 this.progress = ProgressEnum.CANCEL_FAILED;
                 rtn = Boolean.FALSE;
-            };
+            }
+            ;
         }
         return rtn;
     }
