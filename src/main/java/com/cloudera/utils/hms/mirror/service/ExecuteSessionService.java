@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class ExecuteSessionService {
     public static final String DEFAULT = "default.yaml";
 
     private CliEnvironment cliEnvironment;
+    @Setter
     private ExecuteSession currentSession;
     private final Map<String, ExecuteSession> sessions = new HashMap<>();
 
@@ -68,16 +70,14 @@ public class ExecuteSessionService {
     public ExecuteSession getSession(String sessionId) {
         String sessionName = sessionId != null? sessionId : DEFAULT;
 
-        // If the session is the default, create it if it doesn't exist
-        if (sessionName.equals(DEFAULT) && !sessions.containsKey(DEFAULT)) {
-            return createSession(DEFAULT, null);
+        ExecuteSession session = null;
+        if (sessions.containsKey(sessionName)) {
+            session = sessions.get(sessionName);
         } else {
-            return sessions.get(sessionName);
+            // Session Not found.
+//            session = createSession(sessionName, null);
         }
-    }
-
-    public void setCurrentSession(String sessionId) {
-        currentSession = getSession(sessionId);
+        return session;
     }
 
     public ExecuteSession getCurrentSession() {

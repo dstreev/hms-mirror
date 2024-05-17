@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.config;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,8 @@ public class WebInit {
                 log.warn("No config found.  Creating empty config.");
                 hmsMirrorConfig = new HmsMirrorConfig();
             }
-            executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+            ExecuteSession createdSession = executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+            executeSessionService.setCurrentSession(createdSession);
         };
     }
 

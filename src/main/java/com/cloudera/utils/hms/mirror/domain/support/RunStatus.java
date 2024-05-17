@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 @Slf4j
@@ -60,11 +61,43 @@ public class RunStatus {
      */
     private OperationStatistics operationStatistics = new OperationStatistics();
 
+    public boolean isRunning() {
+        boolean rtn = Boolean.FALSE;
+        switch (progress) {
+            case IN_PROGRESS:
+            case STARTED:
+            case CANCEL_FAILED:
+                rtn = Boolean.TRUE;
+                break;
+            case CANCELLED:
+            case COMPLETED:
+            case FAILED:
+            case INITIALIZED:
+                rtn = Boolean.FALSE;
+                break;
+        }
+        return rtn;
+    }
+
     public ProgressEnum getProgress() {
         // If the task is still running, then the progress is still in progress.
         if (runningTask != null) {
-            if (!runningTask.isDone()) {
+            if (runningTask.isCancelled()) {
+                progress = ProgressEnum.CANCELLED;
+            } else if (!runningTask.isDone()) {
                 progress = ProgressEnum.IN_PROGRESS;
+            } else if (runningTask.isDone()) {
+                // Don't attempt to get the result until the task is done.
+                //     or else it will block.
+                try {
+                    if (runningTask.get()) {
+                        progress = ProgressEnum.COMPLETED;
+                    } else {
+                        progress = ProgressEnum.FAILED;
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    //throw new RuntimeException(e);
+                }
             }
         }
         return progress;
@@ -79,14 +112,19 @@ public class RunStatus {
     /*
     reset the state of the RunStatus.
      */
-    public void reset() {
-        errors.clear();
-        warnings.clear();
-        progress = ProgressEnum.INITIALIZED;
-        configValidated = false;
-        stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
-        operationStatistics.reset();
-        cancel();
+    public boolean reset() {
+        boolean rtn = Boolean.TRUE;
+        if (cancel()) {
+            errors.clear();
+            warnings.clear();
+            progress = ProgressEnum.INITIALIZED;
+            configValidated = false;
+            stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
+            operationStatistics.reset();
+        } else {
+            rtn = Boolean.FALSE;
+        }
+        return rtn;
     }
 
     public boolean cancel() {

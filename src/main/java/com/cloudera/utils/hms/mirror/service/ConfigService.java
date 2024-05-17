@@ -52,17 +52,11 @@ public class ConfigService {
 
     private org.springframework.core.env.Environment springEnv;
 
-    private ConnectionPoolService connectionPoolService;
     private ExecuteSessionService executeSessionService;
 
     @Autowired
     public void setSpringEnv(org.springframework.core.env.Environment springEnv) {
         this.springEnv = springEnv;
-    }
-
-    @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
     }
 
     @Autowired
@@ -95,84 +89,6 @@ public class ConfigService {
         if (rtn && hmsMirrorConfig.isResetToDefaultLocation() &&
                 hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null) {
             rtn = Boolean.FALSE;
-        }
-        return rtn;
-    }
-
-    public Boolean checkConnections() {
-        boolean rtn = Boolean.FALSE;
-
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-
-        Set<Environment> envs = new HashSet<>();
-        if (!(hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP ||
-                hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION ||
-                hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.ICEBERG_CONVERSION)) {
-            envs.add(Environment.LEFT);
-            envs.add(Environment.RIGHT);
-        } else {
-            envs.add(Environment.LEFT);
-        }
-
-        for (Environment env : envs) {
-            Cluster cluster = hmsMirrorConfig.getCluster(env);
-            if (cluster != null
-                    && cluster.getHiveServer2() != null
-                    && cluster.getHiveServer2().isValidUri()
-                    && !cluster.getHiveServer2().isDisconnected()) {
-                Connection conn = null;
-                try {
-                    conn = connectionPoolService.getConnectionPools().getHS2EnvironmentConnection(env);
-                    //cluster.getConnection();
-                    // May not be set for DUMP strategy (RIGHT cluster)
-                    log.debug("{}:: Checking Hive Connection", env);
-                    if (conn != null) {
-//                        Statement stmt = null;
-//                        ResultSet resultSet = null;
-//                        try {
-//                            stmt = conn.createStatement();
-//                            resultSet = stmt.executeQuery("SHOW DATABASES");
-//                            resultSet = stmt.executeQuery("SELECT 'HIVE CONNECTION TEST PASSED' AS STATUS");
-                        log.debug("{}:: Hive Connection Successful", env);
-                        rtn = Boolean.TRUE;
-//                        } catch (SQLException sql) {
-                        // DB Doesn't Exists.
-//                            log.error(env + ": Hive Connection check failed.", sql);
-//                            rtn = Boolean.FALSE;
-//                        } finally {
-//                            if (resultSet != null) {
-//                                try {
-//                                    resultSet.close();
-//                                } catch (SQLException sqlException) {
-//                                     ignore
-//                                }
-//                            }
-//                            if (stmt != null) {
-//                                try {
-//                                    stmt.close();
-//                                } catch (SQLException sqlException) {
-                        // ignore
-//                                }
-//                            }
-//                        }
-                    } else {
-                        log.error("{}: Hive Connection check failed.  Connection is null.", env);
-                        rtn = Boolean.FALSE;
-                    }
-                } catch (SQLException se) {
-                    rtn = Boolean.FALSE;
-                    log.error("{}: Hive Connection check failed.", env, se);
-                } finally {
-                    if (conn != null) {
-                        try {
-                            log.info("{}: Closing Connection", env);
-                            conn.close();
-                        } catch (Throwable throwables) {
-                            log.error("{}: Error closing connection.", env, throwables);
-                        }
-                    }
-                }
-            }
         }
         return rtn;
     }

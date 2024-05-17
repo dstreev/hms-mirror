@@ -54,7 +54,13 @@ public class RunStatusController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public RunStatus getRunStatus(@RequestParam(name = "sessionId", required = false) String sessionId) {
-        return executeSessionService.getSession(sessionId).getRunStatus();
+        RunStatus runStatus = null;
+        if (sessionId == null) {
+            runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        } else {
+            runStatus = executeSessionService.getSession(sessionId).getRunStatus();
+        }
+        return runStatus;
     }
 
 

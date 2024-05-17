@@ -24,10 +24,14 @@ import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.Future;
 
@@ -61,10 +65,22 @@ public class RuntimeController {
         this.hmsMirrorAppService = hmsMirrorAppService;
     }
 
-
-    public RunStatus start(String sessionId, Boolean dryrun) {
+    @Operation(summary = "Start the Operation")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operation started successfully",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = RunStatus.class))})
+//            , @ApiResponse(responseCode = "400", description = "Invalid id supplied",
+//                    content = @Content)
+//            , @ApiResponse(responseCode = "404", description = "Config not found",
+//                    content = @Content)
+    })
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/start")
+    public RunStatus start(@RequestParam(name = "sessionId", required = false) String sessionId,
+                           @RequestParam(name = "dryrun") Boolean dryrun) {
         // Check the current RunStatus.  If it is not STOPPED, then we cannot start.
-        ExecuteSession session = executeSessionService.getSession(sessionId);
+        ExecuteSession session = executeSessionService.getCurrentSession();
         RunStatus runStatus = session.getRunStatus();
         if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
                 || runStatus.getProgress() == ProgressEnum.STARTED
@@ -74,34 +90,52 @@ public class RuntimeController {
         } else {
             log.info("Starting session: " + sessionId);
         }
-        runStatus.reset();
-        runStatus.setProgress(ProgressEnum.STARTED);
-        // Set the dryrun flag.
-        executeSessionService.getSession(sessionId).getHmsMirrorConfig().setExecute(!dryrun);
 
-        // Close all connections, so we can ensure we have a clean start.
-        connectionPoolService.close();
+        if (runStatus.reset()) {
+            runStatus.setProgress(ProgressEnum.STARTED);
+            // Set the dryrun flag.
+            executeSessionService.getCurrentSession().getHmsMirrorConfig().setExecute(!dryrun);
 
-        // Start job in a separate thread.
-        Future<Boolean> runningTask = hmsMirrorAppService.run();
+            // Moved to HmsMirrorAppService.run()
+//            // Establish the connection pools.
+//            connectionPoolService.close();
+//            try {
+//                connectionPoolService.init();
+//            } catch (Exception e) {
+//                log.error("Error initializing connection pools.", e);
+//                runStatus.setProgress(ProgressEnum.FAILED);
+//                return runStatus;
+//            }
 
-        // Set state to in progress.
-        runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+            // Start job in a separate thread.
+            Future<Boolean> runningTask = hmsMirrorAppService.run();
 
-        // Set the running task reference in the RunStatus.
-        runStatus.setRunningTask(runningTask);
+            // Set state to in progress.
+            runStatus.setProgress(ProgressEnum.IN_PROGRESS);
 
+            // Set the running task reference in the RunStatus.
+            runStatus.setRunningTask(runningTask);
+        }
         return runStatus;
     }
 
-    public RunStatus status(String sessionId) {
-        return executeSessionService.getSession(sessionId).getRunStatus();
-    }
 
+    @Operation(summary = "Cancel the Operation")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operation cancelled successfully",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = RunStatus.class))})
+//            , @ApiResponse(responseCode = "400", description = "Invalid id supplied",
+//                    content = @Content)
+//            , @ApiResponse(responseCode = "404", description = "Config not found",
+//                    content = @Content)
+    })
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/cancel")
     public RunStatus cancel(String sessionId) {
-        // TODO: Stop a running session.
-
-        return executeSessionService.getSession(sessionId).getRunStatus();
+        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        runStatus.cancel();
+        return runStatus;
     }
 
 

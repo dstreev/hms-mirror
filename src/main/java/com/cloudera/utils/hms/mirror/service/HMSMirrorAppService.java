@@ -21,10 +21,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.domain.support.CollectionEnum;
-import com.cloudera.utils.hms.mirror.domain.support.StageEnum;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.MISC_ERROR;
+import static com.cloudera.utils.hms.mirror.MessageCode.*;
 
 @Service
 @Getter
@@ -88,7 +85,15 @@ public class HMSMirrorAppService {
         RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
         Conversion conversion = executeSessionService.getCurrentSession().getConversion();
 
-        runStatus.reset();
+        connectionPoolService.close();
+
+        try {// Refresh the connection pool.
+            connectionPoolService.init();
+        } catch (SQLException e) {
+            log.error("Issue refreshing connection pool", e);
+            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
+            return new AsyncResult<>(Boolean.FALSE);
+        }
 
         if (!configService.validate()) {
             log.error("Configuration is not valid.  Exiting.");
@@ -410,8 +415,13 @@ public class HMSMirrorAppService {
                     try {
                         if (sf.isDone() && sf.get() != null) {
                             if (sf.get().getStatus() == ReturnStatus.Status.ERROR) {
-                                rtn = Boolean.FALSE;
-//                                    throw new RuntimeException(sf.get().getException());
+                                // Check if the table was removed, so that's not a processing error.
+                                TableMirror tableMirror = sf.get().getTableMirror();
+                                if (tableMirror != null) {
+                                    if (!tableMirror.isRemove()) {
+                                        rtn = Boolean.FALSE;
+                                    }
+                                }
                             }
                         }
                     } catch (InterruptedException | ExecutionException e) {
