@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.in-place=true",
                 "--hms-mirror.config.migrate-acid-only=true",
                 "--hms-mirror.conversion.test-filename=/test_data/legacy_mngd_no_parts.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.right-is-disconnected=true"
         })
 @ActiveProfiles("e2e-cdp-sql-acid")

@@ -47,7 +47,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.distcp=true",
                 "--hms-mirror.config.global-location-map=/apps/hive/warehouse=/warehouse/tablespace/external/hive",
                 "--hms-mirror.conversion.test-filename=/test_data/legacy_mngd_parts_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdh-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdh-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/legacy_cdp/so_wd_epl_rdl_glm_dc"
         })
 @Slf4j

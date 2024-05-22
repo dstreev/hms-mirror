@@ -38,7 +38,7 @@ import static org.junit.Assert.fail;
                 "--hms-mirror.config.external-warehouse-directory=/finance/external-fso",
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.distcp=PULL",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_rdl_dc"

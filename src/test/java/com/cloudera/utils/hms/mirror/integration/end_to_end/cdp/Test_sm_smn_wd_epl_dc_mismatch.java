@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch",
         })
 @ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")

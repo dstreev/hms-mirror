@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.migrate-acid-only=true",
                 "--hms-mirror.config.intermediate-storage=s3a://my_is_bucket",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/sql_mao_is"
         })
 @Slf4j

@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.distcp=true",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.hdp2-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.hdp2-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts"
         })
 @Slf4j

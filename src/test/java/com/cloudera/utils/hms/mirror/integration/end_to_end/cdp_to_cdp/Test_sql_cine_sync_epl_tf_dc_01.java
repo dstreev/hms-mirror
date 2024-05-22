@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.sync=true",
                 "--hms-mirror.config.table-filter=web_sales",
                 "--hms-mirror.conversion.test-filename=/test_data/exists_parts_02.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/sql_cine_sync_epl_tf_dc_01"
         })
 @Slf4j

@@ -42,7 +42,7 @@ import static org.junit.Assert.assertEquals;
 //                "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.distcp=true",
                 "--hms-mirror.conversion.test-filename=/test_data/legacy_mngd_parts_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdh-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdh-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/legacy_cdp/so_epl_legacy_mngd_parts"
         })
 @Slf4j

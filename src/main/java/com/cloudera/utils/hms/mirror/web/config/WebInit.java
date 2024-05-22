@@ -44,9 +44,9 @@ public class WebInit {
     public CommandLineRunner initDefaultConfig(@Value("${hms-mirror.config.path}") String configPath,
                                                @Value("${hms-mirror.config.filename}") String configFilename) {
         return args -> {
-            // hms-mirror.config-filename is set in the application.yaml file with the
+            // hms-mirror.config.filename is set in the application.yaml file with the
             //    default location.  It can be overridden by setting the commandline
-            //    --hms-mirror.config-filename=<filename>.
+            //    --hms-mirror.config.filename=<filename>.
             String configFullFilename = configPath + File.separator + configFilename;
             File cfg = new File(configFullFilename);
             HmsMirrorConfig hmsMirrorConfig;

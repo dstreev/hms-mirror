@@ -93,7 +93,10 @@ public class CliReportWriter {
         mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        for (String database : hmsMirrorConfig.getDatabases()) {
+        for (Map.Entry<String, DBMirror> dbEntry: conversion.getDatabases().entrySet()) {
+            String database = dbEntry.getKey();
+//        }
+//        for (String database : hmsMirrorConfig.getDatabases()) {
 
             String dbReportOutputFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_hms-mirror";
             String dbLeftExecuteFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_execute.sql";

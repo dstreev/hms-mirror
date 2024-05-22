@@ -124,13 +124,13 @@ public class HMSMirrorAppService {
         }
 
         // Clear tables from test dataset if the database only flag is set.
-        if (hmsMirrorConfig.isLoadingTestData() && hmsMirrorConfig.isDatabaseOnly()) {
-            // Remove the tables from the database dataset.
-            for (DBMirror dbMirror : conversion.getDatabases().values()) {
-                dbMirror.getTableMirrors().clear();
-                log.info("Database Only processing, removing table from test dataset");
-            }
-        }
+//        if (hmsMirrorConfig.isLoadingTestData() && hmsMirrorConfig.isDatabaseOnly()) {
+//            // Remove the tables from the database dataset.
+//            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+//                dbMirror.getTableMirrors().clear();
+//                log.info("Database Only processing, removing table from test dataset");
+//            }
+//        }
 
         log.info("Starting Application Workflow");
 
@@ -147,8 +147,14 @@ public class HMSMirrorAppService {
         Date startTime = new Date();
         log.info("GATHERING METADATA: Start Processing for databases: {}", Arrays.toString((hmsMirrorConfig.getDatabases())));
 
-        // Check dbRegEx
-        if (hmsMirrorConfig.getFilter().getDbRegEx() != null && !hmsMirrorConfig.isLoadingTestData()) {
+        if (hmsMirrorConfig.isLoadingTestData()) {
+            List<String> databases = new ArrayList<>();
+            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                databases.add(dbMirror.getName());
+            }
+            String[] dbs = databases.toArray(new String[0]);
+            hmsMirrorConfig.setDatabases(dbs);
+        } else if (hmsMirrorConfig.getFilter().getDbRegEx() != null) {
             // Look for the dbRegEx.
             Connection conn = null;
             Statement stmt = null;
@@ -200,14 +206,14 @@ public class HMSMirrorAppService {
 //                runStatus.addError(MessageCode.ENVIRONMENT_VARS);
                 return new AsyncResult<>(Boolean.FALSE);
             }
+        } else {
+            runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
         }
 
         if (hmsMirrorConfig.getDatabases() == null || hmsMirrorConfig.getDatabases().length == 0) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             return new AsyncResult<>(Boolean.FALSE);
-            //            wrapup();
-            //            return;
         }
 
         List<Future<ReturnStatus>> gtf = new ArrayList<>();
@@ -240,15 +246,15 @@ public class HMSMirrorAppService {
 //                    wrapup();
 //                    return;
                 }
-                runStatus.setStage(StageEnum.DATABASES, CollectionEnum.COMPLETED);
 
                 // Build out the table in a database.
-                if (!hmsMirrorConfig.isDatabaseOnly()) {
+                if (!hmsMirrorConfig.isLoadingTestData() && !hmsMirrorConfig.isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
                     Future<ReturnStatus> gt = getTableService().getTables(dbMirror);
                     gtf.add(gt);
                 }
             }
+            runStatus.setStage(StageEnum.DATABASES, CollectionEnum.COMPLETED);
 
             // Collect Table Information and ensure process is complete before moving on.
             while (true) {

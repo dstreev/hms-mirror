@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=SCHEMA_ONLY",
                 "--hms-mirror.conversion.test-filename=/test_data/legacy_mngd_parts_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.hdp3-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.hdp3-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/hdp3_cdp/sql_mao_wd_da_rdl_dc"
         })
 @Slf4j

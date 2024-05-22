@@ -46,7 +46,7 @@ import static org.junit.Assert.assertEquals;
 //                "--hms-mirror.config.reset-to-default-location=true",
 //                "--hms-mirror.config.distcp=true",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.hdp2-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.hdp2-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/config/so_is"
         })
 

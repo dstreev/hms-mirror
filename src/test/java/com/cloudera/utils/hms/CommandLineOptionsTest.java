@@ -31,7 +31,7 @@ public class CommandLineOptionsTest {
         for (HmsMirrorCommandLineOptionsEnum hmsMirrorCommandLineOptionsEnum : HmsMirrorCommandLineOptionsEnum.values()) {
             if (hmsMirrorCommandLineOptionsEnum.getShortName().equals("cfg")) {
                 // Handle the config file differently
-                sb.append("\"--hms-mirror.config-filename=\",\n");
+                sb.append("\"--hms-mirror.config.filename=\",\n");
             } else if (hmsMirrorCommandLineOptionsEnum.getShortName().equals("ltd")) {
                 // Handle the ltd file differently
                 sb.append("\"--hms-mirror.conversion.test-filename=\",\n");

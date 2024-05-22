@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.in-place=true",
                 "--hms-mirror.config.migrate-acid-only=true",
                 "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.warehouse-directory=/finance/managed-fso",
                 "--hms-mirror.config.external-warehouse-directory=/finance/external-fso"

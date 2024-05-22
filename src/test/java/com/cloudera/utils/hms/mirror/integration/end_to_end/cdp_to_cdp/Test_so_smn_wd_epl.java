@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.storage-migration-namespace=ofs://OHOME90",
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/so_smn_wd_epl"
         })
 @Slf4j

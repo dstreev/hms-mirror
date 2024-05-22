@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=DUMP",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp.bad.hcfsns",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp.bad.hcfsns",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/ei_bad_hcfsns_01"
         })
 @Slf4j
