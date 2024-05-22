@@ -40,9 +40,9 @@ public class PasswordOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(prefix = "hms-mirror",
-            name = "config-filename",
+            name = "config.filename",
             matchIfMissing = true)
-    HmsMirrorConfig loadHmsMirrorConfigFromFile(@Value("${hms-mirror.config-filename}") String configFilename) {
+    HmsMirrorConfig loadHmsMirrorConfigFromFile(@Value("${hms-mirror.config.filename}") String configFilename) {
         HmsMirrorConfig hmsMirrorConfig;
         try {
             hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);

@@ -40,7 +40,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ScheduledExecutorService;
 
 import static com.cloudera.utils.hms.mirror.connections.ConnectionPoolTypes.HYBRID;
 
@@ -63,9 +62,6 @@ public class HmsMirrorConfig implements Cloneable {
     @JsonIgnore
     private Date initDate = new Date();
     private Acceptance acceptance = new Acceptance();
-
-//    @JsonIgnore
-//    private CliEnvironment cliEnvironment;
 
     @Setter
     private Map<Environment, Cluster> clusters = new TreeMap<Environment, Cluster>();
@@ -116,8 +112,7 @@ public class HmsMirrorConfig implements Cloneable {
     private String password;
     @JsonIgnore
     private String passwordKey;
-//    @JsonIgnore
-//    private RunStatus runStatus;
+
     private boolean quiet = Boolean.FALSE;
     /*
     Used when a schema is transferred and has 'purge' properties for the table.
@@ -435,14 +430,13 @@ public class HmsMirrorConfig implements Cloneable {
     public HmsMirrorConfig getResolvedConfig() {
         HmsMirrorConfig resolvedConfig = this.clone();
         if (resolvedConfig.isFlip()) {
-            Cluster origLeft = resolvedConfig.getCluster(Environment.LEFT);
-            origLeft.setEnvironment(Environment.RIGHT);
-            Cluster origRight = resolvedConfig.getCluster(Environment.RIGHT);
-            origRight.setEnvironment(Environment.LEFT);
-            resolvedConfig.getClusters().put(Environment.RIGHT, origLeft);
-            resolvedConfig.getClusters().put(Environment.LEFT, origRight);
+            Cluster left = resolvedConfig.getCluster(Environment.LEFT);
+            left.setEnvironment(Environment.RIGHT);
+            Cluster right = resolvedConfig.getCluster(Environment.RIGHT);
+            right.setEnvironment(Environment.LEFT);
+            resolvedConfig.getClusters().put(Environment.RIGHT, left);
+            resolvedConfig.getClusters().put(Environment.LEFT, right);
         }
-
         return resolvedConfig;
     }
 
@@ -517,12 +511,6 @@ public class HmsMirrorConfig implements Cloneable {
 
             String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
             hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
-//            hmsMirrorConfig.setProgression(progression);
-            // Link the translator to the config
-//            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
-//            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
-//                cluster.setHmsMirrorConfig(hmsMirrorConfig);
-//            }
 
             hmsMirrorConfig.setConfigFilename(configFilename);
         } catch (IOException e) {

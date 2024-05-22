@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -44,7 +45,11 @@ public class TestTranslator01 extends TranslatorTestBase {
         HmsMirrorConfig config = ConfigTest.deserializeResource("/config/default_01.yaml");
         config.setTranslator(translator);
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
-        executeSessionService.getActiveSession().setResolvedConfig(config);
+
+        ExecuteSession session = executeSessionService.createSession(null, config);
+        executeSessionService.setLoadedSession(session);
+        executeSessionService.transitionLoadedSessionToActive();
+
         ConfigService configService = new ConfigService();
         configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();

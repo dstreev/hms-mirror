@@ -289,7 +289,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                     rtn = Boolean.TRUE;
                 } else if (hmsMirrorConfig.getTransfer().getStorageMigration().isStrict()) {
                     log.warn("Cleaning up SQL due to issues for table: {}", tableMirror.getName());
-                    let.addIssue("Storage Migration set to 'strict' and issues were found. So the process couldn't reliably build a plan.");
+                    let.addIssue(MessageCode.STORAGE_MIGRATION_STRICT.getDesc());
                     let.getSql().clear();
                     rtn = Boolean.FALSE;
                 }

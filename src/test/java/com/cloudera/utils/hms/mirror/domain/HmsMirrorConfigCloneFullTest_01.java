@@ -41,7 +41,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
     }
 
     @Test
-    public void test_01() {
+    public void cloneTest_01() {
         log.info("Test 01");
         HmsMirrorConfig clone = hmsMirrorConfig.clone();
 
@@ -187,7 +187,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
 
 
     @Test
-    public void test_101() {
+    public void equalsTest_101() {
         log.info("Test 01");
         HmsMirrorConfig clone = hmsMirrorConfig.clone();
 

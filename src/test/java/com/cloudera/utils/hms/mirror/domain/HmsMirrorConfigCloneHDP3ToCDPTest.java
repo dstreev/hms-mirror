@@ -39,8 +39,8 @@ public class HmsMirrorConfigCloneHDP3ToCDPTest {
     }
 
     @Test
-    public void test_01() {
-        log.info("Test 01");
+    public void cloneTest_01() {
+        log.info("Clone Test 01");
         HmsMirrorConfig clone = hmsMirrorConfig.clone();
 
         // Add your assertions here
@@ -61,8 +61,8 @@ public class HmsMirrorConfigCloneHDP3ToCDPTest {
 
 
     @Test
-    public void test_101() {
-        log.info("Test 01");
+    public void equalsTest_101() {
+        log.info("Equals Test 01");
         HmsMirrorConfig clone = hmsMirrorConfig.clone();
 
         // Add your assertions here

@@ -60,8 +60,10 @@ public class ExecuteSession implements Cloneable {
         try {
             ExecuteSession clone = (ExecuteSession) super.clone();
             // TODO: copy mutable state here, so the clone can't change the internals of the original
-            if (origConfig != null)
+            if (origConfig != null) {
                 clone.origConfig = origConfig.clone();
+                // resolvedConfig is a derived object, so we don't need to clone it.
+            }
             clone.cliEnvironment = cliEnvironment; // This isn't a cloneable object. Just establish the reference.
             // Don't clone the other parts: runStatus, cliEnvironment, conversion, runResults
             return clone;

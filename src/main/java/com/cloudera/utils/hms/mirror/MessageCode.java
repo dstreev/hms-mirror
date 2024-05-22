@@ -197,7 +197,11 @@ public enum MessageCode {
             "re-created.  The data will be overwritten."),
     RO_VALID_STRATEGIES(96, "Read-Only (RO) option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies."),
     DECRYPTED_CONFIG_PASSWORDS(97, "Decrypted Config Passwords"),
-    DECRYPTING_CONFIG_PASSWORDS_ISSUE(98, "Issue decrypting config passwords");
+    DECRYPTING_CONFIG_PASSWORDS_ISSUE(98, "Issue decrypting config passwords"),
+    STORAGE_MIGRATION_STRICT(99, "Storage Migration is in 'strict' mode.  If the table and/or partition locations can't "
+            + "be mapped to the warehouse locations or are covered by a Global Location Map entry, we can't process the table "
+            + "without potential data loss.  Add additional 'global-location-map' entries to cover the locations or "
+            + "consider use the 'reset-to-default-location' option to collect all table data under the warehouse directory.");
 
     private int code = 0;
     private String desc = null;

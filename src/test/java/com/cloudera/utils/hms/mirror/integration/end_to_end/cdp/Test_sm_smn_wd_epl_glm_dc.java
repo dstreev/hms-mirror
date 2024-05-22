@@ -37,8 +37,7 @@ import static org.junit.Assert.fail;
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_glm_dc",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
                 "--hms-mirror.config.storage-migration-strict=true",
-                "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso"
-
+                "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso,/user/dstreev/datasets/alt-locations/web_sales=/finance/external-fso/load_web_sales"
         })
 @ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")
 @Slf4j

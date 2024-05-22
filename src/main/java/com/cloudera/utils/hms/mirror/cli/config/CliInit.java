@@ -194,7 +194,7 @@ public class CliInit {
         return args -> {
             ExecuteSession session = executeSessionService.createSession(null, hmsMirrorConfig);
             executeSessionService.setLoadedSession(session);
-            executeSessionService.transitionSessionToActive(null);
+            executeSessionService.transitionLoadedSessionToActive();
             executeSessionService.getActiveSession().setResolvedConfig(hmsMirrorConfig);
             RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
             Conversion conversion = executeSessionService.getActiveSession().getConversion();

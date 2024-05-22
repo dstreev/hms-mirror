@@ -49,8 +49,8 @@ public class RuntimeService {
         this.hmsMirrorAppService = hmsMirrorAppService;
     }
 
-    public RunStatus start(String sessionId, Boolean dryrun) {
-        ExecuteSession session = executeSessionService.transitionSessionToActive(sessionId);
+    public RunStatus start(Boolean dryrun) {
+        ExecuteSession session = executeSessionService.transitionLoadedSessionToActive();
 
         RunStatus runStatus = session.getRunStatus();
         if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
@@ -58,8 +58,6 @@ public class RuntimeService {
                 || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
             log.error("The session is currently running. Cannot start until operation has completed.");
             throw new RuntimeException("Session already running.");
-        } else {
-            log.info("Starting session: {}", sessionId);
         }
 
         if (runStatus.reset()) {

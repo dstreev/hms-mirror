@@ -59,9 +59,10 @@ public class RuntimeController {
     })
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/start")
-    public RunStatus start(@RequestParam(name = "sessionId", required = false) String sessionId,
+    public RunStatus start(
+//            @RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun) {
-        return runtimeService.start(sessionId, dryrun);
+        return runtimeService.start(dryrun);
     }
 
 

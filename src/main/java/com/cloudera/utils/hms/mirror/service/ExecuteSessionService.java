@@ -138,7 +138,7 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessions separate.  The active session is the
         one that will be referenced during the run.
      */
-    public ExecuteSession transitionSessionToActive(String sessionId) {
+    public ExecuteSession transitionLoadedSessionToActive() {
         ExecuteSession activeSession = null;
         try {
             activeSession = getActiveSession();
@@ -149,8 +149,10 @@ public class ExecuteSessionService {
             throw new RuntimeException("Session is still running.  Cannot transition to active.");
         }
 
-        ExecuteSession loadedSession = getSession(sessionId);
+        // This should get the loaded session and clone it.
+        ExecuteSession loadedSession = getSession(null);
         ExecuteSession session = loadedSession.clone();
+
         // Set the active session id to the current date and time.
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
         session.setSessionId(dtf.format(new Date()));
