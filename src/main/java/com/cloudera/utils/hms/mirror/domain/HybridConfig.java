@@ -22,8 +22,19 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class HybridConfig {
+public class HybridConfig implements Cloneable {
     private int exportImportPartitionLimit = 100;
     private int sqlPartitionLimit = 500;
     private long sqlSizeLimit = (1024 * 1024 * 1024); // 1Gb
+
+    @Override
+    public HybridConfig clone() {
+        try {
+            HybridConfig clone = (HybridConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

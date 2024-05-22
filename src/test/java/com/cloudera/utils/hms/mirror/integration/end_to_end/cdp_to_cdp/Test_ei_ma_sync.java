@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.migrate-acid=true",
                 "--hms-mirror.config.sync=true",
                 "--hms-mirror.conversion.test-filename=/test_data/exists_01.yaml",
-                "--hms-mirror.config-filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/ei_ma_sync"
         })
 @Slf4j

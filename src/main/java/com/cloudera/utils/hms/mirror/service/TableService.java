@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.feature.Feature;
 import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
 import com.cloudera.utils.hms.stage.ReturnStatus;
@@ -82,7 +83,7 @@ public class TableService {
 
     protected Boolean buildShadowToFinalSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // if common storage, skip
         // if inplace, skip
@@ -164,7 +165,7 @@ public class TableService {
 
     protected Boolean buildSourceToTransferSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable source, transfer, target;
         source = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -262,7 +263,7 @@ public class TableService {
 
     public Boolean buildTableSchema(CopySpec copySpec) {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         TableMirror tableMirror = copySpec.getTableMirror();
         Boolean rtn = Boolean.TRUE;
 
@@ -605,7 +606,7 @@ public class TableService {
 
     public Boolean buildTransferSql(TableMirror tableMirror, Environment source, Environment shadow, Environment target) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable sourceTable = tableMirror.getEnvironmentTable(source);
         EnvironmentTable shadowTable = tableMirror.getEnvironmentTable(shadow);
@@ -631,7 +632,7 @@ public class TableService {
 
     protected void checkTableFilter(TableMirror tableMirror, Environment environment) {
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (environment == Environment.LEFT) {
             if (hmsMirrorConfig.getMigrateVIEW().isOn() && hmsMirrorConfig.getDataStrategy() != DUMP) {
@@ -704,7 +705,7 @@ public class TableService {
 
     public String getCreateStatement(TableMirror tableMirror, Environment environment) {
         StringBuilder createStatement = new StringBuilder();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         Boolean cine = hmsMirrorConfig.getCluster(environment).isCreateIfNotExists();
 
@@ -734,7 +735,7 @@ public class TableService {
         // The connection should already be in the database;
         log.debug("Getting table definition for {}:{}.{}",
                 environment, tableMirror.getParent().getName(), tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         // Fetch Table Definition.
@@ -774,7 +775,8 @@ public class TableService {
         }
 
         Boolean partitioned = TableUtils.isPartitioned(et);
-        if (partitioned && !tableMirror.isRemove() && !hmsMirrorConfig.isLoadingTestData()) {
+        if (environment == Environment.LEFT && partitioned
+                && !tableMirror.isRemove() && !hmsMirrorConfig.isLoadingTestData()) {
             /*
             If we are -epl, we need to load the partition metadata for the table. And we need to use the
             metastore_direct connection to do so. Trying to load this through the standard Hive SQL process
@@ -783,10 +785,7 @@ public class TableService {
             if (hmsMirrorConfig.isEvaluatePartitionLocation() ||
                     (hmsMirrorConfig.getDataStrategy() == STORAGE_MIGRATION && hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp())) {
                 loadTablePartitionMetadataDirect(tableMirror, environment);
-            } else {
-                loadTablePartitionMetadata(tableMirror, environment);
             }
-
         }
 
         // Check for table partition count filter
@@ -807,7 +806,8 @@ public class TableService {
     public Future<ReturnStatus> getTableMetadata(TableMirror tableMirror) {
         ReturnStatus rtn = new ReturnStatus();
         rtn.setTableMirror(tableMirror);
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
         try {
             getTableDefinition(tableMirror, Environment.LEFT);
@@ -820,10 +820,12 @@ public class TableService {
                     getTableDefinition(tableMirror, Environment.RIGHT);
                     rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
             }
+            runStatus.getOperationStatistics().getSuccesses().incrementTables();
         } catch (SQLException throwables) {
             log.error(throwables.getMessage(), throwables);
             rtn.setStatus(ReturnStatus.Status.ERROR);
             rtn.setException(throwables);
+            runStatus.getOperationStatistics().getFailures().incrementTables();
         }
         return new AsyncResult<>(rtn);
     }
@@ -831,7 +833,7 @@ public class TableService {
     @Async("metadataThreadPool")
     public Future<ReturnStatus> getTables(DBMirror dbMirror) {
         ReturnStatus rtn = new ReturnStatus();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         log.debug("Getting tables for Database {}", dbMirror.getName());
         try {
             getTables(dbMirror, Environment.LEFT);
@@ -854,7 +856,8 @@ public class TableService {
 
     public void getTables(DBMirror dbMirror, Environment environment) throws SQLException {
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = getExecuteSessionService().getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = getExecuteSessionService().getActiveSession().getResolvedConfig();
+        RunStatus runStatus = getExecuteSessionService().getActiveSession().getRunStatus();
 
         try {
             conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
@@ -901,6 +904,7 @@ public class TableService {
                                     TableMirror tableMirror = dbMirror.addTable(tableName);
                                     tableMirror.setUnique(df.format(hmsMirrorConfig.getInitDate()));
                                     tableMirror.setMigrationStageMessage("Added to evaluation inventory");
+                                    runStatus.getOperationStatistics().getCounts().incrementTables();
                                 } else if (hmsMirrorConfig.getFilter().getTblRegEx() != null) {
                                     // Filter Tables
                                     assert (hmsMirrorConfig.getFilter().getTblFilterPattern() != null);
@@ -909,6 +913,7 @@ public class TableService {
                                         TableMirror tableMirror = dbMirror.addTable(tableName);
                                         tableMirror.setUnique(df.format(hmsMirrorConfig.getInitDate()));
                                         tableMirror.setMigrationStageMessage("Added to evaluation inventory");
+                                        runStatus.getOperationStatistics().getCounts().incrementTables();
                                     } else {
                                         log.info("{}.{} didn't match table regex filter and " +
                                                 "will NOT be added to processing list.", database, tableName);
@@ -920,6 +925,7 @@ public class TableService {
                                         TableMirror tableMirror = dbMirror.addTable(tableName);
                                         tableMirror.setUnique(df.format(hmsMirrorConfig.getInitDate()));
                                         tableMirror.setMigrationStageMessage("Added to evaluation inventory");
+                                        runStatus.getOperationStatistics().getCounts().incrementTables();
                                     } else {
                                         log.info("{}.{} matched exclude table regex filter and " +
                                                 "will NOT be added to processing list.", database, tableName);
@@ -962,7 +968,7 @@ public class TableService {
     }
 
     public Boolean isACIDDowngradeInPlace(TableMirror tableMirror, Environment environment) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         if (TableUtils.isACID(et) && hmsMirrorConfig.getMigrateACID().isDowngradeInPlace()) {
@@ -977,7 +983,7 @@ public class TableService {
         Statement stmt = null;
         ResultSet resultSet = null;
         String database = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         if (environment == Environment.LEFT) {
             database = tableMirror.getParent().getName();
         } else {
@@ -1085,7 +1091,7 @@ public class TableService {
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         if (hmsMirrorConfig.isTransferOwnership()) {
@@ -1211,7 +1217,7 @@ public class TableService {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         String database = tableMirror.getParent().getName();
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
@@ -1249,7 +1255,7 @@ public class TableService {
         // Considered only gathering stats for partitioned tables, but decided to gather for all tables to support
         //  smallfiles across the board.
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
             log.debug("{}:{}: Skipping Stats Collection.", environment, et.getName());
@@ -1333,7 +1339,7 @@ public class TableService {
     public Boolean runTableSql(List<Pair> sqlList, TableMirror tblMirror, Environment environment) {
         Connection conn = null;
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // Skip this if using test data.
         if (!hmsMirrorConfig.isLoadingTestData()) {

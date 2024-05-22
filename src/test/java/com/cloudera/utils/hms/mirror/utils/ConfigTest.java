@@ -34,7 +34,10 @@ public class ConfigTest {
         HmsMirrorConfig hmsMirrorConfig = null;
         String extension = FilenameUtils.getExtension(configResource);
         ObjectMapper mapper = null;
-        if ("yaml".equalsIgnoreCase(extension) || "yml".equalsIgnoreCase(extension)) {
+        if ("yaml".equalsIgnoreCase(extension)
+                || "yml".equalsIgnoreCase(extension)
+                || configResource.contains("yaml")
+                || configResource.contains("yml")) {
             mapper = new ObjectMapper(new YAMLFactory());
         } else if ("json".equalsIgnoreCase(extension) || "jsn".equalsIgnoreCase(extension)) {
             mapper = new ObjectMapper(new JsonFactory());

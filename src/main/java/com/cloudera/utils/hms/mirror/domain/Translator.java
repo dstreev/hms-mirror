@@ -33,12 +33,12 @@ import java.util.regex.Matcher;
 @Getter
 @Setter
 @JsonIgnoreProperties({"dbLocationMap"})
-public class Translator {
+public class Translator implements Cloneable {
 
     @JsonIgnore
     private final Map<String, EnvironmentMap> dbLocationMap = new TreeMap<>();
-    @JsonIgnore
-    private HmsMirrorConfig hmsMirrorConfig;
+//    @JsonIgnore
+//    private HmsMirrorConfig hmsMirrorConfig;
     /*
     Use this to force the location element in the external table create statements and
     not rely on the database 'location' element.
@@ -93,6 +93,17 @@ public class Translator {
 
     public void addGlobalLocationMap(String from, String to) {
         getOrderedGlobalLocationMap().put(from, to);
+    }
+
+    @Override
+    public Translator clone() {
+        try {
+            Translator clone = (Translator) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
     public String removeGlobalLocationMap(String from) {

@@ -20,9 +20,20 @@ package com.cloudera.utils.hms.mirror.domain;
 import lombok.Getter;
 
 @Getter
-public class WarehouseConfig {
+public class WarehouseConfig implements Cloneable {
     private String managedDirectory = null;
     private String externalDirectory = null;
+
+    @Override
+    public WarehouseConfig clone() {
+        try {
+            WarehouseConfig clone = (WarehouseConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     public void setExternalDirectory(String externalDirectory) {
         if (externalDirectory != null) {

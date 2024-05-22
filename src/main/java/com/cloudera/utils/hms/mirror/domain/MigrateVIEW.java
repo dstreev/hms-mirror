@@ -22,11 +22,21 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class MigrateVIEW {
+public class MigrateVIEW implements Cloneable {
 
     /*
     Whether or not we'll be migrating VIEWs.
     */
     private boolean on = Boolean.FALSE;
 
+    @Override
+    public MigrateVIEW clone() {
+        try {
+            MigrateVIEW clone = (MigrateVIEW) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

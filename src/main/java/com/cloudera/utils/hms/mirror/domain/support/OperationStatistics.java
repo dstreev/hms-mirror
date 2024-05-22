@@ -23,35 +23,29 @@ import lombok.Setter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
-@Setter
-public class OperationStatistics {
+public class OperationStatistics implements Cloneable{
 
-    private AtomicInteger databases = new AtomicInteger(0);
-    private AtomicInteger tables = new AtomicInteger(0);
-    private AtomicInteger failures = new AtomicInteger(0);
-    private AtomicInteger successes = new AtomicInteger(0);
+    private final OperationStatistic counts = new OperationStatistic();
+    private final OperationStatistic issues = new OperationStatistic();
+    private final OperationStatistic failures = new OperationStatistic();
+    private final OperationStatistic successes = new OperationStatistic();
 
-    public int incrementDatabases() {
-        return databases.incrementAndGet();
-    }
-
-    public int incrementTables() {
-        return tables.incrementAndGet();
-    }
-
-    public int incrementFailures() {
-        return failures.incrementAndGet();
-    }
-
-    public int incrementSuccesses() {
-        return successes.incrementAndGet();
+    @Override
+    public OperationStatistics clone() {
+        try {
+            OperationStatistics clone = (OperationStatistics) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
     public void reset() {
-        databases.set(0);
-        tables.set(0);
-        failures.set(0);
-        successes.set(0);
+        counts.reset();
+        issues.reset();
+        failures.reset();
+        successes.reset();
     }
 
 }

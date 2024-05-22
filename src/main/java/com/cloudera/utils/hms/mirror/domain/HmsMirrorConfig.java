@@ -48,7 +48,7 @@ import static com.cloudera.utils.hms.mirror.connections.ConnectionPoolTypes.HYBR
 @Getter
 @Setter
 @JsonIgnoreProperties({"featureList"})
-public class HmsMirrorConfig {
+public class HmsMirrorConfig implements Cloneable {
 
     @JsonIgnore
     private final String runMarker = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
@@ -56,7 +56,7 @@ public class HmsMirrorConfig {
     private final List<String> flags = new LinkedList<>();
     @JsonIgnore
     private final List<String> supportFileSystems = new ArrayList<String>(Arrays.asList(
-            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf"
+            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs"
     ));
     @Setter
     @Getter
@@ -167,19 +167,16 @@ public class HmsMirrorConfig {
     private TransferConfig transfer = new TransferConfig();
 
     private boolean transferOwnership = Boolean.FALSE;
-    @JsonIgnore
-    private ScheduledExecutorService transferThreadPool;
-    @JsonIgnore
-    private ScheduledExecutorService metadataThreadPool;
+//    @JsonIgnore
+//    private ScheduledExecutorService transferThreadPool;
+//    @JsonIgnore
+//    private ScheduledExecutorService metadataThreadPool;
     //    @JsonIgnore
     private Translator translator = new Translator();
     @JsonIgnore
     private boolean validated = Boolean.FALSE;
     @JsonIgnore
     private boolean webInterface = Boolean.FALSE;
-
-    public HmsMirrorConfig() {
-    }
 
     public static boolean save(HmsMirrorConfig config, String configFilename, Boolean overwrite) {
         boolean rtn = Boolean.FALSE;
@@ -318,6 +315,17 @@ public class HmsMirrorConfig {
 
     }
 
+    @Override
+    public HmsMirrorConfig clone() {
+        try {
+            HmsMirrorConfig clone = (HmsMirrorConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
 //    public void addError(MessageCode code) {
 //        getRunStatus().addError(code);
 //    }
@@ -346,7 +354,7 @@ public class HmsMirrorConfig {
         Cluster cluster = getClusters().get(environment);
         if (cluster == null) {
             cluster = new Cluster();
-            cluster.setHmsMirrorConfig(this);
+//            cluster.setHmsMirrorConfig(this);
             switch (environment) {
                 case TRANSFER:
                     cluster.setLegacyHive(getCluster(Environment.LEFT).isLegacyHive());
@@ -421,16 +429,33 @@ public class HmsMirrorConfig {
         }
     }
 
+    // Deal with any clean up that changes the state of the config, leaving the original intact.
+    // This allow us to 'reset' the config to the original state.
+    @JsonIgnore // Needed to prevent recursion.
+    public HmsMirrorConfig getResolvedConfig() {
+        HmsMirrorConfig resolvedConfig = this.clone();
+        if (resolvedConfig.isFlip()) {
+            Cluster origLeft = resolvedConfig.getCluster(Environment.LEFT);
+            origLeft.setEnvironment(Environment.RIGHT);
+            Cluster origRight = resolvedConfig.getCluster(Environment.RIGHT);
+            origRight.setEnvironment(Environment.LEFT);
+            resolvedConfig.getClusters().put(Environment.RIGHT, origLeft);
+            resolvedConfig.getClusters().put(Environment.LEFT, origRight);
+        }
+
+        return resolvedConfig;
+    }
+
     public void setFlip(Boolean flip) {
         this.flip = flip;
-        if (this.flip) {
-            Cluster origLeft = getCluster(Environment.LEFT);
-            origLeft.setEnvironment(Environment.RIGHT);
-            Cluster origRight = getCluster(Environment.RIGHT);
-            origRight.setEnvironment(Environment.LEFT);
-            getClusters().put(Environment.RIGHT, origLeft);
-            getClusters().put(Environment.LEFT, origRight);
-        }
+//        if (this.flip) {
+//            Cluster origLeft = getCluster(Environment.LEFT);
+//            origLeft.setEnvironment(Environment.RIGHT);
+//            Cluster origRight = getCluster(Environment.RIGHT);
+//            origRight.setEnvironment(Environment.LEFT);
+//            getClusters().put(Environment.RIGHT, origLeft);
+//            getClusters().put(Environment.LEFT, origRight);
+//        }
     }
 
     public void setGlobalLocationMapKV(String[] extLocs) {
@@ -494,17 +519,20 @@ public class HmsMirrorConfig {
             hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
 //            hmsMirrorConfig.setProgression(progression);
             // Link the translator to the config
-            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
-            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
-                cluster.setHmsMirrorConfig(hmsMirrorConfig);
-            }
+//            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
+//            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
+//                cluster.setHmsMirrorConfig(hmsMirrorConfig);
+//            }
+
             hmsMirrorConfig.setConfigFilename(configFilename);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         log.info("Config loaded.");
-        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
+//        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
         return hmsMirrorConfig;
 
     }
+
+
 }

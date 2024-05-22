@@ -112,7 +112,7 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!getExecuteSessionService().getCurrentSession().getHmsMirrorConfig().isLoadingTestData()) {
+        if (!getExecuteSessionService().getActiveSession().getResolvedConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).

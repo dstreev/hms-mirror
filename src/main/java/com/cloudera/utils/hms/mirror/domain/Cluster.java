@@ -38,13 +38,13 @@ import java.util.Map;
 @Slf4j
 @Getter
 @Setter
-public class Cluster implements Comparable<Cluster> {
+public class Cluster implements Comparable<Cluster>, Cloneable {
 
     @JsonIgnore
     private final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    @JsonIgnore
-    private HmsMirrorConfig hmsMirrorConfig;
+//    @JsonIgnore
+//    private HmsMirrorConfig hmsMirrorConfig;
 
 //    @JsonIgnore
 //    private ConnectionPools pools = null;
@@ -110,6 +110,28 @@ public class Cluster implements Comparable<Cluster> {
         }
         log.debug("{}: Adding Environment Variable: {}={}", getEnvironment(), key, value);
         this.envVars.put(key, value);
+    }
+
+    @Override
+    public Cluster clone() {
+        try {
+            Cluster clone = (Cluster) super.clone();
+            if (hiveServer2 != null) {
+                HiveServer2Config hiveServer2Clone = hiveServer2.clone();
+                clone.setHiveServer2(hiveServer2Clone);
+            }
+            if (metastoreDirect != null) {
+                DBStore metastoreDirectClone = metastoreDirect.clone();
+                clone.setMetastoreDirect(metastoreDirectClone);
+            }
+            if (partitionDiscovery != null) {
+                PartitionDiscovery partitionDiscoveryClone = partitionDiscovery.clone();
+                clone.setPartitionDiscovery(partitionDiscoveryClone);
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
     @Override

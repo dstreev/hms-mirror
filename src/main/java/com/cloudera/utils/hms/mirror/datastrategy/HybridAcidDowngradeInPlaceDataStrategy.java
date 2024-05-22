@@ -53,7 +53,7 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         /*
         Check environment is Hive 3.
             if not, need to do SQLACIDInplaceDowngrade.

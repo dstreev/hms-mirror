@@ -27,7 +27,7 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties({"downgradeInPlace"})
 @Schema(description = "Migrate ACID table configurations")
-public class MigrateACID {
+public class MigrateACID implements Cloneable {
 
     /*
     Whether or not we'll be migrating ACID tables.
@@ -76,6 +76,17 @@ public class MigrateACID {
      */
     @Schema(description = "Downgrade ACID tables in-place.")
     private boolean inplace = Boolean.FALSE;
+
+    @Override
+    public MigrateACID clone() {
+        try {
+            MigrateACID clone = (MigrateACID) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     @JsonIgnore
     public Boolean isDowngradeInPlace() {

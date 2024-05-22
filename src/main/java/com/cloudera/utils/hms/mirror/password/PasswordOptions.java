@@ -58,7 +58,7 @@ public class PasswordOptions {
     ExecuteSession executeSession(HmsMirrorConfig hmsMirrorConfig) {
         ExecuteSession executeSession = new ExecuteSession();
         executeSession.setRunStatus(new RunStatus());
-        executeSession.setHmsMirrorConfig(hmsMirrorConfig);
+        executeSession.setResolvedConfig(hmsMirrorConfig);
         return executeSession;
     }
 

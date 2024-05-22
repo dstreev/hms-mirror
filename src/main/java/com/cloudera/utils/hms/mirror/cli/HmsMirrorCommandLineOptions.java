@@ -17,20 +17,15 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
-import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
 import com.cloudera.utils.hms.mirror.domain.WarehouseConfig;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
-import com.cloudera.utils.hms.util.Protect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -47,15 +42,8 @@ import org.springframework.core.annotation.Order;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.FileSystems;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
-
-import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_CONNECTION_ISSUE;
-import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED;
 
 @Configuration
 @Order(5)
@@ -93,37 +81,82 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.auto-tune")
-    CommandLineRunner configAutoTune(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.auto-tune}") String value) {
+            name = "hms-mirror.config.auto-tune",
+            havingValue = "true")
+    CommandLineRunner configAutoTuneTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("auto-tune: {}", value);
-            hmsMirrorConfig.getOptimization().setAutoTune(Boolean.parseBoolean(value));
+            log.info("auto-tune: {}", Boolean.TRUE);
+            hmsMirrorConfig.getOptimization().setAutoTune(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.avro-schema-migration")
-    CommandLineRunner configAvroSchemaMigration(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.avro-schema-migration}") String value) {
+            name = "hms-mirror.config.auto-tune",
+            havingValue = "false")
+    CommandLineRunner configAutoTuneFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("avro-schema-migration: {}", value);
-            hmsMirrorConfig.setCopyAvroSchemaUrls(Boolean.parseBoolean(value));
+            log.info("auto-tune: {}", Boolean.FALSE);
+            hmsMirrorConfig.getOptimization().setAutoTune(Boolean.FALSE);
+        };
+    }
+
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.avro-schema-migration",
+            havingValue = "true")
+    CommandLineRunner configAvroSchemaMigrationTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("avro-schema-migration: {}", Boolean.TRUE);
+            hmsMirrorConfig.setCopyAvroSchemaUrls(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.create-if-not-exist")
-    CommandLineRunner configCine(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.create-if-not-exist}") String value) {
+            name = "hms-mirror.config.avro-schema-migration",
+            havingValue = "false")
+    CommandLineRunner configAvroSchemaMigrationFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("create-if-not-exist: {}", value);
+            log.info("avro-schema-migration: {}", Boolean.FALSE);
+            hmsMirrorConfig.setCopyAvroSchemaUrls(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.create-if-not-exist",
+            havingValue = "true")
+    CommandLineRunner configCineTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("create-if-not-exist: {}", Boolean.TRUE);
             if (hmsMirrorConfig.getCluster(Environment.LEFT) != null) {
-                hmsMirrorConfig.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.parseBoolean(value));
+                hmsMirrorConfig.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.TRUE);
             }
             if (hmsMirrorConfig.getCluster(Environment.RIGHT) != null) {
-                hmsMirrorConfig.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.parseBoolean(value));
+                hmsMirrorConfig.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.TRUE);
+            }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.create-if-not-exist",
+            havingValue = "false")
+    CommandLineRunner configCineFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("create-if-not-exist: {}", Boolean.FALSE);
+            if (hmsMirrorConfig.getCluster(Environment.LEFT) != null) {
+                hmsMirrorConfig.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.FALSE);
+            }
+            if (hmsMirrorConfig.getCluster(Environment.RIGHT) != null) {
+                hmsMirrorConfig.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.FALSE);
             }
         };
     }
@@ -155,11 +188,24 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.compress-text-output")
-    CommandLineRunner configCompressTextOutput(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.compress-text-output}") String value) {
+            name = "hms-mirror.config.compress-text-output",
+            havingValue = "true")
+    CommandLineRunner configCompressTextOutputTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("compress-text-output: {}", value);
-            hmsMirrorConfig.getOptimization().setCompressTextOutput(Boolean.parseBoolean(value));
+            log.info("compress-text-output: {}", Boolean.TRUE);
+            hmsMirrorConfig.getOptimization().setCompressTextOutput(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.compress-text-output",
+            havingValue = "false")
+    CommandLineRunner configCompressTextOutputFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("compress-text-output: {}", Boolean.FALSE);
+            hmsMirrorConfig.getOptimization().setCompressTextOutput(Boolean.FALSE);
         };
     }
 
@@ -189,11 +235,24 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.database-only")
-    CommandLineRunner configDatabaseOnly(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.database-only}") String value) {
+            name = "hms-mirror.config.database-only",
+            havingValue = "true")
+    CommandLineRunner configDatabaseOnlyTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("database-only: {}", value);
-            hmsMirrorConfig.setDatabaseOnly(Boolean.parseBoolean(value));
+            log.info("database-only: {}", Boolean.TRUE);
+            hmsMirrorConfig.setDatabaseOnly(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.database-only",
+            havingValue = "false")
+    CommandLineRunner configDatabaseOnlyFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("database-only: {}", Boolean.FALSE);
+            hmsMirrorConfig.setDatabaseOnly(Boolean.FALSE);
         };
     }
 
@@ -244,8 +303,21 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
+            name = "hms-mirror.config.distcp",
+            havingValue = "false")
+    CommandLineRunner configDistcpTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("distcp: {}", Boolean.FALSE);
+            hmsMirrorConfig.getTransfer().getStorageMigration().setDistcp(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
             name = "hms-mirror.config.distcp")
-    CommandLineRunner configDistcp(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.distcp}") String value) {
+    CommandLineRunner configDistcp(HmsMirrorConfig hmsMirrorConfig,
+                                   @Value("${hms-mirror.config.distcp}") String value) {
         return args -> {
             log.info("distcp: {}", value);
             if (Boolean.parseBoolean(value)) {
@@ -269,11 +341,24 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.downgrade-acid")
-    CommandLineRunner configDowngradeAcid(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.downgrade-acid}") String value) {
+            name = "hms-mirror.config.downgrade-acid",
+            havingValue = "true")
+    CommandLineRunner configDowngradeAcidTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("downgrade-acid: {}", value);
-            hmsMirrorConfig.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
+            log.info("downgrade-acid: {}", Boolean.TRUE);
+            hmsMirrorConfig.getMigrateACID().setDowngrade(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.downgrade-acid",
+            havingValue = "false")
+    CommandLineRunner configDowngradeAcidFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("downgrade-acid: {}", Boolean.FALSE);
+            hmsMirrorConfig.getMigrateACID().setDowngrade(Boolean.FALSE);
         };
     }
 
@@ -314,22 +399,48 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.evaluate-partition-location")
-    CommandLineRunner configEvaluatePartitionLocation(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.evaluate-partition-location}") String value) {
+            name = "hms-mirror.config.evaluate-partition-location",
+            havingValue = "true")
+    CommandLineRunner configEvaluatePartitionLocationTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("evaluate-partition-location: {}", value);
-            hmsMirrorConfig.setEvaluatePartitionLocation(Boolean.parseBoolean(value));
+            log.info("evaluate-partition-location: {}", Boolean.TRUE);
+            hmsMirrorConfig.setEvaluatePartitionLocation(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.execute")
-    CommandLineRunner configExecute(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.execute}") String value) {
+            name = "hms-mirror.config.evaluate-partition-location",
+            havingValue = "false")
+    CommandLineRunner configEvaluatePartitionLocationFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("execute: {}", value);
-            hmsMirrorConfig.setExecute(Boolean.parseBoolean(value));
+            log.info("evaluate-partition-location: {}", Boolean.FALSE);
+            hmsMirrorConfig.setEvaluatePartitionLocation(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.execute",
+            havingValue = "true")
+    CommandLineRunner configExecuteTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("execute: {}", Boolean.TRUE);
+            hmsMirrorConfig.setExecute(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.execute",
+            havingValue = "false")
+    CommandLineRunner configExecuteFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("execute: {}", Boolean.FALSE);
+            hmsMirrorConfig.setExecute(Boolean.FALSE);
         };
     }
 
@@ -369,22 +480,48 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.flip")
-    CommandLineRunner configFlip(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.flip}") String value) {
+            name = "hms-mirror.config.flip",
+            havingValue = "true")
+    CommandLineRunner configFlipTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("flip: {}", value);
-            hmsMirrorConfig.setFlip(Boolean.parseBoolean(value));
+            log.info("flip: {}", Boolean.TRUE);
+            hmsMirrorConfig.setFlip(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.force-external-location")
-    CommandLineRunner configForceExternalLocation(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.force-external-location}") String value) {
+            name = "hms-mirror.config.flip",
+            havingValue = "false")
+    CommandLineRunner configFlipFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("force-external-location: {}", value);
-            hmsMirrorConfig.getTranslator().setForceExternalLocation(Boolean.parseBoolean(value));
+            log.info("flip: {}", Boolean.FALSE);
+            hmsMirrorConfig.setFlip(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.force-external-location",
+            havingValue = "true")
+    CommandLineRunner configForceExternalLocationTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("force-external-location: {}", Boolean.TRUE);
+            hmsMirrorConfig.getTranslator().setForceExternalLocation(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.force-external-location",
+            havingValue = "false")
+    CommandLineRunner configForceExternalLocationFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("force-external-location: {}", Boolean.FALSE);
+            hmsMirrorConfig.getTranslator().setForceExternalLocation(Boolean.FALSE);
         };
     }
 
@@ -440,21 +577,16 @@ public class HmsMirrorCommandLineOptions {
     // So this happens AFTER migrate acid and migrate acid only are checked.
     @Order(5)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.in-place")
-    CommandLineRunner configInPlace(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.in-place}") String value) {
+            name = "hms-mirror.config.in-place",
+            havingValue = "true")
+    CommandLineRunner configInPlace(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("in-place: {}", value);
+            log.info("in-place downgrade acid tables: {}", Boolean.TRUE);
             if (hmsMirrorConfig.getMigrateACID().isOn()) {
-//                if (cmd.hasOption("da")) {
-//                    // Downgrade ACID tables
-//                    getConfig().getMigrateACID().setDowngrade(Boolean.TRUE);
-//                }
-//                if (cmd.hasOption("ip")) {
                 // Downgrade ACID tables inplace
                 // Only work on LEFT cluster definition.
-//                    log.info("Inplace ACID Downgrade");
-                hmsMirrorConfig.getMigrateACID().setDowngrade(Boolean.parseBoolean(value));
-                hmsMirrorConfig.getMigrateACID().setInplace(Boolean.parseBoolean(value));
+                hmsMirrorConfig.getMigrateACID().setDowngrade(Boolean.TRUE);
+                hmsMirrorConfig.getMigrateACID().setInplace(Boolean.TRUE);
                 // For 'in-place' downgrade, only applies to ACID tables.
                 // Implies `-mao`.
                 log.info("Only ACID Tables will be looked at since 'ip' was specified.");
@@ -463,7 +595,6 @@ public class HmsMirrorCommandLineOptions {
                 log.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
                 if (null != hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2())
                     hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
-//                }
             }
         };
     }
@@ -548,33 +679,72 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-non-native")
-    CommandLineRunner configMigrateNonNative(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.migrate-non-native}") String value) {
+            name = "hms-mirror.config.migrate-non-native",
+            havingValue = "true")
+    CommandLineRunner configMigrateNonNativeTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("migrate-non-native: {}", value);
-            hmsMirrorConfig.setMigratedNonNative(Boolean.parseBoolean(value));
+            log.info("migrate-non-native: {}", Boolean.TRUE);
+            hmsMirrorConfig.setMigratedNonNative(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.migrate-non-native-only")
-    CommandLineRunner configMigrateNonNativeOnly(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.migrate-non-native-only}") String value) {
+            name = "hms-mirror.config.migrate-non-native",
+            havingValue = "false")
+    CommandLineRunner configMigrateNonNativeFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("migrate-non-native-only: {}", value);
-            hmsMirrorConfig.setMigratedNonNative(Boolean.parseBoolean(value));
+            log.info("migrate-non-native: {}", Boolean.FALSE);
+            hmsMirrorConfig.setMigratedNonNative(Boolean.FALSE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.no-purge")
-    CommandLineRunner configNoPurge(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.no-purge}") String value) {
+            name = "hms-mirror.config.migrate-non-native-only",
+            havingValue = "true")
+    CommandLineRunner configMigrateNonNativeOnlyTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("no-purge: {}", value);
-            hmsMirrorConfig.setNoPurge(Boolean.parseBoolean(value));
+            log.info("migrate-non-native-only: {}", Boolean.TRUE);
+            hmsMirrorConfig.setMigratedNonNative(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.migrate-non-native-only",
+            havingValue = "false")
+    CommandLineRunner configMigrateNonNativeOnlyFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("migrate-non-native-only: {}", Boolean.FALSE);
+            hmsMirrorConfig.setMigratedNonNative(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.no-purge",
+            havingValue = "true")
+    CommandLineRunner configNoPurgeTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("no-purge: {}", Boolean.TRUE);
+            hmsMirrorConfig.setNoPurge(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.no-purge",
+            havingValue = "false")
+    CommandLineRunner configNoPurgeFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("no-purge: {}", Boolean.FALSE);
+            hmsMirrorConfig.setNoPurge(Boolean.FALSE);
         };
     }
 
@@ -700,22 +870,48 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.quiet")
-    CommandLineRunner configQuiet(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.quiet}") String value) {
+            name = "hms-mirror.config.quiet",
+            havingValue = "true")
+    CommandLineRunner configQuietTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("quiet: {}", value);
-            hmsMirrorConfig.setQuiet(Boolean.parseBoolean(value));
+            log.info("quiet: {}", Boolean.TRUE);
+            hmsMirrorConfig.setQuiet(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.read-only")
-    CommandLineRunner configReadOnly(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.read-only}") String value) {
+            name = "hms-mirror.config.quiet",
+            havingValue = "false")
+    CommandLineRunner configQuietFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("read-only: {}", value);
-            hmsMirrorConfig.setReadOnly(Boolean.parseBoolean(value));
+            log.info("quiet: {}", Boolean.FALSE);
+            hmsMirrorConfig.setQuiet(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.read-only",
+            havingValue = "true")
+    CommandLineRunner configReadOnlyTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("read-only: {}", Boolean.TRUE);
+            hmsMirrorConfig.setReadOnly(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.read-only",
+            havingValue = "false")
+    CommandLineRunner configReadOnlyFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("read-only: {}", Boolean.FALSE);
+            hmsMirrorConfig.setReadOnly(Boolean.FALSE);
         };
     }
 
@@ -733,35 +929,76 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.reset-right")
-    CommandLineRunner configResetRight(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.reset-right}") String value) {
+            name = "hms-mirror.config.reset-right",
+            havingValue = "true")
+    CommandLineRunner configResetRightTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("reset-right: {}", value);
+            log.info("reset-right: {}", Boolean.TRUE);
             // TODO: Implement.  Does this still make sense?
-//            config.
+            hmsMirrorConfig.setResetRight(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.reset-to-default-location")
-    CommandLineRunner configResetToDefaultLocation(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.reset-to-default-location}") String value) {
+            name = "hms-mirror.config.reset-right",
+            havingValue = "false")
+    CommandLineRunner configResetRightFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("reset-to-default-location: {}", value);
-            hmsMirrorConfig.setResetToDefaultLocation(Boolean.parseBoolean(value));
+            log.info("reset-right: {}", Boolean.FALSE);
+            // TODO: Implement.  Does this still make sense?
+            hmsMirrorConfig.setResetRight(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(2)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.reset-to-default-location",
+            havingValue = "true")
+    CommandLineRunner configResetToDefaultLocationTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("reset-to-default-location: {}", Boolean.TRUE);
+            hmsMirrorConfig.setResetToDefaultLocation(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(2)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.reset-to-default-location",
+            havingValue = "false")
+    CommandLineRunner configResetToDefaultLocationFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("reset-to-default-location: {}", Boolean.FALSE);
+            hmsMirrorConfig.setResetToDefaultLocation(Boolean.FALSE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.right-is-disconnected")
-    CommandLineRunner configRightIsDisconnected(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.right-is-disconnected}") String value) {
+            name = "hms-mirror.config.right-is-disconnected",
+            havingValue = "true")
+    CommandLineRunner configRightIsDisconnectedTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("right-is-disconnected: {}", value);
+            log.info("right-is-disconnected: {}", Boolean.TRUE);
             if (null != hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2())
-                hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.parseBoolean(value));
+                hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.right-is-disconnected",
+            havingValue = "false")
+    CommandLineRunner configRightIsDisconnectedFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("right-is-disconnected: {}", Boolean.FALSE);
+            if (null != hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2())
+                hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.FALSE);
         };
     }
 
@@ -796,66 +1033,144 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-features")
-    CommandLineRunner configSkipFeatures(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.skip-features}") String value) {
+            name = "hms-mirror.config.skip-features",
+            havingValue = "true")
+    CommandLineRunner configSkipFeaturesTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("skip-features: {}", value);
-            hmsMirrorConfig.setSkipFeatures(Boolean.parseBoolean(value));
+            log.info("skip-features: {}", Boolean.TRUE);
+            hmsMirrorConfig.setSkipFeatures(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-legacy-translation")
-    CommandLineRunner configSkipLegacyTranslation(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.skip-legacy-translation}") String value) {
+            name = "hms-mirror.config.skip-features",
+            havingValue = "false")
+    CommandLineRunner configSkipFeaturesFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("skip-legacy-translation: {}", value);
-            hmsMirrorConfig.setSkipLegacyTranslation(Boolean.parseBoolean(value));
+            log.info("skip-features: {}", Boolean.FALSE);
+            hmsMirrorConfig.setSkipFeatures(Boolean.FALSE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-link-check")
-    CommandLineRunner configSkipLinkCheck(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.skip-link-check}") String value) {
+            name = "hms-mirror.config.skip-legacy-translation",
+            havingValue = "true")
+    CommandLineRunner configSkipLegacyTranslationTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("skip-link-check: {}", value);
-            hmsMirrorConfig.setSkipLinkCheck(Boolean.parseBoolean(value));
+            log.info("skip-legacy-translation: {}", Boolean.TRUE);
+            hmsMirrorConfig.setSkipLegacyTranslation(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-optimizations")
-    CommandLineRunner configSkipOptimizations(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.skip-optimizations}") String value) {
+            name = "hms-mirror.config.skip-legacy-translation",
+            havingValue = "false")
+    CommandLineRunner configSkipLegacyTranslationFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("skip-optimizations: {}", value);
-            hmsMirrorConfig.getOptimization().setSkip(Boolean.parseBoolean(value));
+            log.info("skip-legacy-translation: {}", Boolean.FALSE);
+            hmsMirrorConfig.setSkipLegacyTranslation(Boolean.FALSE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.skip-stats-collection")
-    CommandLineRunner configSkipStatsCollection(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.skip-stats-collection}") String value) {
+            name = "hms-mirror.config.skip-link-check",
+            havingValue = "true")
+    CommandLineRunner configSkipLinkCheckTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("skip-stats-collection: {}", value);
-            hmsMirrorConfig.getOptimization().setSkipStatsCollection(Boolean.parseBoolean(value));
+            log.info("skip-link-check: {}", Boolean.TRUE);
+            hmsMirrorConfig.setSkipLinkCheck(Boolean.TRUE);
         };
     }
 
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.sort-dynamic-partition-inserts")
-    CommandLineRunner configSortDynamicPartitionInserts(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.sort-dynamic-partition-inserts}") String value) {
+            name = "hms-mirror.config.skip-link-check",
+            havingValue = "false")
+    CommandLineRunner configSkipLinkCheckFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("sort-dynamic-partition-inserts: {}", value);
-            hmsMirrorConfig.getOptimization().setSortDynamicPartitionInserts(Boolean.parseBoolean(value));
+            log.info("skip-link-check: {}", Boolean.FALSE);
+            hmsMirrorConfig.setSkipLinkCheck(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-optimizations",
+            havingValue = "true")
+    CommandLineRunner configSkipOptimizationsTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("skip-optimizations: {}", Boolean.TRUE);
+            hmsMirrorConfig.getOptimization().setSkip(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-optimizations",
+            havingValue = "false")
+    CommandLineRunner configSkipOptimizationsFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("skip-optimizations: {}", Boolean.FALSE);
+            hmsMirrorConfig.getOptimization().setSkip(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-stats-collection",
+            havingValue = "true")
+    CommandLineRunner configSkipStatsCollectionTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("skip-stats-collection: {}", Boolean.TRUE);
+            hmsMirrorConfig.getOptimization().setSkipStatsCollection(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.skip-stats-collection",
+            havingValue = "false")
+    CommandLineRunner configSkipStatsCollectionFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("skip-stats-collection: {}", Boolean.FALSE);
+            hmsMirrorConfig.getOptimization().setSkipStatsCollection(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sort-dynamic-partition-inserts",
+            havingValue = "true")
+    CommandLineRunner configSortDynamicPartitionInsertsTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("sort-dynamic-partition-inserts: {}", Boolean.TRUE);
+            hmsMirrorConfig.getOptimization().setSortDynamicPartitionInserts(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sort-dynamic-partition-inserts",
+            havingValue = "false")
+    CommandLineRunner configSortDynamicPartitionInsertsFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("sort-dynamic-partition-inserts: {}", Boolean.FALSE);
+            hmsMirrorConfig.getOptimization().setSortDynamicPartitionInserts(Boolean.FALSE);
         };
     }
 
@@ -884,13 +1199,50 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.sync")
-    CommandLineRunner configSync(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.sync}") String value) {
+            name = "hms-mirror.config.storage-migration-strict",
+            havingValue = "true")
+    CommandLineRunner configStorageMigrationStrictTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("sync: {}", value);
+            log.info("storage-migration-strict: {}", Boolean.TRUE);
+            hmsMirrorConfig.getTransfer().getStorageMigration().setStrict(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.storage-migration-strict",
+            havingValue = "false")
+    CommandLineRunner configStorageMigrationStrictFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.warn("storage-migration-strict: {} is not currently supported to ensure valid migration plans.", Boolean.FALSE);
+//            hmsMirrorConfig.getTransfer().getStorageMigration().setStrict(Boolean.FALSE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sync",
+            havingValue = "true")
+    CommandLineRunner configSyncTrue(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("sync: {}", Boolean.TRUE);
             if (hmsMirrorConfig.getDataStrategy() != DataStrategyEnum.DUMP) {
-                hmsMirrorConfig.setSync(Boolean.parseBoolean(value));
+                hmsMirrorConfig.setSync(Boolean.TRUE);
             }
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.sync",
+            havingValue = "false")
+    CommandLineRunner configSyncFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("sync: {}", Boolean.FALSE);
+            hmsMirrorConfig.setSync(Boolean.FALSE);
         };
     }
 
@@ -941,11 +1293,24 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.transfer-ownership")
-    CommandLineRunner configTransferOwnership(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.transfer-ownership}") String value) {
+            name = "hms-mirror.config.transfer-ownership",
+            havingValue = "true")
+    CommandLineRunner configTransferOwnershipTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("transfer-ownership: {}", value);
-            hmsMirrorConfig.setTransferOwnership(Boolean.parseBoolean(value));
+            log.info("transfer-ownership: {}", Boolean.TRUE);
+            hmsMirrorConfig.setTransferOwnership(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.transfer-ownership",
+            havingValue = "false")
+    CommandLineRunner configTransferOwnershipFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("transfer-ownership: {}", Boolean.FALSE);
+            hmsMirrorConfig.setTransferOwnership(Boolean.FALSE);
         };
     }
 
@@ -963,11 +1328,24 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.views-only")
-    CommandLineRunner configViewsOnly(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.views-only}") String value) {
+            name = "hms-mirror.config.views-only",
+            havingValue = "true")
+    CommandLineRunner configViewsOnlyTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            log.info("views-only: {}", value);
-            hmsMirrorConfig.getMigrateVIEW().setOn(Boolean.parseBoolean(value));
+            log.info("views-only: {}", Boolean.TRUE);
+            hmsMirrorConfig.getMigrateVIEW().setOn(Boolean.TRUE);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.views-only",
+            havingValue = "false")
+    CommandLineRunner configViewsOnlyFalse(HmsMirrorConfig hmsMirrorConfig) {
+        return args -> {
+            log.info("views-only: {}", Boolean.FALSE);
+            hmsMirrorConfig.getMigrateVIEW().setOn(Boolean.FALSE);
         };
     }
 
@@ -1563,7 +1941,7 @@ public class HmsMirrorCommandLineOptions {
             String[] values = option.getValues();
             if (opt.equals("config")) {
                 // Handle the config file differently
-                springOptions.add("--hms-mirror.config.filename" +"=\"" + String.join(",", values) + "\"");
+                springOptions.add("--hms-mirror.config.filename" + "=\"" + String.join(",", values) + "\"");
             } else {
                 if (values != null && values.length > 0) {
                     springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + String.join(",", values));

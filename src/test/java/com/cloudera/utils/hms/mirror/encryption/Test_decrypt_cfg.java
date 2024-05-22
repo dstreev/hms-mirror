@@ -18,14 +18,11 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -59,28 +56,28 @@ public class Test_decrypt_cfg extends PasswordTestBase {
 
     @Before
     public void setup() {
-        passwordService.decryptConfigPasswords(getExecuteSession().getHmsMirrorConfig());
+        passwordService.decryptConfigPasswords(getExecuteSession().getResolvedConfig());
     }
 
     @Test
     public void validateLeftPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getResolvedConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateLeftMSPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "cdpprivaatebase",
-                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getResolvedConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateRightPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getHmsMirrorConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getResolvedConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
 }

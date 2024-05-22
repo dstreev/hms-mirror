@@ -17,8 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.web.service.RunStatusService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,18 +32,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
+
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/runStatus")
 public class RunStatusController {
 
     private ExecuteSessionService executeSessionService;
+    private RunStatusService runStatusService;
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
 
+    @Autowired
+    public void setRunStatusService(RunStatusService runStatusService) {
+        this.runStatusService = runStatusService;
+    }
 
     @Operation(summary = "Get the RunStatus")
     @ApiResponses(value = {
@@ -54,14 +65,7 @@ public class RunStatusController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public RunStatus getRunStatus(@RequestParam(name = "sessionId", required = false) String sessionId) {
-        RunStatus runStatus = null;
-        if (sessionId == null) {
-            runStatus = executeSessionService.getCurrentSession().getRunStatus();
-        } else {
-            runStatus = executeSessionService.getSession(sessionId).getRunStatus();
-        }
-        return runStatus;
+        return runStatusService.getRunStatus(sessionId);
     }
-
 
 }

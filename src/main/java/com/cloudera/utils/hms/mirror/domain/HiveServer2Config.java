@@ -26,7 +26,7 @@ import java.util.Properties;
 
 @Getter
 @Setter
-public class HiveServer2Config {
+public class HiveServer2Config implements Cloneable {
     @JsonIgnore
     public static final String APACHE_HIVE_DRIVER_CLASS_NAME = "org.apache.hive.jdbc.HiveDriver";
     @Schema(description = "The JDBC URI for the HiveServer2 connection. EG: jdbc:hive2://<host>:<port>")
@@ -38,6 +38,17 @@ public class HiveServer2Config {
     private String driverClassName = APACHE_HIVE_DRIVER_CLASS_NAME; // default driver.
     @Schema(description = "The path to the jar file for the HiveServer2 connection. Must be specified for non-kerberos connections.  Should be null for kerberos connections and driver should be in 'aux_libs'.")
     private String jarFile = null;
+
+    @Override
+    public HiveServer2Config clone() {
+        try {
+            HiveServer2Config clone = (HiveServer2Config) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     public Properties getConnectionProperties() {
         if (connectionProperties == null) {

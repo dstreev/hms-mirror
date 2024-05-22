@@ -29,12 +29,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Getter
 @Setter
 @Slf4j
-public class ExecuteSession {
+public class ExecuteSession implements Cloneable {
 
     private String sessionId;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private RunStatus runStatus;
-    private HmsMirrorConfig hmsMirrorConfig;
+    private HmsMirrorConfig resolvedConfig;
+    private HmsMirrorConfig origConfig;
     private CliEnvironment cliEnvironment;
     private Conversion conversion;
 
@@ -52,6 +53,29 @@ public class ExecuteSession {
 
     public void addWarning(MessageCode code, Object... args) {
         getRunStatus().addWarning(code, args);
+    }
+
+    @Override
+    public ExecuteSession clone() {
+        try {
+            ExecuteSession clone = (ExecuteSession) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            if (origConfig != null)
+                clone.origConfig = origConfig.clone();
+            clone.cliEnvironment = cliEnvironment; // This isn't a cloneable object. Just establish the reference.
+            // Don't clone the other parts: runStatus, cliEnvironment, conversion, runResults
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
+    public HmsMirrorConfig getResolvedConfig() {
+        if (resolvedConfig == null) {
+            // This deals with any transitions that may have occurred in the config.
+            resolvedConfig = origConfig.getResolvedConfig();
+        }
+        return resolvedConfig;
     }
 
 }

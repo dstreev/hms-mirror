@@ -76,6 +76,7 @@ public enum HmsMirrorCommandLineOptionsEnum {
     SKIP_LINK_CHECK("slc", "skip-link-check", null, ""),
     SKIP_LEGACY_TRANSLATION("slt", "skip-legacy-translation", null, ""),
     STORAGE_MIGRATION_NAMESPACE("smn", "storage-migration-namespace", "namespace", ""),
+    STORAGE_MIGRATION_STRICT("sms", "storage-migration-strict", null, ""),
     SKIP_OPTIMIZATIONS("so", "skip-optimizations", null, ""),
     SQL_PARTITION_COUNT("sp", "sql-partition-count", "limit", ""),
     SQL_OUTPUT("sql", "sql-output", null, ""),

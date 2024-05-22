@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 
 @Getter
 @Setter
-public class Filter {
+public class Filter implements Cloneable {
     @JsonIgnore
     private Pattern dbFilterPattern = null;
     @JsonIgnore // wip
@@ -44,30 +44,40 @@ public class Filter {
     @Schema(description = "Maximum number of partitions in a table (-1 for no limit)")
     private Integer tblPartitionLimit = -1;
 
-    public void setDbRegEx(String dbRegEx) {
-        this.dbRegEx = dbRegEx;
-        if (this.dbRegEx != null)
+    @Override
+    public Filter clone() {
+        try {
+            Filter clone = (Filter) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
+//    public void setDbRegEx(String dbRegEx) {
+//        this.dbRegEx = dbRegEx;
+//    }
+
+    public Pattern getDbFilterPattern() {
+        if (dbRegEx != null && dbFilterPattern == null) {
             dbFilterPattern = Pattern.compile(dbRegEx);
-        else
-            dbFilterPattern = null;
-
+        }
+        return dbFilterPattern;
     }
 
-    public void setTblExcludeRegEx(String tblExcludeRegEx) {
-        this.tblExcludeRegEx = tblExcludeRegEx;
-        if (this.tblExcludeRegEx != null)
-            tblExcludeFilterPattern = Pattern.compile(tblExcludeRegEx);
-        else
-            tblExcludeFilterPattern = null;
-
-    }
-
-    public void setTblRegEx(String tblRegEx) {
-        this.tblRegEx = tblRegEx;
-        if (this.tblRegEx != null)
+    public Pattern getTblFilterPattern() {
+        if (tblRegEx != null && tblFilterPattern == null) {
             tblFilterPattern = Pattern.compile(tblRegEx);
-        else
-            tblFilterPattern = null;
+        }
+        return tblFilterPattern;
+    }
+
+    public Pattern getTblExcludeFilterPattern() {
+        if (tblExcludeRegEx != null && tblExcludeFilterPattern == null) {
+            tblExcludeFilterPattern = Pattern.compile(tblExcludeRegEx);
+        }
+        return tblExcludeFilterPattern;
     }
 
     @JsonIgnore

@@ -19,20 +19,21 @@ package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.Messages;
+import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 @Slf4j
 @Getter
 @Setter
-public class RunStatus {
+public class RunStatus implements Comparable<RunStatus> {
+    private Date runDate = new Date();
     @JsonIgnore
     private final Messages errors = new Messages(150);
     @JsonIgnore
@@ -56,10 +57,17 @@ public class RunStatus {
      */
     private Map<StageEnum, CollectionEnum> stages = new LinkedHashMap<>();
 
+    private List<TableMirror> inProgressTables = new ArrayList<>();
+
     /*
     Maintain statistics on the operation.
      */
     private OperationStatistics operationStatistics = new OperationStatistics();
+
+    @Override
+    public int compareTo(RunStatus o) {
+        return runDate.compareTo(o.runDate);
+    }
 
     public boolean isRunning() {
         boolean rtn = Boolean.FALSE;
@@ -195,5 +203,17 @@ public class RunStatus {
         return warnings.getMessages();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
+        RunStatus runStatus = (RunStatus) o;
+        return Objects.equals(runDate, runStatus.runDate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(runDate);
+    }
 }

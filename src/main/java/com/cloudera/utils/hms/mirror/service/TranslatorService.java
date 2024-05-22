@@ -60,7 +60,7 @@ public class TranslatorService {
     public synchronized Map<String, Map<String, Set<String>>> buildDistcpList(String database, Environment environment, int consolidationLevel) {
         Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // get the map for a db.
         Set<String> databases = hmsMirrorConfig.getTranslator().getDbLocationMap().keySet();
@@ -117,7 +117,7 @@ public class TranslatorService {
 
     public String processGlobalLocationMap(String originalLocation) {
         String newLocation = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (!hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
             log.debug("Checking location: {} for replacement element in global location map.", originalLocation);
@@ -144,7 +144,7 @@ public class TranslatorService {
 
     public Boolean translatePartitionLocations(TableMirror tblMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         Map<String, String> dbRef = tblMirror.getParent().getDBDefinition(Environment.RIGHT);
         Boolean chkLocation = hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null && hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null;
@@ -232,7 +232,7 @@ public class TranslatorService {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         String dbName = configService.getResolvedDB(tableMirror.getParent().getName());
 

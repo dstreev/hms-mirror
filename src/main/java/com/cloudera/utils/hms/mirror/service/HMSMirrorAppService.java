@@ -68,8 +68,8 @@ public class HMSMirrorAppService {
 
     public long getReturnCode() {
         long rtn = 0L;
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
         rtn = runStatus.getErrors().getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
@@ -81,9 +81,9 @@ public class HMSMirrorAppService {
     @Async("executionThreadPool")
     public Future<Boolean> run() {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
 
         connectionPoolService.close();
 
@@ -109,7 +109,9 @@ public class HMSMirrorAppService {
                 (!hmsMirrorConfig.isEvaluatePartitionLocation() && hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
             // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
             for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
+                    runStatus.getOperationStatistics().getCounts().incrementTables();
                     for (EnvironmentTable et : tableMirror.getEnvironments().values()) {
                         et.getPartitions().clear();
                     }
@@ -127,7 +129,7 @@ public class HMSMirrorAppService {
 //        }
 
         log.info("Setting 'running' to TRUE");
-        getExecuteSessionService().getCurrentSession().getRunning().set(Boolean.TRUE);
+        getExecuteSessionService().getActiveSession().getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
         log.info("GATHERING METADATA: Start Processing for databases: {}", Arrays.toString((hmsMirrorConfig.getDatabases())));
@@ -149,6 +151,7 @@ public class HMSMirrorAppService {
                         String db = rs.getString(1);
                         Matcher matcher = hmsMirrorConfig.getFilter().getDbFilterPattern().matcher(db);
                         if (matcher.find()) {
+                            runStatus.getOperationStatistics().getCounts().incrementDatabases();
                             databases.add(db);
                         }
                     }
@@ -158,7 +161,7 @@ public class HMSMirrorAppService {
             } catch (SQLException se) {
                 // Issue
                 log.error("Issue getting databases for dbRegEx", se);
-                executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
+                executeSessionService.getActiveSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
                 return new AsyncResult<>(Boolean.FALSE);
                 //                wrapup();
                 //                return;
@@ -168,7 +171,7 @@ public class HMSMirrorAppService {
                         conn.close();
                     } catch (SQLException e) {
                         log.error("Issue closing connection for LEFT", e);
-                        executeSessionService.getCurrentSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
+                        executeSessionService.getActiveSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
                     }
                 }
             }
@@ -207,15 +210,18 @@ public class HMSMirrorAppService {
 
                     if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) { //getConfig().getCluster(Environment.LEFT).getDatabase(config, dbMirror)) {
                         getDatabaseService().getDatabase(dbMirror, Environment.RIGHT);
+                        runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
                         //getConfig().getCluster(Environment.RIGHT).getDatabase(config, dbMirror);
                     } else {
                         // LEFT DB doesn't exists.
                         dbMirror.addIssue(Environment.LEFT, "DB doesn't exist. Check permissions for user running process");
+                        runStatus.getOperationStatistics().getFailures().incrementDatabases();
                         rtn = Boolean.FALSE;
                     }
                 } catch (SQLException se) {
                     log.error("Issue getting databases", se);
-                    executeSessionService.getCurrentSession().addError(MISC_ERROR, "Issue getting databases");
+                    executeSessionService.getActiveSession().addError(MISC_ERROR, "Issue getting databases");
+                    runStatus.getOperationStatistics().getFailures().incrementDatabases();
                     runStatus.setStage(StageEnum.DATABASES, CollectionEnum.ERRORED);
                     return new AsyncResult<>(Boolean.FALSE);
 //                    wrapup();

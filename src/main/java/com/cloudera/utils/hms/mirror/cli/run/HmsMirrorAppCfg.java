@@ -97,11 +97,11 @@ public class HmsMirrorAppCfg {
     }
 
     protected void wrapup () {
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
         log.info("Wrapping up the Application Workflow");
         log.info("Setting 'running' to FALSE");
-        executeSessionService.getCurrentSession().getRunning().set(Boolean.FALSE);
+        executeSessionService.getActiveSession().getRunning().set(Boolean.FALSE);
 
         // Give the underlying threads a chance to finish.
         try {

@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -59,8 +57,8 @@ public class Test_decrypt_fail extends PasswordTestBase {
     public void validatePassword() {
 
         String decryptedPassword = getPasswordService().decryptPassword(
-                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
-                getExecuteSession().getHmsMirrorConfig().getEncryptedPassword());
+                getExecuteSession().getResolvedConfig().getPasswordKey(),
+                getExecuteSession().getResolvedConfig().getEncryptedPassword());
 
         // The decrypt value should be null because the password is not encrypted correctly.
         assertNull("Decrypt Password Failure",  decryptedPassword);

@@ -59,7 +59,7 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         /*
         rename original to archive

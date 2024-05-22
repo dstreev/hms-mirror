@@ -21,7 +21,6 @@ import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
@@ -30,8 +29,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.core.env.Environment;
@@ -104,7 +101,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public HmsMirrorConfig getConfig(@RequestParam(name = "sessionId", required = false) String sessionId) {
         log.info("Getting Config: {}", sessionId);
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        return executeSessionService.getSession(sessionId).getResolvedConfig();
     }
 
     @Operation(summary = "Get the config by id")
@@ -125,18 +122,18 @@ public class ConfigController {
         return configService.loadConfig(configFileName);
     }
 
-    private boolean isCurrentSessionRunning() {
-        boolean rtn = Boolean.FALSE;
-        // Need to check that nothing is running currently.
-        ExecuteSession currentSession = executeSessionService.getCurrentSession();
-        if (currentSession != null) {
-            RunStatus runStatus = currentSession.getRunStatus();
-            if (runStatus.isRunning()) {
-                rtn = Boolean.TRUE;
-            }
-        }
-        return rtn;
-    }
+//    private boolean isCurrentSessionRunning() {
+//        boolean rtn = Boolean.FALSE;
+//        // Need to check that nothing is running currently.
+//        ExecuteSession currentSession = executeSessionService.getActiveSession();
+//        if (currentSession != null) {
+//            RunStatus runStatus = currentSession.getRunStatus();
+//            if (runStatus.isRunning()) {
+//                rtn = Boolean.TRUE;
+//            }
+//        }
+//        return rtn;
+//    }
 
     @Operation(summary = "Load a config by id")
     @ApiResponses(value = {
@@ -149,10 +146,10 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.POST, value = "/load/{id}")
     public HmsMirrorConfig load(@RequestParam(name = "sessionId", required = false) String sessionId,
                                 @PathVariable @NotNull String id) {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot load config while a session running.");
-        }
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot load config while a session running.");
+//        }
 
         log.info("{}: Loading Config by id: {}", sessionId, id);
         HmsMirrorConfig config = configService.loadConfig(id);
@@ -163,10 +160,10 @@ public class ConfigController {
         if (session == null) {
             session = executeSessionService.createSession(targetSessionId, config);
         } else {
-            session.setHmsMirrorConfig(config);
+            session.setOrigConfig(config);
         }
         // Set it as the current session.
-        executeSessionService.setCurrentSession(session);
+        executeSessionService.setLoadedSession(session);
         return config;
     }
 
@@ -199,7 +196,7 @@ public class ConfigController {
                         @PathVariable @NotNull String id,
                         @RequestParam(value = "overwrite", required = false) Boolean overwrite) {
         log.info("{}: Save current config to: {}", sessionId, id);
-        HmsMirrorConfig config = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig config = executeSessionService.getLoadedSession().getResolvedConfig();
         //Session(sessionId).getHmsMirrorConfig();
         // Save to the hms-mirror.config.path as 'id'.
         String configPath = springEnv.getProperty("hms-mirror.config.path");
@@ -220,7 +217,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.GET, value = "/clusters")
     public Map<Environment, Cluster> getClusters(@RequestParam(name = "sessionId", required = false) String sessionId) {
         log.info("{}: Getting Clusters for current Config", sessionId);
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getClusters();
+        return executeSessionService.getLoadedSession().getResolvedConfig().getClusters();
     }
 
     @Operation(summary = "Get the LEFT|RIGHT cluster config")
@@ -239,7 +236,7 @@ public class ConfigController {
         log.info("{}: Getting {} Cluster current Config", sessionId, side);
         String sideStr = side.toUpperCase();
         Environment env = Environment.valueOf(sideStr);
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getClusters().get(env);
+        return executeSessionService.getLoadedSession().getResolvedConfig().getClusters().get(env);
     }
 
     /*
@@ -294,12 +291,12 @@ public class ConfigController {
             @RequestParam(value = "sync", required = false) Boolean sync,
             @RequestParam(value = "transferOwnership", required = false) Boolean transferOwnership
     )   {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot change config while a session running.");
+//        }
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getResolvedConfig();
         if (copyAvroSchemaUrls != null) {
             log.info("{}: Setting Copy Avro Schema Urls to: {}", sessionId, copyAvroSchemaUrls);
             hmsMirrorConfig.setCopyAvroSchemaUrls(copyAvroSchemaUrls);
@@ -389,12 +386,8 @@ public class ConfigController {
                                     @RequestParam(value = "tblRegEx", required = false) String regEx,
                                     @RequestParam(value = "tblSizeLimit", required = false) String tblSizeLimit,
                                     @RequestParam(value = "tblPartitionLimit", required = false) String tblPartitionLimit) {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
 
-        Filter filter = executeSessionService.getCurrentSession().getHmsMirrorConfig().getFilter();
+        Filter filter = executeSessionService.getLoadedSession().getResolvedConfig().getFilter();
 
         if (excludeRegEx != null) {
             log.info("{}: Setting Table Exclude RegEx to: {}", sessionId, excludeRegEx);
@@ -435,11 +428,11 @@ public class ConfigController {
                                          @RequestParam(value = "non-native", required = false) Boolean nonNative,
                                          @RequestParam(value = "views", required = false) Boolean views) {
 
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
-        MigrateACID migrateACID = executeSessionService.getCurrentSession().getHmsMirrorConfig().getMigrateACID();
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot change config while a session running.");
+//        }
+        MigrateACID migrateACID = executeSessionService.getLoadedSession().getResolvedConfig().getMigrateACID();
         if (acid != null) {
             log.info("{}: Setting Migrate ACID 'on' to: {}", sessionId, acid);
             migrateACID.setOn(acid);
@@ -466,13 +459,13 @@ public class ConfigController {
         }
         if (nonNative != null) {
             log.info("{}: Setting Migrate ACID 'nonNative' to: {}", sessionId, nonNative);
-            executeSessionService.getCurrentSession().getHmsMirrorConfig().setMigratedNonNative(nonNative);
+            executeSessionService.getActiveSession().getResolvedConfig().setMigratedNonNative(nonNative);
         }
         if (views != null) {
             log.info("{}: Setting Migrate ACID 'views' to: {}", sessionId, views);
-            executeSessionService.getCurrentSession().getHmsMirrorConfig().getMigrateVIEW().setOn(views);
+            executeSessionService.getActiveSession().getResolvedConfig().getMigrateVIEW().setOn(views);
         }
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        return executeSessionService.getActiveSession().getResolvedConfig();
     }
 
     // Transfer
@@ -491,11 +484,11 @@ public class ConfigController {
                                       @RequestParam(value = "intermediateStorage", required = false) String intermediateStorage,
                                       @RequestParam(value = "commonStorage", required = false) String commonStorage
     ) {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
-        TransferConfig transferConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTransfer();
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot change config while a session running.");
+//        }
+        TransferConfig transferConfig = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer();
 
         if (transferPrefix != null) {
             log.info("{}: Setting Transfer 'transferPrefix' to: {}", sessionId, transferPrefix);
@@ -536,11 +529,11 @@ public class ConfigController {
             @RequestParam(value = "managedDirectory", required = false) String managedDirectory,
             @RequestParam(value = "externalDirectory", required = false) String externalDirectory
     ) {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
-        WarehouseConfig warehouseConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTransfer().getWarehouse();
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot change config while a session running.");
+//        }
+        WarehouseConfig warehouseConfig = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer().getWarehouse();
         if (managedDirectory != null) {
             log.info("{}: Setting Warehouse 'managedDirectory' to: {}", sessionId, managedDirectory);
             warehouseConfig.setManagedDirectory(managedDirectory);
@@ -563,13 +556,14 @@ public class ConfigController {
     public StorageMigration setStorageMigration(@RequestParam(name = "sessionId", required = false) String sessionId,
             @RequestParam(value = "strategy", required = false) DataStrategyEnum strategy,
             @RequestParam(value = "distcp", required = false) Boolean distcp,
-            @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow
+            @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow,
+            @RequestParam(value = "strict", required = false) Boolean strict
     ) {
-        if (isCurrentSessionRunning()) {
-            // Cannot load a config while running.
-            throw new RuntimeException("Cannot change config while a session running.");
-        }
-        StorageMigration storageMigration = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTransfer().getStorageMigration();
+//        if (isCurrentSessionRunning()) {
+//            // Cannot load a config while running.
+//            throw new RuntimeException("Cannot change config while a session running.");
+//        }
+        StorageMigration storageMigration = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer().getStorageMigration();
         if (strategy != null) {
             log.info("{}: Setting Storage Migration 'strategy' to: {}", sessionId, strategy);
             storageMigration.setStrategy(strategy);
@@ -581,6 +575,10 @@ public class ConfigController {
         if (dataFlow != null) {
             log.info("{}: Setting Storage Migration 'dataFlow' to: {}", sessionId, dataFlow);
             storageMigration.setDataFlow(dataFlow);
+        }
+        if (strict != null) {
+            log.info("{}: Setting Storage Migration 'strict' to: {}", sessionId, strict);
+            storageMigration.setStrict(strict);
         }
         return storageMigration;
     }

@@ -80,10 +80,10 @@ public class CliReportWriter {
     }
 
     public void writeReport() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         log.info("Writing CLI report and artifacts to directory: {}", hmsMirrorConfig.getOutputDirectory());
 //        if (!setupError) {
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
 
         // Remove the abstract environments from config before reporting output.
         hmsMirrorConfig.getClusters().remove(Environment.TRANSFER);

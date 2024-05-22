@@ -24,7 +24,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Schema(description = "Acceptance criteria for the migration that ensures the user is aware of the potential risks")
-public class Acceptance {
+public class Acceptance implements Cloneable {
 
     private boolean silentOverride;
     private boolean backedUpHDFS;
@@ -32,4 +32,14 @@ public class Acceptance {
     private boolean trashConfigured;
     private boolean potentialDataLoss;
 
+    @Override
+    public Acceptance clone() {
+        try {
+            Acceptance clone = (Acceptance) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

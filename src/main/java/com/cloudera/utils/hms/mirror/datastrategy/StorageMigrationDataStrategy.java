@@ -62,7 +62,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -119,7 +119,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         String useDb = null;
         String database = null;
@@ -164,7 +164,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -201,6 +201,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                                         tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
                                         newLocation);
                                 tableMirror.addIssue(Environment.LEFT, msg);
+                                noIssues = Boolean.FALSE;
                             }
                         } else {
                             String location = null;
@@ -217,6 +218,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                                         tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
                                         newLocation);
                                 tableMirror.addIssue(Environment.LEFT, msg);
+                                noIssues = Boolean.FALSE;
                             }
 
                         }
@@ -253,6 +255,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                                                 tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
                                                 newPartLocation);
                                         tableMirror.addIssue(Environment.LEFT, msg);
+                                        noIssues = Boolean.FALSE;
                                     }
                                 } else {
                                     String location = null;
@@ -269,6 +272,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                                                 tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
                                                 newPartLocation);
                                         tableMirror.addIssue(Environment.LEFT, msg);
+                                        noIssues = Boolean.FALSE;
                                     }
 
                                 }
@@ -278,12 +282,18 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             tableMirror.addIssue(Environment.LEFT, rte.getMessage());
                         }
                     }
-                    if (noIssues) {
-                        rtn = Boolean.TRUE;
-                    }
                 } else {
                     rtn = Boolean.TRUE;
                 }
+                if (noIssues) {
+                    rtn = Boolean.TRUE;
+                } else if (hmsMirrorConfig.getTransfer().getStorageMigration().isStrict()) {
+                    log.warn("Cleaning up SQL due to issues for table: {}", tableMirror.getName());
+                    let.addIssue("Storage Migration set to 'strict' and issues were found. So the process couldn't reliably build a plan.");
+                    let.getSql().clear();
+                    rtn = Boolean.FALSE;
+                }
+
             } else {
                 rtn = buildOutDefinition(tableMirror);
                 if (rtn)

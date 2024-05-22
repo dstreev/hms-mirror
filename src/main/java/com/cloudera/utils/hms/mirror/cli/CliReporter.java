@@ -86,7 +86,7 @@ public class CliReporter {
 
     protected void displayReport(Boolean showAll) {
 //        ExecuteSession session = executeSessionService.getCurrentSession();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -142,7 +142,7 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
         if (runStatus.getErrorMessages().length > 0) {
             report.append("\n=== Errors ===\n");
@@ -194,9 +194,9 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
-        ExecuteSession session = executeSessionService.getCurrentSession();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
-        HmsMirrorConfig hmsMirrorConfig = session.getHmsMirrorConfig();
+        ExecuteSession session = executeSessionService.getActiveSession();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        HmsMirrorConfig hmsMirrorConfig = session.getResolvedConfig();
 
         tiktok = !tiktok;
         startedTables.clear();
@@ -278,7 +278,7 @@ public class CliReporter {
 
     @Async("reportingThreadPool")
     public void run() {
-        ExecuteSession session = executeSessionService.getCurrentSession();
+        ExecuteSession session = executeSessionService.getActiveSession();
         try {
             fetchReportTemplates();
             log.info("Starting Reporting Thread");

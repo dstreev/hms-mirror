@@ -25,7 +25,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Schema(description = "Storage migration configuration that controls the data movement strategy")
-public class StorageMigration {
+public class StorageMigration implements Cloneable {
 
     @Schema(description = "Data movement strategy")
     private DataStrategyEnum strategy = DataStrategyEnum.SQL;
@@ -33,6 +33,20 @@ public class StorageMigration {
     private boolean distcp = Boolean.FALSE;
     @Schema(description = "Data flow direction for distcp. This control from where the 'distcp' jobs should be run.")
     private DistcpFlow dataFlow = DistcpFlow.PULL;
+    @Schema(description = "When strict is true, any issues during evaluation will cause the migration to fail. When false, " +
+            "the migration will continue but the issues will be reported. This can lead to data movement issues.")
+    private boolean strict = Boolean.TRUE;
+
+    @Override
+    public StorageMigration clone() {
+        try {
+            StorageMigration clone = (StorageMigration) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     public void setStrategy(DataStrategyEnum strategy) {
         switch (strategy) {

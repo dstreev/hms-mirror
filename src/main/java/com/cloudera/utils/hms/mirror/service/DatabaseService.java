@@ -58,7 +58,7 @@ public class DatabaseService {
 
     public boolean loadEnvironmentVars() {
         boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         for (Environment environment : environments) {
             if (hmsMirrorConfig.getCluster(environment) != null) {
@@ -84,14 +84,14 @@ public class DatabaseService {
                     // Issue
                     rtn = Boolean.FALSE;
                     log.error("Issue getting database connection", se);
-                    executeSessionService.getCurrentSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
+                    executeSessionService.getActiveSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
                 } finally {
                     if (conn != null) {
                         try {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing LEFT database connection", e);
-                            executeSessionService.getCurrentSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
+                            executeSessionService.getActiveSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
                         }
                     }
                 }
@@ -103,8 +103,8 @@ public class DatabaseService {
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         // Start with the LEFT definition.
         Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
         Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
@@ -451,8 +451,8 @@ public class DatabaseService {
 
     public boolean createDatabases() {
         boolean rtn = true;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
         for (String database : hmsMirrorConfig.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
             rtn = buildDBStatements(dbMirror);
@@ -474,7 +474,7 @@ public class DatabaseService {
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);//getConnection();
@@ -555,7 +555,7 @@ public class DatabaseService {
     public Boolean runDatabaseSql(DBMirror dbMirror, Pair dbSqlPair, Environment environment) {
         // Open the connection and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         Boolean rtn = Boolean.TRUE;
         // Skip when running test data.

@@ -22,7 +22,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Optimization {
+public class Optimization implements Cloneable {
 
     /*
     Control whether we'll set the 'hive.optimize.sort.dynamic.partition` conf to 'true' or not.  If this is not set,
@@ -43,4 +43,14 @@ public class Optimization {
     private Overrides overrides = new Overrides();
     private boolean buildShadowStatistics = Boolean.FALSE;
 
+    @Override
+    public Optimization clone() {
+        try {
+            Optimization clone = (Optimization) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

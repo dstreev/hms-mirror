@@ -51,7 +51,7 @@ public class WebInit {
             File cfg = new File(configFullFilename);
             HmsMirrorConfig hmsMirrorConfig;
             if (cfg.exists()) {
-                log.info("Loading config from: " + configFullFilename);
+                log.info("Loading config from: {}", configFullFilename);
                 hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFullFilename);
             } else {
                 // Return empty config.  This will require the user to setup the config.
@@ -59,7 +59,7 @@ public class WebInit {
                 hmsMirrorConfig = new HmsMirrorConfig();
             }
             ExecuteSession createdSession = executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
-            executeSessionService.setCurrentSession(createdSession);
+            executeSessionService.setLoadedSession(createdSession);
         };
     }
 

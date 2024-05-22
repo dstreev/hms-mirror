@@ -37,9 +37,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.Set;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
@@ -67,8 +64,8 @@ public class ConfigService {
 
     public Boolean canDeriveDistcpPlan() {
         Boolean rtn = Boolean.FALSE;
-        ExecuteSession executeSession = executeSessionService.getCurrentSession();
-        HmsMirrorConfig hmsMirrorConfig = executeSession.getHmsMirrorConfig();
+        ExecuteSession executeSession = executeSessionService.getActiveSession();
+        HmsMirrorConfig hmsMirrorConfig = executeSession.getResolvedConfig();
 
         if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
             // We need to get partition location to support partitioned tables and distcp
@@ -94,7 +91,7 @@ public class ConfigService {
     }
 
     public String getResolvedDB(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         String rtn = null;
         // Set Local Value for adjustments
@@ -107,7 +104,7 @@ public class ConfigService {
     }
 
     public Boolean getSkipStatsCollection() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // Reset skipStatsCollection to true if we're doing a dump or schema only. (and a few other conditions)
         if (!hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
@@ -134,7 +131,7 @@ public class ConfigService {
     @JsonIgnore
     public Boolean isConnectionKerberized() {
         boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         Set<Environment> envs = hmsMirrorConfig.getClusters().keySet();
         for (Environment env : envs) {
@@ -151,7 +148,7 @@ public class ConfigService {
 
     public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() != hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
             if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
@@ -163,7 +160,7 @@ public class ConfigService {
 
     protected Boolean linkTest() throws DisabledException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (hmsMirrorConfig.isSkipLinkCheck() || hmsMirrorConfig.isLoadingTestData()) {
             log.warn("Skipping Link Check.");
@@ -200,7 +197,7 @@ public class ConfigService {
     }
 
     public Boolean loadPartitionMetadata() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (hmsMirrorConfig.isEvaluatePartitionLocation() ||
                 (hmsMirrorConfig.getDataStrategy() == STORAGE_MIGRATION &&
@@ -279,9 +276,9 @@ public class ConfigService {
     public Boolean validate() {
         Boolean rtn = Boolean.TRUE;
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         // Reset the config validated flag.
         runStatus.setConfigValidated(Boolean.FALSE);
 

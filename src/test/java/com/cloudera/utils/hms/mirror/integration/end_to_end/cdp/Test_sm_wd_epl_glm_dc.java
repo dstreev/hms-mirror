@@ -83,7 +83,7 @@ public class Test_sm_wd_epl_glm_dc extends E2EBaseTest {
     @Test
     public void validateTableIssueCount() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.LEFT, 3);
+                Environment.LEFT, 4);
 
 //        assertEquals("Issue Count not as expected", 3,
 //                getConversion().getDatabase("ext_purge_odd_parts")

@@ -17,13 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
+import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,22 +29,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.concurrent.Future;
-
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/runtime")
 public class RuntimeController {
 
-    private ConfigService configService;
     private ExecuteSessionService executeSessionService;
-    private ConnectionPoolService connectionPoolService;
-    private HMSMirrorAppService hmsMirrorAppService;
-
-    @Autowired
-    public void setConfigService(ConfigService ConfigService) {
-        this.configService = ConfigService;
-    }
+    private RuntimeService runtimeService;
 
     @Autowired
     public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
@@ -56,13 +43,8 @@ public class RuntimeController {
     }
 
     @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
-    }
-
-    @Autowired
-    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
-        this.hmsMirrorAppService = hmsMirrorAppService;
+    public void setRuntimeService(RuntimeService runtimeService) {
+        this.runtimeService = runtimeService;
     }
 
     @Operation(summary = "Start the Operation")
@@ -79,44 +61,7 @@ public class RuntimeController {
     @RequestMapping(method = RequestMethod.POST, value = "/start")
     public RunStatus start(@RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun) {
-        // Check the current RunStatus.  If it is not STOPPED, then we cannot start.
-        ExecuteSession session = executeSessionService.getCurrentSession();
-        RunStatus runStatus = session.getRunStatus();
-        if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
-                || runStatus.getProgress() == ProgressEnum.STARTED
-                || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
-            log.error("The session is currently running. Cannot start until operation has completed.");
-            throw new RuntimeException("Session already running.");
-        } else {
-            log.info("Starting session: " + sessionId);
-        }
-
-        if (runStatus.reset()) {
-            runStatus.setProgress(ProgressEnum.STARTED);
-            // Set the dryrun flag.
-            executeSessionService.getCurrentSession().getHmsMirrorConfig().setExecute(!dryrun);
-
-            // Moved to HmsMirrorAppService.run()
-//            // Establish the connection pools.
-//            connectionPoolService.close();
-//            try {
-//                connectionPoolService.init();
-//            } catch (Exception e) {
-//                log.error("Error initializing connection pools.", e);
-//                runStatus.setProgress(ProgressEnum.FAILED);
-//                return runStatus;
-//            }
-
-            // Start job in a separate thread.
-            Future<Boolean> runningTask = hmsMirrorAppService.run();
-
-            // Set state to in progress.
-            runStatus.setProgress(ProgressEnum.IN_PROGRESS);
-
-            // Set the running task reference in the RunStatus.
-            runStatus.setRunningTask(runningTask);
-        }
-        return runStatus;
+        return runtimeService.start(sessionId, dryrun);
     }
 
 
@@ -133,7 +78,7 @@ public class RuntimeController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/cancel")
     public RunStatus cancel(String sessionId) {
-        RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         runStatus.cancel();
         return runStatus;
     }

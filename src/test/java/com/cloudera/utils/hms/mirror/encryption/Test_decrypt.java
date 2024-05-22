@@ -56,8 +56,8 @@ public class Test_decrypt extends PasswordTestBase {
     public void validatePassword() {
 
         String decryptedPassword = getPasswordService().decryptPassword(
-                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
-                getExecuteSession().getHmsMirrorConfig().getEncryptedPassword());
+                getExecuteSession().getResolvedConfig().getPasswordKey(),
+                getExecuteSession().getResolvedConfig().getEncryptedPassword());
 
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
                 decryptedPassword);

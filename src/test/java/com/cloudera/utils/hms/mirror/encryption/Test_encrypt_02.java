@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -63,8 +61,8 @@ public class Test_encrypt_02 extends PasswordTestBase {
     public void validateEncryptPassword() {
 
         String encryptedPassword = getPasswordService().encryptPassword(
-                getExecuteSession().getHmsMirrorConfig().getPasswordKey(),
-                getExecuteSession().getHmsMirrorConfig().getPassword());
+                getExecuteSession().getResolvedConfig().getPasswordKey(),
+                getExecuteSession().getResolvedConfig().getPassword());
 
         assertEquals("Encrypt Password Failure: ", "rV+HtIWliZn2CxB+BlWCbQ==",
                 encryptedPassword);

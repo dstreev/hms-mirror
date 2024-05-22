@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
@@ -36,17 +35,21 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
-                "--hms-mirror.config.reset-default-location=true"
+                "--hms-mirror.config.reset-to-default-location=true",
+                "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
+                "--hms-mirror.config.warehouse-directory=/finance/managed-fso",
+                "--hms-mirror.config.external-warehouse-directory=/finance/external-fso",
+                "--hms-mirror.config.storage-migration-namespace=ofs://OHOME90",
+                "--hms-mirror.config.evaluate-partition-location=true",
+                "--hms-mirror.config.storage-migration-strict=true",
+                "--hms-mirror.config.distcp=PULL",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp"
         })
-@ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")
 @Slf4j
 /*
 STORAGE_MIGRATION test.  Defining the warehouse directories (-wd and -ewd) along with -epl (evaluation of partition locations).
 We've also added -dc to this to produce a distcp plan for this data migration.
 It should only evaluate non-acid tables.
-
-In this test, the locations of the partitions doesn't line up with the warehouse directories listed.  And since we're
-not using -rdl (reset default location), we issue warnings about the partitions that don't line up.
 
 This storage migration doesn't require the creation of any new tables.  We will simply ALTER the table and partition
 locations.
@@ -56,7 +59,7 @@ public class Test_sm_smn_wd_epl_dc extends E2EBaseTest {
     @Test
     public void issueTest() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.LEFT, 17);
+                Environment.LEFT, 0);
     }
 
     @Test
@@ -83,17 +86,17 @@ public class Test_sm_smn_wd_epl_dc extends E2EBaseTest {
                 .getTableMirrors().get("web_sales")
                 .getEnvironmentTable(Environment.LEFT).getSql()) {
             if (pair.getDescription().trim().equals("Alter Table Location")) {
-                assertEquals("Location doesn't match", "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales\"", pair.getAction());
+                assertEquals("Location doesn't match", "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"", pair.getAction());
                 foundAT = Boolean.TRUE;
             }
             if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location")) {
-                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
-                        "(`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"", pair.getAction());
+                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET " +
+                        "LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"", pair.getAction());
                 foundOddPart = Boolean.TRUE;
             }
             if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location")) {
-                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
-                        "(`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"", pair.getAction());
+                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET " +
+                        "LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451188\"", pair.getAction());
                 foundOddPart2 = Boolean.TRUE;
             }
         }

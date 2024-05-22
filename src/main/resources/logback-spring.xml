@@ -54,7 +54,7 @@
 <!--        <appender-ref ref="RollingFile"/>-->
 <!--        <appender-ref ref="Console"/>-->
 <!--    </root>-->
-    <root level="WARN">
+    <root level="debug">
 <!--        <appender-ref ref="RollingFile"/>-->
         <appender-ref ref="Console"/>
     </root>
@@ -126,12 +126,12 @@
         <appender-ref ref="Console"/>
     </logger>
 
-<!--    <logger name="org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener" level="debug"-->
-<!--            additivity="false">-->
-<!--        <appender-ref ref="RollingFile"/>-->
-<!--    </logger>-->
-<!--    <logger name="org.springframework.beans.factory" level="trace" additivity="false">-->
-<!--        <appender-ref ref="RollingFile"/>-->
-<!--    </logger>-->
+    <logger name="org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener" level="debug"
+            additivity="false">
+        <appender-ref ref="RollingFile"/>
+    </logger>
+    <logger name="org.springframework.beans.factory" level="trace" additivity="false">
+        <appender-ref ref="RollingFile"/>
+    </logger>
 
 </configuration>

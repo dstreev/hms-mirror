@@ -17,17 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.web.service;
 
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.stage.ReturnStatus;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 @Service
@@ -36,18 +36,47 @@ import java.util.concurrent.Future;
 @Slf4j
 public class RuntimeService {
 
-    private Map<UUID, Future<ReturnStatus>> runningTasks = new ConcurrentHashMap<>();
+    private ExecuteSessionService executeSessionService;
+    private HMSMirrorAppService hmsMirrorAppService;
 
-    @Async("executionThreadPool")
-    public Future<ReturnStatus> run() {
-
-        // Create a UUID for this task. Assign it and add to the runningTasks map.
-
-        // Run the task.
-
-        // Return the Future object.
-        return null;
-
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
     }
 
+    @Autowired
+    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
+        this.hmsMirrorAppService = hmsMirrorAppService;
+    }
+
+    public RunStatus start(String sessionId, Boolean dryrun) {
+        ExecuteSession session = executeSessionService.transitionSessionToActive(sessionId);
+
+        RunStatus runStatus = session.getRunStatus();
+        if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
+                || runStatus.getProgress() == ProgressEnum.STARTED
+                || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
+            log.error("The session is currently running. Cannot start until operation has completed.");
+            throw new RuntimeException("Session already running.");
+        } else {
+            log.info("Starting session: {}", sessionId);
+        }
+
+        if (runStatus.reset()) {
+            runStatus.setProgress(ProgressEnum.STARTED);
+            // Set the dryrun flag.
+            executeSessionService.getActiveSession().getResolvedConfig().setExecute(!dryrun);
+
+            // Start job in a separate thread.
+            Future<Boolean> runningTask = hmsMirrorAppService.run();
+
+            // Set state to in progress.
+            runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+
+            // Set the running task reference in the RunStatus.
+            runStatus.setRunningTask(runningTask);
+        }
+        return runStatus;
+
+    }
 }

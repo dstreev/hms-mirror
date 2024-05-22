@@ -76,7 +76,7 @@ public class StatsCalculatorService {
 
     public String getDistributedPartitionElements(EnvironmentTable envTable) {
         StringBuilder sb = new StringBuilder();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (envTable.getPartitioned()) {
 
@@ -112,7 +112,7 @@ public class StatsCalculatorService {
      */
     protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         if (!hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
             try {
@@ -133,7 +133,7 @@ public class StatsCalculatorService {
     }
 
     public void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // Skip if no stats collection.
         if (hmsMirrorConfig.getOptimization().isSkipStatsCollection())

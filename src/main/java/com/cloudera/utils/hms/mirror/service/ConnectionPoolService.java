@@ -68,7 +68,7 @@ public class ConnectionPoolService implements ConnectionPools {
     public Boolean checkConnections() {
         boolean rtn = Boolean.FALSE;
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         Set<Environment> envs = new HashSet<>();
         if (!(hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP ||
@@ -172,7 +172,7 @@ public class ConnectionPoolService implements ConnectionPools {
 
     private ConnectionPools getConnectionPoolsImpl() throws SQLException {
         ConnectionPools rtn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         switch (hmsMirrorConfig.getConnectionPoolLib()) {
             case DBCP2:
@@ -207,8 +207,8 @@ public class ConnectionPoolService implements ConnectionPools {
 
     @Override
     public void init() throws SQLException {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
-        ExecuteSession executeSession = executeSessionService.getCurrentSession();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        ExecuteSession executeSession = executeSessionService.getActiveSession();
         RunStatus runStatus = executeSession.getRunStatus();
 
         if (hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP) {

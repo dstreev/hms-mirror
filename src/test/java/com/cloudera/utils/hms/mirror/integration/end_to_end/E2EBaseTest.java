@@ -56,7 +56,7 @@ public class E2EBaseTest {
     //HMSMirrorAppService;
 
     protected HmsMirrorConfig getConfig() {
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        return executeSessionService.getActiveSession().getResolvedConfig();
     }
 
     protected ExecuteSessionService getExecuteSessionService() {
@@ -64,7 +64,7 @@ public class E2EBaseTest {
     }
 
     protected Conversion getConversion() {
-        return executeSessionService.getCurrentSession().getConversion();
+        return executeSessionService.getActiveSession().getConversion();
     }
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {

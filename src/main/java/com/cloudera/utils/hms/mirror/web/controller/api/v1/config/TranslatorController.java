@@ -58,7 +58,7 @@ public class TranslatorController {
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public Translator getTransfer() {
         log.debug("Getting Translator Details");
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator();
+        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator();
     }
 
     // Translator
@@ -73,9 +73,9 @@ public class TranslatorController {
             @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation) {
         if (forceExternalLocation != null) {
             log.info("Setting Translator 'forceExternalLocation' to: {}", forceExternalLocation);
-            executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
+            executeSessionService.getActiveSession().getResolvedConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
         }
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator();
+        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator();
     }
 
     // Translator / Global Location Map
@@ -90,8 +90,8 @@ public class TranslatorController {
     public Map<String, String> addGLMEntries(
             @RequestParam() Map<String, String> map) {
         log.info("Adding Global Location Map Entries: {}", map);
-        map.forEach((k, v) -> executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().addGlobalLocationMap(k, v));
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getOrderedGlobalLocationMap();
+        map.forEach((k, v) -> executeSessionService.getActiveSession().getResolvedConfig().getTranslator().addGlobalLocationMap(k, v));
+        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getOrderedGlobalLocationMap();
     }
 
     @Operation(summary = "Remove Global Location Map Value(s)")
@@ -107,11 +107,11 @@ public class TranslatorController {
         List<String> removeList = Collections.emptyList();
         if (keyList != null) {
             log.info("Removing Global Location Map Entries: {}", keyList);
-            removeList = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(keyList);
+            removeList = executeSessionService.getActiveSession().getResolvedConfig().getTranslator().removeGlobalLocationMap(keyList);
         }
         if (key != null) {
             log.info("Removing Global Location Map Entry: {}", key);
-            String removedItem = executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().removeGlobalLocationMap(key);
+            String removedItem = executeSessionService.getActiveSession().getResolvedConfig().getTranslator().removeGlobalLocationMap(key);
             removeList = new ArrayList<>();
             removeList.add(removedItem);
         }
@@ -127,9 +127,9 @@ public class TranslatorController {
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public Map<String, String> buildGLMFromDatabase () {
         // Clear current List
-        executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getGlobalLocationMap().clear();
+        executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap().clear();
         // Pull all unique locations from databases/tables.  Requires Metastore Direct connection.
 
-        return executeSessionService.getCurrentSession().getHmsMirrorConfig().getTranslator().getGlobalLocationMap();
+        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap();
     }
 }

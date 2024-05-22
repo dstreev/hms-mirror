@@ -19,10 +19,10 @@ package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -88,10 +88,10 @@ public class CliInit {
             hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
 //            hmsMirrorConfig.setRunStatus(runStatus);
             // Link the translator to the config
-            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
-            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
-                cluster.setHmsMirrorConfig(hmsMirrorConfig);
-            }
+//            hmsMirrorConfig.getTranslator().setHmsMirrorConfig(hmsMirrorConfig);
+//            for (Cluster cluster : hmsMirrorConfig.getClusters().values()) {
+//                cluster.setHmsMirrorConfig(hmsMirrorConfig);
+//            }
             hmsMirrorConfig.setConfigFilename(configFilename);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -167,7 +167,7 @@ public class CliInit {
                 Conversion conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
                 // Set Config Databases;
                 hmsMirrorConfig.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
-                executeSessionService.getCurrentSession().setConversion(conversion);
+                executeSessionService.getActiveSession().setConversion(conversion);
 //            runStatus.setConversion(conversion);
             } catch (UnrecognizedPropertyException upe) {
                 throw new RuntimeException("\nThere may have been a breaking change in the configuration since the previous " +
@@ -192,9 +192,12 @@ public class CliInit {
     @Order(15)
     public CommandLineRunner conversionPostProcessing(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
-            executeSessionService.getCurrentSession().setHmsMirrorConfig(hmsMirrorConfig);
-            RunStatus runStatus = executeSessionService.getCurrentSession().getRunStatus();
-            Conversion conversion = executeSessionService.getCurrentSession().getConversion();
+            ExecuteSession session = executeSessionService.createSession(null, hmsMirrorConfig);
+            executeSessionService.setLoadedSession(session);
+            executeSessionService.transitionSessionToActive(null);
+            executeSessionService.getActiveSession().setResolvedConfig(hmsMirrorConfig);
+            RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+            Conversion conversion = executeSessionService.getActiveSession().getConversion();
 
             log.info("Post Processing Conversion");
             if (hmsMirrorConfig.isLoadingTestData()) {

@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.datastrategy.HybridAcidDowngradeInPlaceData
 import com.cloudera.utils.hms.mirror.datastrategy.HybridDataStrategy;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -101,7 +102,8 @@ public class TransferService {
         ReturnStatus rtn = new ReturnStatus();
 //        rtn.setStatus(ReturnStatus.Status.SUCCESS);
 //        Boolean successful = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
         try {
             Date start = new Date();
@@ -129,6 +131,7 @@ public class TransferService {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
+                                runStatus.getOperationStatistics().getIssues().incrementTables();
                             }
                         } else {
                             if (hybridDataStrategy.execute(tableMirror)) {

@@ -21,5 +21,10 @@ hms-mirror:
     test-filename: "false"
   concurrency:
     max-threads: 10
+  session-retention:
+    # The number of runs to keep in memory
+    # This controls a queue of runs that have or are being executed.
+    # Runs beyond this number will be removed older runs from the queue.
+    max: 3
   api:
     version: "2.2.0.0"

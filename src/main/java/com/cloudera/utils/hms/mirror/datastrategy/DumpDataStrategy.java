@@ -46,7 +46,7 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutDefinition( TableMirror tableMirror) {
         log.debug("Table: {} buildout DUMP Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -68,7 +68,7 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         log.debug("Table: {} buildout DUMP SQL", tableMirror.getName());
 

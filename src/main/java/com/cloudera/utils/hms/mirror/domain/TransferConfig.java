@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Getter
 @Setter
-public class TransferConfig {
+public class TransferConfig implements Cloneable {
     @Deprecated // Moved to Application Configuration *application.yml*
     private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";
@@ -37,6 +37,23 @@ public class TransferConfig {
     private String commonStorage = null;
     private StorageMigration storageMigration = null;
     private WarehouseConfig warehouse = null;
+
+    @Override
+    public TransferConfig clone() {
+        try {
+            TransferConfig clone = (TransferConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            if (storageMigration != null) {
+                clone.storageMigration = storageMigration.clone();
+            }
+            if (warehouse != null) {
+                clone.warehouse = warehouse.clone();
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     public StorageMigration getStorageMigration() {
         if (storageMigration == null)

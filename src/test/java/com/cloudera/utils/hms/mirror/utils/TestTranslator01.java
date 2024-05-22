@@ -44,7 +44,7 @@ public class TestTranslator01 extends TranslatorTestBase {
         HmsMirrorConfig config = ConfigTest.deserializeResource("/config/default_01.yaml");
         config.setTranslator(translator);
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
-        executeSessionService.getCurrentSession().setHmsMirrorConfig(config);
+        executeSessionService.getActiveSession().setResolvedConfig(config);
         ConfigService configService = new ConfigService();
         configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();

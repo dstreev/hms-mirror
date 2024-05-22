@@ -22,7 +22,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class PartitionDiscovery {
+public class PartitionDiscovery implements Cloneable {
 
     /*
     Partition Discovery is NOT enable by default in most cluster.  On the Metastore Leader, the `PartitionManagementTask`
@@ -35,4 +35,14 @@ public class PartitionDiscovery {
      */
     private boolean initMSCK = Boolean.TRUE;
 
+    @Override
+    public PartitionDiscovery clone() {
+        try {
+            PartitionDiscovery clone = (PartitionDiscovery) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

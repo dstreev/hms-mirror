@@ -93,7 +93,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         log.debug("Table: {} buildout Iceberg Conversion SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getCurrentSession().getHmsMirrorConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         try {

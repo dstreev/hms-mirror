@@ -28,13 +28,24 @@ import java.util.Map;
 @Getter
 @Setter
 @Slf4j
-public class IcebergConfig {
+public class IcebergConfig implements Cloneable {
 
     private int version = 2;
     private Map<String, String> tableProperties = new HashMap<String, String>();
 
     private void addTableProperty(String key, String value) {
         tableProperties.put(key, value);
+    }
+
+    @Override
+    public IcebergConfig clone() {
+        try {
+            IcebergConfig clone = (IcebergConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
     public void setVersion(int version) {
