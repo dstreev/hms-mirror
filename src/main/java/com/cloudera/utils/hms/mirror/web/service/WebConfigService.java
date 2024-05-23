@@ -71,7 +71,8 @@ public class WebConfigService {
         File folder = new File(cfgPath);
         File[] listOfFiles = folder.listFiles(new FilenameFilter() {
             public boolean accept(File dir, String name) {
-                return (name.toLowerCase().endsWith(".yml") | name.toLowerCase().endsWith(".yaml"));
+                return (name.toLowerCase().endsWith(".yml") | name.toLowerCase().endsWith(".yaml") |
+                        name.toLowerCase().contains(".yml") | name.toLowerCase().contains(".yaml"));
             }
         });
 

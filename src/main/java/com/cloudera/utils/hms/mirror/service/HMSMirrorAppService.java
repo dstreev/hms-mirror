@@ -53,18 +53,21 @@ public class HMSMirrorAppService {
     private final ConnectionPoolService connectionPoolService;
     private final DatabaseService databaseService;
     private final ExecuteSessionService executeSessionService;
+    private final ReportWriterService reportWriterService;
     private final TableService tableService;
     private final TransferService transferService;
 
     public HMSMirrorAppService(ExecuteSessionService executeSessionService,
                                ConnectionPoolService connectionPoolService,
                                DatabaseService databaseService,
+                               ReportWriterService reportWriterService,
                                TableService tableService,
                                TransferService transferService,
                                ConfigService configService) {
         this.executeSessionService = executeSessionService;
         this.connectionPoolService = connectionPoolService;
         this.databaseService = databaseService;
+        this.reportWriterService = reportWriterService;
         this.tableService = tableService;
         this.transferService = transferService;
         this.configService = configService;
@@ -460,9 +463,11 @@ public class HMSMirrorAppService {
                 runStatus.setStage(StageEnum.MIGRATE_TABLES, CollectionEnum.COMPLETED);
             } else {
                 runStatus.setStage(StageEnum.MIGRATE_TABLES, CollectionEnum.ERRORED);
-//                runStatus.addError(MessageCode.MIGRATING_TABLES);
             }
         }
+
+        reportWriterService.wrapup();
+
         return new AsyncResult<>(rtn);
     }
 }

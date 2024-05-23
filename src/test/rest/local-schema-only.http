@@ -1,6 +1,11 @@
+### GET List of Configs
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/config/list
+Accept: application/json
+
 ### GET request to example server
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/config/load/default.yaml.HDP-CDP
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/config/reload/default.yaml.HDP-CDP
 Accept: application/json
 
 ###

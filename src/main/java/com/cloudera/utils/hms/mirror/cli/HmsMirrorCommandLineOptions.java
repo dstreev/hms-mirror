@@ -748,64 +748,64 @@ public class HmsMirrorCommandLineOptions {
         };
     }
 
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.output-dir")
-        // Will set this when the value is set externally.
-    CommandLineRunner configOutputDir(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter, @Value("${hms-mirror.config.output-dir}") String value) {
-        return configOutputDirInternal(hmsMirrorConfig, reporter, value);
-    }
-
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.output-dir",
-            havingValue = "false")
-        // Will set this when the value is NOT set and picks up the default application.yaml (false) setting.
-    CommandLineRunner configOutputDirNotSet(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter) {
-        String value = System.getenv("APP_OUTPUT_PATH");
-        if (value != null) {
-            return configOutputDirInternal(hmsMirrorConfig, reporter, value);
-        } else {
-            return configOutputDirInternal(hmsMirrorConfig, reporter,
-                    System.getProperty("user.dir") + FileSystems.getDefault().getSeparator() + ".hms-mirror/reports/not-set");
-        }
-    }
-
-    CommandLineRunner configOutputDirInternal(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter, String value) {
-        return args -> {
-            log.info("output-dir: {}", value);
-            hmsMirrorConfig.setOutputDirectory(value);
-            File reportPathDir = new File(value);
-            if (!reportPathDir.exists()) {
-                reportPathDir.mkdirs();
-            }
-            reporter.setReportOutputFile(value + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
-            reporter.setLeftExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
-            reporter.setLeftCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
-            reporter.setRightExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
-            reporter.setRightCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-
-            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
-
-            // Ensure the Retry Path is created.
-            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
-                    FileSystems.getDefault().getSeparator() + "retry");
-            if (!retryPath.exists()) {
-                retryPath.mkdirs();
-            }
-
-            // Test file to ensure we can write to it for the report.
-            try {
-                new FileOutputStream(testFile).close();
-            } catch (IOException e) {
-                throw new RuntimeException("Can't write to output directory: " + value, e);
-            }
-
-        };
-    }
-
+//    @Bean
+//    @Order(1)
+//    @ConditionalOnProperty(
+//            name = "hms-mirror.config.output-dir")
+//        // Will set this when the value is set externally.
+//    CommandLineRunner configOutputDir(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter, @Value("${hms-mirror.config.output-dir}") String value) {
+//        return configOutputDirInternal(hmsMirrorConfig, reporter, value);
+//    }
+//
+//    @Bean
+//    @Order(1)
+//    @ConditionalOnProperty(
+//            name = "hms-mirror.config.output-dir",
+//            havingValue = "false")
+//        // Will set this when the value is NOT set and picks up the default application.yaml (false) setting.
+//    CommandLineRunner configOutputDirNotSet(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter) {
+//        String value = System.getenv("APP_OUTPUT_PATH");
+//        if (value != null) {
+//            return configOutputDirInternal(hmsMirrorConfig, reporter, value);
+//        } else {
+//            return configOutputDirInternal(hmsMirrorConfig, reporter,
+//                    System.getProperty("user.dir") + FileSystems.getDefault().getSeparator() + ".hms-mirror/reports/not-set");
+//        }
+//    }
+//
+//    CommandLineRunner configOutputDirInternal(HmsMirrorConfig hmsMirrorConfig, CliReporter reporter, String value) {
+//        return args -> {
+//            log.info("output-dir: {}", value);
+//            hmsMirrorConfig.setOutputDirectory(value);
+//            File reportPathDir = new File(value);
+//            if (!reportPathDir.exists()) {
+//                reportPathDir.mkdirs();
+//            }
+//            reporter.setReportOutputFile(value + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
+//            reporter.setLeftExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_execute.sql");
+//            reporter.setLeftCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
+//            reporter.setRightExecuteFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
+//            reporter.setRightCleanUpFile(value + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
+//
+//            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
+//
+//            // Ensure the Retry Path is created.
+//            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
+//                    FileSystems.getDefault().getSeparator() + "retry");
+//            if (!retryPath.exists()) {
+//                retryPath.mkdirs();
+//            }
+//
+//            // Test file to ensure we can write to it for the report.
+//            try {
+//                new FileOutputStream(testFile).close();
+//            } catch (IOException e) {
+//                throw new RuntimeException("Can't write to output directory: " + value, e);
+//            }
+//
+//        };
+//    }
+//
     @Bean
     @Order(1)
     @ConditionalOnProperty(

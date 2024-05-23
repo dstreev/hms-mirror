@@ -18,10 +18,8 @@
 package com.cloudera.utils.hms.mirror.cli.run;
 
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
-import com.cloudera.utils.hms.mirror.cli.CliReportWriter;
+import com.cloudera.utils.hms.mirror.service.ReportWriterService;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.Getter;
@@ -34,9 +32,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.util.*;
 import java.util.concurrent.Future;
 
 /*
@@ -52,7 +47,7 @@ public class HmsMirrorAppCfg {
 //    private static final Logger log = LoggerFactory.getLogger(Setup.class);
 
     @Getter
-    private CliReportWriter cliReportWriter = null;
+    private ReportWriterService reportWriterService = null;
 
     private CliReporter cliReporter = null;
     @Getter
@@ -92,32 +87,9 @@ public class HmsMirrorAppCfg {
                     throw new RuntimeException(e);
                 }
             }
-            wrapup();
+//            reportWriterService.wrapup();
+            cliReporter.refresh(Boolean.TRUE);
         };
-    }
-
-    protected void wrapup () {
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
-        log.info("Wrapping up the Application Workflow");
-        log.info("Setting 'running' to FALSE");
-        executeSessionService.getActiveSession().getRunning().set(Boolean.FALSE);
-
-        // Give the underlying threads a chance to finish.
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        log.info("Writing out report(s)");
-        getCliReportWriter().writeReport();
-        getCliReporter().refresh(Boolean.TRUE);
-        log.info("==============================");
-        log.info(conversion.toString());
-        log.info("==============================");
-        Date endTime = new Date();
-        DecimalFormat df = new DecimalFormat("#.###");
-        df.setRoundingMode(RoundingMode.CEILING);
     }
 
     @Autowired
@@ -126,8 +98,8 @@ public class HmsMirrorAppCfg {
     }
 
     @Autowired
-    public void setCliReportWriter(CliReportWriter cliReportWriter) {
-        this.cliReportWriter = cliReportWriter;
+    public void setReportWriterService(ReportWriterService reportWriterService) {
+        this.reportWriterService = reportWriterService;
     }
 
     @Autowired

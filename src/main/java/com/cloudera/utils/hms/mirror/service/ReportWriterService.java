@@ -15,16 +15,13 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.cli;
+package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
-import com.cloudera.utils.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -42,21 +39,19 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.RoundingMode;
 import java.nio.file.FileSystems;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.text.DecimalFormat;
+import java.util.*;
 
 @Component
 @Slf4j
 @Getter
 @Setter
-public class CliReportWriter {
+public class ReportWriterService {
 
     private ConfigService configService;
     private ExecuteSessionService executeSessionService;
-    private ConnectionPoolService connectionPoolService;
     private TranslatorService translatorService;
 
     @Autowired
@@ -70,13 +65,32 @@ public class CliReportWriter {
     }
 
     @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
-    }
-
-    @Autowired
     public void setTranslatorService(TranslatorService translatorService) {
         this.translatorService = translatorService;
+    }
+
+    public void wrapup () {
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        log.info("Wrapping up the Application Workflow");
+        log.info("Setting 'running' to FALSE");
+        executeSessionService.getActiveSession().getRunning().set(Boolean.FALSE);
+
+        // Give the underlying threads a chance to finish.
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("Writing out report(s)");
+        writeReport();
+//        getCliReporter().refresh(Boolean.TRUE);
+        log.info("==============================");
+        log.info(conversion.toString());
+        log.info("==============================");
+        Date endTime = new Date();
+        DecimalFormat df = new DecimalFormat("#.###");
+        df.setRoundingMode(RoundingMode.CEILING);
     }
 
     public void writeReport() {
@@ -92,6 +106,11 @@ public class CliReportWriter {
         ObjectMapper mapper;
         mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        File outputDir = new File(hmsMirrorConfig.getOutputDirectory());
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
 
         for (Map.Entry<String, DBMirror> dbEntry: conversion.getDatabases().entrySet()) {
             String database = dbEntry.getKey();

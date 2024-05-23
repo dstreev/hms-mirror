@@ -31,12 +31,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Service
@@ -63,23 +64,20 @@ public class ExecuteSessionService {
     @Setter
     private ExecuteSession loadedSession;
 
+    private ExecuteSession activeSession;
+    @Setter
+    private String reportOutputDirectory;
+
     /*
     Used to limit the number of sessions that are retained in memory.
      */
-    private int maxRetainedSessions = 5;
-    private final Deque<ExecuteSession> executeSessionQueue = new ConcurrentLinkedDeque<>();
+//    private int maxRetainedSessions = 5;
+    private final Map<String, ExecuteSession> executeSessionMap = new TreeMap<>();
     private final Map<String, ExecuteSession> sessions = new HashMap<>();
 
     @Autowired
     public void setCliEnvironment(CliEnvironment cliEnvironment) {
         this.cliEnvironment = cliEnvironment;
-    }
-
-    @Bean
-    CommandLineRunner setMaxRetainedSessions(@Value("${hms-mirror.session-retention.max}") int maxSessions) {
-        return args -> {
-            this.maxRetainedSessions = maxSessions;
-        };
     }
 
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
@@ -93,9 +91,6 @@ public class ExecuteSessionService {
             session = new ExecuteSession();
             session.setSessionId(sessionName);
             session.setOrigConfig(hmsMirrorConfig);
-            // These aren't cloned and should only be created before the session is run.
-//            session.setRunStatus(new RunStatus());
-//            session.setConversion(new Conversion());
             sessions.put(sessionName, session);
         }
         return session;
@@ -121,14 +116,6 @@ public class ExecuteSessionService {
         }
     }
 
-    public ExecuteSession getActiveSession() {
-        ExecuteSession activeSession = executeSessionQueue.peekFirst();//getSession(DEFAULT);
-        if (activeSession == null) {
-            throw new RuntimeException("No active session found.");
-        }
-        return activeSession;
-    }
-
     /*
       Look at the 'activeSession' and if it is not null, check that it is not running.
         If it is not running, then clone the currentSession and add it to the 'executeSessionQueue'.
@@ -139,12 +126,6 @@ public class ExecuteSessionService {
         one that will be referenced during the run.
      */
     public ExecuteSession transitionLoadedSessionToActive() {
-        ExecuteSession activeSession = null;
-        try {
-            activeSession = getActiveSession();
-        } catch (RuntimeException e) {
-            // This is expected if there is no active session.
-        }
         if (activeSession != null && activeSession.getRunning().get()) {
             throw new RuntimeException("Session is still running.  Cannot transition to active.");
         }
@@ -152,18 +133,25 @@ public class ExecuteSessionService {
         // This should get the loaded session and clone it.
         ExecuteSession loadedSession = getSession(null);
         ExecuteSession session = loadedSession.clone();
+        HmsMirrorConfig resolvedConfig = loadedSession.getResolvedConfig();
 
         // Set the active session id to the current date and time.
-        DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
+        DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         session.setSessionId(dtf.format(new Date()));
+
+        String sessionReportDir = reportOutputDirectory + File.separator + session.getSessionId();
+        resolvedConfig.setOutputDirectory(sessionReportDir);
+
         // Create the RunStatus and Conversion objects.
         session.setRunStatus(new RunStatus());
         session.setConversion(new Conversion());
-        executeSessionQueue.addFirst(session);
-        // Maintain the queue size by remove the last session if the queue size exceeds the max.
-        while (executeSessionQueue.size() > maxRetainedSessions) {
-            executeSessionQueue.removeLast();
+        // Clear all previous run states from sessions to keep memory usage down.
+        for (Map.Entry<String, ExecuteSession> entry : executeSessionMap.entrySet()) {
+            entry.getValue().setConversion(null);
+            entry.getValue().setRunStatus(null);
         }
+        activeSession = session;
+        executeSessionMap.put(session.getSessionId(), session);
         return session;
     }
 

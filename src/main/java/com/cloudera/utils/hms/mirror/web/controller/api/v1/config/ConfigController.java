@@ -146,22 +146,40 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.POST, value = "/load/{id}")
     public HmsMirrorConfig load(@RequestParam(name = "sessionId", required = false) String sessionId,
                                 @PathVariable @NotNull String id) {
-//        if (isCurrentSessionRunning()) {
-//            // Cannot load a config while running.
-//            throw new RuntimeException("Cannot load config while a session running.");
-//        }
-
         log.info("{}: Loading Config by id: {}", sessionId, id);
         HmsMirrorConfig config = configService.loadConfig(id);
         // If they aren't setting the session id, use the id as the session id.
-        String targetSessionId = sessionId != null? sessionId : id;
+//        String targetSessionId = sessionId != null? sessionId : id;
         // Get the session and set the config.
-        ExecuteSession session = executeSessionService.getSession(targetSessionId);
+        ExecuteSession session = executeSessionService.getSession(sessionId);
         if (session == null) {
-            session = executeSessionService.createSession(targetSessionId, config);
+            session = executeSessionService.createSession(sessionId, config);
         } else {
             session.setOrigConfig(config);
         }
+        // Set it as the current session.
+        executeSessionService.setLoadedSession(session);
+        return config;
+    }
+
+    @Operation(summary = "Re-Load a config by id (from the filesystem)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Config loaded",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = HmsMirrorConfig.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid input",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/reload/{id}")
+    public HmsMirrorConfig reload(@RequestParam(name = "sessionId", required = false) String sessionId,
+                                @PathVariable @NotNull String id) {
+        log.info("{}: ReLoading Config by id: {}", sessionId, id);
+        HmsMirrorConfig config = configService.loadConfig(id);
+        // Remove the old session
+        executeSessionService.getSessions().remove(sessionId);
+        // Create a new session
+        ExecuteSession session = executeSessionService.createSession(sessionId, config);
+
         // Set it as the current session.
         executeSessionService.setLoadedSession(session);
         return config;

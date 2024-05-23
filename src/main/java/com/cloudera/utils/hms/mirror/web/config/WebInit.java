@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
+import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -24,10 +25,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.FileSystems;
 
 @Configuration
 @Slf4j
@@ -58,8 +64,48 @@ public class WebInit {
                 log.warn("No config found.  Creating empty config.");
                 hmsMirrorConfig = new HmsMirrorConfig();
             }
-            ExecuteSession createdSession = executeSessionService.createSession(ExecuteSessionService.DEFAULT, hmsMirrorConfig);
+            ExecuteSession createdSession = executeSessionService.createSession(null, hmsMirrorConfig);
             executeSessionService.setLoadedSession(createdSession);
+        };
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.output-dir")
+        // Will set this when the value is set externally.
+    CommandLineRunner configOutputDir(@Value("${hms-mirror.config.output-dir}") String value) {
+        return configOutputDirInternal(value);
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.output-dir",
+            havingValue = "false")
+        // Will set this when the value is NOT set and picks up the default application.yaml (false) setting.
+    CommandLineRunner configOutputDirNotSet() {
+        String value = System.getProperty("user.home") + File.separator + ".hms-mirror/reports";
+        return configOutputDirInternal(value);
+    }
+
+    CommandLineRunner configOutputDirInternal(String value) {
+        return args -> {
+            log.info("output-dir: {}", value);
+            executeSessionService.setReportOutputDirectory(value);
+            File reportPathDir = new File(value);
+            if (!reportPathDir.exists()) {
+                reportPathDir.mkdirs();
+            }
+
+            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
+
+            // Test file to ensure we can write to it for the report.
+            try {
+                new FileOutputStream(testFile).close();
+            } catch (IOException e) {
+                throw new RuntimeException("Can't write to report output directory: " + value, e);
+            }
         };
     }
 
