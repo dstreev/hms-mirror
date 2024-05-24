@@ -112,6 +112,16 @@ public class ReportWriterService {
             outputDir.mkdirs();
         }
 
+        // Write out the config used to run this session.
+        HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        String configOutputFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
+        try {
+            mapper.writeValue(new File(configOutputFile), resolvedConfig);
+            log.info("Resolved Config 'saved' to: {}", configOutputFile);
+        } catch (IOException ioe) {
+            log.error("Problem 'writing' resolved config", ioe);
+        }
+
         for (Map.Entry<String, DBMirror> dbEntry: conversion.getDatabases().entrySet()) {
             String database = dbEntry.getKey();
 //        }

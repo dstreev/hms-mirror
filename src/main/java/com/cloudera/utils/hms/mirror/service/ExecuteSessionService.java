@@ -131,9 +131,13 @@ public class ExecuteSessionService {
         }
 
         // This should get the loaded session and clone it.
-        ExecuteSession loadedSession = getSession(null);
+        if (loadedSession == null) {
+            throw new RuntimeException("No session loaded.");
+        }
+//        ExecuteSession loadedSession = getSession(null);
         ExecuteSession session = loadedSession.clone();
         HmsMirrorConfig resolvedConfig = loadedSession.getResolvedConfig();
+        session.setResolvedConfig(resolvedConfig);
 
         // Set the active session id to the current date and time.
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -143,7 +147,10 @@ public class ExecuteSessionService {
         resolvedConfig.setOutputDirectory(sessionReportDir);
 
         // Create the RunStatus and Conversion objects.
-        session.setRunStatus(new RunStatus());
+        RunStatus runStatus = new RunStatus();
+        // Link the RunStatus to the session so users know what session details to retrieve.
+        runStatus.setSessionId(session.getSessionId());
+        session.setRunStatus(runStatus);
         session.setConversion(new Conversion());
         // Clear all previous run states from sessions to keep memory usage down.
         for (Map.Entry<String, ExecuteSession> entry : executeSessionMap.entrySet()) {

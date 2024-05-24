@@ -1317,17 +1317,6 @@ public class HmsMirrorCommandLineOptions {
     @Bean
     @Order(1)
     @ConditionalOnProperty(
-            name = "hms-mirror.config.web-interface")
-    CommandLineRunner configUi(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.web-interface}") String value) {
-        return args -> {
-            log.info("web-interface: {}", value);
-            hmsMirrorConfig.setWebInterface(Boolean.parseBoolean(value));
-        };
-    }
-
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
             name = "hms-mirror.config.views-only",
             havingValue = "true")
     CommandLineRunner configViewsOnlyTrue(HmsMirrorConfig hmsMirrorConfig) {
@@ -1407,12 +1396,6 @@ public class HmsMirrorCommandLineOptions {
         quietOutput.setOptionalArg(Boolean.FALSE);
         quietOutput.setRequired(Boolean.FALSE);
         options.addOption(quietOutput);
-
-        Option webInterfaceOption = new Option("wi", "web-interface", false,
-                "Start Web-Interface.");
-        webInterfaceOption.setOptionalArg(Boolean.FALSE);
-        webInterfaceOption.setRequired(Boolean.FALSE);
-        options.addOption(webInterfaceOption);
 
         Option resetTarget = new Option("rr", "reset-right", false,
                 "Use this for testing to remove the database on the RIGHT using CASCADE.");

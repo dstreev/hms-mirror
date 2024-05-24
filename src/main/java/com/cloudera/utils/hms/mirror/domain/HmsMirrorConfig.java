@@ -170,10 +170,8 @@ public class HmsMirrorConfig implements Cloneable {
     private Translator translator = new Translator();
     @JsonIgnore
     private boolean validated = Boolean.FALSE;
-    @JsonIgnore
-    private boolean webInterface = Boolean.FALSE;
 
-    public static boolean save(HmsMirrorConfig config, String configFilename, Boolean overwrite) {
+    public static boolean save(HmsMirrorConfig config, String configFilename, Boolean overwrite) throws IOException {
         boolean rtn = Boolean.FALSE;
         try {
             ObjectMapper mapper;
@@ -184,7 +182,8 @@ public class HmsMirrorConfig implements Cloneable {
             File cfgFile = new File(configFilename);
             if (cfgFile.exists() && (overwrite == null || !overwrite)) {
                 log.error("Config file already exists.  Use 'overwrite' to replace.");
-                return rtn;
+                throw new IOException("Config file already exists.  Use 'overwrite' to replace.");
+//                return rtn;
             }
             FileWriter cfgFileWriter = null;
             try {
@@ -193,15 +192,18 @@ public class HmsMirrorConfig implements Cloneable {
                 rtn = Boolean.TRUE;
                 log.debug("Config 'saved' to: {}", cfgFile.getPath());
             } catch (IOException ioe) {
-                log.error("Problem 'writing' default config", ioe);
+                log.error("Problem 'writing' config", ioe);
+                throw new IOException("Problem 'writing' config", ioe);
             } finally {
                 assert cfgFileWriter != null;
                 cfgFileWriter.close();
             }
         } catch (JsonProcessingException e) {
             log.error("Problem 'saving' default config", e);
+            throw new IOException("Problem 'saving' config", e);
         } catch (IOException ioe) {
-            log.error("Problem 'closing' default config file", ioe);
+            log.error("Problem 'closing' config file", ioe);
+            throw new IOException("Problem 'closing' config file", ioe);
         }
         return rtn;
     }
@@ -210,7 +212,7 @@ public class HmsMirrorConfig implements Cloneable {
         Use this to initialize a default config.
         TODO: Need to add back.
          */
-    public static void setup(String configFile) {
+    public static void setup(String configFile) throws IOException {
         HmsMirrorConfig hmsMirrorConfig = new HmsMirrorConfig();
         Scanner scanner = new Scanner(System.in);
 
@@ -436,6 +438,8 @@ public class HmsMirrorConfig implements Cloneable {
             right.setEnvironment(Environment.LEFT);
             resolvedConfig.getClusters().put(Environment.RIGHT, left);
             resolvedConfig.getClusters().put(Environment.LEFT, right);
+            // Need to unset this, so we don't flip again if the config is cloned.
+            resolvedConfig.setFlip(Boolean.FALSE);
         }
         return resolvedConfig;
     }

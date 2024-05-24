@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
@@ -219,7 +220,7 @@ public class ConfigService {
         return rtn;
     }
 
-    public boolean saveConfig(HmsMirrorConfig config, String configFileName, Boolean overwrite) {
+    public boolean saveConfig(HmsMirrorConfig config, String configFileName, Boolean overwrite) throws IOException {
         return HmsMirrorConfig.save(config, configFileName, overwrite);
     }
 

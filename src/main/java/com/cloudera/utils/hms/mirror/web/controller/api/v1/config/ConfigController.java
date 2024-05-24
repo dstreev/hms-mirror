@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -212,7 +213,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.POST, value = "/save/{id}")
     public boolean save(@RequestParam(name = "sessionId", required = false) String sessionId,
                         @PathVariable @NotNull String id,
-                        @RequestParam(value = "overwrite", required = false) Boolean overwrite) {
+                        @RequestParam(value = "overwrite", required = false) Boolean overwrite) throws IOException {
         log.info("{}: Save current config to: {}", sessionId, id);
         HmsMirrorConfig config = executeSessionService.getLoadedSession().getResolvedConfig();
         //Session(sessionId).getHmsMirrorConfig();

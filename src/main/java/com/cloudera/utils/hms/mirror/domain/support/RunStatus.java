@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.Messages;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,9 @@ import java.util.concurrent.Future;
 @Setter
 public class RunStatus implements Comparable<RunStatus> {
     private Date runDate = new Date();
+
+    @Schema(description = "This identifies the sessionId that is running/ran for this status.")
+    private String sessionId;
     @JsonIgnore
     private final Messages errors = new Messages(150);
     @JsonIgnore
