@@ -15,20 +15,9 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
+package com.cloudera.utils.hms.mirror.domain;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-
-@CrossOrigin
-public class ReportController {
-
-    public void getReportBundleForDatabase(String database) {
-
-    }
-
-    // Zip all reports and download.
-    public void getReportBundle() {
-
-    }
-
+public enum TableType {
+    EXTERNAL_TABLE,
+    MANAGED_TABLE;
 }

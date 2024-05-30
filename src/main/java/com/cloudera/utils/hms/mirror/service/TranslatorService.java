@@ -22,8 +22,8 @@ import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.util.TableUtils;
+import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -63,13 +63,13 @@ public class TranslatorService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 
         // get the map for a db.
-        Set<String> databases = hmsMirrorConfig.getTranslator().getDbLocationMap().keySet();
+        Set<String> databases = hmsMirrorConfig.getTranslator().getTranslationMap().keySet();
 
         // get the map.entry
         Map<String, Set<String>> reverseMap = new TreeMap<>();
         // Get a static view of set to avoid concurrent modification.
         Set<EnvironmentMap.TranslationLevel> dbTranslationLevel =
-                new HashSet<>(hmsMirrorConfig.getTranslator().getDbLocationMap(database, environment));
+                new HashSet<>(hmsMirrorConfig.getTranslator().getTranslationMap(database, environment));
 
         Map<String, String> dbLocationMap = new TreeMap<>();
 
@@ -83,9 +83,9 @@ public class TranslatorService {
         for (Map.Entry<String, String> entry : dbLocationMap.entrySet()) {
             // reduce folder level by 'consolidationLevel' for key and value.
             // Source
-            String reducedSource = Translator.reduceUrlBy(entry.getKey(), consolidationLevel);
+            String reducedSource = UrlUtils.reduceUrlBy(entry.getKey(), consolidationLevel);
             // Target
-            String reducedTarget = Translator.reduceUrlBy(entry.getValue(), consolidationLevel);
+            String reducedTarget = UrlUtils.reduceUrlBy(entry.getValue(), consolidationLevel);
 
             if (reverseMap.get(reducedTarget) != null) {
                 reverseMap.get(reducedTarget).add(entry.getKey());
@@ -193,7 +193,7 @@ public class TranslatorService {
                     }
                     entry.setValue(newPartitionLocation);
                     // For distcp.
-                    hmsMirrorConfig.getTranslator().addLocation(configService.getResolvedDB(tblMirror.getParent().getName()), Environment.RIGHT, partitionLocation,
+                    hmsMirrorConfig.getTranslator().addTranslation(configService.getResolvedDB(tblMirror.getParent().getName()), Environment.RIGHT, partitionLocation,
                             newPartitionLocation, ++level);
 
                     // Check and warn against warehouse locations if specified.
@@ -321,11 +321,11 @@ public class TranslatorService {
         if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()
                 && hmsMirrorConfig.getDataStrategy() != DataStrategyEnum.SQL) {
             if (hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
-                hmsMirrorConfig.getTranslator().addLocation(dbName, Environment.LEFT, originalLocation, dirBuilder.toString().trim(), level);
+                hmsMirrorConfig.getTranslator().addTranslation(dbName, Environment.LEFT, originalLocation, dirBuilder.toString().trim(), level);
             } else if (hmsMirrorConfig.getTransfer().getStorageMigration().getDataFlow() == DistcpFlow.PULL && !hmsMirrorConfig.isFlip()) {
-                hmsMirrorConfig.getTranslator().addLocation(dbName, Environment.RIGHT, originalLocation, dirBuilder.toString().trim(), level);
+                hmsMirrorConfig.getTranslator().addTranslation(dbName, Environment.RIGHT, originalLocation, dirBuilder.toString().trim(), level);
             } else {
-                hmsMirrorConfig.getTranslator().addLocation(dbName, Environment.LEFT, originalLocation, dirBuilder.toString().trim(), level);
+                hmsMirrorConfig.getTranslator().addTranslation(dbName, Environment.LEFT, originalLocation, dirBuilder.toString().trim(), level);
             }
         }
 

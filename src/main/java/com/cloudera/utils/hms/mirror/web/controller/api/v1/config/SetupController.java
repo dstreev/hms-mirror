@@ -17,42 +17,40 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
+import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-@RestController
+import java.util.List;
+import java.util.Map;
+
+//@CrossOrigin
+//@RestController
 @Slf4j
-@RequestMapping(path = "/api/v1/setup")
+//@RequestMapping(path = "/api/v1/setup")
 public class SetupController {
 
-    private ExecuteSessionService executeSessionService;
-    private DatabaseService databaseService;
+//    private ExecuteSessionService executeSessionService;
+//    private DatabaseService databaseService;
 
-    @Autowired
-    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-    }
-
-    @Autowired
-    public void setDatabaseService(DatabaseService databaseService) {
-        this.databaseService = databaseService;
-    }
-
-//    public RunStatus initDatabases(@RequestParam(name = "sessionId", required = false) String sessionId,
-//                                   @RequestParam(name = "database") String database,
-//                                   @RequestParam(name = "databases") List<String> databases) {
-//        boolean success = true;
-//        // Load the Environment Vars
-//        success = databaseService.loadEnvironmentVars();
-//
-//        // First load the database name into Conversion via the database parameter.
-//
-//
-//        return executeSessionService.getSession(sessionId).getRunStatus();
+//    @Autowired
+//    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+//        this.executeSessionService = executeSessionService;
 //    }
+
+//    @Autowired
+//    public void setDatabaseService(DatabaseService databaseService) {
+//        this.databaseService = databaseService;
+//    }
+
 }

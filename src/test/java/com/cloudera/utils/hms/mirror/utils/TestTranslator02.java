@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,13 @@ public class TestTranslator02 extends TranslatorTestBase {
         translator = deserializeResource("/translator/testcase_02.yaml");
         HmsMirrorConfig config = ConfigTest.deserializeResource("/config/default_01.yaml");
         config.setTranslator(translator);
+        // Used to prevent attempting to init connections.
+        config.setLoadTestDataFile("something.yaml");
+
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
+
+        ConnectionPoolService connectionPoolService = new ConnectionPoolService();
+        executeSessionService.setConnectionPoolService(connectionPoolService);
 
         ExecuteSession session = executeSessionService.createSession(null, config);
         executeSessionService.setLoadedSession(session);
@@ -55,6 +62,8 @@ public class TestTranslator02 extends TranslatorTestBase {
         translatorService = new TranslatorService();
         translatorService.setExecuteSessionService(executeSessionService);
         translatorService.setConfigService(configService);
+
+
     }
 
     @Test

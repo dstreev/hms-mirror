@@ -20,11 +20,13 @@ package com.cloudera.utils.hms.mirror.connections;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
@@ -46,10 +48,11 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
     @Getter
-    private final ExecuteSessionService executeSessionService;
+    @Setter
+    private ExecuteSession executeSession;
 
-    public ConnectionPoolsHybridImpl(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
+    public ConnectionPoolsHybridImpl(ExecuteSession executeSession) {
+        this.executeSession = executeSession;
     }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
@@ -129,7 +132,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!getExecuteSessionService().getActiveSession().getResolvedConfig().isLoadingTestData()) {
+        if (!executeSession.getResolvedConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).
@@ -167,7 +170,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
                 // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (getExecuteSessionService().getActiveSession().getResolvedConfig().getCluster(environment).isLegacyHive()) {
+                if (executeSession.getResolvedConfig().getCluster(environment).isLegacyHive()) {
                     ConnectionFactory connectionFactory =
                             new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 

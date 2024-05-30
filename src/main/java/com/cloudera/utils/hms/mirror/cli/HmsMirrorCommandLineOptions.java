@@ -227,7 +227,7 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configDatabase(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.database}") String dbs) {
         return args -> {
             log.info("database: {}", dbs);
-            hmsMirrorConfig.setDatabases(dbs.split(","));
+            hmsMirrorConfig.setDatabases(Arrays.asList(dbs.split(",")));
 //            log.info("Concurrency: " + config.getTransfer().getConcurrency());
         };
     }

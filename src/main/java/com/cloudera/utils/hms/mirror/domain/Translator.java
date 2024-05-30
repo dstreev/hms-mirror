@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
-import com.cloudera.utils.hms.mirror.service.TransferService;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
@@ -27,16 +26,18 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
-import java.util.regex.Matcher;
 
 @Slf4j
 @Getter
 @Setter
 @JsonIgnoreProperties({"dbLocationMap"})
 public class Translator implements Cloneable {
+//    private int consolidationLevelBase = 1;
+//    @Schema(description = "If the Partition Spec doesn't match the partition hierarchy, then set this to true.")
+//    private boolean partitionLevelMismatch = Boolean.FALSE;
 
     @JsonIgnore
-    private final Map<String, EnvironmentMap> dbLocationMap = new TreeMap<>();
+    private final Map<String, EnvironmentMap> translationMap = new TreeMap<>();
 //    @JsonIgnore
 //    private HmsMirrorConfig hmsMirrorConfig;
     /*
@@ -49,57 +50,29 @@ public class Translator implements Cloneable {
     @JsonIgnore
     private Map<String, String> orderedGlobalLocationMap = null;
 
-    public static String getLastDirFromUrl(final String urlString) {
-        Matcher matcher = TransferService.lastDirPattern.matcher(urlString);
-        if (matcher.find()) {
-            String matchStr = matcher.group(1);
-            // Remove last occurrence ONLY.
-            int lastIndexOf = urlString.lastIndexOf(matchStr);
-            return urlString.substring(lastIndexOf, urlString.length());
-        } else {
-            return urlString;
-        }
-    }
-
-    public static String removeLastDirFromUrl(final String url) {
-        Matcher matcher = TransferService.lastDirPattern.matcher(url);
-        if (matcher.find()) {
-            String matchStr = matcher.group(1);
-            // Remove last occurrence ONLY.
-            Integer lastIndexOf = url.lastIndexOf(matchStr);
-            return url.substring(0, lastIndexOf - 1);
-        } else {
-            return url;
-        }
-    }
-
-//    public void setGlobalLocationMap(Map<String, String> globalLocationMap) {
-//        getGlobalLocationMap().putAll(globalLocationMap);
-//    }
-
-    public static String replaceLast(String text, String regex, String replacement) {
-        return text.replaceFirst("(?s)" + regex + "(?!.*?" + regex + ")", replacement);
-    }
-
-    public static String reduceUrlBy(String url, int level) {
-        String rtn = url.trim();
-        if (rtn.endsWith("/"))
-            rtn = rtn.substring(0, rtn.length() - 2);
-        for (int i = 0; i < level; i++) {
-            rtn = removeLastDirFromUrl(rtn);
-        }
-        return rtn;
-    }
+    private WarehouseMapBuilder warehouseMapBuilder = null;
 
     public void addGlobalLocationMap(String from, String to) {
         getOrderedGlobalLocationMap().put(from, to);
+    }
+
+    // Needed to handle npe when loaded from json
+    public WarehouseMapBuilder getWarehouseMapBuilder() {
+        if (warehouseMapBuilder == null)
+            warehouseMapBuilder = new WarehouseMapBuilder();
+        return warehouseMapBuilder;
     }
 
     @Override
     public Translator clone() {
         try {
             Translator clone = (Translator) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            if (globalLocationMap != null)
+                clone.globalLocationMap = new HashMap<>(globalLocationMap);
+            if (orderedGlobalLocationMap != null)
+                clone.orderedGlobalLocationMap = new TreeMap<>(orderedGlobalLocationMap);
+            if (warehouseMapBuilder != null)
+                clone.warehouseMapBuilder = (WarehouseMapBuilder)warehouseMapBuilder.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
@@ -117,15 +90,37 @@ public class Translator implements Cloneable {
         return rtn;
     }
 
+    public void addTableSource(String database, String table, String tableType, String source, int consolidationLevelBase,
+                               boolean partitionLevelMismatch) {
+        if (warehouseMapBuilder == null)
+            warehouseMapBuilder = new WarehouseMapBuilder();
+        TableType type = TableType.valueOf(tableType);
+        warehouseMapBuilder.addSourceLocation(database, table, type, null, source, null,
+                consolidationLevelBase, partitionLevelMismatch);
+    }
 
-    public synchronized void addLocation(String database, Environment environment, String originalLocation, String newLocation, int level) {
-        EnvironmentMap environmentMap = dbLocationMap.computeIfAbsent(database, k -> new EnvironmentMap());
+    public void addPartitionSource(String database, String table, String tableType, String partitionSpec,
+                                   String tableSource, String partitionSource, int consolidationLevelBase,
+                                   boolean partitionLevelMismatch) {
+        if (warehouseMapBuilder == null)
+            warehouseMapBuilder = new WarehouseMapBuilder();
+        TableType type = TableType.valueOf(tableType);
+        warehouseMapBuilder.addSourceLocation(database, table, type, partitionSpec, tableSource, partitionSource,
+                consolidationLevelBase, partitionLevelMismatch);
+    }
+
+    public void removeDatabaseFromTranslationMap(String database) {
+        translationMap.remove(database);
+    }
+
+    public synchronized void addTranslation(String database, Environment environment, String originalLocation, String newLocation, int level) {
+        EnvironmentMap environmentMap = translationMap.computeIfAbsent(database, k -> new EnvironmentMap());
         environmentMap.addTranslationLocation(environment, originalLocation, newLocation, level);
 //        getDbLocationMap(database, environment).put(originalLocation, newLocation);
     }
 
-    public synchronized Set<EnvironmentMap.TranslationLevel> getDbLocationMap(String database, Environment environment) {
-        EnvironmentMap envMap = dbLocationMap.computeIfAbsent(database, k -> new EnvironmentMap());
+    public synchronized Set<EnvironmentMap.TranslationLevel> getTranslationMap(String database, Environment environment) {
+        EnvironmentMap envMap = translationMap.computeIfAbsent(database, k -> new EnvironmentMap());
         return envMap.getTranslationSet(environment);
     }
 

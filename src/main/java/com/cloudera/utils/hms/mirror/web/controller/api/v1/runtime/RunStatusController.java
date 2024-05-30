@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
 
+@CrossOrigin
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/runStatus")

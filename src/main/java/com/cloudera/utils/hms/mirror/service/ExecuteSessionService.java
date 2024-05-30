@@ -48,6 +48,7 @@ public class ExecuteSessionService {
     public static final String DEFAULT = "default.yaml";
 
     private CliEnvironment cliEnvironment;
+    private ConnectionPoolService connectionPoolService;
 
 //    /*
 //    This should be an immutable 'running' or 'ran' version of a session.
@@ -80,6 +81,11 @@ public class ExecuteSessionService {
         this.cliEnvironment = cliEnvironment;
     }
 
+    @Autowired
+    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
+        this.connectionPoolService = connectionPoolService;
+    }
+
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
         String sessionName = sessionId != null? sessionId : DEFAULT;
 
@@ -94,6 +100,15 @@ public class ExecuteSessionService {
             sessions.put(sessionName, session);
         }
         return session;
+    }
+
+    public ExecuteSession getActiveSession() {
+        if (activeSession == null) {
+            log.warn("No active session.  Transitioning loaded session to active.");
+            transitionLoadedSessionToActive();
+//            throw new RuntimeException("No active session. Try configuring a session first.");
+        }
+        return activeSession;
     }
 
     /*
@@ -138,6 +153,17 @@ public class ExecuteSessionService {
         ExecuteSession session = loadedSession.clone();
         HmsMirrorConfig resolvedConfig = loadedSession.getResolvedConfig();
         session.setResolvedConfig(resolvedConfig);
+
+        // Connection Service should be set to the resolved config.
+        connectionPoolService.close();
+        connectionPoolService.setHmsMirrorConfig(resolvedConfig);
+        connectionPoolService.setExecuteSession(session);
+        try {
+            connectionPoolService.init();
+        } catch (Exception e) {
+            log.error("Error initializing connection pool.", e);
+            throw new RuntimeException("Error initializing connection pool.", e);
+        }
 
         // Set the active session id to the current date and time.
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");

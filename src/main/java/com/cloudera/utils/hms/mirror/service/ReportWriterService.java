@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -232,7 +233,7 @@ public class ReportWriterService {
                                         // Only 1 entry, so we can skip the file and just use the source directly.
                                         String source = dbMap.getValue().iterator().next();
                                         // Get last path element
-                                        String lastPathElement = Translator.getLastDirFromUrl(source);//).substring(source.lastIndexOf("/") + 1);
+                                        String lastPathElement = UrlUtils.getLastDirFromUrl(source);//).substring(source.lastIndexOf("/") + 1);
 
                                         distcpScriptSb.append("echo \"Only one element in path.\"").append("\n");
 

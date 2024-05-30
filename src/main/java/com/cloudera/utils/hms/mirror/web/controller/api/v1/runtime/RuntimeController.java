@@ -43,6 +43,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
+@CrossOrigin
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/runtime")

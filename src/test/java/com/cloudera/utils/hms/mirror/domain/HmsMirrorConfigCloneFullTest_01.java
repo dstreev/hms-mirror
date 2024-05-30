@@ -108,7 +108,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
         assertEquals(clone.getFilter().getTblSizeLimit(), hmsMirrorConfig.getFilter().getTblSizeLimit());
         assertEquals(clone.getFilter().getTblPartitionLimit(), hmsMirrorConfig.getFilter().getTblPartitionLimit());
 
-        assertArrayEquals(clone.getDatabases(), hmsMirrorConfig.getDatabases());
+        assertEquals(clone.getDatabases(), hmsMirrorConfig.getDatabases());
 
         // Legacy Translations
         assertEquals(clone.getLegacyTranslations().getRowSerde(), hmsMirrorConfig.getLegacyTranslations().getRowSerde());

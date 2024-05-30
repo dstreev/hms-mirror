@@ -62,7 +62,6 @@ public class ConfigService {
         this.executeSessionService = executeSessionService;
     }
 
-
     public Boolean canDeriveDistcpPlan() {
         Boolean rtn = Boolean.FALSE;
         ExecuteSession executeSession = executeSessionService.getActiveSession();
@@ -129,23 +128,11 @@ public class ConfigService {
         return hmsMirrorConfig.getOptimization().isSkipStatsCollection();
     }
 
-    @JsonIgnore
-    public Boolean isConnectionKerberized() {
-        boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
-
-        Set<Environment> envs = hmsMirrorConfig.getClusters().keySet();
-        for (Environment env : envs) {
-            Cluster cluster = hmsMirrorConfig.getClusters().get(env);
-            if (cluster.getHiveServer2() != null &&
-                    cluster.getHiveServer2().isValidUri() &&
-                    cluster.getHiveServer2().getUri() != null &&
-                    cluster.getHiveServer2().getUri().contains("principal")) {
-                rtn = Boolean.TRUE;
-            }
-        }
-        return rtn;
-    }
+//    @JsonIgnore
+//    public Boolean isConnectionKerberized() {
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+//        return hmsMirrorConfig.isConnectionKerberized();
+//    }
 
     public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
@@ -197,17 +184,10 @@ public class ConfigService {
         return rtn;
     }
 
-    public Boolean loadPartitionMetadata() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
-
-        if (hmsMirrorConfig.isEvaluatePartitionLocation() ||
-                (hmsMirrorConfig.getDataStrategy() == STORAGE_MIGRATION &&
-                        hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp())) {
-            return Boolean.TRUE;
-        } else {
-            return Boolean.FALSE;
-        }
-    }
+//    public Boolean loadPartitionMetadata() {
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+//        return hmsMirrorConfig.loadPartitionMetadata();
+//    }
 
     /*
     Load a config for the default config directory.
@@ -224,55 +204,55 @@ public class ConfigService {
         return HmsMirrorConfig.save(config, configFileName, overwrite);
     }
 
-    public void setupGSS() {
-        try {
-            String CURRENT_USER_PROP = "current.user";
-
-            String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
-            String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml", "mapred-site.xml", "yarn-site.xml"};
-
-            // Get a value that over rides the default, if nothing then use default.
-            String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
-
-            // Set a default
-            if (hadoopConfDirProp == null)
-                hadoopConfDirProp = "/etc/hadoop/conf";
-
-            Configuration hadoopConfig = new Configuration(true);
-
-            File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
-            for (String file : HADOOP_CONF_FILES) {
-                File f = new File(hadoopConfDir, file);
-                if (f.exists()) {
-                    log.debug("Adding conf resource: '{}'", f.getAbsolutePath());
-                    try {
-                        // I found this new Path call failed on the Squadron Clusters.
-                        // Not sure why.  Anyhow, the above seems to work the same.
-                        hadoopConfig.addResource(new Path(f.getAbsolutePath()));
-                    } catch (Throwable t) {
-                        // This worked for the Squadron Cluster.
-                        // I think it has something to do with the Docker images.
-                        hadoopConfig.addResource("file:" + f.getAbsolutePath());
-                    }
-                }
-            }
-
-            // hadoop.security.authentication
-            if (hadoopConfig.get("hadoop.security.authentication", "simple").equalsIgnoreCase("kerberos")) {
-                try {
-                    UserGroupInformation.setConfiguration(hadoopConfig);
-                } catch (Throwable t) {
-                    // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
-                    log.error("Failed GSS Init.  Attempting different Group Mapping");
-                    hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
-                    UserGroupInformation.setConfiguration(hadoopConfig);
-                }
-            }
-        } catch (Throwable t) {
-            log.error("Issue initializing Kerberos", t);
-            throw t;
-        }
-    }
+//    public void setupGSS() {
+//        try {
+//            String CURRENT_USER_PROP = "current.user";
+//
+//            String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
+//            String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml", "mapred-site.xml", "yarn-site.xml"};
+//
+//            // Get a value that over rides the default, if nothing then use default.
+//            String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
+//
+//            // Set a default
+//            if (hadoopConfDirProp == null)
+//                hadoopConfDirProp = "/etc/hadoop/conf";
+//
+//            Configuration hadoopConfig = new Configuration(true);
+//
+//            File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
+//            for (String file : HADOOP_CONF_FILES) {
+//                File f = new File(hadoopConfDir, file);
+//                if (f.exists()) {
+//                    log.debug("Adding conf resource: '{}'", f.getAbsolutePath());
+//                    try {
+//                        // I found this new Path call failed on the Squadron Clusters.
+//                        // Not sure why.  Anyhow, the above seems to work the same.
+//                        hadoopConfig.addResource(new Path(f.getAbsolutePath()));
+//                    } catch (Throwable t) {
+//                        // This worked for the Squadron Cluster.
+//                        // I think it has something to do with the Docker images.
+//                        hadoopConfig.addResource("file:" + f.getAbsolutePath());
+//                    }
+//                }
+//            }
+//
+//            // hadoop.security.authentication
+//            if (hadoopConfig.get("hadoop.security.authentication", "simple").equalsIgnoreCase("kerberos")) {
+//                try {
+//                    UserGroupInformation.setConfiguration(hadoopConfig);
+//                } catch (Throwable t) {
+//                    // Revert to non JNI. This happens in Squadron (Docker Imaged Hosts)
+//                    log.error("Failed GSS Init.  Attempting different Group Mapping");
+//                    hadoopConfig.set("hadoop.security.group.mapping", "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
+//                    UserGroupInformation.setConfiguration(hadoopConfig);
+//                }
+//            }
+//        } catch (Throwable t) {
+//            log.error("Issue initializing Kerberos", t);
+//            throw t;
+//        }
+//    }
 
     public Boolean validate() {
         Boolean rtn = Boolean.TRUE;
@@ -414,7 +394,7 @@ public class ConfigService {
 
         // Only allow db rename with a single database.
         if (hmsMirrorConfig.getDbRename() != null &&
-                hmsMirrorConfig.getDatabases().length > 1) {
+                hmsMirrorConfig.getDatabases().size() > 1) {
             runStatus.addError(DB_RENAME_ONLY_WITH_SINGLE_DB_OPTION);
             rtn = Boolean.FALSE;
         }

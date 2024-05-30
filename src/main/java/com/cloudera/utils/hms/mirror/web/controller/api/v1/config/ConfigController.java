@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+@CrossOrigin
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/config")
@@ -215,7 +216,7 @@ public class ConfigController {
                         @PathVariable @NotNull String id,
                         @RequestParam(value = "overwrite", required = false) Boolean overwrite) throws IOException {
         log.info("{}: Save current config to: {}", sessionId, id);
-        HmsMirrorConfig config = executeSessionService.getLoadedSession().getResolvedConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getResolvedConfig();
         //Session(sessionId).getHmsMirrorConfig();
         // Save to the hms-mirror.config.path as 'id'.
         String configPath = springEnv.getProperty("hms-mirror.config.path");
@@ -316,6 +317,12 @@ public class ConfigController {
 //        }
 
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getResolvedConfig();
+
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (copyAvroSchemaUrls != null) {
             log.info("{}: Setting Copy Avro Schema Urls to: {}", sessionId, copyAvroSchemaUrls);
             hmsMirrorConfig.setCopyAvroSchemaUrls(copyAvroSchemaUrls);
@@ -330,7 +337,7 @@ public class ConfigController {
         }
         if (databases != null) {
             log.info("{}: Setting Databases to: {}", sessionId, databases);
-            hmsMirrorConfig.setDatabases(databases.toArray(new String[0]));
+            hmsMirrorConfig.setDatabases(databases);
         }
         if (dbPrefix != null) {
             log.info("{}: Setting Database Prefix to: {}", sessionId, dbPrefix);
@@ -408,6 +415,11 @@ public class ConfigController {
 
         Filter filter = executeSessionService.getLoadedSession().getResolvedConfig().getFilter();
 
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (excludeRegEx != null) {
             log.info("{}: Setting Table Exclude RegEx to: {}", sessionId, excludeRegEx);
             filter.setTblExcludeRegEx(excludeRegEx);
@@ -452,6 +464,12 @@ public class ConfigController {
 //            throw new RuntimeException("Cannot change config while a session running.");
 //        }
         MigrateACID migrateACID = executeSessionService.getLoadedSession().getResolvedConfig().getMigrateACID();
+
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (acid != null) {
             log.info("{}: Setting Migrate ACID 'on' to: {}", sessionId, acid);
             migrateACID.setOn(acid);
@@ -509,6 +527,11 @@ public class ConfigController {
 //        }
         TransferConfig transferConfig = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer();
 
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (transferPrefix != null) {
             log.info("{}: Setting Transfer 'transferPrefix' to: {}", sessionId, transferPrefix);
             transferConfig.setTransferPrefix(transferPrefix);
@@ -553,6 +576,12 @@ public class ConfigController {
 //            throw new RuntimeException("Cannot change config while a session running.");
 //        }
         WarehouseConfig warehouseConfig = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer().getWarehouse();
+
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (managedDirectory != null) {
             log.info("{}: Setting Warehouse 'managedDirectory' to: {}", sessionId, managedDirectory);
             warehouseConfig.setManagedDirectory(managedDirectory);
@@ -583,6 +612,12 @@ public class ConfigController {
 //            throw new RuntimeException("Cannot change config while a session running.");
 //        }
         StorageMigration storageMigration = executeSessionService.getLoadedSession().getResolvedConfig().getTransfer().getStorageMigration();
+
+        // make sure the session isn't running.
+        if (executeSessionService.getLoadedSession().getRunning().get()) {
+            throw new RuntimeException("Cannot change config while a session running.");
+        }
+
         if (strategy != null) {
             log.info("{}: Setting Storage Migration 'strategy' to: {}", sessionId, strategy);
             storageMigration.setStrategy(strategy);

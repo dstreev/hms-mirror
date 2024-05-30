@@ -48,6 +48,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 
 @Configuration
@@ -178,7 +180,8 @@ public class CliInit {
             String yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
             Conversion conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
             // Set Config Databases;
-            config.setDatabases(conversion.getDatabases().keySet().toArray(new String[0]));
+            List<String> databases = new ArrayList<>(conversion.getDatabases().keySet());
+            config.setDatabases(databases);
             // Replace the conversion in the session.
             executeSessionService.getActiveSession().setConversion(conversion);
         } catch (UnrecognizedPropertyException upe) {

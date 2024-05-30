@@ -1,0 +1,41 @@
+### GET List of Configs
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/config/list
+Accept: application/json
+
+### GET request to example server
+
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/config/reload/default.yaml.cdp
+Accept: application/json
+
+###
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/properties?dataStrategy=STORAGE_MIGRATION&evaluatePartitionLocation=true
+Accept:application/json
+
+### Review the Config
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/config/
+Accept: application/json
+
+### Review the 'empty' warehouse plan
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/warehousePlan/list
+Accept: application/json
+
+### Add a new warehouse plan
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/tpcds_bin_partitioned_orc_10/warehousePlan?externalLocation=%2Ffinance%2Fdata-ext&managedLocation=%2Ffinance%2Fdata-mngd
+Accept: application/json
+
+### Add a new warehouse plan
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/sm_orders/warehousePlan?externalLocation=%2Fmarketing%2Fdata-ext&managedLocation=%2Fmarketing%2Fdata-mngd
+Accept: application/json
+
+### Build Sources
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/buildSources
+Accept: application/json
+
+###

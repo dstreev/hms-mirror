@@ -23,8 +23,10 @@ import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +48,11 @@ public class TestTranslator01 extends TranslatorTestBase {
         config.setTranslator(translator);
         ExecuteSessionService executeSessionService = new ExecuteSessionService();
 
+        // Used to prevent attempting to init connections.
+        config.setLoadTestDataFile("something.yaml");
+        ConnectionPoolService connectionPoolService = new ConnectionPoolService();
+        executeSessionService.setConnectionPoolService(connectionPoolService);
+
         ExecuteSession session = executeSessionService.createSession(null, config);
         executeSessionService.setLoadedSession(session);
         executeSessionService.transitionLoadedSessionToActive();
@@ -60,35 +67,35 @@ public class TestTranslator01 extends TranslatorTestBase {
     @Test
     public void lastDirInUrl_01() {
         String dir = "hdfs://apps/hive/warehouse/my.db/call";
-        dir = Translator.getLastDirFromUrl(dir);
+        dir = UrlUtils.getLastDirFromUrl(dir);
         assertEquals("Directory Reduction Failed: " + dir, "call", dir);
     }
 
     @Test
     public void removeLastDirInUrl_01() {
         String dir = "hdfs://apps/hive/warehouse/my.db/call";
-        dir = Translator.removeLastDirFromUrl(dir);
+        dir = UrlUtils.removeLastDirFromUrl(dir);
         assertEquals("Remove Last Directory Failed: " + dir, "hdfs://apps/hive/warehouse/my.db", dir);
     }
 
     @Test
     public void lastUrlBit_01() {
         String dir = "hdfs://apps/hive/warehouse/my.db/call/";
-        dir = Translator.reduceUrlBy(dir, 1);
+        dir = UrlUtils.reduceUrlBy(dir, 1);
         assertEquals("Directory Reduction Failed: " + dir, "hdfs://apps/hive/warehouse/my.db", dir);
     }
 
     @Test
     public void lastUrlBit_02() {
         String dir = "hdfs://apps/hive/warehouse/my.db/call";
-        dir = Translator.reduceUrlBy(dir, 2);
+        dir = UrlUtils.reduceUrlBy(dir, 2);
         assertEquals("Directory Reduction Failed: " + dir, "hdfs://apps/hive/warehouse", dir);
     }
 
     @Test
     public void lastUrlBit_03() {
         String dir = "hdfs://apps/hive/warehouse/my.db/warehouse";
-        dir = Translator.reduceUrlBy(dir, 1);
+        dir = UrlUtils.reduceUrlBy(dir, 1);
         assertEquals("Directory Reduction Failed: " + dir, "hdfs://apps/hive/warehouse/my.db", dir);
     }
 

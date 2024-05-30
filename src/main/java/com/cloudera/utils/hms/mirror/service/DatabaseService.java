@@ -22,11 +22,18 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hive.config.QueryDefinitions;
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +44,6 @@ import java.text.MessageFormat;
 import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
-import static com.cloudera.utils.hms.mirror.MessageCode.MISC_ERROR;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
@@ -49,11 +55,152 @@ public class DatabaseService {
 
     private ConnectionPoolService connectionPoolService;
     private ExecuteSessionService executeSessionService;
+    private QueryDefinitionsService queryDefinitionsService;
     private ConfigService configService;
 
     @Autowired
     public void setConfigService(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+        this.executeSessionService = executeSessionService;
+    }
+
+    @Autowired
+    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
+        this.connectionPoolService = connectionPoolService;
+    }
+
+    @Autowired
+    public void setQueryDefinitionsService(QueryDefinitionsService queryDefinitionsService) {
+        this.queryDefinitionsService = queryDefinitionsService;
+    }
+
+    public Warehouse addWarehousePlan(String database, String external, String managed) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        hmsMirrorConfig.getDatabases().add(database);
+        return warehouseMapBuilder.addWarehousePlan(database, external, managed);
+    }
+
+    public Warehouse removeWarehousePlan(String database) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        hmsMirrorConfig.getDatabases().remove(database);
+        return warehouseMapBuilder.removeWarehousePlan(database);
+    }
+
+    public Warehouse getWarehousePlan(String database) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        return warehouseMapBuilder.getWarehousePlan().get(database);
+    }
+
+    public Map<String, Warehouse> getWarehousePlans() {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        return warehouseMapBuilder.getWarehousePlan();
+    }
+
+    public void clearWarehousePlan() {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        warehouseMapBuilder.clearWarehousePlan();
+    }
+
+    // Look at the Warehouse Plans and pull the databases from the WarehouseMapBuilder.
+    public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
+        Boolean rtn = Boolean.TRUE;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+
+        // Need to have this set to ensure we're picking everything up.
+        if (!hmsMirrorConfig.isEvaluatePartitionLocation()) {
+            throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
+        }
+
+        for (String database: warehouseMapBuilder.getWarehousePlan().keySet()) {
+            hmsMirrorConfig.getTranslator().removeDatabaseFromTranslationMap(database);
+            loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
+        }
+
+        return warehouseMapBuilder;
+    }
+
+//    public boolean buildAllDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch
+//            , boolean reset) throws RequiredConfigurationException {
+//
+//
+//        return true;
+//    }
+//
+
+    protected void loadDatabaseLocationMetadataDirect(String database, Environment environment,
+                                                      int consolidationLevelBase,
+                                                      boolean partitionLevelMismatch) {
+        /*
+        1. Get Metastore Direct Connection
+        2. Get Query Definitions
+        3. Get Query for 'part_locations'
+        4. Execute Query
+        5. Load Partition Data
+         */
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet resultSet = null;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+//        String database = tableMirror.getParent().getName();
+//        EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
+        try {
+            conn = getConnectionPoolService().getMetastoreDirectEnvironmentConnection(environment);
+            log.info("Loading Partitions from Metastore Direct Connection {}:{}", environment, database);
+            QueryDefinitions queryDefinitions = getQueryDefinitionsService().getQueryDefinitions(environment);
+            if (queryDefinitions != null) {
+                String dbTableLocationQuery = queryDefinitions.getQueryDefinition("database_table_locations").getStatement();
+                pstmt = conn.prepareStatement(dbTableLocationQuery);
+                pstmt.setString(1, database);
+                resultSet = pstmt.executeQuery();
+                while (resultSet.next()) {
+                    String table = resultSet.getString(1);
+                    String tableType = resultSet.getString(2);
+                    String location = resultSet.getString(3);
+                    hmsMirrorConfig.getTranslator().addTableSource(database, table, tableType, location, consolidationLevelBase,
+                            partitionLevelMismatch);
+                }
+                resultSet.close();
+                pstmt.close();
+                // Get the Partition Locations
+                String dbPartitionLocationQuery = queryDefinitions.getQueryDefinition("database_partition_locations").getStatement();
+                pstmt = conn.prepareStatement(dbPartitionLocationQuery);
+                pstmt.setString(1, database);
+                resultSet = pstmt.executeQuery();
+                while (resultSet.next()) {
+                    String table = resultSet.getString(1);
+                    String tableType = resultSet.getString(2);
+                    String partitionSpec = resultSet.getString(3);
+                    String tableLocation = resultSet.getString(4);
+                    String partitionLocation = resultSet.getString(5);
+                    hmsMirrorConfig.getTranslator().addPartitionSource(database, table, tableType, partitionSpec,
+                            tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
+                }
+            }
+
+
+            log.info("Loaded Database Table/Partition Locations from Metastore Direct Connection {}:{}", environment, database);
+        } catch (SQLException throwables) {
+            log.error("Issue loading Table/Partition Locations from Metastore Direct Connection. {}:{}", environment, database);
+            log.error(throwables.getMessage(), throwables);
+            throw new RuntimeException(throwables);
+        } finally {
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException throwables) {
+                //
+            }
+        }
     }
 
     public boolean loadEnvironmentVars() {
@@ -98,6 +245,55 @@ public class DatabaseService {
             }
         }
         return rtn;
+    }
+
+    public List<String> listAvailableDatabases(Environment environment) {
+        List<String> dbs = new ArrayList<>();
+        Connection conn = null;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        try {
+            conn = connectionPoolService.getHS2EnvironmentConnection(environment);
+            if (conn != null) {
+                Statement stmt = null;
+                ResultSet resultSet = null;
+                try {
+                    stmt = conn.createStatement();
+                    resultSet = stmt.executeQuery(SHOW_DATABASES);
+                    while (resultSet.next()) {
+                        dbs.add(resultSet.getString(1));
+                    }
+                } catch (SQLException sql) {
+                    log.error("Issue getting database list", sql);
+                    throw new RuntimeException(sql);
+                } finally {
+                    if (resultSet != null) {
+                        try {
+                            resultSet.close();
+                        } catch (SQLException sqlException) {
+                            // ignore
+                        }
+                    }
+                    if (stmt != null) {
+                        try {
+                            stmt.close();
+                        } catch (SQLException sqlException) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        } catch (SQLException se) {
+            log.error("Issue getting database connection", se);
+            throw new RuntimeException(se);
+        } finally {
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException throwables) {
+                //
+            }
+        }
+        return dbs;
     }
 
     public boolean buildDBStatements(DBMirror dbMirror) {
@@ -226,11 +422,11 @@ public class DatabaseService {
                                 if (hmsMirrorConfig.getDbPrefix() != null || hmsMirrorConfig.getDbRename() != null) {
                                     // adjust locations.
                                     if (location != null) {
-                                        location = Translator.removeLastDirFromUrl(location) + "/"
+                                        location = UrlUtils.removeLastDirFromUrl(location) + "/"
                                                 + configService.getResolvedDB(dbMirror.getName()) + ".db";
                                     }
                                     if (managedLocation != null) {
-                                        managedLocation = Translator.removeLastDirFromUrl(managedLocation) + "/"
+                                        managedLocation = UrlUtils.removeLastDirFromUrl(managedLocation) + "/"
                                                 + configService.getResolvedDB(dbMirror.getName()) + ".db";
                                     }
                                 }
@@ -257,7 +453,7 @@ public class DatabaseService {
                                         ResultSet resultSet = null;
                                         try {
                                             conn = connectionPoolService.getHS2EnvironmentConnection(Environment.RIGHT);
-                                                    //hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
+                                            //hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
 
                                             stmt = conn.createStatement();
 
@@ -315,7 +511,7 @@ public class DatabaseService {
                                         } catch (DisabledException e) {
                                             log.warn("Unable to test location {} because the CLI Interface is disabled.", dbLocation);
                                             dbMirror.addIssue(Environment.RIGHT, "Unable to test location " + dbLocation + " because the CLI Interface is disabled. " +
-                                                            "This may lead to issues when creating the database in 'read-only' mode.  " );
+                                                    "This may lead to issues when creating the database in 'read-only' mode.  ");
                                         }
                                     } else {
                                         // Can't determine location.
@@ -468,8 +664,6 @@ public class DatabaseService {
         }
         return rtn;
     }
-
-
 
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
@@ -624,16 +818,6 @@ public class DatabaseService {
             }
         }
         return rtn;
-    }
-
-    @Autowired
-    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-    }
-
-    @Autowired
-    public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
-        this.connectionPoolService = connectionPoolService;
     }
 
 }

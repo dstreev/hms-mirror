@@ -50,25 +50,21 @@ import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED
 @Slf4j
 public class ConnectionPoolService implements ConnectionPools {
 
-    private ConfigService configService;
-    private ExecuteSessionService executeSessionService;
-
+    private HmsMirrorConfig hmsMirrorConfig;
+    private ExecuteSession executeSession;
     private ConnectionPools connectionPools = null;
+    private EnvironmentService environmentService;
 
     @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
-    }
-
-    @Autowired
-    public ConnectionPoolService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
+    public void setEnvironmentService(EnvironmentService environmentService) {
+        this.environmentService = environmentService;
     }
 
     public Boolean checkConnections() {
         boolean rtn = Boolean.FALSE;
-
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        if (hmsMirrorConfig == null) {
+            throw new RuntimeException("Configuration not set.  Connections can't be established.");
+        }
 
         Set<Environment> envs = new HashSet<>();
         if (!(hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP ||
@@ -155,7 +151,9 @@ public class ConnectionPoolService implements ConnectionPools {
 
     @Override
     public void close() {
-        getConnectionPools().close();
+        if (connectionPools != null) {
+            getConnectionPools().close();
+        }
     }
 
     public ConnectionPools getConnectionPools() {
@@ -172,20 +170,23 @@ public class ConnectionPoolService implements ConnectionPools {
 
     private ConnectionPools getConnectionPoolsImpl() throws SQLException {
         ConnectionPools rtn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+
+        if (hmsMirrorConfig == null) {
+            throw new RuntimeException("Configuration not set.  Connections can't be established.");
+        }
 
         switch (hmsMirrorConfig.getConnectionPoolLib()) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
-                rtn = new ConnectionPoolsDBCP2Impl(getExecuteSessionService());
+                rtn = new ConnectionPoolsDBCP2Impl(executeSession);
                 break;
             case HIKARICP:
                 log.info("Using HIKARICP Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHikariImpl(getExecuteSessionService());
+                rtn = new ConnectionPoolsHikariImpl(executeSession);
                 break;
             case HYBRID:
                 log.info("Using HYBRID Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHybridImpl(getExecuteSessionService());
+                rtn = new ConnectionPoolsHybridImpl(executeSession);
                 break;
         }
         // Initialize the connection pools
@@ -207,8 +208,8 @@ public class ConnectionPoolService implements ConnectionPools {
 
     @Override
     public void init() throws SQLException {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
-        ExecuteSession executeSession = executeSessionService.getActiveSession();
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+//        ExecuteSession executeSession = executeSessionService.getActiveSession();
         RunStatus runStatus = executeSession.getRunStatus();
 
         if (hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.DUMP) {
@@ -248,7 +249,7 @@ public class ConnectionPoolService implements ConnectionPools {
                 hs2Envs.add(Environment.LEFT);
                 break;
         }
-        if (configService.loadPartitionMetadata()) {
+        if (hmsMirrorConfig.loadPartitionMetadata()) {
             if (hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect() != null) {
                 getConnectionPools().addMetastoreDirect(Environment.LEFT, hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect());
             }
@@ -313,14 +314,14 @@ public class ConnectionPoolService implements ConnectionPools {
                 }
         }
 
-        if (configService.isConnectionKerberized()) {
+        if (hmsMirrorConfig.isConnectionKerberized()) {
             log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
-            configService.setupGSS();
+            environmentService.setupGSS();
         }
         log.debug("Checking Hive Connections");
         if (!hmsMirrorConfig.isLoadingTestData() && !checkConnections()) {
             log.error("Check Hive Connections Failed.");
-            if (configService.isConnectionKerberized()) {
+            if (hmsMirrorConfig.isConnectionKerberized()) {
                 log.error("Check Kerberos configuration if GSS issues are encountered.  See the running.md docs for details.");
             }
             throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");

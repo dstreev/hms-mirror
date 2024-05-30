@@ -165,7 +165,7 @@ public class TransferService {
                                 tableMirror.getParent().getName() + ".db/" +
                                 tableMirror.getName();
 
-                        hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.LEFT,
+                        hmsMirrorConfig.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.LEFT,
                                 TableUtils.getLocation(tableMirror.getName(), let.getDefinition()),
                                 isLoc, 1);
                         // RIGHT PULL from INTERMEDIATE
@@ -186,7 +186,7 @@ public class TransferService {
                                 fnlLoc = sbDir.toString();
                             }
                         }
-                        hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
+                        hmsMirrorConfig.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.RIGHT,
                                 isLoc,
                                 fnlLoc, 1);
                     } else if (hmsMirrorConfig.getTransfer().getCommonStorage() != null && hmsMirrorConfig.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
@@ -210,7 +210,7 @@ public class TransferService {
                                     configService.getResolvedDB(tableMirror.getParent().getName()) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;
                         }
-                        hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.LEFT,
+                        hmsMirrorConfig.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.LEFT,
                                 origLoc, newLoc, 1);
                     } else {
                         // RIGHT PULL
@@ -232,7 +232,7 @@ public class TransferService {
                                 sbDir.append(configService.getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
-                            hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
+                            hmsMirrorConfig.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), tet.getDefinition()),
                                     rLoc, 1);
                         } else {
@@ -248,7 +248,7 @@ public class TransferService {
                                 sbDir.append(configService.getResolvedDB(tableMirror.getParent().getName())).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
-                            hmsMirrorConfig.getTranslator().addLocation(tableMirror.getParent().getName(), Environment.RIGHT,
+                            hmsMirrorConfig.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), let.getDefinition())
                                     , rLoc, 1);
                         }

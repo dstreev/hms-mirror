@@ -42,6 +42,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.connections.ConnectionPoolTypes.HYBRID;
+import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
 
 @Slf4j
 @Getter
@@ -82,7 +83,7 @@ public class HmsMirrorConfig implements Cloneable {
     private boolean evaluatePartitionLocation = Boolean.FALSE;
     private Filter filter = new Filter();
     private boolean skipLinkCheck = Boolean.FALSE;
-    private String[] databases = new String[0];
+    private List<String> databases = new ArrayList<>();
     @JsonIgnore
     private String encryptedPassword;
     private LegacyTranslations legacyTranslations = new LegacyTranslations();
@@ -171,6 +172,14 @@ public class HmsMirrorConfig implements Cloneable {
     @JsonIgnore
     private boolean validated = Boolean.FALSE;
 
+    // Handle null databases from config load.
+    public List<String> getDatabases() {
+        if (databases == null) {
+            databases = new ArrayList<>();
+        }
+        return databases;
+    }
+
     public static boolean save(HmsMirrorConfig config, String configFilename, Boolean overwrite) throws IOException {
         boolean rtn = Boolean.FALSE;
         try {
@@ -207,6 +216,35 @@ public class HmsMirrorConfig implements Cloneable {
         }
         return rtn;
     }
+
+    @JsonIgnore
+    public Boolean loadPartitionMetadata() {
+        if (isEvaluatePartitionLocation() ||
+                (getDataStrategy() == STORAGE_MIGRATION &&
+                        getTransfer().getStorageMigration().isDistcp())) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
+    @JsonIgnore
+    public Boolean isConnectionKerberized() {
+        boolean rtn = Boolean.FALSE;
+
+        Set<Environment> envs = getClusters().keySet();
+        for (Environment env : envs) {
+            Cluster cluster = getClusters().get(env);
+            if (cluster.getHiveServer2() != null &&
+                    cluster.getHiveServer2().isValidUri() &&
+                    cluster.getHiveServer2().getUri() != null &&
+                    cluster.getHiveServer2().getUri().contains("principal")) {
+                rtn = Boolean.TRUE;
+            }
+        }
+        return rtn;
+    }
+
 
     /*
         Use this to initialize a default config.

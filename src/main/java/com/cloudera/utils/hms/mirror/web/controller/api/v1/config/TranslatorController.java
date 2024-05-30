@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+@CrossOrigin
 @RestController
 @Slf4j
 @RequestMapping(path = "/api/v1/translator")
@@ -70,7 +71,7 @@ public class TranslatorController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/")
     public Translator setTransfer(
-            @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation) {
+            @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation ) {
         if (forceExternalLocation != null) {
             log.info("Setting Translator 'forceExternalLocation' to: {}", forceExternalLocation);
             executeSessionService.getActiveSession().getResolvedConfig().getTranslator().setForceExternalLocation(forceExternalLocation);

@@ -148,15 +148,15 @@ public class HMSMirrorAppService {
         getExecuteSessionService().getActiveSession().getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
-        log.info("GATHERING METADATA: Start Processing for databases: {}", Arrays.toString((hmsMirrorConfig.getDatabases())));
+        log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",",hmsMirrorConfig.getDatabases()));
 
         if (hmsMirrorConfig.isLoadingTestData()) {
             List<String> databases = new ArrayList<>();
             for (DBMirror dbMirror : conversion.getDatabases().values()) {
                 databases.add(dbMirror.getName());
             }
-            String[] dbs = databases.toArray(new String[0]);
-            hmsMirrorConfig.setDatabases(dbs);
+//            String[] dbs = databases.toArray(new String[0]);
+            hmsMirrorConfig.setDatabases(databases);
         } else if (hmsMirrorConfig.getFilter().getDbRegEx() != null) {
             // Look for the dbRegEx.
             Connection conn = null;
@@ -177,8 +177,8 @@ public class HMSMirrorAppService {
                             databases.add(db);
                         }
                     }
-                    String[] dbs = databases.toArray(new String[0]);
-                    hmsMirrorConfig.setDatabases(dbs);
+//                    String[] dbs = databases.toArray(new String[0]);
+                    hmsMirrorConfig.setDatabases(databases);
                 }
             } catch (SQLException se) {
                 // Issue
@@ -213,7 +213,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
         }
 
-        if (hmsMirrorConfig.getDatabases() == null || hmsMirrorConfig.getDatabases().length == 0) {
+        if (hmsMirrorConfig.getDatabases() == null || hmsMirrorConfig.getDatabases().isEmpty()) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             return new AsyncResult<>(Boolean.FALSE);

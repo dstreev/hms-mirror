@@ -15,20 +15,12 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
+package com.cloudera.utils.hms.mirror.exceptions;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
+public class RequiredConfigurationException extends Throwable {
 
-@CrossOrigin
-public class ReportController {
-
-    public void getReportBundleForDatabase(String database) {
-
-    }
-
-    // Zip all reports and download.
-    public void getReportBundle() {
-
+    public RequiredConfigurationException(String message) {
+        super(message);
     }
 
 }

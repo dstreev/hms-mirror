@@ -20,9 +20,11 @@ package com.cloudera.utils.hms.mirror.connections;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
@@ -47,10 +49,11 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, PoolingDataSource<PoolableConnection>> metastoreDirectDataSources = new TreeMap<>();
     @Getter
-    private final ExecuteSessionService executeSessionService;
+    @Setter
+    private ExecuteSession executeSession;
 
-    public ConnectionPoolsDBCP2Impl(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
+    public ConnectionPoolsDBCP2Impl(ExecuteSession executeSession) {
+        this.executeSession = executeSession;
     }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
@@ -128,7 +131,7 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!getExecuteSessionService().getActiveSession().getResolvedConfig().isLoadingTestData()) {
+        if (!executeSession.getResolvedConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).

@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 
 import java.util.HashSet;
@@ -52,12 +53,12 @@ public class EnvironmentMap {
         }
 
         public String getAdjustedOriginal() {
-            String rtn = Translator.reduceUrlBy(original, level);
+            String rtn = UrlUtils.reduceUrlBy(original, level);
             return rtn;
         }
 
         public String getAdjustedTarget() {
-            String rtn = Translator.reduceUrlBy(target, level);
+            String rtn = UrlUtils.reduceUrlBy(target, level);
             return rtn;
         }
     }
