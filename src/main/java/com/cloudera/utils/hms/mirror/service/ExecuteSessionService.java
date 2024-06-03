@@ -26,9 +26,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -38,7 +35,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Service
 @Slf4j
@@ -66,8 +62,10 @@ public class ExecuteSessionService {
     private ExecuteSession loadedSession;
 
     private ExecuteSession activeSession;
-    @Setter
+
     private String reportOutputDirectory;
+
+    private boolean amendSessionIdToReportDir = Boolean.TRUE;
 
     /*
     Used to limit the number of sessions that are retained in memory.
@@ -84,6 +82,11 @@ public class ExecuteSessionService {
     @Autowired
     public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
         this.connectionPoolService = connectionPoolService;
+    }
+
+    public void setReportOutputDirectory(String reportOutputDirectory, boolean amendSessionIdToReportDir) {
+        this.amendSessionIdToReportDir = amendSessionIdToReportDir;
+        this.reportOutputDirectory = reportOutputDirectory;
     }
 
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
@@ -169,7 +172,12 @@ public class ExecuteSessionService {
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         session.setSessionId(dtf.format(new Date()));
 
-        String sessionReportDir = reportOutputDirectory + File.separator + session.getSessionId();
+        String sessionReportDir = null;
+        if (amendSessionIdToReportDir) {
+            sessionReportDir = reportOutputDirectory + File.separator + session.getSessionId();
+        } else {
+            sessionReportDir = reportOutputDirectory;
+        }
         resolvedConfig.setOutputDirectory(sessionReportDir);
 
         // Create the RunStatus and Conversion objects.

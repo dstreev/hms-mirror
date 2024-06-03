@@ -36,9 +36,6 @@ public class SourceLocationMap implements Cloneable {
      */
     private Map<TableType, Map<String, Set<String>>> locations = new HashMap<>();
 
-//    private Map<String, Set<String>> external;
-//    private Map<String, Set<String>> managed;
-
     public Map<String, Set<String>> get(TableType type) {
         if (locations.containsKey(type)) {
             return locations.get(type);

@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
+package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
@@ -38,8 +38,8 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.external-warehouse-directory=/warehouse/external_tables",
                 "--hms-mirror.config.distcp=true",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/sm_smn_wd_dc"
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_dc"
         })
 @Slf4j
 public class Test_sm_smn_wd_dc extends E2EBaseTest {
@@ -90,7 +90,7 @@ public class Test_sm_smn_wd_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM, MessageCode.DISTCP_REQUIRES_EPL);
+        long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM);
 
         assertEquals("Return Code Failure: ", expected, actual);
 

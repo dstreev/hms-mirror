@@ -27,7 +27,9 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.feature.Feature;
 import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
 import com.cloudera.utils.hms.stage.ReturnStatus;
@@ -444,7 +446,8 @@ public class TableService {
                                 if (hmsMirrorConfig.getFilter().isTableFiltering()) {
                                     level = 0;
                                 }
-                                String targetLocation = getTranslatorService().
+                                String targetLocation = null;
+                                targetLocation = getTranslatorService().
                                         translateTableLocation(tableMirror, sourceLocation, level, null);
                                 if (!TableUtils.updateTableLocation(target, targetLocation)) {
                                     rtn = Boolean.FALSE;
@@ -596,7 +599,7 @@ public class TableService {
 
                 TableUtils.fixTableDefinition(target);
             }
-        } catch (Exception e) {
+        } catch (MismatchException e) {
             log.error("Error building table schema: {}", e.getMessage(), e);
             source.addIssue("Error building table schema: " + e.getMessage());
             rtn = Boolean.FALSE;

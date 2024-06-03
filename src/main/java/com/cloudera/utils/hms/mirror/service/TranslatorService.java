@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
@@ -228,7 +229,7 @@ public class TranslatorService {
         return rtn;
     }
 
-    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws Exception {
+    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws MismatchException {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
@@ -243,7 +244,7 @@ public class TranslatorService {
 
         // Get the relative dir.
         if (!rtn.startsWith(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace())) {
-            throw new Exception("Table/Partition Location prefix: `" + originalLocation +
+            throw new MismatchException("Table/Partition Location prefix: `" + originalLocation +
                     "` doesn't match the LEFT clusters defined hcfsNamespace: `" + hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace() +
                     "`. We can't reliably make this translation.");
         }
@@ -332,4 +333,18 @@ public class TranslatorService {
         return dirBuilder.toString().trim();
     }
 
+    public void addGlobalLocationMap(String source, String target) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        hmsMirrorConfig.getTranslator().addGlobalLocationMap(source, target);
+    }
+
+    public String removeGlobalLocationMap(String source) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        return hmsMirrorConfig.getTranslator().removeGlobalLocationMap(source);
+    }
+
+    public Map<String, String> getGlobalLocationMap() {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
+    }
 }

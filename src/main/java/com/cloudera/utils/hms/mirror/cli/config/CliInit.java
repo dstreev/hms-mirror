@@ -301,6 +301,7 @@ public class CliInit {
         return args -> {
             log.info("output-dir: {}", value);
             hmsMirrorConfig.setOutputDirectory(value);
+            executeSessionService.setReportOutputDirectory(value, false);
             File reportPathDir = new File(value);
             if (!reportPathDir.exists()) {
                 reportPathDir.mkdirs();

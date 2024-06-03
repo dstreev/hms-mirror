@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.NotNull;
 import java.util.*;
 
 @CrossOrigin
@@ -37,17 +39,17 @@ import java.util.*;
 @RequestMapping(path = "/api/v1/translator")
 public class TranslatorController {
 
-    private WebConfigService webConfigService;
     private ExecuteSessionService executeSessionService;
-
-    @Autowired
-    public void setConfigService(WebConfigService webConfigService) {
-        this.webConfigService = webConfigService;
-    }
+    private TranslatorService translatorService;
 
     @Autowired
     public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 
     @Operation(summary = "Get Translator Details")
@@ -81,43 +83,7 @@ public class TranslatorController {
 
     // Translator / Global Location Map
     // Do this through multiple calls with POST, DELETE to add and remove entries.
-    @Operation(summary = "Set Global Location Map Value")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Translator Details set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Map.class))})})
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap")
-    public Map<String, String> addGLMEntries(
-            @RequestParam() Map<String, String> map) {
-        log.info("Adding Global Location Map Entries: {}", map);
-        map.forEach((k, v) -> executeSessionService.getActiveSession().getResolvedConfig().getTranslator().addGlobalLocationMap(k, v));
-        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getOrderedGlobalLocationMap();
-    }
 
-    @Operation(summary = "Remove Global Location Map Value(s)")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Translator Details set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = List.class))})})
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.DELETE, value = "/globalLocationMap")
-    public List<String> removeGLMEntries(
-            @RequestParam(value = "keys", required = false) List<String> keyList,
-            @RequestParam(value = "key", required = false) String key) {
-        List<String> removeList = Collections.emptyList();
-        if (keyList != null) {
-            log.info("Removing Global Location Map Entries: {}", keyList);
-            removeList = executeSessionService.getActiveSession().getResolvedConfig().getTranslator().removeGlobalLocationMap(keyList);
-        }
-        if (key != null) {
-            log.info("Removing Global Location Map Entry: {}", key);
-            String removedItem = executeSessionService.getActiveSession().getResolvedConfig().getTranslator().removeGlobalLocationMap(key);
-            removeList = new ArrayList<>();
-            removeList.add(removedItem);
-        }
-        return removeList;
-    }
 
     @Operation(summary = "Build Global Location Map from Databases.  Resets list!")
     @ApiResponses(value = {
@@ -133,4 +99,56 @@ public class TranslatorController {
 
         return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap();
     }
+
+    @Operation(summary = "Add GLM")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GLM Added",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema())}),
+            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cluster not found",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap")
+    public void addGlobalLocationMap(@RequestParam(name = "source", required = true) String source,
+                                     @RequestParam(name = "target", required = true) String target) {
+        log.info("Adding global location map for source: {} and target: {}", source, target);
+        translatorService.addGlobalLocationMap(source, target);
+    }
+
+    @Operation(summary = "Remove GLM")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GLM Added",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = String.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cluster not found",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.DELETE, value = "/globalLocationMap")
+    public String removeGlobalLocationMap(@RequestParam(name = "source", required = true) String source) {
+        log.info("Removing global location map for source: {}", source);
+        return translatorService.removeGlobalLocationMap(source);
+    }
+
+    // Get Global Location Map
+    @Operation(summary = "Get GLM's")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GLM's retrieved",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Map.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cluster not found",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/globalLocationMap/list")
+    public Map<String, String> getGlobalLocationMaps() {
+        log.info("Getting global location maps");
+        return translatorService.getGlobalLocationMap();
+    }
+
+
 }

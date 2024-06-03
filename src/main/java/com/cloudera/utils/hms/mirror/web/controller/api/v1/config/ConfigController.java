@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -602,8 +603,7 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer/storageMigration")
     public StorageMigration setStorageMigration(@RequestParam(name = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "strategy", required = false) DataStrategyEnum strategy,
-            @RequestParam(value = "distcp", required = false) Boolean distcp,
+            @RequestParam(value = "dataMovementStrategy", required = false) DataMovementStrategyEnum dataMovementStrategy,
             @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow,
             @RequestParam(value = "strict", required = false) Boolean strict
     ) {
@@ -618,13 +618,9 @@ public class ConfigController {
             throw new RuntimeException("Cannot change config while a session running.");
         }
 
-        if (strategy != null) {
-            log.info("{}: Setting Storage Migration 'strategy' to: {}", sessionId, strategy);
-            storageMigration.setStrategy(strategy);
-        }
-        if (distcp != null) {
-            log.info("{}: Setting Storage Migration 'distcp' to: {}", sessionId, distcp);
-            storageMigration.setDistcp(distcp);
+        if (dataMovementStrategy != null) {
+            log.info("{}: Setting Storage Migration 'dataMovementStrategy' to: {}", sessionId, dataMovementStrategy);
+            storageMigration.setDataMovementStrategy(dataMovementStrategy);
         }
         if (dataFlow != null) {
             log.info("{}: Setting Storage Migration 'dataFlow' to: {}", sessionId, dataFlow);

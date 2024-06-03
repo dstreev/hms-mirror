@@ -35,7 +35,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_epl",
                 "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.hdp2-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.migrate-acid=true",

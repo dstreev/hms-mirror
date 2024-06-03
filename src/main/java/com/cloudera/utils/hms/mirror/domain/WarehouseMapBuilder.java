@@ -22,9 +22,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -48,10 +46,16 @@ public class WarehouseMapBuilder implements Cloneable {
         - I think it should be the base location.
 
      */
-    private Map<String, Warehouse> warehousePlan = new HashMap<>();
+    private Map<String, Warehouse> warehousePlans = new HashMap<>();
+
+    public Map<String, Warehouse> getWarehousePlans() {
+        if (warehousePlans == null)
+            warehousePlans = new HashMap<>();
+        return warehousePlans;
+    }
 
     public void clearWarehousePlan() {
-        warehousePlan.clear();
+        warehousePlans.clear();
     }
 
     public void clearSources() {
@@ -68,11 +72,11 @@ public class WarehouseMapBuilder implements Cloneable {
         /*
         Add the database and the desired warehousebase to the map.
          */
-        return warehousePlan.put(database, warehouseBase);
+        return warehousePlans.put(database, warehouseBase);
     }
 
     public Warehouse removeWarehousePlan(String database) {
-        return warehousePlan.remove(database);
+        return warehousePlans.remove(database);
     }
 
     /*
@@ -145,10 +149,10 @@ public class WarehouseMapBuilder implements Cloneable {
         clone.setSources(newSources);
 
         Map<String, Warehouse> newWarehousePlan = new HashMap<>();
-        for (Map.Entry<String, Warehouse> entry : warehousePlan.entrySet()) {
+        for (Map.Entry<String, Warehouse> entry : warehousePlans.entrySet()) {
             newWarehousePlan.put(entry.getKey(), (Warehouse) entry.getValue().clone());
         }
-        clone.setWarehousePlan(newWarehousePlan);
+        clone.setWarehousePlans(newWarehousePlan);
 
         return super.clone();
     }

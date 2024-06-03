@@ -38,9 +38,9 @@ import static org.junit.Assert.fail;
                 "--hms-mirror.config.external-warehouse-directory=/finance/external-fso",
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.distcp=PULL",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.reset-to-default-location=true",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_rdl_dc"
         }
 )
@@ -112,17 +112,17 @@ public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
     @Test
     public void sqlTest() {
         if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Location",
-                "ALTER TABLE web_sales SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
+                "ALTER TABLE web_sales SET LOCATION \"hdfs://HOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
             fail("Alter Table Location not found");
         }
         if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales",
                 "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
+                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"hdfs://HOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
             fail("Alter Table Partition Location not found");
         }
         if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales",
                 "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451188\"")) {
+                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"hdfs://HOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451188\"")) {
             fail("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location");
         }
     }

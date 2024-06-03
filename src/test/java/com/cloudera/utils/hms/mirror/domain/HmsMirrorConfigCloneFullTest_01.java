@@ -170,7 +170,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
         assertEquals(clone.getTransfer().getIntermediateStorage(), hmsMirrorConfig.getTransfer().getIntermediateStorage());
         assertEquals(clone.getTransfer().getCommonStorage(), hmsMirrorConfig.getTransfer().getCommonStorage());
         // Transfer Storage Migration
-        assertEquals(clone.getTransfer().getStorageMigration().getStrategy(), hmsMirrorConfig.getTransfer().getStorageMigration().getStrategy());
+        assertEquals(clone.getTransfer().getStorageMigration().getDataMovementStrategy(), hmsMirrorConfig.getTransfer().getStorageMigration().getDataMovementStrategy());
         assertEquals(clone.getTransfer().getStorageMigration().isDistcp(), hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp());
         assertEquals(clone.getTransfer().getStorageMigration().getDataFlow(), hmsMirrorConfig.getTransfer().getStorageMigration().getDataFlow());
         // Transfer Warehouse

@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
+package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
@@ -38,9 +38,9 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
                 "--hms-mirror.config.force-external-location=true",
                 "--hms-mirror.config.global-location-map=/warehouse/tablespace/managed=/warehouseEC/managed",
-                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/sm_ma_wd_dc_at_fel"
+                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_02.yaml",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_wd_dc_at_fel"
         })
 @Slf4j
 public class Test_sm_ma_wd_dc_at_fel extends E2EBaseTest {
@@ -49,8 +49,8 @@ public class Test_sm_ma_wd_dc_at_fel extends E2EBaseTest {
 //                "-ma",
 //                "-dc",
 //                "-fel",
-//                "-wd", "/warehouseEC/managed/hive", "-ewd", "/warehouse/external",
-//                "-glm", "/warehouse/tablespace/managed=/warehouseEC/managed",
+//                "-wd", "/warehouseEC/managedDirectory/hive", "-ewd", "/warehouse/external",
+//                "-glm", "/warehouse/tablespace/managedDirectory=/warehouseEC/managed",
 //                "-ltd", ACID_W_PARTS_05,
 //                "-cfg", CDP_CDP,
 //                "-o", outputDir
@@ -66,7 +66,7 @@ public class Test_sm_ma_wd_dc_at_fel extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = getCheckCode(MessageCode.DISTCP_REQUIRES_EPL);
+        long check = getCheckCode();
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 

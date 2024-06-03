@@ -21,22 +21,22 @@ import lombok.Getter;
 import lombok.Setter;
 
 /*
-The Warehouse Base is the location base for a databases external and managed locations. The locations
+The Warehouse Base is the location base for a databases external and managedDirectory locations. The locations
 should NOT include the database name.  The database name will be appended to the location when the process
 is run.
  */
 @Setter
 @Getter
 public class Warehouse implements Cloneable {
-    private String external;
-    private String managed;
+    private String externalDirectory;
+    private String managedDirectory;
 
     public Warehouse() {
     }
 
-    public Warehouse(String external, String managed) {
-        this.external = external;
-        this.managed = managed;
+    public Warehouse(String externalDirectory, String managedDirectory) {
+        this.externalDirectory = externalDirectory;
+        this.managedDirectory = managedDirectory;
     }
 
     @Override

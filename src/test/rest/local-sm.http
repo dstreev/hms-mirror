@@ -10,8 +10,27 @@ Accept: application/json
 
 ###
 
-PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/properties?dataStrategy=STORAGE_MIGRATION&evaluatePartitionLocation=true
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/properties?dataStrategy=STORAGE_MIGRATION
 Accept:application/json
+
+###
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/properties?evaluatePartitionLocation=false
+Accept:application/json
+
+### Set the Common Storage Location for the STORAGE_MIGRATION
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer?commonStorage=ofs%3A%2F%2FOHOME90
+Accept: application/json
+
+### Set distcp
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/storageMigration?distcp=false
+Accept: application/json
+
+### Set Warehouse Directories
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/warehouse?managedDirectory=%2Ftest%2Fmngd&externalDirectory=%2Ftest%2Fext
 
 ### Review the Config
 
@@ -25,17 +44,48 @@ Accept: application/json
 
 ### Add a new warehouse plan
 
-PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/tpcds_bin_partitioned_orc_10/warehousePlan?externalLocation=%2Ffinance%2Fdata-ext&managedLocation=%2Ffinance%2Fdata-mngd
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/m01/warehousePlan?externalLocation=%2Ftest%2Fext&managedLocation=%2Ftest%2Fmngd
 Accept: application/json
 
 ### Add a new warehouse plan
 
-PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/sm_orders/warehousePlan?externalLocation=%2Fmarketing%2Fdata-ext&managedLocation=%2Fmarketing%2Fdata-mngd
-Accept: application/json
+#PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/sm_orders/warehousePlan?externalDirectory=%2Fmarketing%2Fdata-ext&managedDirectory=%2Fmarketing%2Fdata-mngd
+#Accept: application/json
 
 ### Build Sources
 
 GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/buildSources
 Accept: application/json
 
+### Manually Add GLM Entry
+
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fexternal%2Fhive&target=%2Ftest%2Fext
+Accept: application/json
+
+### Manually Add GLM Entry
+
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fmanaged%2Fhive&target=%2Ftest%2Fmngd
+Accept: application/json
+
 ###
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap/list
+Accept: application/json
+
+### Dry Run
+
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/start?dryrun=false
+Accept: application/json
+
+### Get Run Status
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/runStatus/
+Accept: application/json
+
+### List Reports
+
+
+
+
+
+

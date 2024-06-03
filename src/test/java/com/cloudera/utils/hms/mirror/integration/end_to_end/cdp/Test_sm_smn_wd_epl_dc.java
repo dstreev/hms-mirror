@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
                 "--hms-mirror.config.warehouse-directory=/finance/managed-fso",
@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.storage-migration-strict=true",
                 "--hms-mirror.config.distcp=PULL",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp"
+                "--hms-mirror.config.filename=/config/default.yaml.cdp"
         })
 @Slf4j
 /*

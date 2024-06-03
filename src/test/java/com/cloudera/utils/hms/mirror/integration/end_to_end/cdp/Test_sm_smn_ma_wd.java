@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
+package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
@@ -32,19 +32,19 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
                 "--hms-mirror.config.storage-migration-namespace=s3a://my_cs_bucket",
-                "--hms-mirror.config.migrate-acid=4",
+                "--hms-mirror.config.migrate-acid=true",
                 "--hms-mirror.config.warehouse-directory=/warehouse/managed",
                 "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
-                "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/sm_smn_ma_4_wd"
+                "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_02.yaml",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_ma_wd"
         })
 @Slf4j
-public class Test_sm_smn_ma_4_wd extends E2EBaseTest {
-    //        String[] args = new String[]{
+public class Test_sm_smn_ma_wd extends E2EBaseTest {
+//        String[] args = new String[]{
 //                "-d", "STORAGE_MIGRATION",
 //                "-smn", COMMON_STORAGE,
-//                "-ma", "4",
+//                "-ma",
 //                "-wd", "/warehouse/managed", "-ewd", "/warehouse/external",
 //                "-ltd", ASSORTED_TBLS_04,
 //                "-cfg", CDP_CDP,
@@ -57,13 +57,14 @@ public class Test_sm_smn_ma_4_wd extends E2EBaseTest {
 //        rtn = mirror.go(args);
 //        int check = 0;
 //        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
         long check = 0L;
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 //    @Test

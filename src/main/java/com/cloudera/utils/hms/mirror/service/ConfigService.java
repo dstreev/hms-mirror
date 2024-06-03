@@ -116,6 +116,7 @@ public class ConfigService {
                         hmsMirrorConfig.getOptimization().setSkipStatsCollection(Boolean.TRUE);
                         break;
                     case STORAGE_MIGRATION:
+                        // TODO: This might be helpful to get so we can be more clear with the distcp process. EG: Mapper count.
                         if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
                             hmsMirrorConfig.getOptimization().setSkipStatsCollection(Boolean.TRUE);
                         }
@@ -268,7 +269,18 @@ public class ConfigService {
 
         switch (hmsMirrorConfig.getDataStrategy()) {
             case DUMP:
+                break;
             case STORAGE_MIGRATION:
+                // Ensure we have the metastore_direct config set.
+                if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+                    runStatus.addError(STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY, Environment.LEFT);
+                    rtn = Boolean.FALSE;
+                }
+                if (hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                    runStatus.addError(METASTORE_DIRECT_CONFIG, Environment.LEFT);
+                    rtn = Boolean.FALSE;
+                }
+                break;
             case ICEBERG_CONVERSION:
                 break;
             default:
@@ -319,10 +331,23 @@ public class ConfigService {
                 runStatus.addError(RESET_TO_DEFAULT_LOCATION);
                 rtn = Boolean.FALSE;
             }
-            if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                    hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null) {
-                runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
-                rtn = Boolean.FALSE;
+            switch (hmsMirrorConfig.getDataStrategy()) {
+                case STORAGE_MIGRATION:
+                    // Need to check that we've set some database Warehouse Plans.
+                    if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null ||
+                            hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                        if (hmsMirrorConfig.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+                            runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                            rtn = Boolean.FALSE;
+                        }
+                    }
+                    break;
+                default:
+                    if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null ||
+                            hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                        runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                        rtn = Boolean.FALSE;
+                    }
             }
             if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
                 runStatus.addWarning(RDL_DC_WARNING_TABLE_ALIGNMENT);

@@ -72,8 +72,9 @@ public class Test_sm_ma_dc extends E2EBaseTest {
         long actual = getReturnCode();
         // Verify the return code.
         long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS,
-                MessageCode.DISTCP_REQUIRES_EPL,
-                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM);
+                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM,
+                MessageCode.METASTORE_DIRECT_CONFIG,
+                MessageCode.STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY);
 
         assertEquals("Return Code Failure: ", expected, actual);
 

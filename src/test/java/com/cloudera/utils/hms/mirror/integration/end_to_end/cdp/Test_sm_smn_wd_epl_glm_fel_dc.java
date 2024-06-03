@@ -37,7 +37,7 @@ import static org.junit.Assert.fail;
         args = {
                 "--hms-mirror.config.force-external-location=true",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_glm_fel_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso"
 
         })

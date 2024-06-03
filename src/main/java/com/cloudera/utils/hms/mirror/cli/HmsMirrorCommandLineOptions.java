@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
 import com.cloudera.utils.hms.mirror.domain.WarehouseConfig;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
@@ -308,7 +309,7 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configDistcpTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
             log.info("distcp: {}", Boolean.FALSE);
-            hmsMirrorConfig.getTransfer().getStorageMigration().setDistcp(Boolean.FALSE);
+            hmsMirrorConfig.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
         };
     }
 
@@ -321,9 +322,8 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("distcp: {}", value);
             if (Boolean.parseBoolean(value)) {
-                hmsMirrorConfig.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
+                hmsMirrorConfig.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
             } else {
-                hmsMirrorConfig.getTransfer().getStorageMigration().setDistcp(Boolean.TRUE);
                 String flowStr = value;
                 if (flowStr != null) {
                     try {
@@ -334,6 +334,7 @@ public class HmsMirrorCommandLineOptions {
                                 Arrays.toString(DistcpFlow.values()), iae);
                     }
                 }
+                hmsMirrorConfig.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
             }
         };
     }

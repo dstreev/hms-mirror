@@ -119,8 +119,7 @@ transfer:
   intermediateStorage: "s3a://my_special_bucket"
   commonStorage: "hdfs://HDP50"
   storageMigration:
-    strategy: "EXPORT_IMPORT"
-    distcp: true
+    dataMovementStrategy: "EXPORT_IMPORT"
     dataFlow: "PUSH"
   warehouse:
     managedDirectory: "/my/managed/warehouse"

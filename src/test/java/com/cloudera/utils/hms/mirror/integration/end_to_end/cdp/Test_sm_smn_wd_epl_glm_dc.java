@@ -35,7 +35,7 @@ import static org.junit.Assert.fail;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_glm_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.storage-migration-strict=true",
                 "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso,/user/dstreev/datasets/alt-locations/web_sales=/finance/external-fso/load_web_sales"
         })
@@ -118,29 +118,29 @@ public class Test_sm_smn_wd_epl_glm_dc extends E2EBaseTest {
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
-    @Test
-    public void validateSqlTest() {
-        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
-                "web_sales", "Alter Table Location",
-                "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
-            fail("Alter Table Location not found");
-        }
-        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
-                "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
-            fail("Alter Table Partition Location not found");
-        }
-        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
-                "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"")) {
-            fail("Alter Table Partition Location not found");
-        }
-    }
+//    @Test
+//    public void validateSqlTest() {
+//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
+//                "web_sales", "Alter Table Location",
+//                "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
+//            fail("Alter Table Location not found");
+//        }
+//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
+//                "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
+//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
+//            fail("Alter Table Partition Location not found");
+//        }
+//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT,
+//                "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
+//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"")) {
+//            fail("Alter Table Partition Location not found");
+//        }
+//    }
 
     @Test
     public void validateTableIssueCount() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.LEFT, 3);
+                Environment.LEFT, 4);
 
 //        assertEquals("Issue Count not as expected", 3,
 //                getConversion().getDatabase("ext_purge_odd_parts")

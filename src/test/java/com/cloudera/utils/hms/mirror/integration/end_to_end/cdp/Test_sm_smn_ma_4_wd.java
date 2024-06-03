@@ -30,34 +30,40 @@ import static org.junit.Assert.assertEquals;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = Mirror.class,
         args = {
-                "--hms-mirror.config.common-storage=s3a://my_cs_bucket",
-                "--hms-mirror.config.distcp=true",
-                "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/so_cs_dc"
+                "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
+                "--hms-mirror.config.storage-migration-namespace=s3a://my_cs_bucket",
+                "--hms-mirror.config.migrate-acid=4",
+                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
+                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
+                "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_02.yaml",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_ma_4_wd"
         })
 @Slf4j
-public class Test_so_cs_dc extends E2EBaseTest {
+public class Test_sm_smn_ma_4_wd extends E2EBaseTest {
     //        String[] args = new String[]{
-//                "-cs", "s3a://my_common_storage",
-//                "--distcp",
+//                "-d", "STORAGE_MIGRATION",
+//                "-smn", COMMON_STORAGE,
+//                "-ma", "4",
+//                "-wd", "/warehouse/managed", "-ewd", "/warehouse/external",
 //                "-ltd", ASSORTED_TBLS_04,
 //                "-cfg", CDP_CDP,
 //                "-o", outputDir
 //        };
 //
+//
 //        long rtn = 0;
 //        MirrorLegacy mirror = new MirrorLegacy();
 //        rtn = mirror.go(args);
 //        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
+//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
         long check = 0L;
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 //    @Test

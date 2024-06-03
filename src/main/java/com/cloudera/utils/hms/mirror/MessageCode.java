@@ -56,7 +56,8 @@ public enum MessageCode {
     STORAGE_MIGRATION_REQUIRED_STRATEGY(19, "STORAGE_MIGRATION requires -sms to set the Data Strategy.  Applicable options " +
             "are SCHEMA_ONLY, SQL, EXPORT_IMPORT, or HYBRID"),
     STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS(20, "STORAGE_MIGRATION requires you to specify PATH location for " +
-            "'managed' and 'external' tables (-wd, -ewd) to migrate storage.  These will be appended to the -smn " +
+            "'managed' and 'external' tables (-wd, -ewd) to migrate storage OR define a warehouse plan for each database " +
+            "you plan to migrate.  These will be appended to the -smn " +
             "(storage-migration-namespace) parameter and used to set the 'database' LOCATION and MANAGEDLOCATION properties"),
     RIGHT_HS2_DEFINITION_MISSING(21, "The 'RIGHT' HS2 definition is missing.  Only STORAGE_MIGRATION or DUMP strategies allow " +
             "that definition to be skipped."),
@@ -201,7 +202,11 @@ public enum MessageCode {
     STORAGE_MIGRATION_STRICT(99, "Storage Migration is in 'strict' mode.  If the table and/or partition locations can't "
             + "be mapped to the warehouse locations or are covered by a Global Location Map entry, we can't process the table "
             + "without potential data loss.  Add additional 'global-location-map' entries to cover the locations or "
-            + "consider use the 'reset-to-default-location' option to collect all table data under the warehouse directory.");
+            + "consider use the 'reset-to-default-location' option to collect all table data under the warehouse directory."),
+    METASTORE_DIRECT_CONFIG(100, "The metastore_direct is not configured for the {0} cluster.  It is required when using " +
+            "`-epl|--evaluate-partition-location` and/or the STORAGE_MIGRATION datastrategy. Without it we can't efficiently " +
+            "evaluate the partition locations or build the storage migration plans."),
+    STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY(101, "Storage Migration is NOT available for Legacy Hive.");
 
     private int code = 0;
     private String desc = null;

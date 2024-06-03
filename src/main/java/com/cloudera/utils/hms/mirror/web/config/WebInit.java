@@ -92,7 +92,7 @@ public class WebInit {
     CommandLineRunner configOutputDirInternal(String value) {
         return args -> {
             log.info("output-dir: {}", value);
-            executeSessionService.setReportOutputDirectory(value);
+            executeSessionService.setReportOutputDirectory(value, true);
             File reportPathDir = new File(value);
             if (!reportPathDir.exists()) {
                 reportPathDir.mkdirs();

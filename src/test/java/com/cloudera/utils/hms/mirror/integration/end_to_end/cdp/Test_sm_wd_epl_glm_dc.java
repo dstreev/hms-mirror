@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_glm_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts.yaml",
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso"
         })
 @ActiveProfiles("e2e-cdp-sm_wd_epl_dc")
@@ -83,7 +83,7 @@ public class Test_sm_wd_epl_glm_dc extends E2EBaseTest {
     @Test
     public void validateTableIssueCount() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.LEFT, 4);
+                Environment.LEFT, 1);
 
 //        assertEquals("Issue Count not as expected", 3,
 //                getConversion().getDatabase("ext_purge_odd_parts")

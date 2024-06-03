@@ -95,13 +95,13 @@ public class DatabaseService {
     public Warehouse getWarehousePlan(String database) {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-        return warehouseMapBuilder.getWarehousePlan().get(database);
+        return warehouseMapBuilder.getWarehousePlans().get(database);
     }
 
     public Map<String, Warehouse> getWarehousePlans() {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-        return warehouseMapBuilder.getWarehousePlan();
+        return warehouseMapBuilder.getWarehousePlans();
     }
 
     public void clearWarehousePlan() {
@@ -121,7 +121,7 @@ public class DatabaseService {
             throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
         }
 
-        for (String database: warehouseMapBuilder.getWarehousePlan().keySet()) {
+        for (String database: warehouseMapBuilder.getWarehousePlans().keySet()) {
             hmsMirrorConfig.getTranslator().removeDatabaseFromTranslationMap(database);
             loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
         }

@@ -35,8 +35,8 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_epl_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.hdp2-cdp",
+                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_02.yaml",
+                "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.reset-to-default-location=true",
                 "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.migrate-acid=true",
@@ -88,11 +88,11 @@ public class Test_sm_ma_parts_epl_dc extends E2EBaseTest {
                 .getTableMirrors().get("acid_03")
                 .getEnvironmentTable(Environment.LEFT).getSql()) {
             if (pair.getDescription().trim().equals("Alter Table Location")) {
-                assertEquals("Location doesn't match", "ALTER TABLE acid_03 SET LOCATION \"hdfs://HDP50/new/warehouse/managed/assort_test_db.db/acid_03\"", pair.getAction());
+                assertEquals("Location doesn't match", "ALTER TABLE acid_03 SET LOCATION \"hdfs://HOME90/new/warehouse/managed/assort_test_db.db/acid_03\"", pair.getAction());
                 foundAT = Boolean.TRUE;
             }
             if (pair.getDescription().trim().equals("Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location")) {
-                assertEquals("Location doesn't match", "ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"hdfs://HDP50/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"", pair.getAction());
+                assertEquals("Location doesn't match", "ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"hdfs://HOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"", pair.getAction());
                 foundOddPart = Boolean.TRUE;
             }
 //            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location")) {

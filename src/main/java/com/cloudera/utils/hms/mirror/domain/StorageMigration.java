@@ -18,6 +18,8 @@
 package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,9 +30,7 @@ import lombok.Setter;
 public class StorageMigration implements Cloneable {
 
     @Schema(description = "Data movement strategy")
-    private DataStrategyEnum strategy = DataStrategyEnum.SQL;
-    @Schema(description = "Whether or not to use distcp for data movement")
-    private boolean distcp = Boolean.FALSE;
+    private DataMovementStrategyEnum dataMovementStrategy = DataMovementStrategyEnum.SQL;
     @Schema(description = "Data flow direction for distcp. This control from where the 'distcp' jobs should be run.")
     private DistcpFlow dataFlow = DistcpFlow.PULL;
     @Schema(description = "When strict is true, any issues during evaluation will cause the migration to fail. When false, " +
@@ -48,16 +48,8 @@ public class StorageMigration implements Cloneable {
         }
     }
 
-    public void setStrategy(DataStrategyEnum strategy) {
-        switch (strategy) {
-            case SQL:
-            case EXPORT_IMPORT:
-            case HYBRID:
-                this.strategy = strategy;
-                break;
-            default:
-                throw new RuntimeException("Invalid strategy for STORAGE_MIGRATION");
-        }
+    @JsonIgnore
+    public boolean isDistcp() {
+        return dataMovementStrategy == DataMovementStrategyEnum.DISTCP;
     }
-
 }

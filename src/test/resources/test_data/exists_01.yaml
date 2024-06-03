@@ -63,7 +63,7 @@ databases:
             - "OUTPUTFORMAT"
             - "'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'"
             - "LOCATION"
-            - "'hdfs://HOME90/warehouse/tablespace/managed/hive/merge_files_migrate.db/acid_01'"
+            - "'hdfs://HOME90/warehouse/tablespace/managedDirectory/hive/merge_files_migrate.db/acid_01'"
             - "TBLPROPERTIES ("
             - "'bucketing_version'='2',"
             - "'hms-mirror_Metadata_Stage1'='2023-07-27 09:20:29',"

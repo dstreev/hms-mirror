@@ -41,6 +41,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.cloudera.utils.hms.mirror.MessageCode.METASTORE_DIRECT_CONFIG;
 import static com.cloudera.utils.hms.mirror.connections.ConnectionPoolTypes.HYBRID;
 import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
 
@@ -456,11 +457,15 @@ public class HmsMirrorConfig implements Cloneable {
 
     public void setDataStrategy(DataStrategyEnum dataStrategy) {
         this.dataStrategy = dataStrategy;
-        if (this.dataStrategy != null &&
-                this.dataStrategy == DataStrategyEnum.DUMP) {
-            this.getMigrateACID().setOn(Boolean.TRUE);
-            this.getMigrateVIEW().setOn(Boolean.TRUE);
-            this.setMigratedNonNative(Boolean.TRUE);
+        if (this.dataStrategy != null) {
+            if (this.dataStrategy == DataStrategyEnum.DUMP) {
+                this.getMigrateACID().setOn(Boolean.TRUE);
+                this.getMigrateVIEW().setOn(Boolean.TRUE);
+                this.setMigratedNonNative(Boolean.TRUE);
+            } else if (this.dataStrategy == STORAGE_MIGRATION) {
+                getMigrateACID().setOn(Boolean.TRUE);
+                setEvaluatePartitionLocation(Boolean.TRUE);
+            }
         }
     }
 
