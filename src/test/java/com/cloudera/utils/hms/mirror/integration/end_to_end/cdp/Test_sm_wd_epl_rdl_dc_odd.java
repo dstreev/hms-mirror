@@ -40,8 +40,8 @@ import static org.junit.Assert.fail;
                 "--hms-mirror.config.distcp=PULL",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.reset-to-default-location=true",
-                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_parts_01.yaml",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_rdl_dc"
+                "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_rdl_dc_odd"
         }
 )
 @Slf4j
@@ -55,7 +55,7 @@ with -rdl, the default location is reset to the new warehouse directory.
 There should be no issue now that the default location is reset to the new warehouse directory.
 
  */
-public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
+public class Test_sm_wd_epl_rdl_dc_odd extends E2EBaseTest {
 
     //        String[] args = new String[]{"-d", "STORAGE_MIGRATION",
 //                "-wd", "/finance/managed-fso",
@@ -93,12 +93,12 @@ public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
 
     @Test
     public void issueCountTest() {
-        validateTableIssueCount("ext_purge_odd_parts", "web_sales", Environment.LEFT, 0);
+        validateTableIssueCount("ext_purge_odd_parts", "web_sales", Environment.LEFT, 2);
     }
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.SUCCESS);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.ERROR);
     }
 
     @Test
@@ -106,7 +106,7 @@ public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        assertEquals("Return Code Failure: " + rtn, 0L, rtn);
+        assertEquals("Return Code Failure: " + rtn, 1L, rtn);
     }
 
     @Test

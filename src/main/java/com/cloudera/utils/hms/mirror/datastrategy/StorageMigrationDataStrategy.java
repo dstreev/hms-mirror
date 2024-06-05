@@ -269,6 +269,34 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                         // Translate to 'partition spec'.
                         partSpec = TableUtils.toPartitionSpec(partSpec);
                         String partLocation = entry.getValue();
+                        // If they are doing distcp, the partition location must match the partition spec in order to
+                        // make a valid translation.
+                        String normalizedPartSpecLocation = TableUtils.getDirectoryFromPartitionSpec(partSpec);
+                        if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
+                            if (!partLocation.endsWith(normalizedPartSpecLocation)) {
+                                // The partition location does not match the partition spec.  This is required for distcp to work properly.
+                                // (i.e. /user/hive/warehouse/db/table/odd does NOT match partition spec partition=1)
+                                String msg = MessageFormat.format(MessageCode.DISTCP_WITH_MISMATCHING_LOCATIONS.getDesc(),
+                                        "Partition", partSpec, partLocation, normalizedPartSpecLocation);
+                                tableMirror.addIssue(Environment.LEFT, msg);
+                                noIssues = Boolean.FALSE;
+                                continue;
+                            } else {
+                                // Since the partition location matches the partition spec, we also need
+                                // to verify that the directory the partition is in, matches the table name
+                                // so the distcp can work properly.
+                                String tableDir = partLocation.substring(0, partLocation.length() - normalizedPartSpecLocation.length() - 1);
+                                String tableDirName = tableDir.substring(tableDir.lastIndexOf("/") + 1);
+                                if (!tableDirName.equals(tableMirror.getName())) {
+                                    // The directory name matches the table name.  This is required for distcp to work properly.
+                                    String msg = MessageFormat.format(MessageCode.DISTCP_WITH_MISMATCHING_TABLE_LOCATION.getDesc(),
+                                            "Partition", partSpec, partLocation, tableDirName);
+                                    tableMirror.addIssue(Environment.LEFT, msg);
+                                    noIssues = Boolean.FALSE;
+                                    continue;
+                                }
+                            }
+                        }
                         try {
                             String newPartLocation = getTranslatorService().
                                     translateTableLocation(tableMirror, partLocation, ++level, entry.getKey());

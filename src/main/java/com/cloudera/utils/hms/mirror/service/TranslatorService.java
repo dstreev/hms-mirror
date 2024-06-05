@@ -19,9 +19,8 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
@@ -347,4 +346,64 @@ public class TranslatorService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
+
+    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        Translator translator = hmsMirrorConfig.getTranslator();
+        Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
+
+        WarehouseMapBuilder warehouseMapBuilder = translator.getWarehouseMapBuilder();
+        Map<String, Warehouse> warehousePlans = warehouseMapBuilder.getWarehousePlans();
+        Map<String, SourceLocationMap> sources = translator.getWarehouseMapBuilder().getSources();
+
+        /*
+         What do we have:
+         1. Warehouse Plans (database, <external, managed>)
+         2. Sources (database, <table_type, <location, tables>>)
+
+        Build these by the database. So use the 'warehousePlans' as the base. For each warehouse plan
+        database, get the external and managed locations.
+
+        Now get the sources for the database.  For each *table type* go through the locations (reduce the location by the consolidation level).
+            - The current level in the location is the database location, most likely. So by default, we should
+                reduce the location by 1.
+            - If the location is the equal to or starts with the warehouse location, then we don't need a glm for this.
+            - If the location is different and they have specified `reset-to-default-location` then we need to add a glm
+                for this that is the location (reduced by consolidation level) and the warehouse location.
+
+
+        */
+        return null;
+    }
+//        // Clear the global location map.
+//        globalLocationMap.clear();
+//        orderedGlobalLocationMap.clear();
+//
+//        // Iterate over the warehouse plans and build the global location map.
+//        for (Map.Entry<String, Warehouse> warehouseEntry : warehousePlans.entrySet()) {
+//            String database = warehouseEntry.getKey();
+//            Warehouse warehouse = warehouseEntry.getValue();
+//            String externalBaseLocation = warehouse.getExternalDirectory();
+//            String managedBaseLocation = warehouse.getManagedDirectory();
+//            SourceLocationMap locationMap = sources.get(database);
+//            if (locationMap != null) {
+//                for (Map.Entry<String, String> locationEntry : locationMap.entrySet()) {
+//                    String location = locationEntry.getKey();
+//                    String reducedLocation = UrlUtils.reduceUrlBy(location, consolidationLevel);
+//                    if (externalBaseLocation != null) {
+//                        String externalLocation = externalBaseLocation + "/" + database + ".db";
+//                        globalLocationMap.put(reducedLocation, externalLocation);
+//                        orderedGlobalLocationMap.put(reducedLocation, externalLocation);
+//                    }
+//                    if (managedBaseLocation != null) {
+//                        String managedLocation = managedBaseLocation + "/" + database + ".db";
+//                        globalLocationMap.put(reducedLocation, managedLocation);
+//                        orderedGlobalLocationMap.put(reducedLocation, managedLocation);
+//                    }
+//                }
+//            }
+//        }
+//        return globalLocationMap;
+//    }
+
 }

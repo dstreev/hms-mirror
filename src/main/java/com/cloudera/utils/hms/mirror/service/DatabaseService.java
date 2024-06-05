@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
@@ -110,11 +111,17 @@ public class DatabaseService {
         warehouseMapBuilder.clearWarehousePlan();
     }
 
-    // Look at the Warehouse Plans and pull the databases from the WarehouseMapBuilder.
+    // Look at the Warehouse Plans and pull the database/table/partition locations the metastore.
     public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+
+        // Check to see if there are any warehouse plans defined.  If not, skip this process.
+        if (warehouseMapBuilder.getWarehousePlans().isEmpty()) {
+            log.warn("No Warehouse Plans defined.  Skipping building out the database sources.");
+            throw new RequiredConfigurationException("No Warehouse Plans defined.  Skipping building out the database sources.");
+        }
 
         // Need to have this set to ensure we're picking everything up.
         if (!hmsMirrorConfig.isEvaluatePartitionLocation()) {
@@ -122,7 +129,9 @@ public class DatabaseService {
         }
 
         for (String database: warehouseMapBuilder.getWarehousePlans().keySet()) {
+            // Reset the database in the translation map.
             hmsMirrorConfig.getTranslator().removeDatabaseFromTranslationMap(database);
+            // Load the database locations.
             loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
         }
 

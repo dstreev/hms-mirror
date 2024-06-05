@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1011,4 +1012,17 @@ public class TableUtils {
         }
     }
 
+    public static String getDirectoryFromPartitionSpec(String partitionSpec) {
+        String rtn = null;
+        String[] parts = partitionSpec.split("/");
+        StringBuilder sb = new StringBuilder();
+        List<String> partList = new ArrayList<>();
+        for (String part: parts) {
+            String nPart = part.replace("`", "");
+            nPart = nPart.replace("'", "");
+            partList.add(nPart);
+        }
+        rtn = String.join("/", partList);
+        return rtn;
+    }
 }

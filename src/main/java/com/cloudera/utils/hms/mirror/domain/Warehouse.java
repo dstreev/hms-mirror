@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -28,7 +29,11 @@ is run.
 @Setter
 @Getter
 public class Warehouse implements Cloneable {
+    @Schema(description = "The external directory location for the database.  This directory should NOT contain the database name, " +
+            "the database name will be appended to the location when the process is run.")
     private String externalDirectory;
+    @Schema(description = "The managed directory location for the database.  This directory should NOT contain the database name, " +
+            "the database name will be appended to the location when the process is run.")
     private String managedDirectory;
 
     public Warehouse() {

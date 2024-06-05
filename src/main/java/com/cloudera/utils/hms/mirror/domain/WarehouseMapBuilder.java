@@ -20,12 +20,14 @@ package com.cloudera.utils.hms.mirror.domain;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Getter
 @Setter
+@Slf4j
 public class WarehouseMapBuilder implements Cloneable {
 
     /*
@@ -68,6 +70,17 @@ public class WarehouseMapBuilder implements Cloneable {
     The locations are the 'base' locations.  This means that the location does NOT include the database name.
      */
     public Warehouse addWarehousePlan(String database, String externalBaseLocation, String managedBaseLocation) {
+        // Check the incoming directories and if the database name is included, remove it.
+        if (externalBaseLocation.endsWith("/" + database + ".db")) {
+            log.warn("The externalBaseLocation includes the database name.  Removing the database name from the location. " +
+                    "It will be added back when the process is run.");
+            externalBaseLocation = externalBaseLocation.substring(0, externalBaseLocation.length() - database.length() - 1);
+        }
+        if (managedBaseLocation.endsWith("/" + database + ".db")) {
+            log.warn("The managedBaseLocation includes the database name.  Removing the database name from the location. " +
+                    "It will be added back when the process is run.");
+            managedBaseLocation = managedBaseLocation.substring(0, managedBaseLocation.length() - database.length() - 1);
+        }
         Warehouse warehouseBase = new Warehouse(externalBaseLocation, managedBaseLocation);
         /*
         Add the database and the desired warehousebase to the map.

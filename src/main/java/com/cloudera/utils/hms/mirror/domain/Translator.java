@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
+import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
@@ -38,8 +39,7 @@ public class Translator implements Cloneable {
 
     @JsonIgnore
     private final Map<String, EnvironmentMap> translationMap = new TreeMap<>();
-//    @JsonIgnore
-//    private HmsMirrorConfig hmsMirrorConfig;
+
     /*
     Use this to force the location element in the external table create statements and
     not rely on the database 'location' element.
@@ -134,23 +134,7 @@ public class Translator implements Cloneable {
     // to ensure that the longest path is replaced first.
     public Map<String, String> getOrderedGlobalLocationMap() {
         if (orderedGlobalLocationMap == null) {
-            Comparator<String> stringLengthComparator = new Comparator<String>() {
-                // return comparison of two strings, first by length then by value.
-                public int compare(String k1, String k2) {
-                    int comp = 0;
-                    if (k1.length() > k2.length()) {
-                        comp = -1;
-                    } else if (k1.length() == k2.length()) {
-                        comp = 0;
-                    } else {
-                        comp = 1;
-                    }
-                    if (comp == 0)
-                        comp = k1.compareTo(k2);
-                    return comp;
-                }
-            };
-            orderedGlobalLocationMap = new TreeMap<String, String>(stringLengthComparator);
+            orderedGlobalLocationMap = new TreeMap<String, String>(new StringLengthComparator());
             // Add the global location map to the ordered map.
             if (globalLocationMap != null)
                 orderedGlobalLocationMap.putAll(globalLocationMap);

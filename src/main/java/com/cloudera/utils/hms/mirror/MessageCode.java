@@ -199,14 +199,23 @@ public enum MessageCode {
     RO_VALID_STRATEGIES(96, "Read-Only (RO) option only valid with SCHEMA_ONLY, LINKED, SQL, and COMMON data strategies."),
     DECRYPTED_CONFIG_PASSWORDS(97, "Decrypted Config Passwords"),
     DECRYPTING_CONFIG_PASSWORDS_ISSUE(98, "Issue decrypting config passwords"),
-    STORAGE_MIGRATION_STRICT(99, "Storage Migration is in 'strict' mode.  If the table and/or partition locations can't "
-            + "be mapped to the warehouse locations or are covered by a Global Location Map entry, we can't process the table "
-            + "without potential data loss.  Add additional 'global-location-map' entries to cover the locations or "
-            + "consider use the 'reset-to-default-location' option to collect all table data under the warehouse directory."),
+    STORAGE_MIGRATION_STRICT(99, "Storage Migration is in 'strict' mode (only supported method currently).  If the table and/or partition locations can't "
+            + "be mapped to the warehouse locations or there are mismatches in location standards, we can't process the table "
+            + "without potential data loss.  Add additional 'global-location-map' entries to cover the locations."
+            + "Mismatched directories or non-standard partition locations can only be handled through the " +
+            "SQL dataMovementStategy."),
     METASTORE_DIRECT_CONFIG(100, "The metastore_direct is not configured for the {0} cluster.  It is required when using " +
             "`-epl|--evaluate-partition-location` and/or the STORAGE_MIGRATION datastrategy. Without it we can't efficiently " +
             "evaluate the partition locations or build the storage migration plans."),
-    STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY(101, "Storage Migration is NOT available for Legacy Hive.");
+    STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY(101, "Storage Migration is NOT available for Legacy Hive."),
+    DISTCP_WITH_MISMATCHING_LOCATIONS(102, "You''ve specified ''distcp'' with mismatching locations for {0} {1}: " +
+            "Original Location {2}, Specification {3}. When these don''t match, a valid distcp plan can''t be created to " +
+            "correctly align the data elements.  You''ll need to use SQL to migrate the data and allow Hive to reorganize it " +
+            "according to your specs."),
+    DISTCP_WITH_MISMATCHING_TABLE_LOCATION(103, "You''ve specified ''distcp'' with mismatching locations for {0} {1}: " +
+            "Original Location: {2}, Derived table name from directory: {3}. The partition directory doesn''t match the table name and we can''t " +
+            "correctly align the data elements via distcp.  You''ll need to use SQL to migrate the data and allow Hive to reorganize it " +
+            "according to your specs.");
 
     private int code = 0;
     private String desc = null;
