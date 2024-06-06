@@ -1371,9 +1371,9 @@ public class TableService {
                             tblMirror.setMigrationStageMessage("Executing SQL: " + pair.getDescription());
                             if (hmsMirrorConfig.isExecute()) {
                                 stmt.execute(pair.getAction());
-                                tblMirror.addStep(hmsMirrorConfig.toString(), "Sql Run Complete for: " + pair.getDescription());
+                                tblMirror.addStep(environment.toString(), "Sql Run Complete for: " + pair.getDescription());
                             } else {
-                                tblMirror.addStep(hmsMirrorConfig.toString(), "Sql Run SKIPPED (DRY-RUN) for: " + pair.getDescription());
+                                tblMirror.addStep(environment.toString(), "Sql Run SKIPPED (DRY-RUN) for: " + pair.getDescription());
                             }
                         }
                     } catch (SQLException throwables) {

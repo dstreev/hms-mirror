@@ -19,10 +19,11 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
-import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,8 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.Map;
 
 @CrossOrigin
 @RestController
@@ -41,11 +41,17 @@ import java.util.*;
 @RequestMapping(path = "/api/v1/translator")
 public class TranslatorController {
 
+    private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
     private TranslatorService translatorService;
 
     @Autowired
-    public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+    }
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
 
@@ -156,14 +162,22 @@ public class TranslatorController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public Map<String, String> buildGLMFromPlans(@RequestParam(name = "dryrun", required = false) Boolean dryrun,
+                                                 @RequestParam(name = "buildSources", required = false) Boolean buildSources,
+                                                 @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
                                                  @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
-            throws MismatchException, SessionRunningException {
+            throws MismatchException, SessionRunningException, RequiredConfigurationException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : true;
         if (!dryrun) {
             executeSessionService.clearActiveSession();
         }
+        boolean lclBuildSources = buildSources != null ? buildSources : false;
         int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
+        boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
+
+        if (lclBuildSources) {
+            databaseService.buildDatabaseSources(lclConsolidationLevel, false);
+        }
         return translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
     }
 

@@ -59,8 +59,8 @@ Accept: application/json
 
 ### Build Sources
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/database/sources/build
-Accept: application/json
+#POST http://{{host}}:{{port}}/hms-mirror/api/v1/database/sources/build
+#Accept: application/json
 
 ### List Sources
 
@@ -84,12 +84,12 @@ Accept: application/json
 
 ### Build GLM From Warehouse Plan
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap/build?dryrun=false
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap/build?dryrun=false&buildSources=true
 Accept: application/json
 
 ### Dry Run
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/start?dryrun=true
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/start?dryrun=true&autoGLM=true
 Accept: application/json
 
 ### Get Run Status
@@ -102,10 +102,10 @@ Accept: application/json
 GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/list
 Accept: application/json
 
-### Get Report
+### Get Latest Report
 
-GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/download/2024-06-06_16-21-20
-
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/latest/download
+Accept: application/json
 
 
 

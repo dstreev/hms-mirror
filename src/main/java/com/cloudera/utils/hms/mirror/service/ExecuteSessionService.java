@@ -27,15 +27,21 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @Slf4j
@@ -207,4 +213,96 @@ public class ExecuteSessionService {
         return session;
     }
 
+    private void createZipFromDirectory(String zipFileName, String baseDirectory) throws IOException {
+
+        final FileOutputStream fos = new FileOutputStream(zipFileName);
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+        File sessionDirectory = new File(baseDirectory);
+
+        List<String> files = Arrays.asList(sessionDirectory.list());
+
+        for (String srcFile : files) {
+            System.out.println("Adding file: " + srcFile);
+            String absolutePath = baseDirectory + File.separator + srcFile;
+            File fileToZip = new File(absolutePath);
+            if (fileToZip.exists()) {
+                FileInputStream fis = null;
+                try {
+                    fis = new FileInputStream(fileToZip);
+                    ZipEntry zipEntry = new ZipEntry(srcFile);
+                    zipOut.putNextEntry(zipEntry);
+
+                    byte[] bytes = new byte[1024];
+                    int length;
+                    while ((length = fis.read(bytes)) >= 0) {
+                        zipOut.write(bytes, 0, length);
+                    }
+                } catch (ZipException ze) {
+                    log.error(ze.getMessage(), ze);
+                } finally {
+                    assert fis != null;
+                    fis.close();
+                }
+            } else {
+                System.out.println("File not found: " + srcFile);
+            }
+        }
+        zipOut.close();
+        fos.close();
+    }
+
+    public HttpEntity<ByteArrayResource> getZippedReport(String id) throws IOException {
+        // Using the 'id', get the reports for the session.
+        String reportDirectory = getReportOutputDirectory();
+        // List directories in the report directory.
+        String sessionDirectoryName = reportDirectory + File.separator + id;
+        File sessionDirectory = new File(sessionDirectoryName);
+        // Ensure it exists and is a directory.
+        if (!sessionDirectory.exists() || !sessionDirectory.isDirectory()) {
+            throw new IOException("Session reports not found.");
+        }
+
+        // Zip the files in the report directory and return the zip file.
+        String zipFileName = System.getProperty("java.io.tmpdir") + File.separator + id + ".zip";
+
+        createZipFromDirectory(zipFileName, sessionDirectoryName);
+
+        // Package and return the zip file.
+        HttpHeaders header = new HttpHeaders();
+        header.setContentType(new MediaType("application", "force-download"));
+
+        String downloadFilename = id + ".zip";
+        header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename="+downloadFilename);
+
+        return new HttpEntity<>(new ByteArrayResource(Files.readAllBytes(Paths.get(zipFileName))), header);
+    }
+
+    public Set<String> getAvailableReports() {
+        Set<String> rtn = new TreeSet<>(new Comparator<String>() {
+            // Descending order.
+            @Override
+            public int compare(String o1, String o2) {
+                return o2.compareTo(o1);
+            }
+        });
+        // Validate that the report id directory exists.
+        String reportDirectory = getReportOutputDirectory();
+        // List directories in the report directory.
+        File folder = new File(reportDirectory);
+        if (folder.isDirectory()) {
+            String[] directories = folder.list(new FilenameFilter() {
+                @Override
+                public boolean accept(File current, String name) {
+                    return new File(current, name).isDirectory();
+                }
+            });
+            assert directories != null;
+//            List<String> dirList = Arrays.asList(directories);
+            rtn.addAll(Arrays.asList(directories));
+//            rtn = Arrays.asList(directories);
+        } else {
+            // Throw exception that output directory isn't a directory.
+        }
+        return rtn;
+    }
 }

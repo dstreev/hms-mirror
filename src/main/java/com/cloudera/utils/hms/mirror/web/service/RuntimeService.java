@@ -20,8 +20,13 @@ package com.cloudera.utils.hms.mirror.web.service;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
+import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -36,8 +41,15 @@ import java.util.concurrent.Future;
 @Slf4j
 public class RuntimeService {
 
+    private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
     private HMSMirrorAppService hmsMirrorAppService;
+    private TranslatorService translatorService;
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+    }
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
@@ -49,7 +61,22 @@ public class RuntimeService {
         this.hmsMirrorAppService = hmsMirrorAppService;
     }
 
-    public RunStatus start(Boolean dryrun) {
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+
+    public RunStatus start(Boolean dryrun, boolean autoGLM) throws RequiredConfigurationException, MismatchException, SessionRunningException {
+
+        // This is the fastest way to build the database source and the glm from those.  It does require that the
+        //   user has already defined Warehouse Plans for the databases they are interested in.
+        if (autoGLM) {
+            // Default Consolidation Level is 1;
+            int defaultConsolidationLevel = 1;
+            databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
+            translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
+        }
+
         ExecuteSession session = executeSessionService.transitionLoadedSessionToActive();
 
         RunStatus runStatus = session.getRunStatus();
