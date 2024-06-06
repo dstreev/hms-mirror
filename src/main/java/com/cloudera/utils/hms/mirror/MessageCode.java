@@ -55,10 +55,9 @@ public enum MessageCode {
     STORAGE_MIGRATION_REQUIRED_NAMESPACE(18, "STORAGE_MIGRATION requires -smn or -cs to define the new namespace."),
     STORAGE_MIGRATION_REQUIRED_STRATEGY(19, "STORAGE_MIGRATION requires -sms to set the Data Strategy.  Applicable options " +
             "are SCHEMA_ONLY, SQL, EXPORT_IMPORT, or HYBRID"),
-    STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS(20, "STORAGE_MIGRATION requires you to specify PATH location for " +
-            "'managed' and 'external' tables (-wd, -ewd) to migrate storage OR define a warehouse plan for each database " +
-            "you plan to migrate.  These will be appended to the -smn " +
-            "(storage-migration-namespace) parameter and used to set the 'database' LOCATION and MANAGEDLOCATION properties"),
+    STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS(20, "STORAGE_MIGRATION requires one of to things.  Either you set the " +
+            "global warehouse locations (warehouse-directory and external-warehouse-directory) or you define some " +
+            "global location maps that will make the translations."),
     RIGHT_HS2_DEFINITION_MISSING(21, "The 'RIGHT' HS2 definition is missing.  Only STORAGE_MIGRATION or DUMP strategies allow " +
             "that definition to be skipped."),
 

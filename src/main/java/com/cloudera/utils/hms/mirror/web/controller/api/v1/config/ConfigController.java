@@ -32,7 +32,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
@@ -175,7 +174,9 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/reload/{id}")
     public HmsMirrorConfig reload(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                @PathVariable @NotNull String id) {
+                                  @PathVariable @NotNull String id) {
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
         log.info("{}: ReLoading Config by id: {}", sessionId, id);
         HmsMirrorConfig config = configService.loadConfig(id);
         // Remove the old session
@@ -185,6 +186,7 @@ public class ConfigController {
 
         // Set it as the current session.
         executeSessionService.setLoadedSession(session);
+
         return config;
     }
 
@@ -291,7 +293,7 @@ public class ConfigController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/properties")
-    public HmsMirrorConfig setConfigProperties (
+    public HmsMirrorConfig setConfigProperties(
             @RequestParam(name = "sessionId", required = false) String sessionId,
             @RequestParam(value = "copyAvroSchemaUrls", required = false) Boolean copyAvroSchemaUrls,
             @RequestParam(value = "dataStrategy", required = false) DataStrategyEnum dataStrategy,
@@ -311,7 +313,7 @@ public class ConfigController {
             @RequestParam(value = "skipLegacyTranslation", required = false) Boolean skipLegacyTranslation,
             @RequestParam(value = "sync", required = false) Boolean sync,
             @RequestParam(value = "transferOwnership", required = false) Boolean transferOwnership
-    )   {
+    ) {
 //        if (isCurrentSessionRunning()) {
 //            // Cannot load a config while running.
 //            throw new RuntimeException("Cannot change config while a session running.");
@@ -409,10 +411,10 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/tableFilter")
     public Filter setTableFilter(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                    @RequestParam(value = "tblExcludeRegEx", required = false) String excludeRegEx,
-                                    @RequestParam(value = "tblRegEx", required = false) String regEx,
-                                    @RequestParam(value = "tblSizeLimit", required = false) String tblSizeLimit,
-                                    @RequestParam(value = "tblPartitionLimit", required = false) String tblPartitionLimit) {
+                                 @RequestParam(value = "tblExcludeRegEx", required = false) String excludeRegEx,
+                                 @RequestParam(value = "tblRegEx", required = false) String regEx,
+                                 @RequestParam(value = "tblSizeLimit", required = false) String tblSizeLimit,
+                                 @RequestParam(value = "tblPartitionLimit", required = false) String tblPartitionLimit) {
 
         Filter filter = executeSessionService.getLoadedSession().getResolvedConfig().getFilter();
 
@@ -451,14 +453,14 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/migrate")
     public HmsMirrorConfig setMigrate(@RequestParam(name = "sessionId", required = false) String sessionId,
-                                         @RequestParam(value = "acid", required = false) Boolean acid,
-                                         @RequestParam(value = "acid-only", required = false) Boolean acidOnly,
-                                         @RequestParam(value = "acid-artificialBucketThreshold", required = false) String artificialBucketThreshold,
-                                         @RequestParam(value = "acid-partitionLimit", required = false) String partitionLimit,
-                                         @RequestParam(value = "acid-downgrade", required = false) Boolean downgrade,
-                                         @RequestParam(value = "acid-inplace-downgrade", required = false) Boolean inplace,
-                                         @RequestParam(value = "non-native", required = false) Boolean nonNative,
-                                         @RequestParam(value = "views", required = false) Boolean views) {
+                                      @RequestParam(value = "acid", required = false) Boolean acid,
+                                      @RequestParam(value = "acid-only", required = false) Boolean acidOnly,
+                                      @RequestParam(value = "acid-artificialBucketThreshold", required = false) String artificialBucketThreshold,
+                                      @RequestParam(value = "acid-partitionLimit", required = false) String partitionLimit,
+                                      @RequestParam(value = "acid-downgrade", required = false) Boolean downgrade,
+                                      @RequestParam(value = "acid-inplace-downgrade", required = false) Boolean inplace,
+                                      @RequestParam(value = "non-native", required = false) Boolean nonNative,
+                                      @RequestParam(value = "views", required = false) Boolean views) {
 
 //        if (isCurrentSessionRunning()) {
 //            // Cannot load a config while running.
@@ -569,8 +571,8 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer/warehouse")
     public WarehouseConfig setTransferWarehouse(@RequestParam(name = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "managedDirectory", required = false) String managedDirectory,
-            @RequestParam(value = "externalDirectory", required = false) String externalDirectory
+                                                @RequestParam(value = "managedDirectory", required = false) String managedDirectory,
+                                                @RequestParam(value = "externalDirectory", required = false) String externalDirectory
     ) {
 //        if (isCurrentSessionRunning()) {
 //            // Cannot load a config while running.
@@ -603,9 +605,9 @@ public class ConfigController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer/storageMigration")
     public StorageMigration setStorageMigration(@RequestParam(name = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "dataMovementStrategy", required = false) DataMovementStrategyEnum dataMovementStrategy,
-            @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow,
-            @RequestParam(value = "strict", required = false) Boolean strict
+                                                @RequestParam(value = "dataMovementStrategy", required = false) DataMovementStrategyEnum dataMovementStrategy,
+                                                @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow,
+                                                @RequestParam(value = "strict", required = false) Boolean strict
     ) {
 //        if (isCurrentSessionRunning()) {
 //            // Cannot load a config while running.

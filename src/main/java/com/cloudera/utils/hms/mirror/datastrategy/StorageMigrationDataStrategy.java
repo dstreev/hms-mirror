@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -79,41 +80,58 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         StringBuilder sb = new StringBuilder();
         sb.append(hmsMirrorConfig.getTransfer().getCommonStorage());
         String warehouseDir = null;
-        // For Storage Migration we need to check if a WarehousePlan was specified for this database and use that
-        //    as the warehouse directories for the table.
-        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-        if (warehouseMapBuilder.getWarehousePlans() != null
-                && warehouseMapBuilder.getWarehousePlans().containsKey(let.getParent().getName())) {
-            Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(let.getParent().getName());
-            if (TableUtils.isExternal(let)) {
-                // External Location
-                warehouseDir = warehouse.getExternalDirectory();
-            } else {
-                // Managed Location
-                warehouseDir = warehouse.getManagedDirectory();
-            }
-        } else {
-            // Otherwise, use the default warehouse directories.
-            // Check to see if the warehouse directories have been specified.
-            if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null
-                    && TableUtils.isExternal(let)) {
-                let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
-                rtn = Boolean.FALSE;
-                return rtn;
-            } else if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null
-                    && TableUtils.isManaged(let)) {
-                let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
-                rtn = Boolean.FALSE;
-                return rtn;
-            }
-            if (TableUtils.isExternal(let)) {
-                // External Location
-                warehouseDir = hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory();
-            } else {
-                // Managed Location
-                warehouseDir = hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory();
-            }
+        // Get the Warehouse for the database
+        Warehouse dbWarehouse = null;
+        try {
+            dbWarehouse = translatorService.getDatabaseWarehouse(tableMirror.getParent().getName());
+        } catch (MissingDataPointException e) {
+            let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
+            rtn = Boolean.FALSE;
+            return rtn;
         }
+        if (TableUtils.isExternal(let)) {
+            // External Location
+            warehouseDir = dbWarehouse.getExternalDirectory();
+        } else {
+            // Managed Location
+            warehouseDir = dbWarehouse.getManagedDirectory();
+        }
+
+//        // For Storage Migration we need to check if a WarehousePlan was specified for this database and use that
+//        //    as the warehouse directories for the table.
+//        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+//        if (warehouseMapBuilder.getWarehousePlans() != null
+//                && warehouseMapBuilder.getWarehousePlans().containsKey(let.getParent().getName())) {
+//            Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(let.getParent().getName());
+//            if (TableUtils.isExternal(let)) {
+//                // External Location
+//                warehouseDir = warehouse.getExternalDirectory();
+//            } else {
+//                // Managed Location
+//                warehouseDir = warehouse.getManagedDirectory();
+//            }
+//        } else {
+//            // Otherwise, use the default warehouse directories.
+//            // Check to see if the warehouse directories have been specified.
+//            if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null
+//                    && TableUtils.isExternal(let)) {
+//                let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
+//                rtn = Boolean.FALSE;
+//                return rtn;
+//            } else if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null
+//                    && TableUtils.isManaged(let)) {
+//                let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
+//                rtn = Boolean.FALSE;
+//                return rtn;
+//            }
+//            if (TableUtils.isExternal(let)) {
+//                // External Location
+//                warehouseDir = hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory();
+//            } else {
+//                // Managed Location
+//                warehouseDir = hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory();
+//            }
+//        }
         if (!hmsMirrorConfig.getTransfer().getCommonStorage().endsWith("/") && !warehouseDir.startsWith("/")) {
             sb.append("/");
         }

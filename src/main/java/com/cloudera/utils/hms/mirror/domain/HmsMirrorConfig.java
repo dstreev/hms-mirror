@@ -389,8 +389,17 @@ public class HmsMirrorConfig implements Cloneable {
     public Cluster getCluster(Environment environment) {
         Cluster cluster = getClusters().get(environment);
         if (cluster == null) {
-            cluster = new Cluster();
-//            cluster.setHmsMirrorConfig(this);
+            if (dataStrategy == STORAGE_MIGRATION) {
+                // We use the RIGHT cluster during STORAGE_MIGRATION as a resting place for conversion.
+                // The configs need to be the same.
+                cluster = getCluster(Environment.LEFT);
+            } else {
+                cluster = new Cluster();
+                if (cluster.getEnvironment() == null) {
+                    cluster.setEnvironment(environment);
+                }
+                getClusters().put(environment, cluster);
+            }
             switch (environment) {
                 case TRANSFER:
                     cluster.setLegacyHive(getCluster(Environment.LEFT).isLegacyHive());
@@ -399,27 +408,9 @@ public class HmsMirrorConfig implements Cloneable {
                     cluster.setLegacyHive(getCluster(Environment.RIGHT).isLegacyHive());
                     break;
             }
-            getClusters().put(environment, cluster);
-        }
-        if (cluster.getEnvironment() == null) {
-            cluster.setEnvironment(environment);
         }
         return cluster;
     }
-
-//    public ScheduledExecutorService getMetadataThreadPool() {
-//        if (metadataThreadPool == null) {
-//            metadataThreadPool = Executors.newScheduledThreadPool(getTransfer().getConcurrency());
-//        }
-//        return metadataThreadPool;
-//    }
-//
-//    public ScheduledExecutorService getTransferThreadPool() {
-//        if (transferThreadPool == null) {
-//            transferThreadPool = Executors.newScheduledThreadPool(getTransfer().getConcurrency());
-//        }
-//        return transferThreadPool;
-//    }
 
     public boolean isExecute() {
         if (!execute) {

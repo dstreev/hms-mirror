@@ -27,18 +27,12 @@ import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Set;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
@@ -610,11 +604,14 @@ public class ConfigService {
                     rtn = Boolean.FALSE;
                 }
             }
+            // If the warehouses aren't set and there are no GLM entries...
             if (hmsMirrorConfig.getTransfer().getWarehouse() == null ||
                     (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() == null ||
                             hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() == null)) {
-                runStatus.addError(STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS);
-                rtn = Boolean.FALSE;
+                if (hmsMirrorConfig.getTranslator().getGlobalLocationMap().isEmpty()) {
+                    runStatus.addError(STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS);
+                    rtn = Boolean.FALSE;
+                }
             }
         }
 

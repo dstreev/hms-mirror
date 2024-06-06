@@ -33,6 +33,7 @@ import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
@@ -57,6 +58,7 @@ public class DatabaseService {
     private ConnectionPoolService connectionPoolService;
     private ExecuteSessionService executeSessionService;
     private QueryDefinitionsService queryDefinitionsService;
+    private TranslatorService translatorService;
     private ConfigService configService;
 
     @Autowired
@@ -77,6 +79,11 @@ public class DatabaseService {
     @Autowired
     public void setQueryDefinitionsService(QueryDefinitionsService queryDefinitionsService) {
         this.queryDefinitionsService = queryDefinitionsService;
+    }
+
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
     }
 
     public Warehouse addWarehousePlan(String database, String external, String managed) {
@@ -128,7 +135,7 @@ public class DatabaseService {
             throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
         }
 
-        for (String database: warehouseMapBuilder.getWarehousePlans().keySet()) {
+        for (String database : warehouseMapBuilder.getWarehousePlans().keySet()) {
             // Reset the database in the translation map.
             hmsMirrorConfig.getTranslator().removeDatabaseFromTranslationMap(database);
             // Load the database locations.
@@ -138,13 +145,11 @@ public class DatabaseService {
         return warehouseMapBuilder;
     }
 
-//    public boolean buildAllDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch
-//            , boolean reset) throws RequiredConfigurationException {
-//
-//
-//        return true;
-//    }
-//
+    public Map<String, SourceLocationMap> getDatabaseSources() {
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        return warehouseMapBuilder.getSources();
+    }
 
     protected void loadDatabaseLocationMetadataDirect(String database, Environment environment,
                                                       int consolidationLevelBase,
@@ -175,8 +180,16 @@ public class DatabaseService {
                     String table = resultSet.getString(1);
                     String tableType = resultSet.getString(2);
                     String location = resultSet.getString(3);
-                    hmsMirrorConfig.getTranslator().addTableSource(database, table, tableType, location, consolidationLevelBase,
-                            partitionLevelMismatch);
+                    // Filter out some table types. Don't transfer previously moved tables or
+                    // interim tables created by hms-mirror.
+                    if (!(table.startsWith(hmsMirrorConfig.getTransfer().getTransferPrefix())
+                            || table.endsWith("storage_migration"))) {
+                        log.warn("Database: {} Table: {} was NOT added to list.  The name matches the transfer prefix " +
+                                "and is most likely a remnant of a previous event. If this is a mistake, change the " +
+                                "'transferPrefix' to something more unique.", database, table);
+                        hmsMirrorConfig.getTranslator().addTableSource(database, table, tableType, location, consolidationLevelBase,
+                                partitionLevelMismatch);
+                    }
                 }
                 resultSet.close();
                 pstmt.close();
@@ -354,33 +367,35 @@ public class DatabaseService {
                         dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
                         database = configService.getResolvedDB(dbMirror.getName());
                         location = dbDefLeft.get(DB_LOCATION);
-                        if (hmsMirrorConfig.getTransfer().getWarehouse() != null
-                                && hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null) {
-                            if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
+                        Warehouse dbWarehouse = null;
+                        try {
+                            dbWarehouse = translatorService.getDatabaseWarehouse(dbMirror.getName());
+                        } catch (MissingDataPointException e) {
+                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
+                            return Boolean.FALSE;
+                        }
+                        if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
                                 location = hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace()
-                                        + hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory()
+                                        + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             } else {
                                 location = hmsMirrorConfig.getTransfer().getCommonStorage()
-                                        + hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory()
+                                        + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             }
-                        }
 
                         if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
                             // Check for Managed Location.
                             managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
                         }
-                        if (hmsMirrorConfig.getTransfer().getWarehouse() != null
-                                && hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null
-                                && !hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                        if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
                             if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
                                 managedLocation = hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace()
-                                        + hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory()
+                                        + dbWarehouse.getManagedDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             } else {
                                 managedLocation = hmsMirrorConfig.getTransfer().getCommonStorage()
-                                        + hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory()
+                                        + dbWarehouse.getManagedDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             }
                             // Check is the Managed Location matches the system default.  If it does,
@@ -595,33 +610,33 @@ public class DatabaseService {
                                 dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbCom.toString()));
                                 break;
                             case STORAGE_MIGRATION:
-                                StringBuilder sbLoc = new StringBuilder();
-                                sbLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
-                                sbLoc.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory());
-                                sbLoc.append("/");
-                                sbLoc.append(database);
-                                sbLoc.append(".db");
+//                                StringBuilder sbLoc = new StringBuilder();
+//                                sbLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
+//                                sbLoc.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory());
+//                                sbLoc.append("/");
+//                                sbLoc.append(database);
+//                                sbLoc.append(".db");
                                 if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
-                                    String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, sbLoc.toString());
+                                    String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
-                                    dbDefRight.put(DB_LOCATION, sbLoc.toString());
+                                    dbDefRight.put(DB_LOCATION, location);
                                 }
 
-                                StringBuilder sbMngdLoc = new StringBuilder();
-                                sbMngdLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
-                                sbMngdLoc.append(hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory());
-                                sbMngdLoc.append("/");
-                                sbMngdLoc.append(database);
-                                sbMngdLoc.append(".db");
+//                                StringBuilder sbMngdLoc = new StringBuilder();
+//                                sbMngdLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
+//                                sbMngdLoc.append(hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory());
+//                                sbMngdLoc.append("/");
+//                                sbMngdLoc.append(database);
+//                                sbMngdLoc.append(".db");
                                 if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
-                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, sbMngdLoc.toString());
+                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
-                                    dbDefRight.put(DB_MANAGED_LOCATION, sbMngdLoc.toString());
+                                    dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
                                 } else {
-                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, sbMngdLoc.toString());
+                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
                                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
                                     dbMirror.addIssue(Environment.LEFT, HDPHIVE3_DB_LOCATION.getDesc());
-                                    dbDefRight.put(DB_LOCATION, sbMngdLoc.toString());
+                                    dbDefRight.put(DB_LOCATION, managedLocation);
                                 }
 
                                 dbMirror.addIssue(Environment.LEFT, "This process, when 'executed' will leave the original tables intact in their renamed " +

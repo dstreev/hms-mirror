@@ -105,6 +105,16 @@ public class ExecuteSessionService {
         return session;
     }
 
+    public void clearActiveSession() {
+        if (activeSession != null) {
+           if (activeSession.getRunning().get()) {
+               throw new RuntimeException("Session is still running.  Cannot clear active session.");
+           } else {
+            activeSession = null;
+           };
+        }
+    }
+
     public ExecuteSession getActiveSession() {
         if (activeSession == null) {
             log.warn("No active session.  Transitioning loaded session to active.");

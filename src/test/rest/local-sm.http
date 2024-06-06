@@ -25,12 +25,12 @@ Accept: application/json
 
 ### Set distcp
 
-PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/storageMigration?distcp=false
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/storageMigration?dataMovementStrategy=DISTCP
 Accept: application/json
 
 ### Set Warehouse Directories
 
-PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/warehouse?managedDirectory=%2Ftest%2Fmngd&externalDirectory=%2Ftest%2Fext
+# PUT http://{{host}}:{{port}}/hms-mirror/api/v1/config/transfer/warehouse?managedDirectory=%2Ftest%2Fmngd&externalDirectory=%2Ftest%2Fext
 
 ### Review the Config
 
@@ -42,9 +42,14 @@ Accept: application/json
 GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/warehousePlan/list
 Accept: application/json
 
-### Add a new warehouse plan
+### Add a new warehouse plan for m01
 
 PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/m01/warehousePlan?externalLocation=%2Ftest%2Fext&managedLocation=%2Ftest%2Fmngd
+Accept: application/json
+
+### Add a new warehouse plan for m02
+
+PUT http://{{host}}:{{port}}/hms-mirror/api/v1/database/m02/warehousePlan?externalLocation=%2Ffinance%2Fext&managedLocation=%2Ffinance%2Fmngd
 Accept: application/json
 
 ### Add a new warehouse plan
@@ -54,7 +59,12 @@ Accept: application/json
 
 ### Build Sources
 
-GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/buildSources
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/database/sources/build
+Accept: application/json
+
+### List Sources
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/database/sources/list
 Accept: application/json
 
 ### Manually Add GLM Entry
@@ -67,14 +77,19 @@ Accept: application/json
 POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fmanaged%2Fhive&target=%2Ftest%2Fmngd
 Accept: application/json
 
-###
+### List GLM
 
 GET http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap/list
 Accept: application/json
 
+### Build GLM From Warehouse Plan
+
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap/build?dryrun=false
+Accept: application/json
+
 ### Dry Run
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/start?dryrun=false
+POST http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/start?dryrun=true
 Accept: application/json
 
 ### Get Run Status
@@ -84,7 +99,12 @@ Accept: application/json
 
 ### List Reports
 
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/list
+Accept: application/json
 
+### Get Report
+
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/download/2024-06-06_12-41-44
 
 
 

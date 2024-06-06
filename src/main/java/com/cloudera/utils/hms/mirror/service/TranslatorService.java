@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
@@ -140,6 +141,25 @@ public class TranslatorService {
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
+    }
+
+    public Warehouse getDatabaseWarehouse(String database) throws MissingDataPointException {
+        Warehouse dbWarehouse = null;
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        dbWarehouse = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder().getWarehousePlans().get(database);
+        if (dbWarehouse == null) {
+            if (hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null &&
+                    hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null) {
+                dbWarehouse = new Warehouse(hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory(),
+                        hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory());
+            }
+        }
+        if (dbWarehouse == null) {
+            throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
+                    ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+                    "set the global warehouse locations.");
+        }
+        return dbWarehouse;
     }
 
     public Boolean translatePartitionLocations(TableMirror tblMirror) {
@@ -347,7 +367,7 @@ public class TranslatorService {
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
 
-    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) {
+    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         Translator translator = hmsMirrorConfig.getTranslator();
         Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
@@ -373,8 +393,55 @@ public class TranslatorService {
 
 
         */
-        return null;
+
+        for (Map.Entry<String, Warehouse> warehouseEntry : warehousePlans.entrySet()) {
+            String database = warehouseEntry.getKey();
+            Warehouse warehouse = warehouseEntry.getValue();
+            String externalBaseLocation = warehouse.getExternalDirectory();
+            String managedBaseLocation = warehouse.getManagedDirectory();
+            SourceLocationMap locationMap = sources.get(database);
+            if (locationMap != null) {
+                for (Map.Entry<TableType, Map<String, Set<String>>> locationEntry : locationMap.getLocations().entrySet()) {
+                    String typeLocation = null;
+                    // Set the location based on the table type.
+                    switch (locationEntry.getKey()) {
+                        case EXTERNAL_TABLE:
+                            typeLocation = externalBaseLocation;
+                            break;
+                        case MANAGED_TABLE:
+                            typeLocation = managedBaseLocation;
+                            break;
+                    }
+                    typeLocation = typeLocation + "/" + database + ".db";
+                    // Locations and the tables that are in that location.
+                    for (Map.Entry<String, Set<String>> locationSet : locationEntry.getValue().entrySet()) {
+                        String location = locationSet.getKey();
+                        // String the namespace from the location.
+                        location = location.replace(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace(), "");
+                        if (!location.startsWith("/") || (location.length() == locationSet.getKey().length())) {
+                            // Issue with reducing the location.
+                            throw new MismatchException("Location doesn't start with a '/'.  This is a problem. " +
+                                    "Location: " + locationSet.getKey() + " Database: " + database + " Type: " + locationEntry.getKey() +
+                                    "HCFS Namespace: " + hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace());
+                        }
+                        // TODO: Review Consolidation Level for this.
+//                        String reducedLocation = UrlUtils.reduceUrlBy(location, consolidationLevel);
+                        String reducedLocation = UrlUtils.reduceUrlBy(location, 0);
+                        if (typeLocation != null) {
+                            if (!location.startsWith(typeLocation)) {
+                                lclGlobalLocationMap.put(reducedLocation, typeLocation);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!dryrun) {
+            translator.setOrderedGlobalLocationMap(lclGlobalLocationMap);
+        }
+        return lclGlobalLocationMap;
     }
+
 //        // Clear the global location map.
 //        globalLocationMap.clear();
 //        orderedGlobalLocationMap.clear();

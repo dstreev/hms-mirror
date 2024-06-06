@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
 import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -153,13 +154,27 @@ public class DatabaseController {
 //            @ApiResponse(responseCode = "404", description = "Cluster not found",
 //                    content = @Content)})
     @ResponseBody
-    @RequestMapping(method = RequestMethod.GET, value = "/buildSources")
+    @RequestMapping(method = RequestMethod.POST, value = "/sources/build")
     public WarehouseMapBuilder buildAllDatabaseSources(@RequestParam(name = "consolidationLevelbase", required = false) Integer consolidationLevelBase,
                                            @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch) throws RequiredConfigurationException {
         int consolidationBase = consolidationLevelBase == null ? 1 : consolidationLevelBase;
         boolean partitionMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
         return databaseService.buildDatabaseSources(consolidationBase, partitionMismatch);
-//        return true;
+    }
+
+    @Operation(summary = "List 'sources' for all databases")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Build sources successful",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Map.class))})}) //,
+//            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+//                    content = @Content),
+//            @ApiResponse(responseCode = "404", description = "Cluster not found",
+//                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/sources/list")
+    public Map<String, SourceLocationMap> listAllDatabaseSources() {
+        return databaseService.getDatabaseSources();
     }
 
 }

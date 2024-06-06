@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
@@ -85,20 +86,21 @@ public class TranslatorController {
     // Do this through multiple calls with POST, DELETE to add and remove entries.
 
 
-    @Operation(summary = "Build Global Location Map from Databases.  Resets list!")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "GLM Details set",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Map.class))})})
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
-    public Map<String, String> buildGLMFromDatabase () {
-        // Clear current List
-        executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap().clear();
-        // Pull all unique locations from databases/tables.  Requires Metastore Direct connection.
-
-        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap();
-    }
+//    @Operation(summary = "Build Global Location Map from Databases.  Resets list!")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "GLM Details set",
+//                    content = {@Content(mediaType = "application/json",
+//                            schema = @Schema(implementation = Map.class))})})
+//    @ResponseBody
+//    @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
+//    public Map<String, String> buildGLMFromDatabase () {
+//        // Clear current List
+//        executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap().clear();
+//        // Pull all unique locations from databases/tables.  Requires Metastore Direct connection.
+//
+//        return executeSessionService.getActiveSession().getResolvedConfig().getTranslator().getGlobalLocationMap();
+//    }
+//
 
     @Operation(summary = "Add GLM")
     @ApiResponses(value = {
@@ -148,6 +150,27 @@ public class TranslatorController {
     public Map<String, String> getGlobalLocationMaps() {
         log.info("Getting global location maps");
         return translatorService.getGlobalLocationMap();
+    }
+
+    // Get Global Location Map
+    @Operation(summary = "Build GLM from Warehouse Plan")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GLM Built",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Map.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cluster not found",
+                    content = @Content)})
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
+    public Map<String, String> buildGLMFromPlans(@RequestParam(name = "dryrun", required = false) Boolean dryrun,
+                                                 @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
+            throws MismatchException {
+        log.info("Building global location maps");
+        boolean lclDryrun = dryrun != null ? dryrun : true;
+        int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
+        return translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
     }
 
 
