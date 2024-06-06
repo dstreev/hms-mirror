@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -105,10 +106,10 @@ public class ExecuteSessionService {
         return session;
     }
 
-    public void clearActiveSession() {
+    public void clearActiveSession() throws SessionRunningException {
         if (activeSession != null) {
            if (activeSession.getRunning().get()) {
-               throw new RuntimeException("Session is still running.  Cannot clear active session.");
+               throw new SessionRunningException("Session is still running.  You can't change the session while it is running.");
            } else {
             activeSession = null;
            };

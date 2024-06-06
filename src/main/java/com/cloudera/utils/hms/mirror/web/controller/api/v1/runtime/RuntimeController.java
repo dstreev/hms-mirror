@@ -37,8 +37,7 @@ import javax.validation.constraints.NotNull;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
@@ -193,7 +192,7 @@ public class RuntimeController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "List of available reports",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = List.class))})
+                            schema = @Schema(implementation = Set.class))})
 //            , @ApiResponse(responseCode = "400", description = "Invalid id supplied",
 //                    content = @Content)
 //            , @ApiResponse(responseCode = "404", description = "Config not found",
@@ -201,8 +200,14 @@ public class RuntimeController {
     })
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/reports/list")
-    public List<String> availableReports() {
-        List<String> rtn = null;
+    public Set<String> availableReports() {
+        Set<String> rtn = new TreeSet<>(new Comparator<String>() {
+            // Descending order.
+            @Override
+            public int compare(String o1, String o2) {
+                return o2.compareTo(o1);
+            }
+        });
         // Validate that the report id directory exists.
         String reportDirectory = executeSessionService.getReportOutputDirectory();
         // List directories in the report directory.
@@ -215,7 +220,9 @@ public class RuntimeController {
                 }
             });
             assert directories != null;
-            rtn = Arrays.asList(directories);
+//            List<String> dirList = Arrays.asList(directories);
+            rtn.addAll(Arrays.asList(directories));
+//            rtn = Arrays.asList(directories);
         } else {
             // Throw exception that output directory isn't a directory.
         }

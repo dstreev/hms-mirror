@@ -157,6 +157,7 @@ public class DatabaseController {
     @RequestMapping(method = RequestMethod.POST, value = "/sources/build")
     public WarehouseMapBuilder buildAllDatabaseSources(@RequestParam(name = "consolidationLevelbase", required = false) Integer consolidationLevelBase,
                                            @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch) throws RequiredConfigurationException {
+
         int consolidationBase = consolidationLevelBase == null ? 1 : consolidationLevelBase;
         boolean partitionMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
         return databaseService.buildDatabaseSources(consolidationBase, partitionMismatch);

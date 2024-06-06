@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
@@ -352,12 +353,18 @@ public class TranslatorService {
         return dirBuilder.toString().trim();
     }
 
-    public void addGlobalLocationMap(String source, String target) {
+    public void addGlobalLocationMap(String source, String target) throws SessionRunningException {
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
+
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         hmsMirrorConfig.getTranslator().addGlobalLocationMap(source, target);
     }
 
-    public String removeGlobalLocationMap(String source) {
+    public String removeGlobalLocationMap(String source) throws SessionRunningException {
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
+
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         return hmsMirrorConfig.getTranslator().removeGlobalLocationMap(source);
     }
@@ -367,7 +374,10 @@ public class TranslatorService {
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
 
-    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException {
+    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionRunningException {
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
+
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
         Translator translator = hmsMirrorConfig.getTranslator();
         Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
@@ -441,36 +451,4 @@ public class TranslatorService {
         }
         return lclGlobalLocationMap;
     }
-
-//        // Clear the global location map.
-//        globalLocationMap.clear();
-//        orderedGlobalLocationMap.clear();
-//
-//        // Iterate over the warehouse plans and build the global location map.
-//        for (Map.Entry<String, Warehouse> warehouseEntry : warehousePlans.entrySet()) {
-//            String database = warehouseEntry.getKey();
-//            Warehouse warehouse = warehouseEntry.getValue();
-//            String externalBaseLocation = warehouse.getExternalDirectory();
-//            String managedBaseLocation = warehouse.getManagedDirectory();
-//            SourceLocationMap locationMap = sources.get(database);
-//            if (locationMap != null) {
-//                for (Map.Entry<String, String> locationEntry : locationMap.entrySet()) {
-//                    String location = locationEntry.getKey();
-//                    String reducedLocation = UrlUtils.reduceUrlBy(location, consolidationLevel);
-//                    if (externalBaseLocation != null) {
-//                        String externalLocation = externalBaseLocation + "/" + database + ".db";
-//                        globalLocationMap.put(reducedLocation, externalLocation);
-//                        orderedGlobalLocationMap.put(reducedLocation, externalLocation);
-//                    }
-//                    if (managedBaseLocation != null) {
-//                        String managedLocation = managedBaseLocation + "/" + database + ".db";
-//                        globalLocationMap.put(reducedLocation, managedLocation);
-//                        orderedGlobalLocationMap.put(reducedLocation, managedLocation);
-//                    }
-//                }
-//            }
-//        }
-//        return globalLocationMap;
-//    }
-
 }

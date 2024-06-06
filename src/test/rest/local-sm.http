@@ -69,13 +69,13 @@ Accept: application/json
 
 ### Manually Add GLM Entry
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fexternal%2Fhive&target=%2Ftest%2Fext
-Accept: application/json
+#POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fexternal%2Fhive&target=%2Ftest%2Fext
+#Accept: application/json
 
 ### Manually Add GLM Entry
 
-POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fmanaged%2Fhive&target=%2Ftest%2Fmngd
-Accept: application/json
+#POST http://{{host}}:{{port}}/hms-mirror/api/v1/translator/globalLocationMap?source=%2Fwarehouse%2Ftablespace%2Fmanaged%2Fhive&target=%2Ftest%2Fmngd
+#Accept: application/json
 
 ### List GLM
 
@@ -104,7 +104,7 @@ Accept: application/json
 
 ### Get Report
 
-GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/download/2024-06-06_12-41-44
+GET http://{{host}}:{{port}}/hms-mirror/api/v1/runtime/reports/download/2024-06-06_16-21-20
 
 
 
