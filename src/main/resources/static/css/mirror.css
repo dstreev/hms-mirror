@@ -1,0 +1,12 @@
+.mirror-header {
+    float:left;
+    width:33.33%;
+    text-align: left;
+    padding-right: 10px;
+}
+.mirror-right {
+    float:right;
+    /*width:33.33%;*/
+    text-align: right;
+    padding-right: 10px;
+}

@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror;
 
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -18,9 +18,11 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;

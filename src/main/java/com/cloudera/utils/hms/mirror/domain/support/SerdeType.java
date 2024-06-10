@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain;
+package com.cloudera.utils.hms.mirror.domain.support;
 
 import lombok.Getter;
 

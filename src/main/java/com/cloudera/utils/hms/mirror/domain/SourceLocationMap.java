@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import lombok.Getter;
 import lombok.Setter;
 

@@ -15,8 +15,8 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.connections;
+package com.cloudera.utils.hms.mirror.domain.support;
 
-public enum ConnectionPoolTypes {
+public enum ConnectionPoolType {
     DBCP2, HIKARICP, HYBRID
 }

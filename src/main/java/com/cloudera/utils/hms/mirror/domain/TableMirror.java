@@ -18,7 +18,8 @@
 package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;

@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;

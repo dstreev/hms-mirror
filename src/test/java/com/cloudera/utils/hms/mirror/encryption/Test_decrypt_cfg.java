@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.password.Password;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;

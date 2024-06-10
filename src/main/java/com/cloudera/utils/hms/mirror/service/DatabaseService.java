@@ -24,7 +24,7 @@ import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;

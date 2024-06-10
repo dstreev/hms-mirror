@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.integration.end_to_end;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;

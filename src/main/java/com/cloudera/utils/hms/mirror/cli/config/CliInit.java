@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;

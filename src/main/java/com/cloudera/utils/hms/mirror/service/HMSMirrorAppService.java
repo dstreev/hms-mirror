@@ -18,13 +18,9 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.CollectionEnum;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.domain.support.StageEnum;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

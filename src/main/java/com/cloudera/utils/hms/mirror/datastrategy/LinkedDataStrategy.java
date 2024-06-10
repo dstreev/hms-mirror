@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.util.TableUtils;

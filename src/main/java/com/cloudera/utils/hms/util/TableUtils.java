@@ -19,7 +19,7 @@ package com.cloudera.utils.hms.util;
 
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.domain.SerdeType;
+import com.cloudera.utils.hms.mirror.domain.support.SerdeType;
 import com.cloudera.utils.hms.mirror.feature.IcebergState;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,7 +28,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

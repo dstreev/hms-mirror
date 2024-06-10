@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;

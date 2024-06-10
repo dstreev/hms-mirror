@@ -24,10 +24,10 @@ import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.feature.Feature;
@@ -56,8 +56,8 @@ import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.SORT_DYNAMIC_PARTITION;
 import static com.cloudera.utils.hms.mirror.SessionVars.SORT_DYNAMIC_PARTITION_THRESHOLD;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.*;
-import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.DUMP;
-import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
+import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.DUMP;
+import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
 
 @Service
 @Getter

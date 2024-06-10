@@ -20,8 +20,8 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
-import static com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum.STORAGE_MIGRATION;
+import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
 
 @Service
 @Slf4j

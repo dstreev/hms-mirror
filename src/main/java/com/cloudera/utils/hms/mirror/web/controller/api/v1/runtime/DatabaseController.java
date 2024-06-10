@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;

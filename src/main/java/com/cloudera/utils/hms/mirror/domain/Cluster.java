@@ -18,9 +18,8 @@
 package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,8 +27,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -84,6 +81,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     @Schema(description = "The HiveServer2 configuration for the cluster.")
     private HiveServer2Config hiveServer2 = null;
     @JsonProperty(value = "metastore_direct")
+    @JsonAlias("metastore_direct")
     @Schema(description = "The direct connection to the Hive Metastore. Optimization used for extracting table and partition details that aren't efficient through the JDBC interface")
     private DBStore metastoreDirect = null;
     @Schema(description = "Methods used to find/discover partitions during initialization and on-going.")

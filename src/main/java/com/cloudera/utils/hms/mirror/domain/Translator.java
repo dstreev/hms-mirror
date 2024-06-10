@@ -17,9 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
 import com.cloudera.utils.hms.mirror.domain.support.StringLengthComparator;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

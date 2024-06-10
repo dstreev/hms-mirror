@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.legacy_to_cdp;
 
-import com.cloudera.utils.hms.mirror.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;

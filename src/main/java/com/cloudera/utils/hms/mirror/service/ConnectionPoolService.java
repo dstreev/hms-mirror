@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPools;

@@ -17,14 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.util.Protect;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;

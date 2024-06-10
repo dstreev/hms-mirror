@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>View Config</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror-order.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/angled-header.css}">
+    <link rel="stylesheet" th:href="@{/css/tabs.css}"/>
+        <script type="text/javascript" th:src="@{/js/tabs.js}"></script>
+</head>
+<body>
+<header>
+    <h1 class="dlm-header" th:text="#{'config.' + ${action}}"></h1>
+</header>
+<main>
+    <div class="mirror-form">
+        <th:block th:object="${config}">
+            <div class="datainput">
+                <div class="label" th:text="#{config.dataStrategy}"></div>
+                <div class="validate" type="text" th:text="${config.dataStrategy}"></div>
+                <span class="highlight"></span><span class="bar"></span>
+            </div>
+            <div class="datainput">
+                <div class="label" th:text="#{config.transfer.commonStorage}"></div>
+                <div class="validate" type="text" th:text="${config.transfer.commonStorage}"></div>
+                <span class="highlight"></span><span class="bar"></span>
+            </div>
+            <div class="datainput">
+                <div class="label" th:text="#{config.transfer.storageMigration.dataMovementStrategy}"></div>
+                <div class="validate" type="text"
+                     th:text="${config.transfer.storageMigration.dataMovementStrategy}"></div>
+                <span class="highlight"></span><span class="bar"></span>
+            </div>
+
+            <div class="tab">
+                <button th:each="cluster: ${config.clusters}"
+                        th:id="${cluster.key}+'Button'" class="tablinks"
+                        th:attr="onclick=|openTab(event, '${cluster.key}', 'HiveServer2')|"
+                        th:text="${cluster.key}"/>
+            </div>
+
+            <div class="tabcontent" th:each="cluster: ${config.clusters}" th:id="${cluster.key}">
+                <div class="label" th:text="#{config.clusters.hcfsNamespace}"></div>
+                <div class="validate" type="text" th:text="${cluster.value.hcfsNamespace}"></div>
+                <span class="highlight"></span><span class="bar"></span>
+                <div class="tab">
+                    <button th:id="${cluster.key}+'HiveServer2Button'" class="tablinks"
+                            th:attr="onclick=|openTab(event, ${cluster.key}, HiveServer2)|">Hive Server2</button>
+                    <button th:id="${cluster.key}+'MetastoreDirectButton'" class="tablinks"
+                            th:attr="onclick=|openTab(event, ${cluster.key}, MetastoreDirect)|">Metastore Direct</button>
+                </div>
+                <div class="tabcontent" th:id="${cluster.key}+'HiveServer2'">
+                    <div class="label" th:text="#{uri}"></div>
+                    <div class="validate" type="text" th:text="${cluster.value.hiveServer2.uri}"></div>
+                    <span class="highlight"></span><span class="bar"></span>
+                </div>
+                <div class="tabcontent" th:id="${cluster.key}+'MetastoreDirect'" th:unless="${cluster.value.metastoreDirect == null}">
+                    <div class="label" th:text="#{uri}"></div>
+                    <div class="validate" type="text" th:text="${cluster.value.metastoreDirect.uri}"></div>
+                    <span class="highlight"></span><span class="bar"></span>
+                </div>
+            </div>
+        </th:block>
+    </div>
+
+</main>
+</body>
+</html>

@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror;
 
-import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 

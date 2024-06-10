@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
-import com.cloudera.utils.hms.mirror.Environment;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
@@ -41,9 +41,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.util.*;
 
 @Configuration
