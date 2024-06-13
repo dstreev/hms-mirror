@@ -17,15 +17,15 @@
 
 <!--<!DOCTYPE HTML>-->
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
+<header>
     <title>Create Config</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
-</head>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+</header>
 <body>
-<form class="pure-form pure-form-aligned" th:action="@{/config/save}" th:object="${sessionContainer}" method="post">
     <div class="pure-g">
         <div class="pure-u-1">
             <h1 th:text="#{${action}}"/>
@@ -37,6 +37,7 @@
         </div>
         <div class="pure-u-1-5">
         </div>
+        <form class="pure-form pure-form-aligned" th:action="@{/config/save}" th:object="${sessionContainer}" method="post">
         <div class="pure-u-4-5">
             <fieldset>
                 <legend th:text="#{config.actions}"/>
@@ -223,6 +224,7 @@
                 </div>
             </div>
         </div>
+        </form>
         <div class="pure-u-1-1">
             <fieldset>
                 <legend th:text="#{config.translator}"/>
@@ -239,9 +241,9 @@
                 <div class="pure-u-1-1">
                     <fieldset>
                         <legend th:text="#{warehouse.plans}"/>
-                    </fieldset>
                     <div class="pure-g">
                         <div class="pure-u-1-5">
+                            <a class="pure-button" th:href="@{/translator/warehousePlan/create}" th:text="#{button.add}"/>
                         </div>
                         <div class="pure-u-4-5">
                             <table class="pure-table">
@@ -258,54 +260,125 @@
                                         th:each="plan: ${sessionContainer.config.translator.warehouseMapBuilder.warehousePlans}">
                                     <tr>
                                         <td>
-                                            <a th:href="@{${'/database/'+plan.key+'/warehousePlan/delete'}}"
+                                            <a class="pure-button"
+                                               th:href="@{${'/database/'+plan.key+'/warehousePlan/delete'}}"
                                                th:text="#{delete}"/>
                                         </td>
                                         <td><label th:text="${plan.key}"/></td>
                                         <td><label th:text="${plan.value.externalDirectory}"/></td>
                                         <td><label th:text="${plan.value.managedDirectory}"/></td>
-                                        <!--                            <div class="pure-u-1-8">-->
-                                        <!--                            </div>-->
-                                        <!--                            <a class="pure-button pure-u-1-8"-->
-                                        <!--                               th:href="@{${'/database/'+plan.key+'/warehousePlan/delete'}}"-->
-                                        <!--                               th:text="#{delete}"/>-->
-                                        <!--                            <div class="pure-u-1-8">-->
-                                        <!--                            </div>-->
-                                        <!--                            &lt;!&ndash;                            <div class="pure-u-1-5">&ndash;&gt;-->
-                                        <!--                            <label class="pure-u-1-8" th:text="${plan.key}"/>-->
-                                        <!--                            &lt;!&ndash;                                <input class="pure-u-1-5" type="text" th:field="*{plan.key}" th:disabled="disabled"/>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            </div>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            <div class="pure-u-1-5">&ndash;&gt;-->
-                                        <!--                            <label class="pure-u-1-4" th:text="${plan.value.externalDirectory}"/>-->
-                                        <!--                            &lt;!&ndash;                                <input class="pure-u-1-5" type="text" th:field="*{plan.value.externalDirectory}" th:disabled="disabled"/>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            </div>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            <div class="pure-u-1-5">&ndash;&gt;-->
-                                        <!--                            <label class="pure-u-1-4" th:text="${plan.value.managedDirectory}"/>-->
-                                        <!--                            &lt;!&ndash;                                <input class="pure-u-1-5" type="text" th:field="*{plan.value.managedDirectory}" th:disabled="disabled"/>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            </div>&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            <div class="pure-u-1-5">&ndash;&gt;-->
-                                        <!--                            &lt;!&ndash;                            </div>&ndash;&gt;-->
                                     </tr>
                                 </th:block>
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    </fieldset>
                 </div>
                 <div class="pure-u-1-1">
                     <fieldset>
                         <legend th:text="#{global.location.maps}"/>
                     </fieldset>
+                    <div class="pure-g">
+                        <div class="pure-u-1-5">
+                        </div>
+                        <div class="pure-u-4-5">
+                            <table class="pure-table">
+                                <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Source</th>
+                                    <th>Target</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <th:block
+                                        th:each="glm: ${sessionContainer.config.translator.globalLocationMap}">
+                                    <tr>
+                                        <td>
+                                            <a class="pure-button"
+                                               th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                                               th:text="#{delete}"/>
+                                        </td>
+                                        <td><label th:text="${glm.key}"/></td>
+                                        <td><label th:text="${glm.value}"/></td>
+                                    </tr>
+                                </th:block>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="pure-u-1-1">
                 <fieldset>
                     <legend th:text="#{builder.sources}"/>
                 </fieldset>
+                <div class="pure-g">
+                    <div class="pure-u-1-5">
+                    </div>
+                    <div class="pure-u-4-5">
+                        <ul id="tree">
+                            <th:block
+                                    th:each="source: ${sessionContainer.config.translator.warehouseMapBuilder.sources}">
+                                <li>
+                                    <details open>
+                                        <summary th:text="${source.key}"></summary>
+                                        <ul>
+                                            <li>
+                                                <details>
+                                                    <summary th:text="#{managed.tables}"></summary>
+                                                    <ul>
+                                                        <th:block
+                                                                th:each="mngdTbl: ${source.value.locations[MANAGED_TABLE]}">
+                                                            <li>
+                                                                <details>
+                                                                    <summary th:text="${mngdTbl.key}"></summary>
+                                                                    <ul>
+                                                                        <th:block th:each="tbl: ${mngdTbl.value}">
+                                                                            <li th:text="${tbl}">
+                                                                                <!--                                                                    <summary th:text="${tbl}"></summary>-->
+                                                                            </li>
+                                                                        </th:block>
+                                                                    </ul>
+                                                                </details>
+                                                            </li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                            <li>
+                                                <details>
+                                                    <summary th:text="#{external.tables}"></summary>
+                                                    <ul>
+                                                        <th:block
+                                                                th:each="extTbl: ${source.value.locations[EXTERNAL_TABLE]}">
+                                                            <li>
+                                                                <details>
+                                                                    <summary th:text="${extTbl.key}"></summary>
+                                                                    <ul>
+                                                                        <th:block th:each="tbl: ${extTbl.value}">
+                                                                            <li th:text="${tbl}"></li>
+                                                                        </th:block>
+                                                                    </ul>
+                                                                </details>
+                                                            </li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        </ul>
+                                    </details>
+                                </li>
+                            </th:block>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     </div>
-</form>
+<!--</form>-->
 </body>
 </html>

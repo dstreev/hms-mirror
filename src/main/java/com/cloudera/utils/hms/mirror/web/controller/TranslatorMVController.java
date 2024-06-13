@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
-import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -32,31 +32,32 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.validation.constraints.NotNull;
 
 @Controller
-@RequestMapping(path = "/database")
+@RequestMapping(path = "/translator")
 @Slf4j
-public class DatabaseMVController {
+public class TranslatorMVController {
 
-    private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
-
-    @Autowired
-    public void setDatabaseService(DatabaseService databaseService) {
-        this.databaseService = databaseService;
-    }
+    private TranslatorService translatorService;
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
 
-    @RequestMapping(value = "/{database}/warehousePlan/delete", method = RequestMethod.GET)
-    public String reload(Model model,
-                         @PathVariable @NotNull String database) throws SessionRunningException {
+    @Autowired
+    public void setTranslatorService(TranslatorService translatorService) {
+        this.translatorService = translatorService;
+    }
+
+    @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
+    public String removeGlobalLocationMap(Model model,
+                                          @PathVariable @NotNull String source) throws SessionRunningException {
+        // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        databaseService.removeWarehousePlan(database);
+        log.info("Removing global location map for source: {}", source);
+        translatorService.removeGlobalLocationMap(source);
 
         return "redirect:/config/view";
     }
-
 }
