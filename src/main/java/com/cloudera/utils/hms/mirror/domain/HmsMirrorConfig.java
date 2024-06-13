@@ -388,10 +388,13 @@ public class HmsMirrorConfig implements Cloneable {
     public Cluster getCluster(Environment environment) {
         Cluster cluster = getClusters().get(environment);
         if (cluster == null) {
-            if (dataStrategy == STORAGE_MIGRATION) {
+            if (dataStrategy == STORAGE_MIGRATION && environment == Environment.LEFT) {
                 // We use the RIGHT cluster during STORAGE_MIGRATION as a resting place for conversion.
                 // The configs need to be the same.
-                cluster = getCluster(Environment.LEFT);
+                cluster = new Cluster();
+                cluster.setEnvironment(environment);
+                this.getClusters().put(environment, cluster);
+//                cluster = getCluster(Environment.LEFT);
             } else {
                 cluster = new Cluster();
                 if (cluster.getEnvironment() == null) {

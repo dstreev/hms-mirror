@@ -15,26 +15,20 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller;
+package com.cloudera.utils.hms.mirror.domain.support;
 
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 
-@Controller
-@RequestMapping(path = "/report")
+import java.util.Set;
+import java.util.TreeSet;
+
+@Getter
+@Setter
 @Slf4j
-public class ReportController {
+public class ReportContainer {
 
-    @GetMapping(path = "/{id}")
-    public String getReport(@PathVariable String id) {
-        return "report";
-    }
+    private Set<String> reports = new TreeSet<>();
 
-    @GetMapping(path = "/")
-    public String getReport() {
-        return "report";
-    }
 }

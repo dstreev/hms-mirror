@@ -112,6 +112,11 @@ public class ExecuteSessionService {
         return session;
     }
 
+    public void clearLoadedSession() throws SessionRunningException {
+        clearActiveSession();
+        loadedSession = null;
+    }
+
     public void clearActiveSession() throws SessionRunningException {
         if (activeSession != null) {
            if (activeSession.getRunning().get()) {
@@ -250,6 +255,7 @@ public class ExecuteSessionService {
         zipOut.close();
         fos.close();
     }
+
 
     public HttpEntity<ByteArrayResource> getZippedReport(String id) throws IOException {
         // Using the 'id', get the reports for the session.

@@ -75,7 +75,8 @@ public class ExecuteSession implements Cloneable {
     public HmsMirrorConfig getResolvedConfig() {
         if (resolvedConfig == null) {
             // This deals with any transitions that may have occurred in the config.
-            resolvedConfig = origConfig.getResolvedConfig();
+            if (origConfig != null)
+                resolvedConfig = origConfig.getResolvedConfig();
         }
         return resolvedConfig;
     }

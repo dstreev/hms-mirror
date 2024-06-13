@@ -61,11 +61,11 @@ public class WebInit {
                 hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFullFilename);
             } else {
                 // Return empty config.  This will require the user to setup the config.
-                log.warn("No config found.  Creating empty config.");
-                hmsMirrorConfig = new HmsMirrorConfig();
+                log.warn("Default config not found.");
+//                hmsMirrorConfig = new HmsMirrorConfig();
             }
-            ExecuteSession createdSession = executeSessionService.createSession(null, hmsMirrorConfig);
-            executeSessionService.setLoadedSession(createdSession);
+//            ExecuteSession createdSession = executeSessionService.createSession(null, hmsMirrorConfig);
+//            executeSessionService.setLoadedSession(createdSession);
         };
     }
 

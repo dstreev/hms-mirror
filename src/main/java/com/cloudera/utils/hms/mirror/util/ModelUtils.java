@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.util;
 
+import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import org.springframework.ui.Model;
 
@@ -32,7 +33,9 @@ public class ModelUtils {
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, model);
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, model);
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum.class, model);
+        enumForModel(DBStore.DB_TYPE.class, model);
         configEnvironmentForModel(model);
+        configSupportDataStrategyForModel(model);
         enumForModel(ConnectionPoolType.class, model);
         booleanForModel(model);
     }
@@ -42,6 +45,10 @@ public class ModelUtils {
         model.addAttribute("environments", new String[]{"LEFT", "RIGHT"});
     }
 
+    public static void configSupportDataStrategyForModel(Model model) {
+        // Add SUPPORTED and UNSUPPORTED to the model
+        model.addAttribute("supporteddatastrategyenums", new String[]{"STORAGE_MIGRATION"});
+    }
     public static void enumForModel(Class clazz, Model model) {
         if (clazz.isEnum()) {
             Method method = null;
