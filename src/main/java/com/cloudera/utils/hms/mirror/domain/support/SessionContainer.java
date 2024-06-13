@@ -21,12 +21,16 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 public class SessionContainer {
     private boolean saveAsDefault = Boolean.FALSE;
     private boolean stripMappings = Boolean.TRUE;
     private boolean flipConfig = Boolean.FALSE;
+    private List<Environment> environments = new ArrayList<>();
     private HmsMirrorConfig config;
     private RunStatus runStatus = null;
     private String sessionId = null;

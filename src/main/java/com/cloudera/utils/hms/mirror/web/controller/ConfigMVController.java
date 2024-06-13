@@ -135,6 +135,12 @@ public class ConfigMVController {
             config = session.getConfig();
             sessionContainer.setSessionId(session.getSessionId());
         }
+        if (config.getCluster(Environment.LEFT) != null) {
+            sessionContainer.getEnvironments().add(Environment.LEFT);
+        }
+        if (config.getCluster(Environment.RIGHT) != null) {
+            sessionContainer.getEnvironments().add(Environment.RIGHT);
+        }
 
         sessionContainer.setConfig(config);
         sessionContainer.setReadOnly(readOnly);
