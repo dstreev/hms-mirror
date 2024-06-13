@@ -57,7 +57,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         log.debug("Table: {} buildout Intermediate Definition", tableMirror.getName());
         EnvironmentTable let = null;
@@ -215,7 +215,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         log.debug("Table: {} buildout Intermediate SQL", tableMirror.getName());
 
@@ -307,7 +307,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         rtn = buildOutDefinition(tableMirror);
         if (rtn)

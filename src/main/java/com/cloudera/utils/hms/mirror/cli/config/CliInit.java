@@ -161,7 +161,7 @@ public class CliInit {
 
     private void loadTestData(ExecuteSession session) {
         log.info("Loading Test Data");
-        HmsMirrorConfig config = session.getResolvedConfig();
+        HmsMirrorConfig config = session.getConfig();
         try {
             String filename = config.getLoadTestDataFile();
             log.info("Reconstituting Conversion from test data file: {}", filename);
@@ -209,7 +209,7 @@ public class CliInit {
             ExecuteSession session = executeSessionService.createSession(null, builtConfig);
             executeSessionService.setLoadedSession(session);
             executeSessionService.transitionLoadedSessionToActive();
-            HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getResolvedConfig();
+            HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getConfig();
             RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
             Conversion conversion = null;
             log.info("Post Processing Conversion");

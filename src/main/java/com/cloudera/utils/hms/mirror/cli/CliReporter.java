@@ -196,7 +196,7 @@ public class CliReporter {
     private void populateVarMap() {
         ExecuteSession session = executeSessionService.getActiveSession();
         Conversion conversion = executeSessionService.getActiveSession().getConversion();
-        HmsMirrorConfig hmsMirrorConfig = session.getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = session.getConfig();
 
         tiktok = !tiktok;
         startedTables.clear();

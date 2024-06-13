@@ -58,7 +58,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -179,7 +179,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         String useDb = null;
         String database = null;

@@ -26,84 +26,80 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
 </header>
 <body>
+<!--<div class="pure-g">-->
+<!--    <div class="pure-u-1">-->
+<h1 th:text="#{${action}}"/>
+<!--    </div>-->
+<!--    <div class="pure-u-1-1">-->
+<form id="config_form" class="pure-form pure-form-aligned" th:action="@{/config/save}"
+      th:object="${sessionContainer}" method="post">
+    <!--        </form>-->
     <div class="pure-g">
-        <div class="pure-u-1">
-            <h1 th:text="#{${action}}"/>
-        </div>
-        <div class="pure-u-1-1">
-            <fieldset>
+        <div class="pure-u-1-5">
+            <fieldset
+                    th:disabled="${sessionContainer.isReadOnly()}">
                 <legend th:text="#{config}"/>
             </fieldset>
         </div>
-        <div class="pure-u-1-5">
-        </div>
-        <form class="pure-form pure-form-aligned" th:action="@{/config/save}" th:object="${sessionContainer}" method="post">
         <div class="pure-u-4-5">
-            <fieldset>
+            <fieldset class="pure-form pure-form-aligned" th:disabled="${sessionContainer.isReadOnly()}">
                 <legend th:text="#{config.actions}"/>
-                <div class="pure-g">
-                    <div class="pure-u-1-5">
-
-                    </div>
-                    <div class="pure-u-2-5">
-                        <div class="pure-control-group">
-                            <label for="saveas" th:text="#{saveAs}"/>
-                            <input class="pure-input-2-3" id="saveas" type="text" th:field="*{sessionId}"
-                                   th:placeholder="#{saveAs}"
-                                   th:disabled="${sessionContainer.isReadOnly()}"/>
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="saveAsDefault" th:text="#{saveAsDefault}"/>
-                            <input type="checkbox" name="saveAsDefault" th:field="*{saveAsDefault}"
-                                   th:checked="${sessionContainer.saveAsDefault}"
-                                   th:disabled="${sessionContainer.isReadOnly()}"/>
-                        </div>
-                        <div class="pure-control-group" th:unless="${sessionContainer.config.databases?.isEmpty()}">
-                            <label for="stripMappings" th:text="#{stripMappings}"/>
-                            <input type="checkbox" name="stripMappings" th:field="*{stripMappings}"
-                                   th:checked="${sessionContainer.stripMappings}"
-                                   th:disabled="${sessionContainer.isReadOnly()}"/>
-                        </div>
-                    </div>
-                    <div class="pure-u-2-5">
-                        <button class="pure-button pure-button-primary" type="submit" th:text="#{button.save}"
-                                th:disabled="${sessionContainer.isReadOnly()}"/>
-                        <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>
-                        <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>
-                        <!--            Save As Filename
-                                        Save as Default Checkbox
-                                        Save Button
-                                        Cancel Button - return to Home
-                        -->
-                    </div>
+                <!--                    <div class="pure-g">-->
+                <!--                        <div class="pure-u-1-5">-->
+                <!---->
+                <!--                        </div>-->
+                <!--                        <div class="pure-u-2-5">-->
+                <div class="pure-control-group">
+                    <label for="saveas" th:text="#{saveAs}"/>
+                    <input class="pure-input-2-3" id="saveas" type="text" th:field="*{sessionId}"
+                           th:placeholder="#{saveAs}"/>
                 </div>
+                <div class="pure-control-group">
+                    <label for="saveAsDefault" th:text="#{saveAsDefault}"/>
+                    <input type="checkbox" name="saveAsDefault" th:field="*{saveAsDefault}"
+                           th:checked="${sessionContainer.saveAsDefault}"/>
+                </div>
+                <div class="pure-control-group" th:unless="${sessionContainer.config.databases?.isEmpty()}">
+                    <label for="stripMappings" th:text="#{stripMappings}"/>
+                    <input type="checkbox" name="stripMappings" th:field="*{stripMappings}"
+                           th:checked="${sessionContainer.stripMappings}"/>
+                </div>
+                <div class="pure-control-group" th:unless="${sessionContainer.config.clusters[RIGHT] == null}">
+                    <label for="flipConfig" th:text="#{flip.configs}"/>
+                    <input type="checkbox" name="flipConfig" th:field="*{flipConfig}"
+                           th:checked="${sessionContainer.flipConfig}"/>
+                </div>
+                <!--                        </div>-->
+                <div class="pure-control-group">
+                    <button class="pure-button pure-button-primary" type="submit" th:text="#{button.save}"
+                            th:disabled="${sessionContainer.isReadOnly()}"/>
+                    <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>
+                    <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>
+                </div>
+                <!--    </div>-->
             </fieldset>
-            <fieldset>
+            <fieldset th:disabled="${sessionContainer.isReadOnly()}">
                 <legend th:text="#{attributes}"/>
                 <div class="pure-control-group">
                     <label for="datastrategy">Data Strategy</label>
-                    <select id="datastrategy" th:field="*{config.dataStrategy}"
-                            th:disabled="${sessionContainer.isReadOnly()}">
+                    <select id="datastrategy" th:field="*{config.dataStrategy}">
                         <option th:each="cet: ${supporteddatastrategyenums}"
                                 th:value="${cet}"
                                 th:text="${cet}"
                                 th:selected="${cet.equals(sessionContainer.config.dataStrategy)}"/>
                     </select>
-                    <!--                <span class="pure-form-message-inline">This is a required field.</span>-->
                 </div>
                 <div class="pure-control-group">
                     <label for="common-storage" th:text="#{config.transfer.commonStorage}"/>
                     <input class="pure-input-1-3" id="common-storage" type="text"
                            th:field="*{config.transfer.commonStorage}"
-                           placeholder="Set Migration Namespace" th:disabled="${sessionContainer.isReadOnly()}"/>
-                    <!--                <span class="highlight"></span><span class="bar"></span>-->
+                           placeholder="Set Migration Namespace"/>
                 </div>
                 <div class="pure-control-group">
                     <label for="datamovementstrategy"
                            th:text="#{config.transfer.storageMigration.dataMovementStrategy}"></label>
-                    <select id="datamovementstrategy" th:disabled="${sessionContainer.isReadOnly()}"
+                    <select id="datamovementstrategy"
                             th:field="*{config.transfer.storageMigration.dataMovementStrategy}">
-                        <!--                <option hidden='hidden' selected='selected' value='default'>Select</option>-->
                         <option th:each="cet: ${datamovementstrategyenums}"
                                 th:value="${cet}"
                                 th:text="${cet}"
@@ -113,272 +109,312 @@
                 <div class="pure-control-group">
                     <label for="evaluatepartitionlocation" th:text="#{config.evaluatePartitionLocation}"></label>
                     <input type="checkbox" name="evaluatepartitionlocation"
-                           th:checked="${sessionContainer.config.evaluatePartitionLocation}"
-                           th:disabled="${sessionContainer.isReadOnly()}"/>
+                           th:field="*{config.evaluatePartitionLocation}"
+                           th:checked="${sessionContainer.config.evaluatePartitionLocation}"/>
                 </div>
             </fieldset>
-        </div>
-        <div class="pure-u-1-1">
             <fieldset>
-                <legend th:text="#{source.connections}"/>
-            </fieldset>
-        </div>
-        <div class="pure-u-1-5">
-        </div>
-        <div class="pure-u-4-5">
-            <div class="pure-g">
-                <div class="pure-u-1-1">
-                    <fieldset>
-                        <legend th:text="#{hive.server2}"/>
-                        <!--                    <h5 th:text="#{hive.server2}"></h5>-->
-                        <div class="pure-control-group">
-                            <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>
-                            <input type="checkbox" name="hs2legacy" th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:checked="${sessionContainer.config.clusters[LEFT].legacyHive}"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="leftNamespace" th:text="#{hcfs.namespace}"/>
-                            <input class="pure-input-1-3" id="leftNamespace" type="text"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].hcfsNamespace}"
-                                   placeholder="Set Namespace"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="hs2uri" th:text="#{hive.server2.uri}"/>
-                            <input class="pure-input-3-4" id="hs2uri" type="text"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].hiveServer2.uri}"
-                                   placeholder="Set HiveServer2 JDBC URI"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="hs2user" th:text="#{hive.server2.user}"/>
-                            <input class="pure-input-1-4" id="hs2user" type="text"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[user]}"
-                                   placeholder="Set HiveServer2 User"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="hs2password" th:text="#{hive.server2.password}"/>
-                            <input class="pure-input-1-4" id="hs2password" type="password"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[password]}"
-                                   placeholder="Set HiveServer2 Password"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="hs2jars" th:text="#{hive.server2.jars}"/>
-                            <input class="pure-input-3-4" id="hs2jars" type="text"
-                                   th:field="*{config.clusters[LEFT].hiveServer2.jarFile}"
-                                   placeholder="Set HiveServer2 JDBC Driver Jar File(s)"
-                                   th:disabled="${sessionContainer.isReadOnly()}"/>
-                            <span class="pure-form-message-inline">Local file(s) on application server host.</span>
-                            <!--                        </label>-->
-                        </div>
-                    </fieldset>
-                </div>
-                <div class="pure-u-1-1">
-                    <fieldset>
-                        <legend th:text="#{metastore.direct}"/>
-                        <!--                    <h5 th:text="#{metastore.direct}"></h5>-->
-                        <div class="pure-control-group">
-                            <label for="metastoreuri" th:text="#{metastore.direct.uri}"/>
-                            <input class="pure-input-3-4" id="metastoreuri" type="text"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].metastoreDirect.uri}"
-                                   placeholder="Set HiveServer2 JDBC URI"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="metastoretype"
-                                   th:text="#{metastore.direct.type}"></label>
-                            <select id="metastoretype" th:field="*{config.clusters[LEFT].metastoreDirect.type}"
-                                    th:disabled="${sessionContainer.isReadOnly()}">
-                                <option th:each="cet: ${db_types}"
-                                        th:value="${cet}"
-                                        th:text="${cet}"
-                                        th:selected="${cet.equals(sessionContainer.config.clusters[LEFT].metastoreDirect.type)}"/>
-                            </select>
-                        </div>
-
-                        <div class="pure-control-group">
-                            <label for="metastoreuser" th:text="#{metastore.direct.user}"/>
-                            <input class="pure-input-1-4" id="metastoreuser" type="text"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].metastoreDirect.connectionProperties[user]}"
-                                   placeholder="Set Metastore User"/>
-                            <!--                        </label>-->
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="metastorepassword" th:text="#{metastore.direct.password}"/>
-                            <input class="pure-input-1-4" id="metastorepassword" type="password"
-                                   th:disabled="${sessionContainer.isReadOnly()}"
-                                   th:field="*{config.clusters[LEFT].metastoreDirect.connectionProperties[password]}"
-                                   placeholder="Set Metastore Password"/>
-                            <!--                        </label>-->
-                        </div>
-                    </fieldset>
-                </div>
-            </div>
-        </div>
-        </form>
-        <div class="pure-u-1-1">
-            <fieldset>
-                <legend th:text="#{config.translator}"/>
-            </fieldset>
-        </div>
-        <div class="pure-u-1-5">
-        </div>
-        <div class="pure-u-4-5">
-            <!--Show:-->
-            <!-- - The Warehouse Plans-->
-            <!-- - The Global Location Maps-->
-            <!-- - The Builder Sources-->
-            <div class="pure-g">
-                <div class="pure-u-1-1">
-                    <fieldset>
-                        <legend th:text="#{warehouse.plans}"/>
-                    <div class="pure-g">
-                        <div class="pure-u-1-5">
-                            <a class="pure-button" th:href="@{/translator/warehousePlan/create}" th:text="#{button.add}"/>
-                        </div>
-                        <div class="pure-u-4-5">
-                            <table class="pure-table">
-                                <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Database</th>
-                                    <th>External Directory</th>
-                                    <th>Managed Directory</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <th:block
-                                        th:each="plan: ${sessionContainer.config.translator.warehouseMapBuilder.warehousePlans}">
-                                    <tr>
-                                        <td>
-                                            <a class="pure-button"
-                                               th:href="@{${'/database/'+plan.key+'/warehousePlan/delete'}}"
-                                               th:text="#{delete}"/>
-                                        </td>
-                                        <td><label th:text="${plan.key}"/></td>
-                                        <td><label th:text="${plan.value.externalDirectory}"/></td>
-                                        <td><label th:text="${plan.value.managedDirectory}"/></td>
-                                    </tr>
-                                </th:block>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    </fieldset>
-                </div>
-                <div class="pure-u-1-1">
-                    <fieldset>
-                        <legend th:text="#{global.location.maps}"/>
-                    </fieldset>
-                    <div class="pure-g">
-                        <div class="pure-u-1-5">
-                        </div>
-                        <div class="pure-u-4-5">
-                            <table class="pure-table">
-                                <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Source</th>
-                                    <th>Target</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <th:block
-                                        th:each="glm: ${sessionContainer.config.translator.globalLocationMap}">
-                                    <tr>
-                                        <td>
-                                            <a class="pure-button"
-                                               th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
-                                               th:text="#{delete}"/>
-                                        </td>
-                                        <td><label th:text="${glm.key}"/></td>
-                                        <td><label th:text="${glm.value}"/></td>
-                                    </tr>
-                                </th:block>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-            <div class="pure-u-1-1">
-                <fieldset>
-                    <legend th:text="#{builder.sources}"/>
-                </fieldset>
+                <legend th:text="#{source.cluster}"/>
                 <div class="pure-g">
-                    <div class="pure-u-1-5">
+                    <div class="pure-u-1-8"></div>
+                    <div class="pure-u-7-8">
+                        <fieldset>
+                            <legend th:text="#{attributes}"/>
+                        <input type="hidden" th:field="*{config.clusters[LEFT].environment}"
+                               th:value="${sessionContainer.config.clusters[LEFT]?.environment}"/>
+                        <div class="pure-control-group">
+                            <label for="cine" th:text="#{cluster.cine}"/>
+                            <input id="cine" type="checkbox" th:field="*{config.clusters[LEFT].createIfNotExists}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.createIfNotExists}"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="hdphive3" th:text="#{cluster.hdp.hive3}"/>
+                            <input id="hdphive3" type="checkbox" th:field="*{config.clusters[LEFT].hdpHive3}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.hdpHive3}"/>
+                        </div>
+
+                        <div class="pure-control-group">
+                            <label for="partauto" th:text="#{cluster.partition.auto}"/>
+                            <input id="partauto" type="checkbox" th:field="*{config.clusters[LEFT].partitionDiscovery.auto}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.partitionDiscovery.auto}"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="partmsck" th:text="#{cluster.partition.msck}"/>
+                            <input id="partmsck" type="checkbox" th:field="*{config.clusters[LEFT].partitionDiscovery.initMSCK}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.partitionDiscovery.initMSCK}"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="tblstats" th:text="#{cluster.enable.table.stats}"/>
+                            <input id="tblstats" type="checkbox" th:field="*{config.clusters[LEFT].enableAutoTableStats}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.enableAutoTableStats}"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="colstats" th:text="#{cluster.enable.colums.stats}"/>
+                            <input id="colstats" type="checkbox" th:field="*{config.clusters[LEFT].enableAutoColumnStats}"
+                                   th:checked="${sessionContainer.config.clusters[LEFT]?.enableAutoColumnStats}"/>
+                        </div>
+                        </fieldset>
+
                     </div>
-                    <div class="pure-u-4-5">
-                        <ul id="tree">
-                            <th:block
-                                    th:each="source: ${sessionContainer.config.translator.warehouseMapBuilder.sources}">
-                                <li>
-                                    <details open>
-                                        <summary th:text="${source.key}"></summary>
-                                        <ul>
-                                            <li>
-                                                <details>
-                                                    <summary th:text="#{managed.tables}"></summary>
-                                                    <ul>
-                                                        <th:block
-                                                                th:each="mngdTbl: ${source.value.locations[MANAGED_TABLE]}">
-                                                            <li>
-                                                                <details>
-                                                                    <summary th:text="${mngdTbl.key}"></summary>
-                                                                    <ul>
-                                                                        <th:block th:each="tbl: ${mngdTbl.value}">
-                                                                            <li th:text="${tbl}">
-                                                                                <!--                                                                    <summary th:text="${tbl}"></summary>-->
-                                                                            </li>
-                                                                        </th:block>
-                                                                    </ul>
-                                                                </details>
-                                                            </li>
-                                                        </th:block>
-                                                    </ul>
-                                                </details>
-                                            </li>
-                                            <li>
-                                                <details>
-                                                    <summary th:text="#{external.tables}"></summary>
-                                                    <ul>
-                                                        <th:block
-                                                                th:each="extTbl: ${source.value.locations[EXTERNAL_TABLE]}">
-                                                            <li>
-                                                                <details>
-                                                                    <summary th:text="${extTbl.key}"></summary>
-                                                                    <ul>
-                                                                        <th:block th:each="tbl: ${extTbl.value}">
-                                                                            <li th:text="${tbl}"></li>
-                                                                        </th:block>
-                                                                    </ul>
-                                                                </details>
-                                                            </li>
-                                                        </th:block>
-                                                    </ul>
-                                                </details>
-                                            </li>
-                                        </ul>
-                                    </details>
-                                </li>
-                            </th:block>
-                        </ul>
+                    <div class="pure-u-1-8"></div>
+                    <div class="pure-u-7-8">
+                        <fieldset th:disabled="${sessionContainer.isReadOnly()}">
+                            <legend th:text="#{hive.server2}"/>
+                            <fieldset>
+                                <!--                    Field required but editing not supported yet. -->
+                                <!--                                hiveServer2-->
+                                <!--                                hiveServer2.disconnected-->
+                                <!--                                hiveServer2.driverClassName-->
+                                <!--                                hiveServer2.connectionProperties[maxWaitMillis,user,password,maxTotal]-->
+                                <!--                 -->
+                                <input type="hidden" th:field="*{config.clusters[LEFT].hiveServer2.disconnected}"
+                                       th:checked="${sessionContainer.config.clusters[LEFT]?.hiveServer2?.disconnected}"/>
+                                <input type="hidden" th:field="*{config.clusters[LEFT].hiveServer2.driverClassName}"
+                                       th:value="${sessionContainer.config.clusters[LEFT]?.hiveServer2?.driverClassName}"/>
+                                <!--                                <select id="driverClass" th:field="*{config.clusters[LEFT].hiveServer2.driverClassName}">-->
+                                <!--                                    <option th:each="cet: ${driverclassnameenums}"-->
+                                <!--                                            th:value="${cet}"-->
+                                <!--                                            th:text="${cet}"-->
+                                <!--                                            th:selected="${cet.equals(sessionContainer.config.clusters[LEFT]?.hiveServer2?.driverClassName)}"/>-->
+                                <!--                                </select>-->
+                                <input type="hidden"
+                                       th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[maxWaitMillis]}"
+                                       th:value="${sessionContainer.config.clusters[LEFT].hiveServer2?.connectionProperties[maxWaitMillis]}"/>
+                                <input type="hidden"
+                                       th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[maxTotal]}"
+                                       th:value="${sessionContainer.config.clusters[LEFT].hiveServer2?.connectionProperties[maxTotal]}"/>
+
+                                <div class="pure-control-group">
+                                    <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>
+                                    <input type="checkbox" name="hs2legacy"
+                                           th:field="*{config.clusters[LEFT].legacyHive}"
+                                           th:checked="${sessionContainer.config.clusters[LEFT]?.legacyHive}"/>
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="leftNamespace" th:text="#{hcfs.namespace}"/>
+                                    <input class="pure-input-1-3" id="leftNamespace" type="text"
+                                           th:field="*{config.clusters[LEFT].hcfsNamespace}"
+                                           placeholder="Set Namespace"/>
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="hs2uri" th:text="#{hive.server2.uri}"/>
+                                    <input class="pure-input-3-4" id="hs2uri" type="text"
+                                           th:field="*{config.clusters[LEFT].hiveServer2.uri}"
+                                           placeholder="Set HiveServer2 JDBC URI"/>
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="hs2user" th:text="#{hive.server2.user}"/>
+                                    <input class="pure-input-1-4" id="hs2user" type="text"
+                                           th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[user]}"
+                                           placeholder="Set HiveServer2 User"/>
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="hs2password" th:text="#{hive.server2.password}"/>
+                                    <input class="pure-input-1-4" id="hs2password" type="password"
+                                           th:field="*{config.clusters[LEFT].hiveServer2.connectionProperties[password]}"
+                                           placeholder="Set HiveServer2 Password"/>
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="hs2jars" th:text="#{hive.server2.jars}"/>
+                                    <input class="pure-input-3-4" id="hs2jars" type="text"
+                                           th:field="*{config.clusters[LEFT].hiveServer2.jarFile}"
+                                           placeholder="Set HiveServer2 JDBC Driver Jar File(s)"/>
+                                    <span class="pure-form-message-inline">Local file(s) on application server host.</span>
+                                </div>
+                                <!--                        </div>-->
+                                <!--                    </div>-->
+                            </fieldset>
+                        </fieldset>
+                        <fieldset th:disabled="${sessionContainer.isReadOnly()}">
+                            <legend th:text="#{metastore.direct}"/>
+                            <!--                            Hidden Field to support all Metastore Direct Options -->
+                            <!--                            initSql-->
+                            <!--                            connectionPool.min-->
+                            <!--                            connectionPool.max-->
+                            <!--                            connectionPool.timeout-->
+                            <input type="hidden" th:field="*{config.clusters[LEFT].metastoreDirect.initSql}"
+                                   th:value="${sessionContainer.config.clusters[LEFT]?.metastoreDirect?.initSql}"/>
+                            <input type="hidden" th:field="*{config.clusters[LEFT].metastoreDirect.connectionPool.min}"
+                                   th:value="${sessionContainer.config.clusters[LEFT]?.metastoreDirect?.connectionPool.min}"/>
+                            <input type="hidden" th:field="*{config.clusters[LEFT].metastoreDirect.connectionPool.max}"
+                                   th:value="${sessionContainer.config.clusters[LEFT]?.metastoreDirect?.connectionPool.max}"/>
+                            <input type="hidden"
+                                   th:field="*{config.clusters[LEFT].metastoreDirect.connectionPool.timeout}"
+                                   th:value="${sessionContainer.config.clusters[LEFT]?.metastoreDirect?.connectionPool.timeout}"/>
+                            <div class="pure-control-group">
+                                <label for="metastoreuri" th:text="#{metastore.direct.uri}"/>
+                                <input class="pure-input-3-4" id="metastoreuri" type="text"
+                                       th:field="*{config.clusters[LEFT].metastoreDirect.uri}"
+                                       placeholder="Set HiveServer2 JDBC URI"/>
+                            </div>
+                            <div class="pure-control-group">
+                                <label for="metastoretype"
+                                       th:text="#{metastore.direct.type}"></label>
+                                <select id="metastoretype" th:field="*{config.clusters[LEFT].metastoreDirect.type}">
+                                    <option th:each="cet: ${db_types}"
+                                            th:value="${cet}"
+                                            th:text="${cet}"
+                                            th:selected="${cet.equals(sessionContainer.config.clusters[LEFT]?.metastoreDirect?.type)}"/>
+                                </select>
+                            </div>
+                            <div class="pure-control-group">
+                                <label for="metastoreuser" th:text="#{metastore.direct.user}"/>
+                                <input class="pure-input-1-4" id="metastoreuser" type="text"
+                                       th:field="*{config.clusters[LEFT].metastoreDirect.connectionProperties[user]}"
+                                       placeholder="Set Metastore User"/>
+                            </div>
+                            <div class="pure-control-group">
+                                <label for="metastorepassword" th:text="#{metastore.direct.password}"/>
+                                <input class="pure-input-1-4" id="metastorepassword" type="password"
+                                       th:field="*{config.clusters[LEFT].metastoreDirect.connectionProperties[password]}"
+                                       placeholder="Set Metastore Password"/>
+                            </div>
+                        </fieldset>
                     </div>
                 </div>
-            </div>
+            </fieldset>
         </div>
     </div>
-    </div>
-<!--</form>-->
+</form>
+<fieldset>
+    <legend th:text="#{config.translator}"/>
+    <fieldset>
+        <legend th:text="#{warehouse.plans}"/>
+        <div class="pure-g">
+            <div class="pure-u-1-5">
+                <form class="pure-form pure-form-aligned" th:action="@{/config/warehouse/plan/add}" method="post">
+                    <div class="pure-control-group">
+                        <label for="database" th:text="#{database}"/>
+                        <input id="database" name="database" type="text"/>
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="extDir" th:text="#{external.warehouse}"/>
+                        <input id="extDir" name="externalDirectory" type="text"/>
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="mngdDir" th:text="#{managed.warehouse}"/>
+                        <input id="mngdDir" name="managedDirectory" type="text"/>
+                    </div>
+                    <div class="pure-control-group">
+                        <button class="pure-button pure-button-primary" type="submit" th:text="#{button.save}"/>
+                    </div>
+                </form>
+                <!--                <a class="pure-button" th:href="@{/translator/warehousePlan/create}" th:text="#{button.add}"/>-->
+            </div>
+            <div class="pure-u-4-5">
+                <table class="pure-table">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>Database</th>
+                        <th>External Directory</th>
+                        <th>Managed Directory</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th:block
+                            th:each="plan: ${sessionContainer.config.translator.warehouseMapBuilder.warehousePlans}">
+                        <tr>
+                            <td>
+                                <a class="pure-button"
+                                   th:href="@{${'/database/'+plan.key+'/warehousePlan/delete'}}"
+                                   th:text="#{delete}"/>
+                            </td>
+                            <td><label th:text="${plan.key}"/></td>
+                            <td><label th:text="${plan.value.externalDirectory}"/></td>
+                            <td><label th:text="${plan.value.managedDirectory}"/></td>
+                        </tr>
+                    </th:block>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend th:text="#{global.location.maps}"/>
+        <table class="pure-table">
+            <thead>
+            <tr>
+                <th></th>
+                <th>Source</th>
+                <th>Target</th>
+            </tr>
+            </thead>
+            <tbody>
+            <th:block
+                    th:each="glm: ${sessionContainer.config.translator.globalLocationMap}">
+                <tr>
+                    <td>
+                        <a class="pure-button"
+                           th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                           th:text="#{delete}"/>
+                    </td>
+                    <td><label th:text="${glm.key}"/></td>
+                    <td><label th:text="${glm.value}"/></td>
+                </tr>
+            </th:block>
+            </tbody>
+        </table>
+    </fieldset>
+    <fieldset>
+        <legend th:text="#{builder.sources}"/>
+        <ul id="tree">
+            <th:block
+                    th:each="source: ${sessionContainer.config.translator.warehouseMapBuilder.sources}">
+                <li>
+                    <details open>
+                        <summary th:text="${source.key}"></summary>
+                        <ul>
+                            <li>
+                                <details>
+                                    <summary th:text="#{managed.tables}"></summary>
+                                    <ul>
+                                        <th:block
+                                                th:each="mngdTbl: ${source.value.locations[MANAGED_TABLE]}">
+                                            <li>
+                                                <details>
+                                                    <summary th:text="${mngdTbl.key}"></summary>
+                                                    <ul>
+                                                        <th:block th:each="tbl: ${mngdTbl.value}">
+                                                            <li th:text="${tbl}">
+                                                                <!--                                                                    <summary th:text="${tbl}"></summary>-->
+                                                            </li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        </th:block>
+                                    </ul>
+                                </details>
+                            </li>
+                            <li>
+                                <details>
+                                    <summary th:text="#{external.tables}"></summary>
+                                    <ul>
+                                        <th:block
+                                                th:each="extTbl: ${source.value.locations[EXTERNAL_TABLE]}">
+                                            <li>
+                                                <details>
+                                                    <summary th:text="${extTbl.key}"></summary>
+                                                    <ul>
+                                                        <th:block th:each="tbl: ${extTbl.value}">
+                                                            <li th:text="${tbl}"></li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        </th:block>
+                                    </ul>
+                                </details>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+            </th:block>
+        </ul>
+    </fieldset>
+</fieldset>
+<!--    </div>-->
+<!--</div>-->
 </body>
 </html>

@@ -45,7 +45,7 @@ public abstract class DataStrategyBase implements DataStrategy {
     protected Boolean AVROCheck(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         Boolean relative = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         // Check for AVRO
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);

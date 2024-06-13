@@ -50,7 +50,7 @@ public class DatabaseMVController {
     }
 
     @RequestMapping(value = "/{database}/warehousePlan/delete", method = RequestMethod.GET)
-    public String reload(Model model,
+    public String deleteWarehousePlan(Model model,
                          @PathVariable @NotNull String database) throws SessionRunningException {
         executeSessionService.clearActiveSession();
 
@@ -58,5 +58,6 @@ public class DatabaseMVController {
 
         return "redirect:/config/view";
     }
+
 
 }

@@ -61,8 +61,8 @@ public class Test_encrypt_02 extends PasswordTestBase {
     public void validateEncryptPassword() {
 
         String encryptedPassword = getPasswordService().encryptPassword(
-                getExecuteSession().getResolvedConfig().getPasswordKey(),
-                getExecuteSession().getResolvedConfig().getPassword());
+                getExecuteSession().getConfig().getPasswordKey(),
+                getExecuteSession().getConfig().getPassword());
 
         assertEquals("Encrypt Password Failure: ", "rV+HtIWliZn2CxB+BlWCbQ==",
                 encryptedPassword);

@@ -132,7 +132,7 @@ public class ConfigMVController {
 
         } else {
             model.addAttribute("action", "edit");
-            config = session.getResolvedConfig();
+            config = session.getConfig();
             sessionContainer.setSessionId(session.getSessionId());
         }
 
@@ -157,9 +157,13 @@ public class ConfigMVController {
                        @Value("${hms-mirror.config.path}") String configPath,
                        @ModelAttribute("container") SessionContainer container) throws IOException, SessionRunningException {
 
-        executeSessionService.clearActiveSession();
+        executeSessionService.clearLoadedSession();
 
         HmsMirrorConfig config = container.getConfig();
+        if (container.isFlipConfig()) {
+            executeSessionService.flipConfig(config);
+        }
+
         String saveAs = null;
         if (container.isSaveAsDefault()) {
             log.info("Saving Config as Default: {}", "default.yaml");
@@ -180,6 +184,7 @@ public class ConfigMVController {
         ExecuteSession session = executeSessionService.createSession(saveAs, config);
         // Set it as the current session.
         executeSessionService.setLoadedSession(session);
+//        executeSessionService.transitionLoadedSessionToActive();
 
         internalUpsert(model, true);
         model.addAttribute("action", "view");
@@ -223,15 +228,22 @@ public class ConfigMVController {
     @RequestMapping(value = "/warehouse/plan/add", method = RequestMethod.POST)
     public String addDatabase(Model model,
                               @RequestParam(value = "database", required = true) String database,
-                              @RequestParam(value = "externalLocation", required = true) String externalLocation,
-                              @RequestParam(value = "managedLocation", required = true) String managedLocation) throws
-            SessionRunningException {
+                              @RequestParam(value = "externalDirectory", required = true) String externalDirectory,
+                              @RequestParam(value = "managedDirectory", required = true) String managedDirectory
+                              ) throws SessionRunningException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        databaseService.addWarehousePlan(database, externalLocation, managedLocation);
+//        SessionContainer container = (SessionContainer)model.getAttribute("sessionContainer");
+//        assert container != null;
+//        String database = container.getDatabase();
+//        String externalLocation = container.getWarehouse().getExternalDirectory();
+//        String managedLocation = container.getWarehouse().getManagedDirectory();
 
-        log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalLocation, managedLocation);
+        log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
+
+        databaseService.addWarehousePlan(database, externalDirectory, managedDirectory);
+
 
 //        HmsMirrorConfig config = configService.loadConfig(configId);
 //        // Remove the old session
@@ -239,15 +251,17 @@ public class ConfigMVController {
 //        // Create a new session
 //        ExecuteSession session = executeSessionService.createSession(configId, config);
 //
-        ExecuteSession session = executeSessionService.getActiveSession();
+//        ExecuteSession session = executeSessionService.getActiveSession();
 //        // Set it as the current session.
-        HmsMirrorConfig config = session.getResolvedConfig();
+//        HmsMirrorConfig config = session.getResolvedConfig();
 
         model.addAttribute("action", "view");
-        model.addAttribute("config", config);
-        model.addAttribute("sessionId", session.getSessionId());
-        ModelUtils.allEnumsForModel(model);
-        return "/config/view";
+        internalUpsert(model, true);
+
+//        model.addAttribute("config", config);
+//        model.addAttribute("sessionId", session.getSessionId());
+//        ModelUtils.allEnumsForModel(model);
+        return "/config/view_edit";
     }
 
 

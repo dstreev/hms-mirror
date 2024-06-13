@@ -90,7 +90,7 @@ public class RuntimeService {
         if (runStatus.reset()) {
             runStatus.setProgress(ProgressEnum.STARTED);
             // Set the dryrun flag.
-            executeSessionService.getActiveSession().getResolvedConfig().setExecute(!dryrun);
+            executeSessionService.getActiveSession().getConfig().setExecute(!dryrun);
 
             // Start job in a separate thread.
             Future<Boolean> runningTask = hmsMirrorAppService.run();

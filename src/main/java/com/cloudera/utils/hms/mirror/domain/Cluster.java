@@ -185,11 +185,11 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
         return result;
     }
 
-    public Boolean isHdpHive3() {
+    public boolean isHdpHive3() {
         return hdpHive3;
     }
 
-    public Boolean isInitialized() {
+    public boolean isInitialized() {
         if (hiveServer2 != null && !hiveServer2.isDisconnected()) {
             return initialized;
         } else {

@@ -59,7 +59,7 @@ public class ConfigService {
     public Boolean canDeriveDistcpPlan() {
         Boolean rtn = Boolean.FALSE;
         ExecuteSession executeSession = executeSessionService.getActiveSession();
-        HmsMirrorConfig hmsMirrorConfig = executeSession.getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSession.getConfig();
 
         if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
             // We need to get partition location to support partitioned tables and distcp
@@ -85,7 +85,7 @@ public class ConfigService {
     }
 
     public String getResolvedDB(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         String rtn = null;
         // Set Local Value for adjustments
@@ -98,7 +98,7 @@ public class ConfigService {
     }
 
     public Boolean getSkipStatsCollection() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         // Reset skipStatsCollection to true if we're doing a dump or schema only. (and a few other conditions)
         if (!hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
@@ -131,7 +131,7 @@ public class ConfigService {
 
     public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() != hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
             if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
@@ -143,7 +143,7 @@ public class ConfigService {
 
     protected Boolean linkTest() throws DisabledException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         if (hmsMirrorConfig.isSkipLinkCheck() || hmsMirrorConfig.isLoadingTestData()) {
             log.warn("Skipping Link Check.");
@@ -252,7 +252,7 @@ public class ConfigService {
     public Boolean validate() {
         Boolean rtn = Boolean.TRUE;
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         // Reset the config validated flag.

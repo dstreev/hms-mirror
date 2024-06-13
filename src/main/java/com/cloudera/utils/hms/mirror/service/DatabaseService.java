@@ -87,33 +87,33 @@ public class DatabaseService {
     }
 
     public Warehouse addWarehousePlan(String database, String external, String managed) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         hmsMirrorConfig.getDatabases().add(database);
         return warehouseMapBuilder.addWarehousePlan(database, external, managed);
     }
 
     public Warehouse removeWarehousePlan(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         hmsMirrorConfig.getDatabases().remove(database);
         return warehouseMapBuilder.removeWarehousePlan(database);
     }
 
     public Warehouse getWarehousePlan(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         return warehouseMapBuilder.getWarehousePlans().get(database);
     }
 
     public Map<String, Warehouse> getWarehousePlans() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         return warehouseMapBuilder.getWarehousePlans();
     }
 
     public void clearWarehousePlan() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         warehouseMapBuilder.clearWarehousePlan();
     }
@@ -121,7 +121,7 @@ public class DatabaseService {
     // Look at the Warehouse Plans and pull the database/table/partition locations the metastore.
     public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
 
         // Check to see if there are any warehouse plans defined.  If not, skip this process.
@@ -146,7 +146,7 @@ public class DatabaseService {
     }
 
     public Map<String, SourceLocationMap> getDatabaseSources() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         return warehouseMapBuilder.getSources();
     }
@@ -164,7 +164,7 @@ public class DatabaseService {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
 //        String database = tableMirror.getParent().getName();
 //        EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
@@ -227,7 +227,7 @@ public class DatabaseService {
 
     public boolean loadEnvironmentVars() {
         boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         for (Environment environment : environments) {
             if (hmsMirrorConfig.getCluster(environment) != null) {
@@ -272,7 +272,7 @@ public class DatabaseService {
     public List<String> listAvailableDatabases(Environment environment) {
         List<String> dbs = new ArrayList<>();
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);
             if (conn != null) {
@@ -321,7 +321,7 @@ public class DatabaseService {
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         // Start with the LEFT definition.
         Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
@@ -671,7 +671,7 @@ public class DatabaseService {
 
     public boolean createDatabases() {
         boolean rtn = true;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         Conversion conversion = executeSessionService.getActiveSession().getConversion();
         for (String database : hmsMirrorConfig.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
@@ -692,7 +692,7 @@ public class DatabaseService {
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);//getConnection();
@@ -773,7 +773,7 @@ public class DatabaseService {
     public Boolean runDatabaseSql(DBMirror dbMirror, Pair dbSqlPair, Environment environment) {
         // Open the connection and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         Boolean rtn = Boolean.TRUE;
         // Skip when running test data.

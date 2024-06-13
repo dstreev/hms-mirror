@@ -57,7 +57,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -133,7 +133,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
 
         String useDb = null;
@@ -212,7 +212,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 

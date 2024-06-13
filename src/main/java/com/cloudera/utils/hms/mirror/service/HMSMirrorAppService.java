@@ -84,7 +84,7 @@ public class HMSMirrorAppService {
     @Async("executionThreadPool")
     public Future<Boolean> run() {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
         Conversion conversion = executeSessionService.getActiveSession().getConversion();
 

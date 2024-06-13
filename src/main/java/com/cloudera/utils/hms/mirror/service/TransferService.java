@@ -103,7 +103,7 @@ public class TransferService {
         ReturnStatus rtn = new ReturnStatus();
 //        rtn.setStatus(ReturnStatus.Status.SUCCESS);
 //        Boolean successful = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
         try {

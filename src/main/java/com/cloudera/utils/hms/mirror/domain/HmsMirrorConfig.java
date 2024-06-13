@@ -100,7 +100,9 @@ public class HmsMirrorConfig implements Cloneable {
     /*
     Use 'flip' to switch LEFT and RIGHT cluster definitions.  Allows you to change the direction of the calls.
      */
+    @Deprecated
     private boolean flip = Boolean.FALSE;
+
     private HybridConfig hybrid = new HybridConfig();
     private IcebergConfig icebergConfig = new IcebergConfig();
     private MigrateACID migrateACID = new MigrateACID();
@@ -464,24 +466,24 @@ public class HmsMirrorConfig implements Cloneable {
 
     // Deal with any clean up that changes the state of the config, leaving the original intact.
     // This allow us to 'reset' the config to the original state.
-    @JsonIgnore // Needed to prevent recursion.
-    public HmsMirrorConfig getResolvedConfig() {
-        HmsMirrorConfig resolvedConfig = this.clone();
-        if (resolvedConfig.isFlip()) {
-            Cluster left = resolvedConfig.getCluster(Environment.LEFT);
-            left.setEnvironment(Environment.RIGHT);
-            Cluster right = resolvedConfig.getCluster(Environment.RIGHT);
-            right.setEnvironment(Environment.LEFT);
-            resolvedConfig.getClusters().put(Environment.RIGHT, left);
-            resolvedConfig.getClusters().put(Environment.LEFT, right);
-            // Need to unset this, so we don't flip again if the config is cloned.
-            resolvedConfig.setFlip(Boolean.FALSE);
-        }
-        return resolvedConfig;
-    }
+//    @JsonIgnore // Needed to prevent recursion.
+//    public HmsMirrorConfig getResolvedConfig() {
+//        HmsMirrorConfig resolvedConfig = this.clone();
+//        if (resolvedConfig.isFlip()) {
+//            Cluster left = resolvedConfig.getCluster(Environment.LEFT);
+//            left.setEnvironment(Environment.RIGHT);
+//            Cluster right = resolvedConfig.getCluster(Environment.RIGHT);
+//            right.setEnvironment(Environment.LEFT);
+//            resolvedConfig.getClusters().put(Environment.RIGHT, left);
+//            resolvedConfig.getClusters().put(Environment.LEFT, right);
+//            // Need to unset this, so we don't flip again if the config is cloned.
+//            resolvedConfig.setFlip(Boolean.FALSE);
+//        }
+//        return resolvedConfig;
+//    }
 
     public void setFlip(Boolean flip) {
-        this.flip = flip;
+//        this.flip = flip;
 //        if (this.flip) {
 //            Cluster origLeft = getCluster(Environment.LEFT);
 //            origLeft.setEnvironment(Environment.RIGHT);
@@ -490,6 +492,11 @@ public class HmsMirrorConfig implements Cloneable {
 //            getClusters().put(Environment.RIGHT, origLeft);
 //            getClusters().put(Environment.LEFT, origRight);
 //        }
+    }
+
+    @JsonIgnore
+    public boolean getFlip() {
+        return Boolean.FALSE;
     }
 
     public void setGlobalLocationMapKV(String[] extLocs) {

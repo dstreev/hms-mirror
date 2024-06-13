@@ -34,8 +34,8 @@ public class ExecuteSession implements Cloneable {
     private String sessionId;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private RunStatus runStatus;
-    private HmsMirrorConfig resolvedConfig;
-    private HmsMirrorConfig origConfig;
+//    private HmsMirrorConfig resolvedConfig;
+    private HmsMirrorConfig config;
     private CliEnvironment cliEnvironment;
     private Conversion conversion;
 
@@ -60,8 +60,8 @@ public class ExecuteSession implements Cloneable {
         try {
             ExecuteSession clone = (ExecuteSession) super.clone();
             // TODO: copy mutable state here, so the clone can't change the internals of the original
-            if (origConfig != null) {
-                clone.origConfig = origConfig.clone();
+            if (config != null) {
+                clone.config = config.clone();
                 // resolvedConfig is a derived object, so we don't need to clone it.
             }
             clone.cliEnvironment = cliEnvironment; // This isn't a cloneable object. Just establish the reference.
@@ -72,13 +72,17 @@ public class ExecuteSession implements Cloneable {
         }
     }
 
-    public HmsMirrorConfig getResolvedConfig() {
-        if (resolvedConfig == null) {
-            // This deals with any transitions that may have occurred in the config.
-            if (origConfig != null)
-                resolvedConfig = origConfig.getResolvedConfig();
-        }
-        return resolvedConfig;
-    }
+//    public void clearResolvedConfig() {
+//        resolvedConfig = null;
+//    }
+//
+//    public HmsMirrorConfig getConfig() {
+//        if (resolvedConfig == null) {
+//            // This deals with any transitions that may have occurred in the config.
+//            if (config != null)
+//                resolvedConfig = config.getResolvedConfig();
+//        }
+//        return null;
+//    }
 
 }

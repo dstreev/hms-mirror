@@ -167,7 +167,7 @@ public class Conversion {
     }
 
     public String toReport(String database, ExecuteSessionService executeSessionService) throws JsonProcessingException {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
         StringBuilder sb = new StringBuilder();

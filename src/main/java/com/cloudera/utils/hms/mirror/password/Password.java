@@ -51,7 +51,7 @@ public class Password {
 
         ExecuteSession executeSession = applicationContext.getBean(ExecuteSession.class);
 
-        HmsMirrorConfig hmsMirrorConfig = executeSession.getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSession.getConfig();
 
         if (hmsMirrorConfig.getEncryptedPassword() != null) {
             String decryptedPassword = passwordService.decryptPassword(

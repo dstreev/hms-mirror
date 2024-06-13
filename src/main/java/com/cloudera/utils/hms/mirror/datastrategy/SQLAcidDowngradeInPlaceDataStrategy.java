@@ -51,7 +51,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -106,7 +106,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         // Check to see if there are partitions.
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
@@ -176,7 +176,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         /*
         In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure

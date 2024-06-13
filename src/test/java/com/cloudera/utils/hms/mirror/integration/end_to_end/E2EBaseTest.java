@@ -57,7 +57,7 @@ public class E2EBaseTest {
     //HMSMirrorAppService;
 
     protected HmsMirrorConfig getConfig() {
-        return executeSessionService.getActiveSession().getResolvedConfig();
+        return executeSessionService.getActiveSession().getConfig();
     }
 
     protected ExecuteSessionService getExecuteSessionService() {

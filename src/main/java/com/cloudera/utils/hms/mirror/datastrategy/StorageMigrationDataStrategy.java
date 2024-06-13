@@ -66,7 +66,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -168,7 +168,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         String useDb = null;
         String database = null;
@@ -213,7 +213,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);

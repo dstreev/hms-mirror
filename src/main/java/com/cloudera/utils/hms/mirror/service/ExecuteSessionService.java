@@ -18,8 +18,10 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
@@ -102,11 +104,11 @@ public class ExecuteSessionService {
         ExecuteSession session;
         if (sessions.containsKey(sessionName)) {
             session = sessions.get(sessionName);
-            session.setOrigConfig(hmsMirrorConfig);
+            session.setConfig(hmsMirrorConfig);
         } else {
             session = new ExecuteSession();
             session.setSessionId(sessionName);
-            session.setOrigConfig(hmsMirrorConfig);
+            session.setConfig(hmsMirrorConfig);
             sessions.put(sessionName, session);
         }
         return session;
@@ -176,12 +178,12 @@ public class ExecuteSessionService {
         }
 //        ExecuteSession loadedSession = getSession(null);
         ExecuteSession session = loadedSession.clone();
-        HmsMirrorConfig resolvedConfig = loadedSession.getResolvedConfig();
-        session.setResolvedConfig(resolvedConfig);
+//        HmsMirrorConfig resolvedConfig = loadedSession.getConfig();
+//        session.setResolvedConfig(resolvedConfig);
 
         // Connection Service should be set to the resolved config.
         connectionPoolService.close();
-        connectionPoolService.setHmsMirrorConfig(resolvedConfig);
+        connectionPoolService.setHmsMirrorConfig(session.getConfig());
         connectionPoolService.setExecuteSession(session);
         try {
             connectionPoolService.init();
@@ -200,7 +202,7 @@ public class ExecuteSessionService {
         } else {
             sessionReportDir = reportOutputDirectory;
         }
-        resolvedConfig.setOutputDirectory(sessionReportDir);
+        session.getConfig().setOutputDirectory(sessionReportDir);
 
         // Create the RunStatus and Conversion objects.
         RunStatus runStatus = new RunStatus();
@@ -311,4 +313,17 @@ public class ExecuteSessionService {
         }
         return rtn;
     }
+
+    public HmsMirrorConfig flipConfig(HmsMirrorConfig config) {
+        if (config != null) {
+            Cluster leftClone = config.getCluster(Environment.LEFT).clone();
+            leftClone.setEnvironment(Environment.RIGHT);
+            Cluster rightClone   = config.getCluster(Environment.RIGHT).clone();
+            rightClone.setEnvironment(Environment.LEFT);
+            config.getClusters().put(Environment.RIGHT, leftClone);
+            config.getClusters().put(Environment.LEFT, rightClone);
+        }
+        return config;
+    }
+
 }

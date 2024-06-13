@@ -58,7 +58,7 @@ public class HiveServer2Config implements Cloneable {
     }
 
     @JsonIgnore
-    public Boolean isKerberosConnection() {
+    public boolean isKerberosConnection() {
         if (!isDisconnected()) {
             if (getUri() != null && getUri().contains("principal")) {
                 return Boolean.TRUE;

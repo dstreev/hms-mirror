@@ -56,7 +56,7 @@
         <cdp.scope>compile</cdp.scope>
 
         <hadoop-cli.version>3.1.0.0</hadoop-cli.version>
-        <hive-sre.version>3.0.1.6</hive-sre.version>
+        <hive-sre.version>3.0.1.7</hive-sre.version>
 
     </properties>
 

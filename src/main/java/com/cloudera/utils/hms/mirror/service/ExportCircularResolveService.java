@@ -61,7 +61,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
 
     public Boolean buildOutExportImportSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
 
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
 

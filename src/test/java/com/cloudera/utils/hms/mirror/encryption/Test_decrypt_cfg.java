@@ -56,28 +56,28 @@ public class Test_decrypt_cfg extends PasswordTestBase {
 
     @Before
     public void setup() {
-        passwordService.decryptConfigPasswords(getExecuteSession().getResolvedConfig());
+        passwordService.decryptConfigPasswords(getExecuteSession().getConfig());
     }
 
     @Test
     public void validateLeftPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getResolvedConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateLeftMSPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "cdpprivaatebase",
-                getExecuteSession().getResolvedConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
     }
 
     @Test
     public void validateRightPassword() {
         // Get Runtime Return Code.
         assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getResolvedConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+                getExecuteSession().getConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
     }
 
 }

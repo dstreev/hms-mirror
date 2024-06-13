@@ -131,7 +131,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     }
 
     public void init() throws SQLException {
-        if (!executeSession.getResolvedConfig().isLoadingTestData()) {
+        if (!executeSession.getConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).
@@ -169,7 +169,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
                 // Check for legacy.  If Legacy, use dbcp2 else hikaricp.
-                if (executeSession.getResolvedConfig().getCluster(environment).isLegacyHive()) {
+                if (executeSession.getConfig().getCluster(environment).isLegacyHive()) {
                     ConnectionFactory connectionFactory =
                             new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
 

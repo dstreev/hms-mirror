@@ -95,7 +95,7 @@ public class ReportWriterService {
     }
 
     public void writeReport() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
         log.info("Writing CLI report and artifacts to directory: {}", hmsMirrorConfig.getOutputDirectory());
 //        if (!setupError) {
         Conversion conversion = executeSessionService.getActiveSession().getConversion();
@@ -114,7 +114,7 @@ public class ReportWriterService {
         }
 
         // Write out the config used to run this session.
-        HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getResolvedConfig();
+        HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getConfig();
         String configOutputFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
         try {
             mapper.writeValue(new File(configOutputFile), resolvedConfig);

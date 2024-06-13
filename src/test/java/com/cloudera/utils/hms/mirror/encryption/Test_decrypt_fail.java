@@ -57,8 +57,8 @@ public class Test_decrypt_fail extends PasswordTestBase {
     public void validatePassword() {
 
         String decryptedPassword = getPasswordService().decryptPassword(
-                getExecuteSession().getResolvedConfig().getPasswordKey(),
-                getExecuteSession().getResolvedConfig().getEncryptedPassword());
+                getExecuteSession().getConfig().getPasswordKey(),
+                getExecuteSession().getConfig().getEncryptedPassword());
 
         // The decrypt value should be null because the password is not encrypted correctly.
         assertNull("Decrypt Password Failure",  decryptedPassword);
