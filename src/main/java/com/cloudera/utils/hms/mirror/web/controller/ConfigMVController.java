@@ -96,7 +96,7 @@ public class ConfigMVController {
     }
 
 
-//    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    //    @RequestMapping(value = "/list", method = RequestMethod.GET)
 //    public String list(Model model) {
 //        String loadedSessionId = executeSessionService.getLoadedSession().getSessionId();
 //        List<String> configs = webConfigService.getConfigList();
@@ -135,12 +135,12 @@ public class ConfigMVController {
             config = session.getConfig();
             sessionContainer.setSessionId(session.getSessionId());
         }
-        if (config.getCluster(Environment.LEFT) != null) {
-            sessionContainer.getEnvironments().add(Environment.LEFT);
-        }
-        if (config.getCluster(Environment.RIGHT) != null) {
-            sessionContainer.getEnvironments().add(Environment.RIGHT);
-        }
+//        if (config.getCluster(Environment.LEFT) != null) {
+        sessionContainer.getEnvironments().add(Environment.LEFT);
+//        }
+//        if (config.getCluster(Environment.RIGHT) != null) {
+        sessionContainer.getEnvironments().add(Environment.RIGHT);
+//        }
 
         sessionContainer.setConfig(config);
         sessionContainer.setReadOnly(readOnly);
@@ -162,10 +162,20 @@ public class ConfigMVController {
     public String save(Model model,
                        @Value("${hms-mirror.config.path}") String configPath,
                        @ModelAttribute("container") SessionContainer container) throws IOException, SessionRunningException {
-
+        // Get the current session config.
+        ExecuteSession curSession = executeSessionService.getLoadedSession();
+        HmsMirrorConfig currentConfig = curSession.getConfig();
+        // Clear the session, making way for the updates.
         executeSessionService.clearLoadedSession();
-
+        // Get the config from the container in the model from the UI.
         HmsMirrorConfig config = container.getConfig();
+
+        // Get the current translator settings and apply if we're not stripping them.
+        // The translator settings are not part of the config, so we need to apply them here.
+        if (!container.isStripMappings()) {
+            config.setTranslator(currentConfig.getTranslator());
+        }
+
         if (container.isFlipConfig()) {
             executeSessionService.flipConfig(config);
         }
@@ -236,7 +246,7 @@ public class ConfigMVController {
                               @RequestParam(value = "database", required = true) String database,
                               @RequestParam(value = "externalDirectory", required = true) String externalDirectory,
                               @RequestParam(value = "managedDirectory", required = true) String managedDirectory
-                              ) throws SessionRunningException {
+    ) throws SessionRunningException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -270,5 +280,18 @@ public class ConfigMVController {
         return "/config/view_edit";
     }
 
+    @RequestMapping(value = "/cluster/init", method = RequestMethod.GET)
+    public String initCluster(Model model,
+            @RequestParam(value = "environment", required = true) String environment) throws SessionRunningException {
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
 
+        Environment env = Environment.valueOf(environment);
+        ExecuteSession session = executeSessionService.getLoadedSession();
+        HmsMirrorConfig config = session.getConfig();
+        config.initClusterFor(env);
+        internalUpsert(model, true);
+
+        return "/config/view_edit";
+    }
 }

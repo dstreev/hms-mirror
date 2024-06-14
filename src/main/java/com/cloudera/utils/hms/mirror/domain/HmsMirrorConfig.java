@@ -387,32 +387,43 @@ public class HmsMirrorConfig implements Cloneable {
         }
     }
 
+    public Cluster initClusterFor(Environment environment) {
+        Cluster cluster = getCluster(environment);
+        if (cluster == null) {
+            cluster = new Cluster();
+            cluster.setEnvironment(environment);
+            getClusters().put(environment, cluster);
+        }
+        return cluster;
+    }
+
     public Cluster getCluster(Environment environment) {
         Cluster cluster = getClusters().get(environment);
-        if (cluster == null) {
-            if (dataStrategy == STORAGE_MIGRATION && environment == Environment.LEFT) {
-                // We use the RIGHT cluster during STORAGE_MIGRATION as a resting place for conversion.
-                // The configs need to be the same.
-                cluster = new Cluster();
-                cluster.setEnvironment(environment);
-                this.getClusters().put(environment, cluster);
-//                cluster = getCluster(Environment.LEFT);
-            } else {
-                cluster = new Cluster();
-                if (cluster.getEnvironment() == null) {
-                    cluster.setEnvironment(environment);
-                }
-                getClusters().put(environment, cluster);
-            }
-            switch (environment) {
-                case TRANSFER:
-                    cluster.setLegacyHive(getCluster(Environment.LEFT).isLegacyHive());
-                    break;
-                case SHADOW:
-                    cluster.setLegacyHive(getCluster(Environment.RIGHT).isLegacyHive());
-                    break;
-            }
-        }
+        // This is causing a lot of issues with trying to determine if a cluster has been defined or not.
+//        if (cluster == null) {
+//            if (dataStrategy == STORAGE_MIGRATION && environment == Environment.LEFT) {
+//                // We use the RIGHT cluster during STORAGE_MIGRATION as a resting place for conversion.
+//                // The configs need to be the same.
+//                cluster = new Cluster();
+//                cluster.setEnvironment(environment);
+//                this.getClusters().put(environment, cluster);
+////                cluster = getCluster(Environment.LEFT);
+//            } else {
+//                cluster = new Cluster();
+//                if (cluster.getEnvironment() == null) {
+//                    cluster.setEnvironment(environment);
+//                }
+//                getClusters().put(environment, cluster);
+//            }
+//            switch (environment) {
+//                case TRANSFER:
+//                    cluster.setLegacyHive(getCluster(Environment.LEFT).isLegacyHive());
+//                    break;
+//                case SHADOW:
+//                    cluster.setLegacyHive(getCluster(Environment.RIGHT).isLegacyHive());
+//                    break;
+//            }
+//        }
         return cluster;
     }
 

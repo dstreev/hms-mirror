@@ -18,15 +18,15 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsDBCP2Impl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHikariImpl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHybridImpl;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.Getter;
@@ -43,6 +43,7 @@ import java.util.Set;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_CONNECTION_ISSUE;
 import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED;
+import static java.util.Objects.nonNull;
 
 @Component
 @Getter
@@ -250,10 +251,12 @@ public class ConnectionPoolService implements ConnectionPools {
                 break;
         }
         if (hmsMirrorConfig.loadPartitionMetadata()) {
-            if (hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect() != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.LEFT)) &&
+                    nonNull(hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect())) {
                 getConnectionPools().addMetastoreDirect(Environment.LEFT, hmsMirrorConfig.getCluster(Environment.LEFT).getMetastoreDirect());
             }
-            if (hmsMirrorConfig.getCluster(Environment.RIGHT).getMetastoreDirect() != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT)) &&
+                    nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT).getMetastoreDirect())) {
                 getConnectionPools().addMetastoreDirect(Environment.RIGHT, hmsMirrorConfig.getCluster(Environment.RIGHT).getMetastoreDirect());
             }
         }
@@ -308,8 +311,9 @@ public class ConnectionPoolService implements ConnectionPools {
                 break;
             default:
                 // Don't set the Pools when Disconnected.
-                if (hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2() !=
-                        null && !hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+                if (nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT))
+                        && nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2())
+                        && !hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
 //                        hmsMirrorConfig.getCluster(Environment.RIGHT).setPools(connectionPoolService.getConnectionPools());
                 }
         }

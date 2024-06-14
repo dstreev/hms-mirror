@@ -6,7 +6,7 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
-    <!--    <script type="text/javascript" th:src="@{/js/tabs.js}"></script>-->
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
 </head>
 <body>
 <div class="pure-g">
@@ -47,23 +47,6 @@
                     </div>
                 </fieldset>
             </form>
-<!--        </th:block>-->
-<!--        <form class="pure-form pure-form-aligned" action="#" th:action="@{/config/reload}" method="post">-->
-<!--            <fieldset>-->
-<!--                <legend th:text="#{config}"/>-->
-<!--                <div class="pure-control-group">-->
-<!--                    <label for="config_id" th:text="#{config.reload}"/>-->
-<!--                    <select name="config_id" required>-->
-<!--                        <option th:each="id: ${configs}"-->
-<!--                                th:value="${id}"-->
-<!--                                th:text="${id}"-->
-<!--                                th:selected="${id.equals(sessionContainer.sessionId)}"/>-->
-<!--                    </select>-->
-<!--                    <button class="pure-button pure-button-primary" type="submit" th:text="#{button.load}"/>-->
-<!--                    <a class="pure-button" th:href="@{/config/create}" th:text="#{button.create}"/>-->
-<!--                </div>-->
-<!--            </fieldset>-->
-<!--        </form>-->
         <th:block th:if="${sessionContainer.config == null}">
             <h3 th:text="#{config.not.loaded}"/>
         </th:block>

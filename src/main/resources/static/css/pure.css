@@ -675,7 +675,7 @@ html {
 .pure-button-selected,
 a.pure-button-primary,
 a.pure-button-selected {
-    background-color: rgb(0, 120, 231);
+    background-color: rgb(0, 140, 255);
     color: #fff;
 }
 

@@ -126,6 +126,8 @@ public class ExecuteSessionService {
            } else {
             activeSession = null;
            };
+           // Close the connection pools, so they can be reset.
+           connectionPoolService.close();
         }
     }
 

@@ -1,0 +1,155 @@
+<!--
+  ~ Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  -->
+
+<!--<!DOCTYPE HTML>-->
+<html xmlns:th="http://www.thymeleaf.org">
+<header>
+    <title>Create Config</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+</header>
+<body>
+<!--<div class="pure-g">-->
+<!--    <div class="pure-u-1">-->
+<h1 th:text="#{${action}}"/>
+<!--    </div>-->
+<!--    <div class="pure-u-1-1">-->
+    <fieldset>
+        <legend th:text="#{global.location.maps}"/>
+<!--        <form class="pure-form pure-form-aligned" th:action="@{/translator/globalLocationMap/build}" method="post">-->
+
+<!--&lt;!&ndash;          dryrun, buildSources, consolidationLevel, partitionLevelMisMatch &ndash;&gt;-->
+<!--            <div class="pure-control-group">-->
+<!--                <label for="dryrun" th:text="#{dryrun}"/>-->
+<!--                <input id="dryrun" type="checkbox" name="dryrun"-->
+<!--                       th:checked="true"-->
+<!--            </div>-->
+<!--            <div class="pure-control-group">-->
+<!--                <label for="buildSources" th:text="#{build.sources}"/>-->
+<!--                <input id="buildSources" type="checkbox" name="buildSources"-->
+<!--                       th:checked="true"/>-->
+<!--            </div>-->
+<!--            <div class="pure-control-group">-->
+<!--                <label for="consolidationLevel" th:text="#{consolidation.level}"/>-->
+<!--                <select id="consolidationLevel" name="consolidationLevel">-->
+<!--                    <option value="1" selected>1</option>-->
+<!--                    <option value="2">2</option>-->
+<!--                    <option value="3">3</option>-->
+<!--                    <option value="4">4</option>-->
+<!--                    <option value="5">5</option>-->
+<!--                    <option value="6">6</option>-->
+<!--                </select>-->
+<!--            </div>-->
+<!--            <div class="pure-control-group">-->
+<!--                <label for="partitionLevelMisMatch" th:text="#{partition.level.mismatch}"/>-->
+<!--                <input id="partitionLevelMisMatch" type="checkbox" name="partitionLevelMisMatch"-->
+<!--                       th:checked="true"/>-->
+<!--            </div>-->
+<!--            <div class="pure-control-group">-->
+<!--                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.build}"/>-->
+<!--            </div>-->
+<!--        </form>-->
+        <table class="pure-table">
+            <thead>
+            <tr>
+                <th></th>
+                <th>Source</th>
+                <th>Target</th>
+            </tr>
+            </thead>
+            <tbody>
+            <th:block
+                    th:each="item: ${glm}">
+                <tr>
+                    <td>
+<!--                        <a class="pure-button"-->
+<!--                           th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"-->
+<!--                           th:text="#{delete}"/>-->
+                    </td>
+                    <td><label th:text="${item.key}"/></td>
+                    <td><label th:text="${item.value}"/></td>
+                </tr>
+            </th:block>
+            </tbody>
+        </table>
+    </fieldset>
+    <fieldset>
+        <legend th:text="#{builder.sources}"/>
+        <ul id="tree">
+            <th:block
+                    th:each="source: ${sources}">
+                <li>
+                    <details open>
+                        <summary th:text="${source.key}"></summary>
+                        <ul>
+                            <li>
+                                <details>
+                                    <summary th:text="#{managed.tables}"></summary>
+                                    <ul>
+                                        <th:block
+                                                th:each="mngdTbl: ${source.value.locations[MANAGED_TABLE]}">
+                                            <li>
+                                                <details>
+                                                    <summary th:text="${mngdTbl.key}"></summary>
+                                                    <ul>
+                                                        <th:block th:each="tbl: ${mngdTbl.value}">
+                                                            <li th:text="${tbl}">
+                                                                <!--                                                                    <summary th:text="${tbl}"></summary>-->
+                                                            </li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        </th:block>
+                                    </ul>
+                                </details>
+                            </li>
+                            <li>
+                                <details>
+                                    <summary th:text="#{external.tables}"></summary>
+                                    <ul>
+                                        <th:block
+                                                th:each="extTbl: ${source.value.locations[EXTERNAL_TABLE]}">
+                                            <li>
+                                                <details>
+                                                    <summary th:text="${extTbl.key}"></summary>
+                                                    <ul>
+                                                        <th:block th:each="tbl: ${extTbl.value}">
+                                                            <li th:text="${tbl}"></li>
+                                                        </th:block>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        </th:block>
+                                    </ul>
+                                </details>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+            </th:block>
+        </ul>
+    </fieldset>
+<!--</fieldset>-->
+<!--    </div>-->
+<!--</div>-->
+</body>
+</html>
