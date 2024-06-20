@@ -18,10 +18,12 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -59,7 +61,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -69,14 +71,14 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
         ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         // Different transfer technique.  Staging location.
-        if (hmsMirrorConfig.getTransfer().getIntermediateStorage() != null ||
-                hmsMirrorConfig.getTransfer().getCommonStorage() != null ||
+        if (config.getTransfer().getIntermediateStorage() != null ||
+                config.getTransfer().getCommonStorage() != null ||
                 TableUtils.isACID(let)) {
             return getIntermediateDataStrategy().buildOutDefinition(tableMirror);
         }
 
         if (ret.isExists()) {
-            if (hmsMirrorConfig.isSync() && hmsMirrorConfig.getCluster(Environment.RIGHT).isCreateIfNotExists()) {
+            if (config.isSync() && config.getCluster(Environment.RIGHT).isCreateIfNotExists()) {
                 // sync with overwrite.
                 ret.addIssue(SQL_SYNC_W_CINE.getDesc());
                 ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -89,20 +91,26 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             ret.setCreateStrategy(CreateStrategy.CREATE);
         }
 
-        if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
+        if (config.getTransfer().getCommonStorage() == null) {
+            // If the temp cluster doesn't exist, create it as a clone of the LEFT.
+            if (config.getCluster(Environment.SHADOW) == null) {
+                Cluster shadowCluster = config.getCluster(Environment.LEFT).clone();
+                config.getClusters().put(Environment.SHADOW, shadowCluster);
+            }
+
             CopySpec shadowSpec = null;
 
             // Create a 'shadow' table definition on right cluster pointing to the left data.
             shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
 
-            if (hmsMirrorConfig.convertManaged())
+            if (config.convertManaged())
                 shadowSpec.setUpgrade(Boolean.TRUE);
 
             // Don't claim data.  It will be in the LEFT cluster, so the LEFT owns it.
             shadowSpec.setTakeOwnership(Boolean.FALSE);
 
             // Create table with alter name in RIGHT cluster.
-            shadowSpec.setTableNamePrefix(hmsMirrorConfig.getTransfer().getShadowPrefix());
+            shadowSpec.setTableNamePrefix(config.getTransfer().getShadowPrefix());
 
             // Build Shadow from Source.
             rtn = tableService.buildTableSchema(shadowSpec);
@@ -113,17 +121,17 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
 
         // Swap out the namespace of the LEFT with the RIGHT.
         rightSpec.setReplaceLocation(Boolean.TRUE);
-        if (TableUtils.isManaged(let) && hmsMirrorConfig.convertManaged()) {
+        if (TableUtils.isManaged(let) && config.convertManaged()) {
             rightSpec.setUpgrade(Boolean.TRUE);
         } else {
             rightSpec.setMakeExternal(Boolean.TRUE);
         }
-        if (hmsMirrorConfig.isReadOnly()) {
+        if (config.isReadOnly()) {
             rightSpec.setTakeOwnership(Boolean.FALSE);
         } else if (TableUtils.isManaged(let)) {
             rightSpec.setTakeOwnership(Boolean.TRUE);
         }
-        if (hmsMirrorConfig.isNoPurge()) {
+        if (config.isNoPurge()) {
             rightSpec.setTakeOwnership(Boolean.FALSE);
         }
 
@@ -137,10 +145,10 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
-        if (hmsMirrorConfig.getTransfer().getIntermediateStorage() != null ||
-                hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
+        if (config.getTransfer().getIntermediateStorage() != null ||
+                config.getTransfer().getCommonStorage() != null) {
             return getIntermediateDataStrategy().buildOutSql(tableMirror);
         }
 
@@ -159,7 +167,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             // TODO: Hum... Not sure this is right.
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
-            database = configService.getResolvedDB(tableMirror.getParent().getName());
+            database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
             ret.addSql(TableUtils.USE_DESC, useDb);
@@ -201,7 +209,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
                     String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                     //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                    if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive() && hmsMirrorConfig.isTransferOwnership() && let.getOwner() != null) {
+                    if (!config.getCluster(Environment.RIGHT).isLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                         ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                     }

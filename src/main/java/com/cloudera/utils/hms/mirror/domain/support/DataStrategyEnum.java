@@ -27,6 +27,10 @@ import java.util.List;
 @Slf4j
 public enum DataStrategyEnum {
     /*
+    ACID Transfer is a hidden strategy applied to the table.
+     */
+    ACID(Boolean.TRUE, AcidDataStrategy.class),
+    /*
     The DUMP strategy will run against the LEFT cluster (attaching to it) and build scripts
      based on the configuration in that cluster.  You can optionally use the -f|--flip
      option to use the RIGHT cluster as the target for the dump.
@@ -39,7 +43,7 @@ public enum DataStrategyEnum {
     The process will create an alternate table in the same database with the same structure, but it will
     be an EXTERNAL/PURGE table.  The location will be omitted from the definition of this table.  Which means
     the data will be copied to the default location for EXTERNAL tables.  That will either be set by
-    the metastores `hive.metastore.warehouse.external.dir` value or the databases definition for `LOCATION`.
+    the metastores `hive.metastoreDirect.warehouse.external.dir` value or the databases definition for `LOCATION`.
 
     You can use the `-ewd` setting to set the database `LOCATION`, which will be applied to all following
     actions.
@@ -90,7 +94,7 @@ public enum DataStrategyEnum {
     /*
     Using the LEFT cluster configuration (or RIGHT when `-f|--flip` is used), migrate the tables from
     the current storage location to one of two possibilities: The default locations in 'hms' as identified by
-    the metastores `hive.metastore.warehouse.dir` for MANAGED (ACID) tables and `hive.metastore.warehouse.external.dir`
+    the metastores `hive.metastoreDirect.warehouse.dir` for MANAGED (ACID) tables and `hive.metastoreDirect.warehouse.external.dir`
     for EXTERNAL tables. As an alternative, the LOCATION and MANAGEDLOCATION properties of the database can be
     configured/changed to a combination of the `-sms`, `-smn|-cs`, `-wd`, and `-ewd`.<p/>
 
@@ -128,10 +132,6 @@ public enum DataStrategyEnum {
     location.  Commit/ownership?
      */
     COMMON(Boolean.FALSE, CommonDataStrategy.class),
-    /*
-    ACID Transfer is a hidden strategy applied to the table.
-     */
-    ACID(Boolean.TRUE, AcidDataStrategy.class),
     ICEBERG_CONVERSION(Boolean.FALSE, IcebergConversionDataStrategy.class),
     INTERMEDIATE(Boolean.TRUE, IntermediateDataStrategy.class),
     SQL_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, SQLAcidDowngradeInPlaceDataStrategy.class),

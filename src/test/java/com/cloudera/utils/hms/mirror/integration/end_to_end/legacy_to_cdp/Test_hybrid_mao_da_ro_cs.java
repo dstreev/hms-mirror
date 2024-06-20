@@ -32,8 +32,8 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=HYBRID",
                 "--hms-mirror.config.migrate-acid-only=true",
-//                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
-//                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
+                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
+                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
                 "--hms-mirror.config.downgrade-acid=true",
                 "--hms-mirror.config.read-only=true",
 //                "--hms-mirror.config.evaluate-partition-location=true",
@@ -70,7 +70,7 @@ public class Test_hybrid_mao_da_ro_cs extends E2EBaseTest {
 //        long check = MessageCode.RO_VALID_STRATEGIES.getLong();
         // The long value of 96'th bit is 4294967296.
         long check = 4294967296l;
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 //    @Test

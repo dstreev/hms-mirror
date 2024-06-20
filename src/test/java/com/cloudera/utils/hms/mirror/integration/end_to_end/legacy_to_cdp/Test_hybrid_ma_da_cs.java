@@ -32,8 +32,8 @@ import static org.junit.Assert.assertEquals;
         args = {
                 "--hms-mirror.config.data-strategy=HYBRID",
 //                "--hms-mirror.config.migrate-acid=true",
-//                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
-//                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
+                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
+                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
                 "--hms-mirror.config.downgrade-acid=true",
 //                "--hms-mirror.config.intermediate-storage=s3a://my_is_bucket",
                 "--hms-mirror.config.common-storage=s3a://my_cs_bucket",
@@ -63,7 +63,7 @@ public class Test_hybrid_ma_da_cs extends E2EBaseTest {
         long rtn = getReturnCode();
         // Verify the return code.
         long check = 0L;
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 //    @Test

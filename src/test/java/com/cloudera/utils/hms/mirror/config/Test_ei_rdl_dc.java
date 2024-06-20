@@ -26,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static com.cloudera.utils.hms.mirror.MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
@@ -72,9 +73,29 @@ public class Test_ei_rdl_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.DISTCP_VALID_STRATEGY, MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+        long expected = getCheckCode(
+                MessageCode.DISTCP_VALID_STRATEGY);
 
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.DISTCP_WO_TABLE_FILTERS,
+                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
+                MessageCode.LINK_TEST_SKIPPED_WITH_IS,
+                MessageCode.DISTCP_REQUIRES_EPL,
+                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
+
 }

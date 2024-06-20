@@ -69,7 +69,8 @@ public class Test_sm extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS,
+        long expected = getCheckCode(
+                MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS,
                 MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM,
                 MessageCode.METASTORE_DIRECT_CONFIG,
                 MessageCode.STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY);
@@ -77,5 +78,20 @@ public class Test_sm extends E2EBaseTest {
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED,
+                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
 }

@@ -68,10 +68,25 @@ public class Test_so_is extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.DISTCP_REQUIRED_FOR_SCHEMA_ONLY_IS);
+        long expected = getCheckCode(
+                MessageCode.DISTCP_REQUIRED_FOR_SCHEMA_ONLY_IS);
 
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
 }

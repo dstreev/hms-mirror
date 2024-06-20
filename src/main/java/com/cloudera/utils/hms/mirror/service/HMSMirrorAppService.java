@@ -81,14 +81,21 @@ public class HMSMirrorAppService {
         return rtn;
     }
 
+    public long getWarningCode() {
+        long rtn = 0L;
+        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        rtn = runStatus.getWarnings().getReturnCode();
+        return rtn;
+    }
+
     @Async("executionThreadPool")
     public Future<Boolean> run() {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
-
-        connectionPoolService.close();
+        ExecuteSession session = executeSessionService.getActiveSession();
+        HmsMirrorConfig config = session.getConfig();
+        RunStatus runStatus = session.getRunStatus();
+        Conversion conversion = session.getConversion();
 
         try {// Refresh the connection pool.
             connectionPoolService.init();
@@ -98,18 +105,9 @@ public class HMSMirrorAppService {
             return new AsyncResult<>(Boolean.FALSE);
         }
 
-        if (!configService.validate()) {
-            log.error("Configuration is not valid.  Exiting.");
-            hmsMirrorConfig.setValidated(Boolean.FALSE);
-            return new AsyncResult<>(Boolean.FALSE);
-        } else {
-            log.info("Configuration is valid.");
-            hmsMirrorConfig.setValidated(Boolean.TRUE);
-        }
-
         // Correct the load data issue ordering.
-        if (hmsMirrorConfig.isLoadingTestData() &&
-                (!hmsMirrorConfig.isEvaluatePartitionLocation() && hmsMirrorConfig.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
+        if (config.isLoadingTestData() &&
+                (!config.isEvaluatePartitionLocation() && config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
             // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
             for (DBMirror dbMirror : conversion.getDatabases().values()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
@@ -122,38 +120,29 @@ public class HMSMirrorAppService {
             }
         }
 
-        // Clear tables from test dataset if the database only flag is set.
-//        if (hmsMirrorConfig.isLoadingTestData() && hmsMirrorConfig.isDatabaseOnly()) {
-//            // Remove the tables from the database dataset.
-//            for (DBMirror dbMirror : conversion.getDatabases().values()) {
-//                dbMirror.getTableMirrors().clear();
-//                log.info("Database Only processing, removing table from test dataset");
-//            }
-//        }
-
         log.info("Starting Application Workflow");
 
-//        if (!hmsMirrorConfig.isValidated()) {
-//            log.error("Configuration is not valid.  Exiting.");
-//            return new AsyncResult<>(Boolean.FALSE);
-////            getCliReporter().getMessages();
-////            return;
-//        }
+        // Don't continue if config hasn't been validated.
+        if (!config.isValidated()) {
+            log.error("Configuration is not valid.  Exiting.");
+            reportWriterService.wrapup();
+            return new AsyncResult<>(Boolean.FALSE);
+        }
 
         log.info("Setting 'running' to TRUE");
         getExecuteSessionService().getActiveSession().getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
-        log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",",hmsMirrorConfig.getDatabases()));
+        log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",",config.getDatabases()));
 
-        if (hmsMirrorConfig.isLoadingTestData()) {
+        if (config.isLoadingTestData()) {
             List<String> databases = new ArrayList<>();
             for (DBMirror dbMirror : conversion.getDatabases().values()) {
                 databases.add(dbMirror.getName());
             }
 //            String[] dbs = databases.toArray(new String[0]);
-            hmsMirrorConfig.setDatabases(databases);
-        } else if (hmsMirrorConfig.getFilter().getDbRegEx() != null) {
+            config.setDatabases(databases);
+        } else if (config.getFilter().getDbRegEx() != null) {
             // Look for the dbRegEx.
             Connection conn = null;
             Statement stmt = null;
@@ -167,22 +156,20 @@ public class HMSMirrorAppService {
                     ResultSet rs = stmt.executeQuery(MirrorConf.SHOW_DATABASES);
                     while (rs.next()) {
                         String db = rs.getString(1);
-                        Matcher matcher = hmsMirrorConfig.getFilter().getDbFilterPattern().matcher(db);
+                        Matcher matcher = config.getFilter().getDbFilterPattern().matcher(db);
                         if (matcher.find()) {
                             runStatus.getOperationStatistics().getCounts().incrementDatabases();
                             databases.add(db);
                         }
                     }
-//                    String[] dbs = databases.toArray(new String[0]);
-                    hmsMirrorConfig.setDatabases(databases);
+                    config.setDatabases(databases);
                 }
             } catch (SQLException se) {
                 // Issue
                 log.error("Issue getting databases for dbRegEx", se);
                 executeSessionService.getActiveSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
+                reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
-                //                wrapup();
-                //                return;
             } finally {
                 if (conn != null) {
                     try {
@@ -195,21 +182,21 @@ public class HMSMirrorAppService {
             }
         }
 
-        if (!hmsMirrorConfig.isLoadingTestData()) {
+        if (!config.isLoadingTestData()) {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.IN_PROGRESS);
             rtn = databaseService.loadEnvironmentVars();
             if (rtn) {
                 runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
             } else {
                 runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.ERRORED);
-//                runStatus.addError(MessageCode.ENVIRONMENT_VARS);
+                reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
             }
         } else {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
         }
 
-        if (hmsMirrorConfig.getDatabases() == null || hmsMirrorConfig.getDatabases().isEmpty()) {
+        if (config.getDatabases() == null || config.getDatabases().isEmpty()) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             return new AsyncResult<>(Boolean.FALSE);
@@ -219,9 +206,9 @@ public class HMSMirrorAppService {
         // ========================================
         // Get the Database definitions for the LEFT and RIGHT clusters.
         // ========================================
-        if (!hmsMirrorConfig.isLoadingTestData()) {
+        if (!config.isLoadingTestData()) {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
-            for (String database : hmsMirrorConfig.getDatabases()) {
+            for (String database : config.getDatabases()) {
                 DBMirror dbMirror = conversion.addDatabase(database);
                 try {
                     // Get the Database definitions for the LEFT and RIGHT clusters.
@@ -241,13 +228,12 @@ public class HMSMirrorAppService {
                     executeSessionService.getActiveSession().addError(MISC_ERROR, "Issue getting databases");
                     runStatus.getOperationStatistics().getFailures().incrementDatabases();
                     runStatus.setStage(StageEnum.DATABASES, CollectionEnum.ERRORED);
+                    reportWriterService.wrapup();
                     return new AsyncResult<>(Boolean.FALSE);
-//                    wrapup();
-//                    return;
                 }
 
                 // Build out the table in a database.
-                if (!hmsMirrorConfig.isLoadingTestData() && !hmsMirrorConfig.isDatabaseOnly()) {
+                if (!config.isLoadingTestData() && !config.isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
                     Future<ReturnStatus> gt = getTableService().getTables(dbMirror);
                     gtf.add(gt);
@@ -284,59 +270,22 @@ public class HMSMirrorAppService {
             if (!rtn) {
                 runStatus.setStage(StageEnum.TABLES, CollectionEnum.ERRORED);
                 runStatus.getErrors().set(MessageCode.COLLECTING_TABLES);
+                reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
-//                wrapup();
-//                return; //rtn = Boolean.FALSE;
             }
         }
 
         runStatus.setStage(StageEnum.CREATE_DATABASES, CollectionEnum.IN_PROGRESS);
         if (!getDatabaseService().createDatabases()) {
-            runStatus.getErrors().set(MessageCode.DATABASE_CREATION);
+            runStatus.addError(MessageCode.DATABASE_CREATION);
             runStatus.setStage(StageEnum.CREATE_DATABASES, CollectionEnum.ERRORED);
+            reportWriterService.wrapup();
             return new AsyncResult<>(Boolean.FALSE);
-//            wrapup();
-//            return; //rtn = Boolean.FALSE;
         }
         runStatus.setStage(StageEnum.CREATE_DATABASES, CollectionEnum.COMPLETED);
 
-        // Create the databases we'll need on the LEFT and RIGHT
-//        Callable<ReturnStatus> createDatabases = new CreateDatabases(conversion);
-//        gtf.add(getConfig().getTransferThreadPool().schedule(createDatabases, 1, TimeUnit.MILLISECONDS));
-
-        // Check and Build DB's First.
-//        while (true) {
-//            boolean check = true;
-//            for (Future<ReturnStatus> sf : gtf) {
-//                if (!sf.isDone()) {
-//                    check = false;
-//                    break;
-//                }
-//                try {
-//                    if (sf.isDone() && sf.get() != null) {
-//                        ReturnStatus returnStatus = sf.get();
-//                        if (returnStatus != null && returnStatus.getStatus() == ReturnStatus.Status.ERROR) {
-////                            throw new RuntimeException(sf.get().getException());
-//                            rtn = Boolean.FALSE;
-//                        }
-//                    }
-//                } catch (InterruptedException | ExecutionException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//            if (check)
-//                break;
-//        }
-//        gtf.clear(); // reset
-
-        // Failure, report and exit with FALSE
-//        if (!rtn) {
-//            getProgression().getErrors().set(DATABASE_CREATION.getCode());
-//            return Boolean.FALSE;
-//        }
-
         // Shortcut.  Only DB's.
-        if (!hmsMirrorConfig.isDatabaseOnly()) {
+        if (!config.isDatabaseOnly()) {
             // ========================================
             // Get the table METADATA for the tables collected in the databases.
             // ========================================
@@ -370,8 +319,6 @@ public class HMSMirrorAppService {
                     }
                     try {
                         if (sf.isDone() && sf.get() != null) {
-//                                ReturnStatus sfStatus = sf.get(100, java.util.concurrent.TimeUnit.MILLISECONDS);
-//                                if (sfStatus != null) {
                             switch (sf.get().getStatus()) {
                                 case SUCCESS:
                                     // Trigger next step and set status.
@@ -387,9 +334,6 @@ public class HMSMirrorAppService {
                                 case NEXTSTEP:
                                     break;
                             }
-//                                } else {
-//                                    check = false;
-//                                }
                         }
                     } catch (InterruptedException | ExecutionException e) {
                         throw new RuntimeException(e);
@@ -403,8 +347,6 @@ public class HMSMirrorAppService {
                 runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.COMPLETED);
             } else {
                 runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.ERRORED);
-//                runStatus.addError(MessageCode.COLLECTING_TABLE_METADATA);
-//                return new AsyncResult<>(Boolean.FALSE);
             }
 
             gtf.clear(); // reset

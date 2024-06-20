@@ -38,6 +38,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
                 "--hms-mirror.config.storage-migration-namespace=s3a://my_cs_bucket",
                 "--hms-mirror.config.reset-to-default-location=true",
+                "--hms-mirror.config.evaluate-partition-location=true",
 //                "--hms-mirror.config.global-location-mapping=/warehouse/tablespace/managed=/warehouseEC/managed",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_02.yaml",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",

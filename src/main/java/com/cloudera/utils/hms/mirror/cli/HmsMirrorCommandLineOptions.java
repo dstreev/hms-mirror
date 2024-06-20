@@ -19,7 +19,7 @@ package com.cloudera.utils.hms.mirror.cli;
 
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.DistcpFlow;
+import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
 import com.cloudera.utils.hms.mirror.domain.WarehouseConfig;
@@ -42,6 +42,8 @@ import org.springframework.core.annotation.Order;
 
 import java.io.File;
 import java.util.*;
+
+import static java.util.Objects.nonNull;
 
 @Configuration
 @Order(5)
@@ -179,7 +181,7 @@ public class HmsMirrorCommandLineOptions {
             log.info("common-storage: {}", value);
             hmsMirrorConfig.getTransfer().setCommonStorage(value);
             // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp.
-            hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH);
+            hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(DistcpFlowEnum.PUSH);
         };
     }
 
@@ -324,11 +326,11 @@ public class HmsMirrorCommandLineOptions {
                 String flowStr = value;
                 if (flowStr != null) {
                     try {
-                        DistcpFlow flow = DistcpFlow.valueOf(flowStr.toUpperCase(Locale.ROOT));
+                        DistcpFlowEnum flow = DistcpFlowEnum.valueOf(flowStr.toUpperCase(Locale.ROOT));
                         hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(flow);
                     } catch (IllegalArgumentException iae) {
                         throw new RuntimeException("Optional argument for `distcp` is invalid. Valid values: " +
-                                Arrays.toString(DistcpFlow.values()), iae);
+                                Arrays.toString(DistcpFlowEnum.values()), iae);
                     }
                 }
                 hmsMirrorConfig.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
@@ -476,14 +478,15 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(6)
     @ConditionalOnProperty(
             name = "hms-mirror.config.flip",
             havingValue = "true")
     CommandLineRunner configFlipTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
             log.info("flip: {}", Boolean.TRUE);
-            hmsMirrorConfig.setFlip(Boolean.TRUE);
+            configService.flipConfig(hmsMirrorConfig);
+//            hmsMirrorConfig.setFlip(Boolean.TRUE);
         };
     }
 
@@ -495,7 +498,7 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configFlipFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
             log.info("flip: {}", Boolean.FALSE);
-            hmsMirrorConfig.setFlip(Boolean.FALSE);
+//            hmsMirrorConfig.setFlip(Boolean.FALSE);
         };
     }
 
@@ -591,7 +594,7 @@ public class HmsMirrorCommandLineOptions {
                 hmsMirrorConfig.getMigrateACID().setOnly(Boolean.TRUE);
                 // Remove RIGHT cluster and enforce mao
                 log.info("RIGHT Cluster definition will be disconnected if exists since this is a LEFT cluster ONLY operation");
-                if (null != hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2())
+                if (nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT)) && nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2()))
                     hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().setDisconnected(Boolean.TRUE);
             }
         };
@@ -607,7 +610,7 @@ public class HmsMirrorCommandLineOptions {
             hmsMirrorConfig.getTransfer().setIntermediateStorage(value);
             // This usually means an on-prem to cloud migration, which should be a PUSH data flow for distcp from the
             // LEFT and PULL from the RIGHT.
-            hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(DistcpFlow.PUSH_PULL);
+            hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(DistcpFlowEnum.PUSH_PULL);
         };
     }
 

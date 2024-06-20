@@ -34,6 +34,7 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
                 "--hms-mirror.config.migrate-acid=true",
                 "--hms-mirror.config.distcp=true",
+                "--hms-mirror.config.evaluate-partition-location=true",
                 "--hms-mirror.config.warehouse-directory=/warehouseEC/managed/hive",
                 "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
                 "--hms-mirror.config.force-external-location=true",

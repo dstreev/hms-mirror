@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.util.ModelUtils;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
+import com.jcabi.manifests.Manifests;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,12 +42,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-// [MermaidChart: f619f3bf-1b39-426d-b48e-71b8c80a8524]
-
 @Controller
 @RequestMapping(path = "/config")
 @Slf4j
-public class ConfigMVController {
+public class ConfigMVController implements ControllerReferences {
 
     private ConfigService configService;
     private ExecuteSessionService executeSessionService;
@@ -75,22 +74,23 @@ public class ConfigMVController {
 
     @RequestMapping(value = "/home", method = RequestMethod.GET)
     public String home(Model model) {
-        model.addAttribute("action", "home");
+        model.addAttribute(ACTION, "home");
 
-        SessionContainer sessionContainer = new SessionContainer();
-        sessionContainer.loadFromSession(executeSessionService.getLoadedSession());
+        ExecuteSession executeSession = executeSessionService.getLoadedSession();
 
         // Get list of available configs
         List<String> configs = webConfigService.getConfigList();
-        model.addAttribute("configs", configs);
-        model.addAttribute("sessionContainer", sessionContainer);
+        model.addAttribute(CONFIG_LIST, configs);
+
+        sessionToModel(model);
 
         // Get list of Reports
-        ReportContainer reportContainer = new ReportContainer();
-        reportContainer.setReports(executeSessionService.getAvailableReports());
-        model.addAttribute("reportContainer", reportContainer);
-
-        ModelUtils.allEnumsForModel(model);
+        model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
+        try {
+            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
+        } catch (IllegalArgumentException iae) {
+            model.addAttribute(VERSION, "Unknown");
+        }
 
         return "/config/home";
     }
@@ -106,192 +106,189 @@ public class ConfigMVController {
 //        return "/config/list";
 //    }
 //
-    @RequestMapping(value = "/create", method = RequestMethod.GET)
-    public String create(Model model) throws SessionRunningException {
-        model.addAttribute("action", "create");
+    @RequestMapping(value = "/create", method = RequestMethod.POST)
+    public String create(Model model,
+                         @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy) throws SessionRunningException {
+        model.addAttribute(ACTION, "create");
+        // Clear the loaded and active session.
         executeSessionService.clearLoadedSession();
-        internalUpsert(model, false);
-        return "/config/view_edit";
+        // Create new Session (with blank config)
+        HmsMirrorConfig config = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
+        ExecuteSession session = executeSessionService.createSession(NEW_CONFIG, config);
+        // Set the Loaded Session
+        executeSessionService.setLoadedSession(session);
+//        // Setup Model for MVC
+//        model.addAttribute(CONFIG, session.getConfig());
+//        model.addAttribute(SESSION_ID, session.getSessionId());
+
+        sessionToModel(model);
+
+        return "/config/view";
     }
 
-    private void internalUpsert(Model model, boolean readOnly) {
-        model.addAttribute("action", "create");
-        SessionContainer sessionContainer = new SessionContainer();
+    private void sessionToModel(Model model) {
 
         ExecuteSession session = executeSessionService.getLoadedSession();
-        HmsMirrorConfig config = null;
-        if (session == null) {
-            config = new HmsMirrorConfig();
+        RunContainer runContainer = new RunContainer();
+        model.addAttribute(RUN_CONTAINER, runContainer);
+        if (session != null) {
+            runContainer.setSessionId(session.getSessionId());
+            runContainer.setDataStrategy(session.getConfig().getDataStrategy());
 
-            // Init Storage migration.
-            config.setDataStrategy(DataStrategyEnum.STORAGE_MIGRATION);
-            Cluster cluster = config.getCluster(Environment.LEFT);
-            cluster.setLegacyHive(Boolean.FALSE);
-            // Init Metastore Direct
-            cluster.setMetastoreDirect(new DBStore());
+            model.addAttribute(CONFIG, session.getConfig());
 
-        } else {
-            model.addAttribute("action", "edit");
-            config = session.getConfig();
-            sessionContainer.setSessionId(session.getSessionId());
+            runContainer.setSaveAs(session.getSessionId());
+            // TODO: Remove, for testing only.
+            if (session.getRunStatus() == null) {
+                RunStatus runStatus = new RunStatus();
+                runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
+                model.addAttribute(RUN_STATUS, runStatus);
+            }
         }
-//        if (config.getCluster(Environment.LEFT) != null) {
-        sessionContainer.getEnvironments().add(Environment.LEFT);
-//        }
-//        if (config.getCluster(Environment.RIGHT) != null) {
-        sessionContainer.getEnvironments().add(Environment.RIGHT);
-//        }
-
-        sessionContainer.setConfig(config);
-        sessionContainer.setReadOnly(readOnly);
-        model.addAttribute("sessionContainer", sessionContainer);
-
+        model.addAttribute(RUN_CONTAINER, runContainer);
         ModelUtils.allEnumsForModel(model);
     }
 
     @RequestMapping(value = "/edit", method = RequestMethod.GET)
     public String edit(Model model) throws SessionRunningException {
         executeSessionService.clearActiveSession();
-        model.addAttribute("action", "edit");
-        internalUpsert(model, false);
-        return "/config/view_edit";
+        model.addAttribute(ACTION, "edit");
+        model.addAttribute(READ_ONLY, Boolean.FALSE);
+        sessionToModel(model);
+        return "/config/view";
     }
-
 
     @RequestMapping(value = "/save", method = RequestMethod.POST)
     public String save(Model model,
-                       @Value("${hms-mirror.config.path}") String configPath,
-                       @ModelAttribute("container") SessionContainer container) throws IOException, SessionRunningException {
+                       @ModelAttribute(CONFIG) HmsMirrorConfig config) throws SessionRunningException {
+        executeSessionService.clearActiveSession();
+        model.addAttribute(ACTION, "view");
+
+        ExecuteSession session = executeSessionService.getLoadedSession();
+        HmsMirrorConfig currentConfig = session.getConfig();
+
+        // Merge
+        currentConfig.getClusters().forEach((env, cluster) -> {
+            config.getClusters().put(env, cluster);
+        });
+        config.setTranslator(currentConfig.getTranslator());
+
+        // Reset to the merged config.
+        session.setConfig(config);
+        model.addAttribute(READ_ONLY, Boolean.TRUE);
+        sessionToModel(model);
+        return "/config/view";
+    }
+
+
+    // TODO: Need to adjust this to a persist only. Adjust SessionContainer (drop) and replace with
+    //      GET path variables to control how to save.
+    @RequestMapping(value = "/persist", method = RequestMethod.POST)
+    public String persist(Model model,
+                          @Value("${hms-mirror.config.path}") String configPath,
+                          @ModelAttribute(PERSIST) PersistContainer persistContainer) throws IOException, SessionRunningException {
         // Get the current session config.
         ExecuteSession curSession = executeSessionService.getLoadedSession();
         HmsMirrorConfig currentConfig = curSession.getConfig();
-        // Clear the session, making way for the updates.
-        executeSessionService.clearLoadedSession();
-        // Get the config from the container in the model from the UI.
-        HmsMirrorConfig config = container.getConfig();
 
-        // Get the current translator settings and apply if we're not stripping them.
-        // The translator settings are not part of the config, so we need to apply them here.
-        if (!container.isStripMappings()) {
-            config.setTranslator(currentConfig.getTranslator());
+        if (persistContainer.isFlipConfigs()) {
+            configService.flipConfig(currentConfig);
         }
 
-        if (container.isFlipConfig()) {
-            executeSessionService.flipConfig(config);
+        // Clone and save clone
+        HmsMirrorConfig config = currentConfig.clone();
+        if (persistContainer.isStripMappings()) {
+            config.setTranslator(new Translator());
         }
 
         String saveAs = null;
-        if (container.isSaveAsDefault()) {
-            log.info("Saving Config as Default: {}", "default.yaml");
-            saveAs = "default.yaml";
+        if (persistContainer.isSaveAsDefault()) {
+            log.info("Saving Config as Default: {}", DEFAULT_CONFIG);
+            saveAs = DEFAULT_CONFIG;
             String configFullFilename = configPath + File.separator + saveAs;
             configService.saveConfig(config, configFullFilename, Boolean.TRUE);
         }
-        if (container.getSessionId() != null) {
-            saveAs = container.getSessionId();
-            if (!(saveAs.contains(".yaml") || saveAs.contains(".yml"))) {
-                saveAs += ".yaml";
+        if (!persistContainer.getSaveAs().isEmpty()) {
+            saveAs = curSession.getSessionId();
+            if (!(persistContainer.getSaveAs().contains(".yaml") || persistContainer.getSaveAs().contains(".yml"))) {
+                persistContainer.setSaveAs(persistContainer.getSaveAs() + ".yaml");//saveAs += ".yaml";
             }
             log.info("Saving Config as: {}", saveAs);
-            String configFullFilename = configPath + File.separator + saveAs;
+            String configFullFilename = configPath + File.separator + persistContainer.getSaveAs();
             configService.saveConfig(config, configFullFilename, Boolean.TRUE);
         }
 
-        ExecuteSession session = executeSessionService.createSession(saveAs, config);
-        // Set it as the current session.
-        executeSessionService.setLoadedSession(session);
-//        executeSessionService.transitionLoadedSessionToActive();
-
-        internalUpsert(model, true);
-        model.addAttribute("action", "view");
+        sessionToModel(model);
+        model.addAttribute(ACTION, "view");
 
         ModelUtils.allEnumsForModel(model);
-        return "/config/view_edit";
+        return "/config/view";
     }
 
     @RequestMapping(value = "/reload", method = RequestMethod.POST)
     public String reload(Model model,
-                         @RequestParam(value = "config_id", required = true) String configId) throws SessionRunningException {
-
+                         @RequestParam(value = SESSION_ID, required = true) String sessionId) throws SessionRunningException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        log.info("ReLoading Config: {}", configId);
-        HmsMirrorConfig config = configService.loadConfig(configId);
+        log.info("ReLoading Config: {}", sessionId);
+        HmsMirrorConfig config = configService.loadConfig(sessionId);
         // Remove the old session
-        executeSessionService.getSessions().remove(configId);
+        executeSessionService.getSessions().remove(sessionId);
         // Create a new session
-        ExecuteSession session = executeSessionService.createSession(configId, config);
+        ExecuteSession session = executeSessionService.createSession(sessionId, config);
+        executeSessionService.setLoadedSession(session);
 
         // Set it as the current session.
-        executeSessionService.setLoadedSession(session);
-        internalUpsert(model, true);
-        model.addAttribute("action", "view");
-//        model.addAttribute("config", config);
-//        model.addAttribute("sessionId", configId);
+        sessionToModel(model);
+        model.addAttribute(ACTION, "view");
+        model.addAttribute(READ_ONLY, Boolean.FALSE);
+
         ModelUtils.allEnumsForModel(model);
-        return "/config/view_edit";
+        return "/config/view";
     }
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)
     public String view(Model model) throws SessionRunningException {
-        model.addAttribute("action", "view");
-        internalUpsert(model, true);
-//        model.addAttribute("readonly", true);
-        return "/config/view_edit";
+        model.addAttribute(ACTION, "view");
+        model.addAttribute(READ_ONLY, Boolean.TRUE);
+        sessionToModel(model);
+        return "/config/view";
     }
 
     @RequestMapping(value = "/warehouse/plan/add", method = RequestMethod.POST)
     public String addDatabase(Model model,
-                              @RequestParam(value = "database", required = true) String database,
-                              @RequestParam(value = "externalDirectory", required = true) String externalDirectory,
-                              @RequestParam(value = "managedDirectory", required = true) String managedDirectory
+                              @RequestParam(value = DATABASE, required = true) String database,
+                              @RequestParam(value = EXTERNAL_DIRECTORY, required = true) String externalDirectory,
+                              @RequestParam(value = MANAGED_DIRECTORY, required = true) String managedDirectory
     ) throws SessionRunningException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
-
-//        SessionContainer container = (SessionContainer)model.getAttribute("sessionContainer");
-//        assert container != null;
-//        String database = container.getDatabase();
-//        String externalLocation = container.getWarehouse().getExternalDirectory();
-//        String managedLocation = container.getWarehouse().getManagedDirectory();
 
         log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
 
         databaseService.addWarehousePlan(database, externalDirectory, managedDirectory);
 
+        model.addAttribute(ACTION, "view");
+        model.addAttribute(READ_ONLY, Boolean.TRUE);
+        sessionToModel(model);
 
-//        HmsMirrorConfig config = configService.loadConfig(configId);
-//        // Remove the old session
-//        executeSessionService.getSessions().remove(configId);
-//        // Create a new session
-//        ExecuteSession session = executeSessionService.createSession(configId, config);
+        return "/config/view";
+    }
+
+//    @RequestMapping(value = "/cluster/init", method = RequestMethod.GET)
+//    public String initCluster(Model model,
+//            @RequestParam(value = ENVIRONMENT, required = true) String environment) throws SessionRunningException {
+//        // Don't reload if running.
+//        executeSessionService.clearActiveSession();
 //
-//        ExecuteSession session = executeSessionService.getActiveSession();
-//        // Set it as the current session.
-//        HmsMirrorConfig config = session.getResolvedConfig();
-
-        model.addAttribute("action", "view");
-        internalUpsert(model, true);
-
-//        model.addAttribute("config", config);
-//        model.addAttribute("sessionId", session.getSessionId());
-//        ModelUtils.allEnumsForModel(model);
-        return "/config/view_edit";
-    }
-
-    @RequestMapping(value = "/cluster/init", method = RequestMethod.GET)
-    public String initCluster(Model model,
-            @RequestParam(value = "environment", required = true) String environment) throws SessionRunningException {
-        // Don't reload if running.
-        executeSessionService.clearActiveSession();
-
-        Environment env = Environment.valueOf(environment);
-        ExecuteSession session = executeSessionService.getLoadedSession();
-        HmsMirrorConfig config = session.getConfig();
-        config.initClusterFor(env);
-        internalUpsert(model, true);
-
-        return "/config/view_edit";
-    }
+//        Environment env = Environment.valueOf(environment);
+//        ExecuteSession session = executeSessionService.getLoadedSession();
+//        HmsMirrorConfig config = session.getConfig();
+//        config.initClusterFor(env);
+//        sessionToModel(model);
+//
+//        return "/config/view";
+//    }
 }

@@ -61,8 +61,8 @@ public enum MessageCode {
     RIGHT_HS2_DEFINITION_MISSING(21, "The 'RIGHT' HS2 definition is missing.  Only STORAGE_MIGRATION or DUMP strategies allow " +
             "that definition to be skipped."),
 
-    RESET_TO_DEFAULT_LOCATION(22, "'reset-to-default-location' is NOT available for this data strategy."),
-    DISTCP_VALID_STRATEGY(23, "The `distcp` option is not valid for this strategy and configuration."),
+    RESET_TO_DEFAULT_LOCATION(22, "'reset-to-default-location' is NOT available for this data strategy: {0}."),
+    DISTCP_VALID_STRATEGY(23, "The `distcp` option is not valid for this strategy ({0}) and configuration."),
     STORAGE_MIGRATION_DISTCP_EXECUTE(24, "STORAGE_MIGRATION with 'distcp' requires MANUAL intervention to run " +
             "'distcp' to migrate the data separately.  This process expects the data to be migrated already.  "),
     STORAGE_MIGRATION_DISTCP_ACID(25, "STORAGE_MIGRATION with 'distcp' can't support the direct transfer of ACID tables without -epl."),
@@ -72,7 +72,7 @@ public enum MessageCode {
     NON_LEGACY_TO_LEGACY(29, "`hms-mirror` does NOT support migrations from Hive 3 to Hive 1/2."),
     //    DISTCP_VALID_DISTCP_RESET_TO_DEFAULT_LOCATION(30, "You must specify `-wd` and `-ewd` when using `-rdl` with `--distcp`."),
     RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS(30, "When using `-rdl`, you will need specify the " +
-            "warehouse locations (-wd,-ewd) to enable the `distcp` workbooks and/or resetting locations.  Without them, we can NOT know the " +
+            "warehouse locations (-wd,-ewd) OR have a Warehouse Plan created for the 'database' to enable the `distcp` workbooks and/or resetting locations.  Without them, we can NOT know the " +
             "default locations to build a plan."),
 
     SQL_ACID_DA_DISTCP_WO_EXT_WAREHOUSE(31, "You need to specify `-ewd` when using `distcp`, `da`, and `SQL`"),
@@ -170,7 +170,7 @@ public enum MessageCode {
     FLIP_WITHOUT_RIGHT(80, "You can use the 'flip' option if there isn't a RIGHT cluster defined in the configuration."),
     WAREHOUSE_DIRS_SAME_DIR(81, "You can't use the same location for EXTERNAL {0} and MANAGED {1} warehouse locations."),
     COLLECTING_TABLE_DEFINITIONS(82, "There was an issue collecting table definitions.  Please check logs."),
-    DATABASE_CREATION(83, "There was an issue creating/modifying databases.  Please check logs."),
+    DATABASE_CREATION(83, "There was an issue creating/modifying databases.  Ensure that the warehouse directories have been set.  Check logs."),
     COLLECTING_TABLES(84, "There was an issue collecting tables.  Please check logs."),
     LEGACY_AND_HIVE3(85, "Setting legacyHive=true and hdpHive3=true is a conflicting configuration"),
     RDL_FEL_OVERRIDES(86, "You've request both -rdl and -fel. -fel will take precedence."),
@@ -214,7 +214,18 @@ public enum MessageCode {
     DISTCP_WITH_MISMATCHING_TABLE_LOCATION(103, "You''ve specified ''distcp'' with mismatching locations for {0} {1}: " +
             "Original Location: {2}, Derived table name from directory: {3}. The partition directory doesn''t match the table name and we can''t " +
             "correctly align the data elements via distcp.  You''ll need to use SQL to migrate the data and allow Hive to reorganize it " +
-            "according to your specs.");
+            "according to your specs."),
+    CLUSTER_NOT_DEFINED_OR_CONFIGURED(104, "The {0} cluster is NOT defined or configured in the runtime configuration.  " +
+            "Please check the configuration and try again."),
+    HS2_NOT_DEFINED_OR_CONFIGURED(105, "The {0} HiveServer2 is NOT defined or configured in the runtime configuration.  " +
+            "Please check the configuration and try again."),
+    METASTORE_DIRECT_NOT_DEFINED_OR_CONFIGURED(106, "The {0} metastore_direct is NOT defined or configured in the runtime configuration.  " +
+            "Please check the configuration and try again."),
+    MISSING_PROPERTY(107, "The property '{0}' is missing from the configuration {1} {2}.  Please add it and try again."),
+    WAREHOUSE_DIRECTORIES_NOT_DEFINED(108, "The warehouse directories are NOT defined.  " +
+            "Please add them and try again."),
+    WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV(109, "The warehouse directories were retrieved from the Hive environment.  If these are not the intended " +
+            "directories, add the warehouse directories to the configuration and try again.");
 
     private int code = 0;
     private String desc = null;

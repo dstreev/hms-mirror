@@ -67,7 +67,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         // Location of converted data will got to default location.
         leftNewTableSpec.setStripLocation(Boolean.TRUE);
 
-        rtn = getTableService().buildTableSchema(leftNewTableSpec);
+        rtn = tableService.buildTableSchema(leftNewTableSpec);
 
         String origTableName = let.getName();
 

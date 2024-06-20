@@ -63,7 +63,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     bugs/incomplete features.
 
     Hive 3 Databases have an MANAGEDLOCATION attribute used to override the 'warehouse' location
-    specified in the hive metastore as the basis for the root directory of ACID tables in Hive.
+    specified in the hive metastoreDirect as the basis for the root directory of ACID tables in Hive.
     Unfortunately, this setting isn't available in HDP Hive 3.  It was added later in CDP Hive 3.
 
     In lew of this, when this flag is set to true (default is false), we will NOT strip the location

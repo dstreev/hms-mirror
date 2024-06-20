@@ -35,6 +35,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.Map;
 import javax.validation.constraints.NotNull;
 
+import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.*;
+
 @Controller
 @RequestMapping(path = "/translator")
 @Slf4j
@@ -73,7 +75,7 @@ public class TranslatorMVController {
 
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public String buildGLMFromPlans(Model model,
-                                    @RequestParam(name = "dryrun", required = false) Boolean dryrun,
+                                    @RequestParam(name = "glm_dryrun", required = false) Boolean dryrun,
                                     @RequestParam(name = "buildSources", required = false) Boolean buildSources,
                                     @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
                                     @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
@@ -83,25 +85,28 @@ public class TranslatorMVController {
 
         // Reset Connections and reload most current config.
         executeSessionService.clearActiveSession();
-        executeSessionService.transitionLoadedSessionToActive();
+        if (executeSessionService.transitionLoadedSessionToActive()) {
 
-        boolean lclBuildSources = buildSources != null ? buildSources : false;
-        int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
-        boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
+            boolean lclBuildSources = buildSources != null ? buildSources : false;
+            int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
+            boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
 
-        if (lclBuildSources) {
-            WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
-            model.addAttribute("sources", wmb.getSources());
-        }
+            if (lclBuildSources) {
+                WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
+                model.addAttribute(SOURCES, wmb.getSources());
+            }
 
-        Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
+            Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
 
-        if (dryrun) {
-            model.addAttribute("action", "view.dryrun");
-            model.addAttribute("glm", globalLocationMap);
-            return "/globalLocationMap/view_edit";
+            if (dryrun) {
+                model.addAttribute(ACTION, "view.dryrun");
+                model.addAttribute(GLOBAL_LOCATION_MAP, globalLocationMap);
+                return "/globalLocationMap/view_edit";
+            } else {
+                return "redirect:/config/view";
+            }
         } else {
-            return "redirect:/config/view";
+            return "redirect:/config/home";
         }
     }
 

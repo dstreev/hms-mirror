@@ -17,30 +17,21 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Getter
 @Setter
-public class SessionContainer {
-    private boolean saveAsDefault = Boolean.FALSE;
-    private boolean stripMappings = Boolean.TRUE;
-    private boolean flipConfig = Boolean.FALSE;
-    private List<Environment> environments = new ArrayList<>();
-    private HmsMirrorConfig config;
-    private RunStatus runStatus = null;
-    private String sessionId = null;
-    private boolean readOnly = Boolean.FALSE;
+public class RunContainer {
+    private Boolean dryrun = Boolean.TRUE;
+    private Boolean autoGLM = Boolean.FALSE;
+    private String sessionId;
+    private DataStrategyEnum dataStrategy;
 
-    public void loadFromSession(ExecuteSession executeSession) {
-        if (executeSession != null) {
-            this.sessionId = executeSession.getSessionId();
-            this.config = executeSession.getConfig();
-            this.runStatus = executeSession.getRunStatus();
-        }
-    }
+    private String saveAs = "change_me.yaml";
+    private boolean stripMappings = Boolean.TRUE;
+    private boolean saveAsDefault = Boolean.FALSE;
+    private boolean flipConfigs = Boolean.FALSE;
+
 }

@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -68,7 +69,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
@@ -83,7 +84,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                 } else if (tableMirror.isPartitioned(Environment.LEFT)) {
                     // We need to drop the RIGHT and RECREATE.
                     ret.addIssue("Table is partitioned.  Need to change data strategy to drop and recreate.");
-                    String useDb = MessageFormat.format(MirrorConf.USE, configService.getResolvedDB(tableMirror.getParent().getName()));
+                    String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config));
                     ret.addSql(MirrorConf.USE_DESC, useDb);
 
                     // Make sure the table is NOT set to purge.
@@ -101,7 +102,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
                 } else {
                     // - AVRO LOCATION
                     if (AVROCheck(tableMirror)) {
-                        String useDb = MessageFormat.format(MirrorConf.USE, configService.getResolvedDB(tableMirror.getParent().getName()));
+                        String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config));
                         ret.addSql(MirrorConf.USE_DESC, useDb);
                         // Look at the table definition and get.
                         // - LOCATION

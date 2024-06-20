@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -133,7 +134,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
 
         String useDb = null;
@@ -145,7 +146,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
 
         //ret.getSql().clear();
 
-        database = configService.getResolvedDB(tableMirror.getParent().getName());
+        database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -174,8 +175,8 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
                 ret.addSql(TableUtils.USE_DESC, useDb);
                 String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()
-                        && hmsMirrorConfig.isTransferOwnership() && let.getOwner() != null) {
+                if (!config.getCluster(Environment.RIGHT).isLegacyHive()
+                        && config.isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
@@ -189,15 +190,15 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
         if (let.getPartitioned() && !TableUtils.isACID(let) &&
                 (ret.getCreateStrategy() == CreateStrategy.REPLACE || ret.getCreateStrategy() == CreateStrategy.CREATE
                         || ret.getCreateStrategy() == CreateStrategy.AMEND_PARTS)) {
-            if (hmsMirrorConfig.isEvaluatePartitionLocation()) {
+            if (config.isEvaluatePartitionLocation()) {
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
                 String tableParts = translatorService.buildPartitionAddStatement(ret);
                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
                 ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-            } else if (hmsMirrorConfig.getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
+            } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
-                if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
+                if (config.getTransfer().getStorageMigration().isDistcp()) {
                     ret.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
                 } else {
                     ret.addSql(TableUtils.REPAIR_DESC, msckStmt);

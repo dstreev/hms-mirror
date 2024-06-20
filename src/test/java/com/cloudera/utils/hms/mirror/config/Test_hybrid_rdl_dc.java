@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.config;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
+import com.google.protobuf.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,9 +73,28 @@ public class Test_hybrid_rdl_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.DISTCP_VALID_STRATEGY, MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+        long expected = getCheckCode(
+                MessageCode.DISTCP_VALID_STRATEGY);
 
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
+                MessageCode.LINK_TEST_SKIPPED_WITH_IS,
+                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
+                MessageCode.DISTCP_WO_TABLE_FILTERS
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
+
 }

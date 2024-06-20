@@ -1,0 +1,93 @@
+<!--
+  ~ Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  -->
+<!--<!DOCTYPE HTML>-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Create Config</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+</head>
+<body>
+
+<h1 th:text="#{${action}}"/>
+
+<fieldset>
+    <legend th:text="#{${environment}}"/>
+    <fieldset>
+        <legend th:text="#{metastore.direct}"/>
+        <form  class="pure-form pure-form-aligned" id="config_form" th:action="@{/metastoreDirect/save}"
+               th:object="${metastoreDirect}" method="post">
+
+            <input type="hidden" name="environment" th:value="${environment}"/>
+
+            <input type="hidden" th:field="*{initSql}"
+                   th:value="${metastoreDirect.initSql}"/>
+            <input type="hidden"
+                   th:field="*{connectionPool.min}"
+                   th:value="${metastoreDirect.connectionPool.min}"/>
+            <input type="hidden"
+                   th:field="*{connectionPool.max}"
+                   th:value="${metastoreDirect.connectionPool.max}"/>
+            <input type="hidden"
+                   th:field="*{connectionPool.timeout}"
+                   th:value="${metastoreDirect.connectionPool.timeout}"/>
+            <div class="pure-control-group">
+                <label for="metastoreuri" th:text="#{metastore.direct.uri}"/>
+                <input class="pure-input-3-4" id="metastoreuri" type="text"
+                       th:field="*{uri}"
+                       placeholder="Set Metastore JDBC URI"/>
+            </div>
+            <div class="pure-control-group">
+                <label for="metastoretype"
+                       th:text="#{metastore.direct.type}"></label>
+                <select id="metastoretype"
+                        th:field="*{type}">
+                    <option th:each="cet: ${db_types}"
+                            th:value="${cet}"
+                            th:text="${cet}"
+                            th:selected="${cet.equals(metastoreDirect.type)}"/>
+                </select>
+            </div>
+            <div class="pure-control-group">
+                <label for="metastoreuser" th:text="#{metastore.direct.user}"/>
+                <input class="pure-input-1-4" id="metastoreuser" type="text"
+                       th:field="*{connectionProperties[user]}"
+                       placeholder="Set Metastore User"/>
+            </div>
+            <div class="pure-control-group">
+                <label for="metastorepassword" th:text="#{metastore.direct.password}"/>
+                <input class="pure-input-1-4" id="metastorepassword" type="text"
+                       th:field="*{connectionProperties[password]}"
+                       autocomplete="off"
+                       placeholder="Set Metastore Password"/>
+            </div>
+            <div class="pure-button-group">
+                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.save}"/>
+                <button class="pure-button" type="submit" th:text="#{button.cancel}"
+                        th:formaction="@{/config/view}" th:formmethod="get"/>
+            </div>
+
+        </form>
+    </fieldset>
+</fieldset>
+
+</body>
+</html>

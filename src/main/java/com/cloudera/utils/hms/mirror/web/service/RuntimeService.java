@@ -77,31 +77,40 @@ public class RuntimeService {
             translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
         }
 
-        ExecuteSession session = executeSessionService.transitionLoadedSessionToActive();
+        RunStatus runStatus = null;
+        ExecuteSession session = null;
 
-        RunStatus runStatus = session.getRunStatus();
-        if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
-                || runStatus.getProgress() == ProgressEnum.STARTED
-                || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
-            log.error("The session is currently running. Cannot start until operation has completed.");
-            throw new RuntimeException("Session already running.");
-        }
+        if (executeSessionService.transitionLoadedSessionToActive()) {
 
-        if (runStatus.reset()) {
-            runStatus.setProgress(ProgressEnum.STARTED);
-            // Set the dryrun flag.
-            executeSessionService.getActiveSession().getConfig().setExecute(!dryrun);
+            session = executeSessionService.getActiveSession();
 
-            // Start job in a separate thread.
-            Future<Boolean> runningTask = hmsMirrorAppService.run();
+            runStatus = session.getRunStatus();
+//            if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
+//                    || runStatus.getProgress() == ProgressEnum.STARTED
+//                    || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
+//                log.error("The session is currently running. Cannot start until operation has completed.");
+//                throw new RuntimeException("Session already running.");
+//            }
 
-            // Set state to in progress.
-            runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+            if (runStatus.reset()) {
+                runStatus.setProgress(ProgressEnum.STARTED);
+                // Set the dryrun flag.
+                executeSessionService.getActiveSession().getConfig().setExecute(!dryrun);
 
-            // Set the running task reference in the RunStatus.
-            runStatus.setRunningTask(runningTask);
+                // Start job in a separate thread.
+                Future<Boolean> runningTask = hmsMirrorAppService.run();
+
+                // Set state to in progress.
+                runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+
+                // Set the running task reference in the RunStatus.
+                runStatus.setRunningTask(runningTask);
+            }
+        } else {
+            session = executeSessionService.getActiveSession();
+            runStatus = session.getRunStatus();
         }
         return runStatus;
-
     }
+
 }

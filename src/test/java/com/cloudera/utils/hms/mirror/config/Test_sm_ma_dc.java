@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 //                "--hms-mirror.config.downgrade-acid=true",
 //                "--hms-mirror.config.read-only=true",
 //                "--hms-mirror.config.sync=true",
-//                "--hms-mirror.config.evaluate-partition-location=true",
+                "--hms-mirror.config.evaluate-partition-location=true",
 //                "--hms-mirror.config.intermediate-storage=s3a://my_is_bucket",
 //                "--hms-mirror.config.common-storage=s3a://my_cs_bucket",
 //                "--hms-mirror.config.reset-to-default-location=true",
@@ -71,7 +71,8 @@ public class Test_sm_ma_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS,
+        long expected = getCheckCode(
+                MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS,
                 MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM,
                 MessageCode.METASTORE_DIRECT_CONFIG,
                 MessageCode.STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY);
@@ -79,5 +80,21 @@ public class Test_sm_ma_dc extends E2EBaseTest {
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.STORAGE_MIGRATION_DISTCP_EXECUTE,
+                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT,
+                MessageCode.DISTCP_WO_TABLE_FILTERS
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
 }

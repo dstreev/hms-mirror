@@ -17,11 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.*;
-import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -545,7 +542,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer/storageMigration")
     public StorageMigration setStorageMigration(@RequestParam(name = "sessionId", required = false) String sessionId,
                                                 @RequestParam(value = "dataMovementStrategy", required = false) DataMovementStrategyEnum dataMovementStrategy,
-                                                @RequestParam(value = "dataFlow", required = false) DistcpFlow dataFlow,
+                                                @RequestParam(value = "dataFlow", required = false) DistcpFlowEnum dataFlow,
                                                 @RequestParam(value = "strict", required = false) Boolean strict
     ) throws SessionRunningException {
 

@@ -15,9 +15,9 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain;
+package com.cloudera.utils.hms.mirror.domain.support;
 
-public enum DistcpFlow {
+public enum DistcpFlowEnum {
 
     /*
     Data is being 'pulled' from the source cluster by the target cluster (RIGHT 'pulls' from LEFT).

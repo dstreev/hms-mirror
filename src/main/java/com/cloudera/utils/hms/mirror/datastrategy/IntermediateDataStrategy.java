@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -215,7 +216,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     @Override
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
         log.debug("Table: {} buildout Intermediate SQL", tableMirror.getName());
 
@@ -243,7 +244,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         String transferCreateStmt = tableService.getCreateStatement(tableMirror, Environment.TRANSFER);
         let.addSql(TableUtils.CREATE_TRANSFER_DESC, transferCreateStmt);
 
-        database = configService.getResolvedDB(tableMirror.getParent().getName());
+        database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
         useDb = MessageFormat.format(MirrorConf.USE, database);
         ret.addSql(TableUtils.USE_DESC, useDb);
 
@@ -283,14 +284,14 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             case CREATE:
                 String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                 ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()
-                        && hmsMirrorConfig.isTransferOwnership() && let.getOwner() != null) {
+                if (!config.getCluster(Environment.RIGHT).isLegacyHive()
+                        && config.isTransferOwnership() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, ret.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }
                 if (let.getPartitioned()) {
-                    if (hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
-                        if (!TableUtils.isACID(let) || (TableUtils.isACID(let) && hmsMirrorConfig.getMigrateACID().isDowngrade())) {
+                    if (config.getTransfer().getCommonStorage() != null) {
+                        if (!TableUtils.isACID(let) || (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade())) {
                             String rightMSCKStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                             ret.addSql(TableUtils.REPAIR_DESC, rightMSCKStmt);
                         }

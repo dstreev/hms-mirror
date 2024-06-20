@@ -90,7 +90,9 @@ public class Test_sm_smn_wd_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM);
+        long expected = getCheckCode(
+                MessageCode.DISTCP_REQUIRES_EPL,
+                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM);
 
         assertEquals("Return Code Failure: ", expected, actual);
 

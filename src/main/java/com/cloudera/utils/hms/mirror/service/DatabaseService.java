@@ -32,6 +32,7 @@ import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -47,8 +48,7 @@ import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
-import static com.cloudera.utils.hms.mirror.SessionVars.LEGACY_DB_LOCATION_PROP;
+import static com.cloudera.utils.hms.mirror.SessionVars.*;
 
 @Service
 @Slf4j
@@ -118,7 +118,7 @@ public class DatabaseService {
         warehouseMapBuilder.clearWarehousePlan();
     }
 
-    // Look at the Warehouse Plans and pull the database/table/partition locations the metastore.
+    // Look at the Warehouse Plans and pull the database/table/partition locations the metastoreDirect.
     public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
@@ -321,28 +321,34 @@ public class DatabaseService {
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+
+        if (config.getCluster(Environment.RIGHT) == null) {
+            // With no RIGHT cluster, don't continue.
+            return Boolean.TRUE;
+        }
+
         // Start with the LEFT definition.
         Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
         Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
         String database = null;
         String location = null;
         String managedLocation = null;
-        String leftNamespace = hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace();
-        String rightNamespace = hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace();
+        String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
+        String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
 
-        if (!hmsMirrorConfig.isResetRight()) {
+        if (!config.isResetRight()) {
             // Don't buildout RIGHT side with inplace downgrade of ACID tables.
-            if (!hmsMirrorConfig.getMigrateACID().isDowngradeInPlace()) {
-                switch (hmsMirrorConfig.getDataStrategy()) {
+            if (!config.getMigrateACID().isDowngradeInPlace()) {
+                switch (config.getDataStrategy()) {
                     case CONVERT_LINKED:
                         // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
-                        database = configService.getResolvedDB(dbMirror.getName());
+                        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
                         location = dbDefRight.get(DB_LOCATION);
                         managedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
 
-                        if (location != null && !hmsMirrorConfig.getCluster(Environment.RIGHT).isHdpHive3()) {
+                        if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
                             location = location.replace(leftNamespace, rightNamespace);
                             String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                             dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
@@ -350,7 +356,7 @@ public class DatabaseService {
                         }
                         if (managedLocation != null) {
                             managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
-                            if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isHdpHive3()) {
+                            if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                 String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                 dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDBMngdLocationSql));
                             } else {
@@ -365,7 +371,7 @@ public class DatabaseService {
                     default:
                         // Start with the LEFT definition.
                         dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
-                        database = configService.getResolvedDB(dbMirror.getName());
+                        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
                         location = dbDefLeft.get(DB_LOCATION);
                         Warehouse dbWarehouse = null;
                         try {
@@ -374,34 +380,34 @@ public class DatabaseService {
                             dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
                             return Boolean.FALSE;
                         }
-                        if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
-                                location = hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace()
+                        if (config.getTransfer().getCommonStorage() == null) {
+                                location = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             } else {
-                                location = hmsMirrorConfig.getTransfer().getCommonStorage()
+                                location = config.getTransfer().getCommonStorage()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             }
 
-                        if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+                        if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                             // Check for Managed Location.
                             managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
                         }
-                        if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
-                            if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
-                                managedLocation = hmsMirrorConfig.getCluster(Environment.RIGHT).getHcfsNamespace()
+                        if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                            if (config.getTransfer().getCommonStorage() == null) {
+                                managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                         + dbWarehouse.getManagedDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             } else {
-                                managedLocation = hmsMirrorConfig.getTransfer().getCommonStorage()
+                                managedLocation = config.getTransfer().getCommonStorage()
                                         + dbWarehouse.getManagedDirectory()
                                         + "/" + dbMirror.getName() + ".db";
                             }
                             // Check is the Managed Location matches the system default.  If it does,
                             //  then we don't need to set it.
-                            String envDefaultFS = hmsMirrorConfig.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
-                            String envWarehouseDir = hmsMirrorConfig.getCluster(Environment.RIGHT).getEnvVars().get(METASTOREWAREHOUSE);
+                            String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
+                            String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
                             String defaultManagedLocation = envDefaultFS + envWarehouseDir;
                             log.info("Comparing Managed Location: {} to default: {}", managedLocation, defaultManagedLocation);
                             if (managedLocation.startsWith(defaultManagedLocation)) {
@@ -413,7 +419,7 @@ public class DatabaseService {
                             }
                         }
 
-                        switch (hmsMirrorConfig.getDataStrategy()) {
+                        switch (config.getDataStrategy()) {
                             case HYBRID:
                             case EXPORT_IMPORT:
                             case SCHEMA_ONLY:
@@ -423,7 +429,7 @@ public class DatabaseService {
                                     location = location.replace(leftNamespace, rightNamespace);
                                     // https://github.com/cloudera-labs/hms-mirror/issues/13
                                     // LOCATION to MANAGED LOCATION silent translation for HDP 3 migrations.
-                                    if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+                                    if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                                         String locationMinusNS = location.substring(rightNamespace.length());
                                         if (locationMinusNS.startsWith(DEFAULT_MANAGED_BASE_DIR)) {
                                             // Translate to managed.
@@ -443,18 +449,18 @@ public class DatabaseService {
                                 if (managedLocation != null) {
                                     managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
                                 }
-                                if (hmsMirrorConfig.getDbPrefix() != null || hmsMirrorConfig.getDbRename() != null) {
+                                if (config.getDbPrefix() != null || config.getDbRename() != null) {
                                     // adjust locations.
                                     if (location != null) {
                                         location = UrlUtils.removeLastDirFromUrl(location) + "/"
-                                                + configService.getResolvedDB(dbMirror.getName()) + ".db";
+                                                + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
                                     }
                                     if (managedLocation != null) {
                                         managedLocation = UrlUtils.removeLastDirFromUrl(managedLocation) + "/"
-                                                + configService.getResolvedDB(dbMirror.getName()) + ".db";
+                                                + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
                                     }
                                 }
-                                if (hmsMirrorConfig.isReadOnly() && !hmsMirrorConfig.isLoadingTestData()) {
+                                if (config.isReadOnly() && !config.isLoadingTestData()) {
                                     log.debug("Config set to 'read-only'.  Validating FS before continuing");
                                     CliEnvironment cli = executeSessionService.getCliEnvironment();
 
@@ -466,7 +472,7 @@ public class DatabaseService {
                                         // Get location for DB. If it's not there than:
                                         //     SQL query to get default from Hive.
                                         String defaultDBLocProp = null;
-                                        if (hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                                        if (config.getCluster(Environment.RIGHT).isLegacyHive()) {
                                             defaultDBLocProp = LEGACY_DB_LOCATION_PROP;
                                         } else {
                                             defaultDBLocProp = EXT_DB_LOCATION_PROP;
@@ -558,13 +564,13 @@ public class DatabaseService {
                                 // TODO: DB Properties.
                                 dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
 
-                                if (location != null && !hmsMirrorConfig.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                     String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                                     dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
                                     dbDefRight.put(DB_LOCATION, location);
                                 }
                                 if (managedLocation != null) {
-                                    if (!hmsMirrorConfig.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                    if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                         String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                         dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
                                         dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
@@ -616,7 +622,7 @@ public class DatabaseService {
 //                                sbLoc.append("/");
 //                                sbLoc.append(database);
 //                                sbLoc.append(".db");
-                                if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                                     String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
                                     dbDefRight.put(DB_LOCATION, location);
@@ -628,7 +634,7 @@ public class DatabaseService {
 //                                sbMngdLoc.append("/");
 //                                sbMngdLoc.append(database);
 //                                sbMngdLoc.append(".db");
-                                if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
                                     String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
                                     dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
@@ -650,10 +656,10 @@ public class DatabaseService {
                 }
             } else {
                 // Downgrade in place.
-                if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null) {
+                if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
                     // Set the location to the external directory for the database.
-                    database = configService.getResolvedDB(dbMirror.getName());
-                    location = hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace() + hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() +
+                    database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                    location = config.getCluster(Environment.LEFT).getHcfsNamespace() + config.getTransfer().getWarehouse().getExternalDirectory() +
                             "/" + database + ".db";
                     String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                     dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
@@ -662,7 +668,7 @@ public class DatabaseService {
             }
         } else {
             // Reset Right DB.
-            database = configService.getResolvedDB(dbMirror.getName());
+            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
             String dropDb = MessageFormat.format(DROP_DB, database);
             dbMirror.getSql(Environment.RIGHT).add(new Pair(DROP_DB_DESC, dropDb));
         }
@@ -692,13 +698,13 @@ public class DatabaseService {
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);//getConnection();
             if (conn != null) {
 
-                String database = (environment == Environment.LEFT ? dbMirror.getName() : configService.getResolvedDB(dbMirror.getName()));
+                String database = (environment == Environment.LEFT ? dbMirror.getName() : HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config));
 
                 log.debug("{}:{}: Loading database definition.", environment, database);
 

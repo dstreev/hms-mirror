@@ -1,0 +1,106 @@
+<!--
+  ~ Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~  
+  -->
+<!--<!DOCTYPE HTML>-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Create Config</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+  <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+  <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+  <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+  <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+</head>
+<body>
+
+<h1 th:text="#{${action}}"/>
+
+<fieldset>
+  <legend th:text="#{${environment}}"/>
+  <fieldset>
+    <legend th:text="#{hive.server2}"/>
+    <form  class="pure-form pure-form-aligned" id="config_form" th:action="@{/templates/hiveServer2/save}"
+          th:object="${hiveServer2}" method="post">
+
+      <input type="hidden" name="environment" th:value="${environment}"/>
+
+      <input type="hidden"
+             th:field="*{disconnected}"
+             th:checked="${hiveServer2.disconnected}"/>
+      <input type="hidden"
+             th:field="*{driverClassName}"
+             th:value="${hiveServer2.driverClassName}"/>
+      <input type="hidden"
+             th:field="*{connectionProperties[maxWaitMillis]}"
+             th:value="${hiveServer2.connectionProperties[maxWaitMillis]}"/>
+      <input type="hidden"
+             th:field="*{connectionProperties[maxTotal]}"
+             th:value="${hiveServer2.connectionProperties[maxTotal]}"/>
+
+<!--      <div class="pure-control-group">-->
+<!--        <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>-->
+<!--        <input type="checkbox" name="hs2legacy"-->
+<!--               th:field="*{config.clusters[__${env}__].legacyHive}"-->
+<!--               th:checked="${sessionContainer.config.clusters[__${env}__]?.legacyHive}"/>-->
+<!--      </div>-->
+<!--      <div class="pure-control-group">-->
+<!--        <label for="leftNamespace" th:text="#{hcfs.namespace}"/>-->
+<!--        <input class="pure-input-1-3" id="leftNamespace" type="text"-->
+<!--               th:field="*{config.clusters[__${env}__].hcfsNamespace}"-->
+<!--               placeholder="Set Namespace"/>-->
+<!--      </div>-->
+      <div class="pure-control-group">
+        <label for="hs2uri" th:text="#{hive.server2.uri}"/>
+        <input class="pure-input-3-4" id="hs2uri" type="text"
+               th:field="*{uri}"
+               placeholder="Set HiveServer2 JDBC URI"/>
+      </div>
+      <div class="pure-control-group">
+        <label for="hs2user" th:text="#{hive.server2.user}"/>
+        <input class="pure-input-1-4" id="hs2user" type="text"
+               th:field="*{connectionProperties[user]}"
+               placeholder="Set HiveServer2 User"/>
+      </div>
+      <div class="pure-control-group">
+        <label for="hs2password" th:text="#{hive.server2.password}"/>
+        <!--                                    TODO: Issue with password getting translated through when using the 'password'-->
+        <!--                                           input type. -->
+        <input class="pure-input-1-4" id="hs2password" type="text"
+               autocomplete="off"
+               th:field="*{connectionProperties[password]}"
+               placeholder="Set Hive Server2 Password"/>
+      </div>
+      <div class="pure-control-group">
+        <label for="hs2jars" th:text="#{hive.server2.jars}"/>
+        <input class="pure-input-3-4" id="hs2jars" type="text"
+               th:field="*{jarFile}"
+               placeholder="Set HiveServer2 JDBC Driver Jar File(s)"/>
+        <span class="pure-form-message-inline">Local file(s) on application server host.</span>
+      </div>
+      <div class="pure-button-group">
+        <button class="pure-button pure-button-primary" type="submit" th:text="#{button.save}"/>
+        <button class="pure-button" type="submit" th:text="#{button.cancel}"
+                th:formaction="@{/config/view}" th:formmethod="get"/>
+      </div>
+
+    </form>
+  </fieldset>
+</fieldset>
+
+
+</body>
+</html>

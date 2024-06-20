@@ -33,8 +33,8 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.data-strategy=DUMP",
                 "--hms-mirror.config.migrate-acid=true",
                 "--hms-mirror.config.evaluate-partition-location=true",
-//                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
-//                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
+                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
+                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
 //                "--hms-mirror.config.downgrade-acid=true",
 //                "--hms-mirror.config.reset-to-default-location=true",
 //                "--hms-mirror.config.distcp=true",
@@ -62,7 +62,7 @@ public class Test_dump_ma_epl extends E2EBaseTest {
         long rtn = getReturnCode();
         // Verify the return code.
         long check = 0L;
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 //    @Test

@@ -72,7 +72,9 @@ public class Test_common_rdl extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.RESET_TO_DEFAULT_LOCATION, MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+        long expected = getCheckCode(
+                MessageCode.DATABASE_CREATION,
+                MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED);
 
         assertEquals("Return Code Failure: ", expected, actual);
 

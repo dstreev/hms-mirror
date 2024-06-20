@@ -34,8 +34,8 @@ import static org.junit.Assert.assertEquals;
                 "--hms-mirror.config.data-strategy=SQL",
 //                "--hms-mirror.config.migrate-acid=true",
 //                "--hms-mirror.config.migrate-acid-only=true",
-//                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
-//                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
+                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
+                "--hms-mirror.config.external-warehouse-directory=/warehouse/external",
 //                "--hms-mirror.config.sort-dynamic-partition-inserts=true",
 //                "--hms-mirror.config.downgrade-acid=true",
                 "--hms-mirror.config.read-only=true",
@@ -73,7 +73,7 @@ public class Test_sql_ro extends E2EBaseTest {
         long rtn = getReturnCode();
         // Verify the return code.
         long check = MessageCode.RO_DB_DOESNT_EXIST.getLong();
-        assertEquals("Return Code Failure: " + rtn, check * -1, rtn);
+        assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
 

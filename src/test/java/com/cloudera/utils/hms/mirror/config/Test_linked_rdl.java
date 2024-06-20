@@ -70,10 +70,27 @@ public class Test_linked_rdl extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.RESET_TO_DEFAULT_LOCATION, MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+        long expected = getCheckCode(
+                MessageCode.RESET_TO_DEFAULT_LOCATION);
 
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
+                MessageCode.LINK_TEST_SKIPPED_WITH_IS,
+                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
 }

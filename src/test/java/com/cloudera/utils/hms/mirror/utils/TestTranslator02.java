@@ -53,12 +53,13 @@ public class TestTranslator02 extends TranslatorTestBase {
         ConnectionPoolService connectionPoolService = new ConnectionPoolService();
         executeSessionService.setConnectionPoolService(connectionPoolService);
 
-        ExecuteSession session = executeSessionService.createSession(null, config);
+        ExecuteSession session = executeSessionService.createSession(ExecuteSessionService.DEFAULT, config);
         executeSessionService.setLoadedSession(session);
         executeSessionService.transitionLoadedSessionToActive();
 
         ConfigService configService = new ConfigService();
-        configService.setExecuteSessionService(executeSessionService);
+        executeSessionService.setConfigService(configService);
+//        configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();
         translatorService.setExecuteSessionService(executeSessionService);
         translatorService.setConfigService(configService);

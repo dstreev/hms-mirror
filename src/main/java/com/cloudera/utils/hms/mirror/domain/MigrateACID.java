@@ -88,6 +88,27 @@ public class MigrateACID implements Cloneable {
         }
     }
 
+    public void setInplace(boolean inplace) {
+        this.inplace = inplace;
+        if (this.inplace) {
+            if (!on) {
+                this.on = Boolean.TRUE;
+            }
+            if (!downgrade) {
+                this.downgrade = Boolean.TRUE;
+            }
+        }
+    }
+
+    public void setDowngrade(boolean downgrade) {
+        this.downgrade = downgrade;
+        if (this.downgrade) {
+            if (!on) {
+                this.on = Boolean.TRUE;
+            }
+        }
+    }
+
     @JsonIgnore
     public Boolean isDowngradeInPlace() {
         if (inplace && downgrade)

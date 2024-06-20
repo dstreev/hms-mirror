@@ -21,21 +21,18 @@ import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
-import java.util.Set;
 
 @Controller
 @RequestMapping(path = "/report")
 @Slf4j
-public class ReportMVController {
+public class ReportMVController implements ControllerReferences {
 
     private final ExecuteSessionService executeSessionService;
 
@@ -44,29 +41,29 @@ public class ReportMVController {
     }
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)
-    public String viewReport(@RequestParam(value = "report_id", required = true) String report_id) {
+    public String viewReport(@RequestParam(value = REPORT_ID, required = true) String report_id) {
         log.info("Viewing report: {}", report_id);
 
         return "/report/view";
     }
 
     @RequestMapping(value = "/download", method = RequestMethod.GET)
-    public void downloadReport(@RequestParam(value = "report_id", required = true) String reportId,
+    public void downloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
                 HttpServletResponse response) {
         try {
-            HttpEntity<ByteArrayResource> entity = executeSessionService.getZippedReport(reportId);
+            HttpEntity<ByteArrayResource> entity = executeSessionService.getZippedReport(report_id);
             response.setContentType("application/zip");
             // Translate headers
             entity.getHeaders().forEach((k, v) -> response.setHeader(k, v.get(0)));
 
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + reportId + ".zip\"");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + report_id + ".zip\"");
             // get your file as InputStream
             InputStream is = Objects.requireNonNull(entity.getBody()).getInputStream();
             // copy it to response's OutputStream
             org.apache.commons.io.IOUtils.copy(is, response.getOutputStream());
             response.flushBuffer();
         } catch (IOException ex) {
-            log.info("Error writing file to output stream. Filename was '{}.zip'", reportId, ex);
+            log.info("Error writing file to output stream. Filename was '{}.zip'", report_id, ex);
             throw new RuntimeException("IOError writing file to output stream");
         }
 

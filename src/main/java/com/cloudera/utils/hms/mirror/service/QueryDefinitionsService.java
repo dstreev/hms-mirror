@@ -62,7 +62,7 @@ public class QueryDefinitionsService {
                 mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
                 try {
-                    String dbQueryDefReference = "/" + dbType.toString() + "/metastore.yaml";
+                    String dbQueryDefReference = "/" + dbType.toString() + "/metastoreDirect.yaml";
                     try {
                         URL configURL = this.getClass().getResource(dbQueryDefReference);
                         if (configURL == null) {

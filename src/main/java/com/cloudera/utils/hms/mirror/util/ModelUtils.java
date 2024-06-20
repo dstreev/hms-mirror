@@ -19,12 +19,13 @@ package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
+import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import org.springframework.ui.Model;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-public class ModelUtils {
+public class ModelUtils implements ControllerReferences {
 
     public static void allEnumsForModel(Model model) {
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.SerdeType.class, model);
@@ -33,22 +34,33 @@ public class ModelUtils {
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, model);
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, model);
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum.class, model);
+        enumForModel(com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum.class, model);
         enumForModel(DBStore.DB_TYPE.class, model);
         configEnvironmentForModel(model);
         configSupportDataStrategyForModel(model);
+        configSupportedHiveDriverClassesForModel(model);
         enumForModel(ConnectionPoolType.class, model);
+        model.addAttribute("FALSE", "false");
+        model.addAttribute("TRUE", "true");
         booleanForModel(model);
     }
 
     public static void configEnvironmentForModel(Model model) {
         // Add LEFT and RIGHT to the model
-        model.addAttribute("environments", new String[]{"LEFT", "RIGHT"});
+        model.addAttribute(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
     }
 
     public static void configSupportDataStrategyForModel(Model model) {
         // Add SUPPORTED and UNSUPPORTED to the model
-        model.addAttribute("supporteddatastrategyenums", new String[]{"STORAGE_MIGRATION"});
+        model.addAttribute(SUPPORTED_DATA_STRATEGIES, new String[]{"STORAGE_MIGRATION"});
     }
+
+    public static void configSupportedHiveDriverClassesForModel(Model model) {
+        // Add SUPPORTED and UNSUPPORTED to the model
+        model.addAttribute(SUPPORTED_HIVE_DRIVER_CLASSES,
+                new String[]{"org.apache.hive.jdbc.HiveDriver", "com.cloudera.hive.jdbc.HS2Driver"});
+    }
+
     public static void enumForModel(Class clazz, Model model) {
         if (clazz.isEnum()) {
             Method method = null;
@@ -69,8 +81,8 @@ public class ModelUtils {
 
     public static void booleanForModel(Model model) {
         String[] bools = new String[2];
-        bools[0] = "true";
-        bools[1] = "false";
-        model.addAttribute("booleans", bools);
+        bools[0] = "false";
+        bools[1] = "true";
+        model.addAttribute(BOOLEANS, bools);
     }
 }

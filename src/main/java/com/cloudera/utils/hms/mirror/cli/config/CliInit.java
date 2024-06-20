@@ -18,13 +18,14 @@
 package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +57,13 @@ import java.util.regex.Matcher;
 @Slf4j
 public class CliInit {
 
+    private ConfigService configService;
     private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
@@ -208,12 +215,18 @@ public class CliInit {
         return args -> {
             ExecuteSession session = executeSessionService.createSession(null, builtConfig);
             executeSessionService.setLoadedSession(session);
-            executeSessionService.transitionLoadedSessionToActive();
-            HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getConfig();
-            RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+            Boolean transitioned = executeSessionService.transitionLoadedSessionToActive();
+
+            log.info("Session transitioned to active.");
+            builtConfig.setValidated(Boolean.TRUE);
+
+            session = executeSessionService.getActiveSession();
+
+            HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+
             Conversion conversion = null;
             log.info("Post Processing Conversion");
-            if (resolvedConfig.isLoadingTestData()) {
+            if (config.isLoadingTestData()) {
                 // Load Test Data.
                 loadTestData(session);
 
@@ -224,35 +237,35 @@ public class CliInit {
                     String database = dbMirror.getName();
                     for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
                         String tableName = tableMirror.getName();
-                        if (resolvedConfig.isDatabaseOnly()) {
+                        if (config.isDatabaseOnly()) {
                             // Only work with the database.
                             tableMirror.setRemove(true);
                         } else if (TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))
-                                && !resolvedConfig.getMigrateACID().isOn()) {
+                                && !config.getMigrateACID().isOn()) {
                             tableMirror.setRemove(true);
                         } else if (!TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))
-                                && resolvedConfig.getMigrateACID().isOnly()) {
+                                && config.getMigrateACID().isOnly()) {
                             tableMirror.setRemove(true);
                         } else {
                             // Same logic as in TableService.getTables to filter out tables that are not to be processed.
-                            if (tableName.startsWith(resolvedConfig.getTransfer().getTransferPrefix())) {
+                            if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
                                 log.info("Database: {} Table: {} was NOT added to list.  The name matches the transfer prefix and is most likely a remnant of a previous event. If this is a mistake, change the 'transferPrefix' to something more unique.", database, tableName);
                                 tableMirror.setRemove(true);
                             } else if (tableName.endsWith("storage_migration")) {
                                 log.info("Database: {} Table: {} was NOT added to list.  The name is the result of a previous STORAGE_MIGRATION attempt that has not been cleaned up.", database, tableName);
                                 tableMirror.setRemove(true);
                             } else {
-                                if (resolvedConfig.getFilter().getTblRegEx() != null) {
+                                if (config.getFilter().getTblRegEx() != null) {
                                     // Filter Tables
-                                    assert (resolvedConfig.getFilter().getTblFilterPattern() != null);
-                                    Matcher matcher = resolvedConfig.getFilter().getTblFilterPattern().matcher(tableName);
+                                    assert (config.getFilter().getTblFilterPattern() != null);
+                                    Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
                                     if (!matcher.matches()) {
                                         log.info("{}:{} didn't match table regex filter and will NOT be added to processing list.", database, tableName);
                                         tableMirror.setRemove(true);
                                     }
-                                } else if (resolvedConfig.getFilter().getTblExcludeRegEx() != null) {
-                                    assert (resolvedConfig.getFilter().getTblExcludeFilterPattern() != null);
-                                    Matcher matcher = resolvedConfig.getFilter().getTblExcludeFilterPattern().matcher(tableName);
+                                } else if (config.getFilter().getTblExcludeRegEx() != null) {
+                                    assert (config.getFilter().getTblExcludeFilterPattern() != null);
+                                    Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
                                     if (matcher.matches()) { // ANTI-MATCH
                                         log.info("{}:{} matched exclude table regex filter and will NOT be added to processing list.", database, tableName);
                                         tableMirror.setRemove(true);

@@ -18,10 +18,8 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -95,27 +93,28 @@ public class ReportWriterService {
     }
 
     public void writeReport() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
-        log.info("Writing CLI report and artifacts to directory: {}", hmsMirrorConfig.getOutputDirectory());
+        ExecuteSession session = executeSessionService.getActiveSession();
+        HmsMirrorConfig config = session.getConfig();
+        log.info("Writing CLI report and artifacts to directory: {}", config.getOutputDirectory());
 //        if (!setupError) {
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        Conversion conversion = session.getConversion();
 
         // Remove the abstract environments from config before reporting output.
-        hmsMirrorConfig.getClusters().remove(Environment.TRANSFER);
-        hmsMirrorConfig.getClusters().remove(Environment.SHADOW);
+        config.getClusters().remove(Environment.TRANSFER);
+        config.getClusters().remove(Environment.SHADOW);
 
         ObjectMapper mapper;
         mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        File outputDir = new File(hmsMirrorConfig.getOutputDirectory());
+        File outputDir = new File(config.getOutputDirectory());
         if (!outputDir.exists()) {
             outputDir.mkdirs();
         }
 
         // Write out the config used to run this session.
         HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getConfig();
-        String configOutputFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
+        String configOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
         try {
             mapper.writeValue(new File(configOutputFile), resolvedConfig);
             log.info("Resolved Config 'saved' to: {}", configOutputFile);
@@ -128,22 +127,22 @@ public class ReportWriterService {
 //        }
 //        for (String database : hmsMirrorConfig.getDatabases()) {
 
-            String dbReportOutputFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_hms-mirror";
-            String dbLeftExecuteFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_execute.sql";
-            String dbLeftCleanUpFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_CleanUp_execute.sql";
-            String dbRightExecuteFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_RIGHT_execute.sql";
-            String dbRightCleanUpFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_RIGHT_CleanUp_execute.sql";
-            String dbRunbookFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_runbook.md";
+            String dbReportOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_hms-mirror";
+            String dbLeftExecuteFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_execute.sql";
+            String dbLeftCleanUpFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_LEFT_CleanUp_execute.sql";
+            String dbRightExecuteFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_RIGHT_execute.sql";
+            String dbRightCleanUpFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_RIGHT_CleanUp_execute.sql";
+            String dbRunbookFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database + "_runbook.md";
 
             try {
                 // Output directory maps
                 boolean dcLeft = Boolean.FALSE;
                 boolean dcRight = Boolean.FALSE;
 
-                if (configService.canDeriveDistcpPlan()) {
+                if (configService.canDeriveDistcpPlan(session)) {
                     try {
                         Environment[] environments = null;
-                        switch (hmsMirrorConfig.getDataStrategy()) {
+                        switch (config.getDataStrategy()) {
 
                             case DUMP:
                             case STORAGE_MIGRATION:
@@ -207,7 +206,7 @@ public class ReportWriterService {
                                 for (Map.Entry<String, Set<String>> dbMap : value.entrySet()) {
                                     if (dbMap.getValue().size() > 1) {
                                         String distcpSourceFile = entry.getKey() + "_" + distcpEnv.toString() + "_" + i++ + "_distcp_source.txt";
-                                        String distcpSourceFileFull = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + distcpSourceFile;
+                                        String distcpSourceFileFull = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + distcpSourceFile;
                                         distcpSourceFW = new FileWriter(distcpSourceFileFull);
 
                                         StringBuilder line = new StringBuilder();
@@ -274,9 +273,9 @@ public class ReportWriterService {
                                         break;
                                 }
 
-                                String distcpWorkbookFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
+                                String distcpWorkbookFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
                                         "_" + distcpEnv + "_distcp_workbook.md";
-                                String distcpScriptFile = hmsMirrorConfig.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
+                                String distcpScriptFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + database +
                                         "_" + distcpEnv + "_distcp_script.sh";
 
                                 FileWriter distcpWorkbookFW = new FileWriter(distcpWorkbookFile);
@@ -301,12 +300,12 @@ public class ReportWriterService {
                         "\n\nThis file includes details about the configuration at the time this was run and the " +
                         "output/actions on each table in the database that was included.\n\n");
                 runbookFile.write("## Steps\n\n");
-                if (hmsMirrorConfig.isExecute()) {
+                if (config.isExecute()) {
                     runbookFile.write("Execute was **ON**, so many of the scripts have been run already.  Verify status " +
                             "in the above report.  `distcp` actions (if requested/applicable) need to be run manually. " +
                             "Some cleanup scripts may have been run if no `distcp` actions were requested.\n\n");
-                    if (hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2() != null) {
-                        if (hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+                    if (config.getCluster(Environment.RIGHT).getHiveServer2() != null) {
+                        if (config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
                             runbookFile.write("Process ran with RIGHT environment 'disconnected'.  All RIGHT scripts will need to be run manually.\n\n");
                         }
                     }
@@ -361,7 +360,7 @@ public class ReportWriterService {
                     leftExecOutput.close();
                     log.info("LEFT Execution Script is here: {}", dbLeftExecuteFile);
                     runbookFile.write(step++ + ". **LEFT** clusters SQL script. ");
-                    if (hmsMirrorConfig.isExecute()) {
+                    if (config.isExecute()) {
                         runbookFile.write(" (Has been executed already, check report file details)");
                     } else {
                         runbookFile.write("(Has NOT been executed yet)");
@@ -381,8 +380,8 @@ public class ReportWriterService {
                     rightExecOutput.close();
                     log.info("RIGHT Execution Script is here: {}", dbRightExecuteFile);
                     runbookFile.write(step++ + ". **RIGHT** clusters SQL script. ");
-                    if (hmsMirrorConfig.isExecute()) {
-                        if (!hmsMirrorConfig.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+                    if (config.isExecute()) {
+                        if (!config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
                             runbookFile.write(" (Has been executed already, check report file details)");
                         } else {
                             runbookFile.write(" (Has NOT been executed because the environment is NOT connected.  Review and run scripts manually.)");
@@ -398,7 +397,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String lcu = conversion.executeCleanUpSql(Environment.LEFT, database, configService.getResolvedDB(database));
+                String lcu = conversion.executeCleanUpSql(Environment.LEFT, database, HmsMirrorConfigUtil.getResolvedDB(database, config));
                 if (lcu != null) {
                     FileWriter leftCleanUpOutput = new FileWriter(dbLeftCleanUpFile);
                     leftCleanUpOutput.write(lcu);
@@ -409,7 +408,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String rcu = conversion.executeCleanUpSql(Environment.RIGHT, database, configService.getResolvedDB(database));
+                String rcu = conversion.executeCleanUpSql(Environment.RIGHT, database, HmsMirrorConfigUtil.getResolvedDB(database, config));
                 if (rcu != null) {
                     FileWriter rightCleanUpOutput = new FileWriter(dbRightCleanUpFile);
                     rightCleanUpOutput.write(rcu);

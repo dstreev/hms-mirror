@@ -186,6 +186,10 @@ public class E2EBaseTest {
 //        return executeSessionService.getCurrentSession().getRunStatus().getErrors().getReturnCode();
     }
 
+    protected Long getWarningCode() {
+        return hmsMirrorAppService.getWarningCode();
+    }
+
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;

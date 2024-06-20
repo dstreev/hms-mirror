@@ -79,6 +79,7 @@ public class HmsMirrorAppCfg {
             matchIfMissing = true)
     public CommandLineRunner start() {
         return args -> {
+            // NOTE: The transitionToActive process happens in another bean....
             Future<Boolean> result = hmsMirrorAppService.run();
             while (!result.isDone()) {
                 try {
@@ -87,7 +88,6 @@ public class HmsMirrorAppCfg {
                     throw new RuntimeException(e);
                 }
             }
-//            reportWriterService.wrapup();
             cliReporter.refresh(Boolean.TRUE);
         };
     }

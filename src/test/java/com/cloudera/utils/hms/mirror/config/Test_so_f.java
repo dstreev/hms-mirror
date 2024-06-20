@@ -70,10 +70,25 @@ public class Test_so_f extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.NON_LEGACY_TO_LEGACY);
+        long expected = getCheckCode(
+                MessageCode.NON_LEGACY_TO_LEGACY);
 
         assertEquals("Return Code Failure: ", expected, actual);
 
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
 }

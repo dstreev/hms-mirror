@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
@@ -85,8 +86,9 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-//        ExecuteSession session = executeSessionService.getCurrentSession();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        ExecuteSession session = executeSessionService.getActiveSession();
+        HmsMirrorConfig config = session.getConfig();
+        Conversion conversion = session.getConversion();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -97,7 +99,7 @@ public class CliReporter {
             // Table Processing
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
-                tblVars.put("db.name", configService.getResolvedDB(tblMirror.getParent().getName()));
+                tblVars.put("db.name", HmsMirrorConfigUtil.getResolvedDB(tblMirror.getParent().getName(), config));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());

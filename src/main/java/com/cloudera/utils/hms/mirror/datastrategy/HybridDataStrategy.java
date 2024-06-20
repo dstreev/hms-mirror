@@ -63,15 +63,15 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
 
         // Need to look at table.  ACID tables go to doACID()
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         // Acid tables between legacy and non-legacy are forced to intermediate
-        if (TableUtils.isACID(let) && configService.legacyMigration()) {
+        if (TableUtils.isACID(let) && configService.legacyMigration(config)) {
             tableMirror.setStrategy(DataStrategyEnum.ACID);
-            if (hmsMirrorConfig.getMigrateACID().isOn()) {
+            if (config.getMigrateACID().isOn()) {
                 rtn = intermediateDataStrategy.execute(tableMirror);
             } else {
                 let.addIssue(TableUtils.ACID_NOT_ON);
@@ -79,18 +79,18 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
             }
         } else {
             if (let.getPartitioned()) {
-                if (let.getPartitions().size() > hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() &&
-                        hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() > 0) {
+                if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit() &&
+                        config.getHybrid().getExportImportPartitionLimit() > 0) {
                     // SQL
                     let.addIssue("The number of partitions: " + let.getPartitions().size()
                             + " exceeds the EXPORT_IMPORT "
                             + "partition limit (hybrid->exportImportPartitionLimit) of "
-                            + hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() +
+                            + config.getHybrid().getExportImportPartitionLimit() +
                             ".  Hence, the SQL method has been selected for the migration.");
 
                     tableMirror.setStrategy(DataStrategyEnum.SQL);
-                    if (hmsMirrorConfig.getTransfer().getIntermediateStorage() != null
-                            || hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
+                    if (config.getTransfer().getIntermediateStorage() != null
+                            || config.getTransfer().getCommonStorage() != null) {
                         rtn = intermediateDataStrategy.execute(tableMirror);
                     } else {
                         rtn = sqlDataStrategy.execute(tableMirror);

@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>View Config</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -7,63 +7,131 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
 <div class="pure-g">
     <div class="pure-u-1">
-        <h1 th:text="#{session.info}"/>
+        <h1 th:text="#{app.info}"/>
+        <h4 th:text="${VERSION}" th:unless="${VERSION == null}"/>
     </div>
-    <div class="pure-u-1-5">
+    <div class="pure-u-3-5">
+        <fieldset>
+            <legend th:text="#{session}"/>
+            <th:block th:if="${CONFIG == null}">
+                <h3 th:text="#{config.not.loaded}"/>
+            </th:block>
+            <th:block th:unless="${CONFIG == null}">
+                <form class="pure-form pure-form-aligned" th:object="${RUN_CONTAINER}">
 
+                    <div class="pure-control-group">
+                        <div class="pure-g">
+                            <div class="pure-u-3-4">
+                                <label for="curr_config_id" th:text="#{config.current}"/>
+                                <input type="text" name="SESSION_ID" th:value="${RUN_CONTAINER.sessionId}"
+                                       readonly="true"/>
+                            </div>
+                            <!--                            <div class="pure-u-2-8"></div>-->
+                            <div class="pure-u-1-4">
+                                <!--                            <div class="pure-button-group">-->
+                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.view}"
+                                        th:formaction="@{/config/view}" th:formmethod="get"/>
+                                <button class="pure-button" type="submit" th:text="#{button.edit}"
+                                        th:formaction="@{/config/edit}" th:formmethod="get"/>
+                                <!--                            </div>-->
+                            </div>
+                            <div class="pure-u-1">
+                                <hr class="solid"/>
+                            </div>
+                            <div class="pure-u-3-4">
+                                <div class="pure-control-group">
+                                    <label for="DRY_RUN" th:text="#{dryrun}"/>
+                                    <input type="checkbox" th:field="*{dryrun}"/>
+                                    <!--                                    <select name="DRY_RUN" required>-->
+                                    <!--                                        <option th:each="id: ${BOOLEANS}"-->
+                                    <!--                                                th:value="${id}"-->
+                                    <!--                                                th:text="${id}"/>-->
+                                    <!--                                    </select>-->
+
+                                </div>
+                                <div class="pure-control-group">
+                                    <label for="session_autoGLM" th:text="#{auto.glm}"/>
+                                    <input type="checkbox" id="session_autoGLM" th:field="*{autoGLM}"/>
+                                </div>
+                            </div>
+                            <div class="pure-u-1-4">
+                                <button class="pure-button" type="submit" th:text="#{button.run}"
+                                        th:formaction="@{/runtime/start}" th:formmethod="post"/>
+                            </div>
+                        </div>
+                        <!--                    </form>-->
+                    </div>
+                </form>
+                <!--                        <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>-->
+            </th:block>
+        </fieldset>
     </div>
     <div class="pure-u-2-5">
+
+    </div>
+    <div class="pure-u-3-5">
+        <fieldset>
+            <legend th:text="#{config}"/>
             <form class="pure-form pure-form-aligned">
-                <fieldset>
-                    <legend th:text="#{config}"/>
-                    <th:block th:unless="${sessionContainer.config == null}">
-                    <div class="pure-control-group">
-                        <label for="curr_config_id" th:text="#{config.current}"/>
-                        <input type="text" name="curr_config_id" th:value="${sessionContainer.sessionId}" readonly="true"/>
-                        <button class="pure-button pure-button-primary" type="submit" th:text="#{button.view}"
-                                th:formaction="@{/config/view}" th:formmethod="get"/>
-                        <button class="pure-button" type="submit" th:text="#{button.edit}"
-                                th:formaction="@{/config/edit}" th:formmethod="get"/>
-                        <!--                        <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>-->
+                <div class="pure-g">
+                    <div class="pure-u-3-4">
+                        <div class="pure-control-group">
+                            <label for="SESSION_ID" th:text="#{config.reload}"/>
+                            <select name="SESSION_ID" required>
+                                <option th:each="id: ${CONFIG_LIST}"
+                                        th:value="${id}"
+                                        th:text="${id}"
+                                        th:selected="${id.equals(RUN_CONTAINER.sessionId)}"/>
+                            </select>
+                        </div>
                     </div>
-                    </th:block>
-                    <div class="pure-control-group">
-                        <label for="config_id" th:text="#{config.reload}"/>
-                        <select name="config_id" required>
-                            <option th:each="id: ${configs}"
-                                    th:value="${id}"
-                                    th:text="${id}"
-                                    th:selected="${id.equals(sessionContainer.sessionId)}"/>
-                        </select>
+                    <div class="pure-u-1-4">
                         <button class="pure-button" type="submit" th:text="#{button.load}"
                                 th:formaction="@{/config/reload}" th:formmethod="post"/>
                     </div>
-                    <div class="pure-control-group">
-                        <a class="pure-button" th:href="@{/config/create}" th:text="#{button.create}"/>
-                    </div>
-                </fieldset>
-            </form>
-        <th:block th:if="${sessionContainer.config == null}">
-            <h3 th:text="#{config.not.loaded}"/>
-        </th:block>
+                </div>
+                <!--            </form>-->
 
+                <div class="pure-control-group">
+                    <!--                <form class="pure-form pure-form-aligned">-->
+                    <div class="pure-g">
+                        <div class="pure-u-3-4">
+                            <label for="new_config" th:text="#{config.create}"/>
+                            <select id="new_config" name="DATA_STRATEGY">
+                                <option th:each="cet: ${SUPPORTED_DATA_STRATEGIES}"
+                                        th:value="${cet}"
+                                        th:text="${cet}"/>
+                            </select>
+                        </div>
+                        <div class="pure-u-1-4">
+                            <button class="pure-button" th:formaction="@{/config/create}" th:formmethod="post"
+                                    th:text="#{button.create}"/>
+                        </div>
+                    </div>
+                    <!--                </form>-->
+                </div>
+            </form>
+        </fieldset>
     </div>
     <div class="pure-u-2-5">
         <!--       Reports -->
-        <form class="pure-form pure-form-aligned" method="get" th:object="${reportContainer}">
-            <fieldset>
-                <legend th:text="#{reports}"/>
+        <fieldset>
+            <legend th:text="#{reports}"/>
+            <form class="pure-form pure-form-aligned" method="get">
                 <div class="pure-control-group">
                     <label for="report_id" th:text="#{reports.available}"/>
-                    <select name="report_id">
-                        <option th:each="id: ${reportContainer.reports}"
+                    <select name="REPORT_ID">
+                        <option th:each="id: ${REPORT_LIST}"
                                 th:value="${id}"
                                 th:text="${id}"/>
                     </select>
+                </div>
+                <div class="pure-button-group">
                     <button class="pure-button pure-button-primary"
                             type="submit" th:text="#{button.download}"
                             th:formaction="@{/report/download}" th:method="get"/>
@@ -71,9 +139,35 @@
                             type="submit" th:text="#{button.view}"
                             th:formaction="@{/report/view}" th:method="get">
                 </div>
-            </fieldset>
-        </form>
+            </form>
+        </fieldset>
+    </div>
+    <div class="pure-u-1" th:if="${RUN_STATUS != null}">
+        <fieldset>
+            <legend th:text="#{run.status}"/>
+            <div class="pure-form pure-form-aligned">
+                <div class="pure-control-group pure-u-1">
+                    <label for="run_status" th:text="#{run.progress}"/>
+                    <input type="text" id="run_status" th:value="${RUN_STATUS.progress}" readonly="true"/>
+                </div>
 
+                <div class="pure-u-1" th:if="${RUN_STATUS.warnings != null}">
+                    <fieldset>
+                        <legend th:text="#{run.status.warnings}"/>
+                        <ul>
+                            <li th:each="warning: ${RUN_STATUS.warnings.getMessages()}" th:text="${warning}"/>
+                        </ul>
+                    </fieldset>
+                </div>
+                <div class="pure-u-1" th:if="${RUN_STATUS.errors != null}">
+                    <fieldset>
+                        <legend th:text="#{run.status.errors}"/>
+                        <ul>
+                            <li th:each="error: ${RUN_STATUS.errors.getMessages()}" th:text="${error}"/>
+                        </ul>
+                    </fieldset>
+                </div>
+        </fieldset>
     </div>
 </div>
 </body>

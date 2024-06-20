@@ -296,7 +296,7 @@ public class HmsMirrorConfig implements Cloneable {
                     System.out.println("----------------------------------------------------------------------------------------");
                     System.out.println("The connection appears to be Kerberized.\n\t\tPlace the 'hive standalone' driver in '$HOME/.hms-mirror/aux_libs'");
                     System.out.println("\tSPECIAL RUN INSTRUCTIONS for Legacy Kerberos Connections.");
-                    System.out.println("\thttps://github.com/cloudera-labs/hms-mirror#running-against-a-legacy-non-cdp-kerberized-hiveserver2");
+                    System.out.println("\thttps://github.com/cloudera-labs/hms-mirror#running-against-a-legacy-non-cdp-kerberized-hiveServer2");
                     System.out.println("----------------------------------------------------------------------------------------");
                     kerb = Boolean.TRUE;
                 } else if (response.contains("principal")) {
@@ -470,7 +470,7 @@ public class HmsMirrorConfig implements Cloneable {
                 this.setMigratedNonNative(Boolean.TRUE);
             } else if (this.dataStrategy == STORAGE_MIGRATION) {
                 getMigrateACID().setOn(Boolean.TRUE);
-                setEvaluatePartitionLocation(Boolean.TRUE);
+//                setEvaluatePartitionLocation(Boolean.TRUE);
             }
         }
     }
@@ -579,6 +579,5 @@ public class HmsMirrorConfig implements Cloneable {
         return hmsMirrorConfig;
 
     }
-
 
 }

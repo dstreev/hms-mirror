@@ -33,6 +33,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -53,6 +54,7 @@ public class ExecuteSessionService {
     public static final String DEFAULT = "default.yaml";
 
     private CliEnvironment cliEnvironment;
+    private ConfigService configService;
     private ConnectionPoolService connectionPoolService;
 
 //    /*
@@ -82,6 +84,11 @@ public class ExecuteSessionService {
 //    private int maxRetainedSessions = 5;
     private final Map<String, ExecuteSession> executeSessionMap = new TreeMap<>();
     private final Map<String, ExecuteSession> sessions = new HashMap<>();
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Autowired
     public void setCliEnvironment(CliEnvironment cliEnvironment) {
@@ -169,7 +176,9 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessions separate.  The active session is the
         one that will be referenced during the run.
      */
-    public ExecuteSession transitionLoadedSessionToActive() {
+    public Boolean transitionLoadedSessionToActive() {
+        Boolean rtn = Boolean.TRUE;
+
         if (activeSession != null && activeSession.getRunning().get()) {
             throw new RuntimeException("Session is still running.  Cannot transition to active.");
         }
@@ -178,6 +187,7 @@ public class ExecuteSessionService {
         if (loadedSession == null) {
             throw new RuntimeException("No session loaded.");
         }
+
 //        ExecuteSession loadedSession = getSession(null);
         ExecuteSession session = loadedSession.clone();
 //        HmsMirrorConfig resolvedConfig = loadedSession.getConfig();
@@ -187,12 +197,13 @@ public class ExecuteSessionService {
         connectionPoolService.close();
         connectionPoolService.setHmsMirrorConfig(session.getConfig());
         connectionPoolService.setExecuteSession(session);
-        try {
-            connectionPoolService.init();
-        } catch (Exception e) {
-            log.error("Error initializing connection pool.", e);
-            throw new RuntimeException("Error initializing connection pool.", e);
-        }
+
+//        try {
+//            connectionPoolService.init();
+//        } catch (Exception e) {
+//            log.error("Error initializing connection pool.", e);
+//            throw new RuntimeException("Error initializing connection pool.", e);
+//        }
 
         // Set the active session id to the current date and time.
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -218,8 +229,15 @@ public class ExecuteSessionService {
             entry.getValue().setRunStatus(null);
         }
         activeSession = session;
+
+        // Validate the session.
+        rtn = configService.validate(activeSession, getCliEnvironment());
+
+        // Set whether the config has been validated.
+        activeSession.getConfig().setValidated(rtn);
+
         executeSessionMap.put(session.getSessionId(), session);
-        return session;
+        return rtn;
     }
 
     private void createZipFromDirectory(String zipFileName, String baseDirectory) throws IOException {
@@ -314,18 +332,6 @@ public class ExecuteSessionService {
             // Throw exception that output directory isn't a directory.
         }
         return rtn;
-    }
-
-    public HmsMirrorConfig flipConfig(HmsMirrorConfig config) {
-        if (config != null) {
-            Cluster leftClone = config.getCluster(Environment.LEFT).clone();
-            leftClone.setEnvironment(Environment.RIGHT);
-            Cluster rightClone   = config.getCluster(Environment.RIGHT).clone();
-            rightClone.setEnvironment(Environment.LEFT);
-            config.getClusters().put(Environment.RIGHT, leftClone);
-            config.getClusters().put(Environment.LEFT, rightClone);
-        }
-        return config;
     }
 
 }

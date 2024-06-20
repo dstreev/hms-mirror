@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -31,7 +32,7 @@ public class StorageMigration implements Cloneable {
     @Schema(description = "Data movement strategy")
     private DataMovementStrategyEnum dataMovementStrategy = DataMovementStrategyEnum.SQL;
     @Schema(description = "Data flow direction for distcp. This control from where the 'distcp' jobs should be run.")
-    private DistcpFlow dataFlow = DistcpFlow.PULL;
+    private DistcpFlowEnum dataFlow = DistcpFlowEnum.PULL;
     @Schema(description = "When strict is true, any issues during evaluation will cause the migration to fail. When false, " +
             "the migration will continue but the issues will be reported. This can lead to data movement issues.")
     private boolean strict = Boolean.TRUE;

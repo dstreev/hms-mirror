@@ -913,7 +913,7 @@ since IE8 won't execute CSS that contains a CSS3 selector.
     margin-bottom: 0.5em;
 }
 .pure-form-aligned .pure-control-group label {
-    text-align: right;
+    text-align: left;
     display: inline-block;
     vertical-align: middle;
     width: 10em;
