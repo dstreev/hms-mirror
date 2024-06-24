@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -105,7 +106,12 @@ public class DatabaseController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/{database}/warehousePlan")
     public Warehouse getWarehousePlan(@PathVariable @NotNull String database) {
-        return databaseService.getWarehousePlan(database);
+        try {
+            return databaseService.getWarehousePlan(database);
+        } catch (MissingDataPointException e) {
+            log.error("Error getting Warehouse Plan for database: " + database, e);
+            return null;
+        }
     }
 
     // Get all Warehouse Plans

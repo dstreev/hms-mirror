@@ -21,9 +21,7 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -59,12 +57,29 @@ public class ConfigService {
 //        this.executeSessionService = executeSessionService;
 //    }
 
-    public Boolean canDeriveDistcpPlan(ExecuteSession session) {
-        Boolean rtn = Boolean.FALSE;
+    public boolean doWareHousePlansExist(ExecuteSession session) {
+        HmsMirrorConfig config = session.getConfig();
+        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
+        Warehouse warehouse = config.getTransfer().getWarehouse();
+        if ((nonNull(warehouse)
+                && nonNull(warehouse.getExternalDirectory())
+                && nonNull(warehouse.getManagedDirectory()))
+                || !warehouseMapBuilder.getWarehousePlans().isEmpty()) {
+            return Boolean.TRUE;
+        } else{
+            return Boolean.FALSE;
+        }
+    }
+
+    public boolean canDeriveDistcpPlan(ExecuteSession session) {
+        boolean rtn = Boolean.FALSE;
 //        ExecuteSession executeSession = executeSessionService.getActiveSession();
         HmsMirrorConfig config = session.getConfig();
 
         if (config.getTransfer().getStorageMigration().isDistcp()) {
+            if (rtn) {
+                rtn = doWareHousePlansExist(session);
+            }
             // We need to get partition location to support partitioned tables and distcp
             if (!config.isEvaluatePartitionLocation()) {
                 if (config.getDataStrategy() == STORAGE_MIGRATION) {
@@ -80,10 +95,8 @@ public class ConfigService {
         } else {
             session.addWarning(DISTCP_OUTPUT_NOT_REQUESTED);
         }
-        if (rtn && config.isResetToDefaultLocation() &&
-                config.getTransfer().getWarehouse().getExternalDirectory() == null) {
-            rtn = Boolean.FALSE;
-        }
+
+
         return rtn;
     }
 
@@ -454,9 +467,22 @@ public class ConfigService {
             switch (config.getDataStrategy()) {
                 case STORAGE_MIGRATION:
                     // Need to check that we've set some database Warehouse Plans.
-                    if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                            config.getTransfer().getWarehouse().getExternalDirectory() == null) {
-                        if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+                    if (nonNull(config.getTransfer().getWarehouse())) {
+                        if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
+                                config.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                            if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+                                runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                                rtn = Boolean.FALSE;
+                            }
+                        }
+                    } else {
+                        // Are there any Warehouse Plans.
+                        if (nonNull(config.getTranslator().getWarehouseMapBuilder())) {
+                            if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+                                runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                                rtn = Boolean.FALSE;
+                            }
+                        } else {
                             runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                             rtn = Boolean.FALSE;
                         }
@@ -465,10 +491,15 @@ public class ConfigService {
                 default:
                     // Check for warehouse settings.  This will be a warning now that we have the Warehouse Plans
                     // available for a database that is more specific.
-                    if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                            config.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                    if (nonNull(config.getTransfer().getWarehouse())) {
+                        if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
+                                config.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                            runStatus.addWarning(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
+                        }
+                    } else {
                         runStatus.addWarning(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                     }
+                    break;
             }
             if (config.getTransfer().getStorageMigration().isDistcp()) {
                 runStatus.addWarning(RDL_DC_WARNING_TABLE_ALIGNMENT);
@@ -607,7 +638,7 @@ public class ConfigService {
             if (config.getDataStrategy() == DataStrategyEnum.SQL
                     && config.getMigrateACID().isOn()
                     && config.getMigrateACID().isDowngrade()
-                    && (config.getTransfer().getWarehouse().getExternalDirectory() == null)) {
+                    && (!doWareHousePlansExist(session))) {
                 runStatus.addError(SQL_ACID_DA_DISTCP_WO_EXT_WAREHOUSE);
                 rtn = Boolean.FALSE;
             }
@@ -655,11 +686,6 @@ public class ConfigService {
                     rtn = Boolean.FALSE;
                 }
             }
-        }
-
-        if (config.isResetToDefaultLocation()
-                && (config.getTransfer().getWarehouse().getExternalDirectory() == null)) {
-            runStatus.addWarning(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
         }
 
         if (config.isSync()
@@ -743,13 +769,15 @@ public class ConfigService {
         }
 
         // Because some just don't get you can't do this...
-        if (config.getTransfer().getWarehouse().getManagedDirectory() != null &&
-                config.getTransfer().getWarehouse().getExternalDirectory() != null) {
-            // Make sure these aren't set to the same location.
-            if (config.getTransfer().getWarehouse().getManagedDirectory().equals(config.getTransfer().getWarehouse().getExternalDirectory())) {
-                runStatus.addError(WAREHOUSE_DIRS_SAME_DIR, config.getTransfer().getWarehouse().getExternalDirectory()
-                        , config.getTransfer().getWarehouse().getManagedDirectory());
-                rtn = Boolean.FALSE;
+        if (nonNull(config.getTransfer().getWarehouse())) {
+            if (config.getTransfer().getWarehouse().getManagedDirectory() != null &&
+                    config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+                // Make sure these aren't set to the same location.
+                if (config.getTransfer().getWarehouse().getManagedDirectory().equals(config.getTransfer().getWarehouse().getExternalDirectory())) {
+                    runStatus.addError(WAREHOUSE_DIRS_SAME_DIR, config.getTransfer().getWarehouse().getExternalDirectory()
+                            , config.getTransfer().getWarehouse().getManagedDirectory());
+                    rtn = Boolean.FALSE;
+                }
             }
         }
 

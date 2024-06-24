@@ -36,7 +36,7 @@ public class TransferConfig implements Cloneable {
     private String intermediateStorage = null;
     private String commonStorage = null;
     private StorageMigration storageMigration = null;
-    private WarehouseConfig warehouse = null;
+    private Warehouse warehouse = null;
 
     @Override
     public TransferConfig clone() {
@@ -61,11 +61,11 @@ public class TransferConfig implements Cloneable {
         return storageMigration;
     }
 
-    public WarehouseConfig getWarehouse() {
-        if (warehouse == null)
-            warehouse = new WarehouseConfig();
-        return warehouse;
-    }
+//    public Warehouse getWarehouse() {
+//        if (warehouse == null)
+//            warehouse = new Warehouse();
+//        return warehouse;
+//    }
 
     public void setCommonStorage(String commonStorage) {
         if (commonStorage != null) {

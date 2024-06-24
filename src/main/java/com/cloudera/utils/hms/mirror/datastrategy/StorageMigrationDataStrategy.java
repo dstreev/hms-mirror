@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -42,20 +43,28 @@ import java.util.Date;
 import java.util.Map;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
+import static com.cloudera.utils.hms.mirror.MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 import static com.cloudera.utils.hms.mirror.SessionVars.*;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
+import static java.util.Objects.nonNull;
 
 @Component
 @Slf4j
 @Getter
 public class StorageMigrationDataStrategy extends DataStrategyBase implements DataStrategy {
 
+    private DatabaseService databaseService;
     private TableService tableService;
     private TranslatorService translatorService;
     private StatsCalculatorService statsCalculatorService;
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+    }
 
     public StorageMigrationDataStrategy(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
@@ -83,8 +92,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         // Get the Warehouse for the database
         Warehouse dbWarehouse = null;
         try {
-            dbWarehouse = translatorService.getDatabaseWarehouse(tableMirror.getParent().getName());
+            dbWarehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
+            assert dbWarehouse != null;
         } catch (MissingDataPointException e) {
+            log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
             let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
             rtn = Boolean.FALSE;
             return rtn;
@@ -239,8 +250,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                     String alterTable = MessageFormat.format(MirrorConf.ALTER_TABLE_LOCATION, tableMirror.getEnvironmentTable(Environment.LEFT).getName(), newLocation);
                     Pair alterTablePair = new Pair(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterTable);
                     let.addSql(alterTablePair);
-                    if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null &&
-                            hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
+                    // Get the Warehouse from the Database Service.
+                    Warehouse warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
+                    if (nonNull(warehouse)) {
                         if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                             // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
                             if (!newLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
@@ -271,6 +283,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             }
 
                         }
+                    } else {
+                        // Warehouse should NOT be null.  Issue with the Warehouse Plan.
+                        tableMirror.addIssue(Environment.LEFT, WAREHOUSE_DIRECTORIES_NOT_DEFINED.getDesc());
+                        noIssues = Boolean.FALSE;
                     }
                 } catch (MismatchException rte) {
                     noIssues = Boolean.FALSE;
@@ -462,9 +478,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                 // Run the Transfer Scripts
                 rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
             }
-        } catch (Throwable t) {
-            log.error("Error executing StorageMigrationDataStrategy", t);
-            let.addIssue(t.getMessage());
+        } catch (MissingDataPointException e) {
+            log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
+            let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
             rtn = Boolean.FALSE;
         }
         return rtn;

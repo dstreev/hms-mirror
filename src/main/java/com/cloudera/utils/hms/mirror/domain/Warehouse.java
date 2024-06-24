@@ -26,7 +26,6 @@ The Warehouse Base is the location base for a databases external and managedDire
 should NOT include the database name.  The database name will be appended to the location when the process
 is run.
  */
-@Setter
 @Getter
 public class Warehouse implements Cloneable {
     @Schema(description = "The external directory location for the database.  This directory should NOT contain the database name, " +
@@ -44,8 +43,36 @@ public class Warehouse implements Cloneable {
         this.managedDirectory = managedDirectory;
     }
 
+    public void setExternalDirectory(String externalDirectory) {
+        if (externalDirectory != null) {
+            this.externalDirectory = externalDirectory.trim();
+            if (!this.externalDirectory.startsWith("/")) {
+                this.externalDirectory = "/" + this.externalDirectory;
+            }
+            if (this.externalDirectory.endsWith("/")) {
+                this.externalDirectory = this.externalDirectory.substring(0, this.externalDirectory.length() - 1);
+            }
+        } else {
+            this.externalDirectory = externalDirectory;
+        }
+    }
+
+    public void setManagedDirectory(String managedDirectory) {
+        if (managedDirectory != null) {
+            this.managedDirectory = managedDirectory.trim();
+            if (!this.managedDirectory.startsWith("/")) {
+                this.managedDirectory = "/" + this.managedDirectory;
+            }
+            if (this.managedDirectory.endsWith("/")) {
+                this.managedDirectory = this.managedDirectory.substring(0, this.managedDirectory.length() - 1);
+            }
+        } else {
+            this.managedDirectory = managedDirectory;
+        }
+    }
+
     @Override
-    protected Object clone() throws CloneNotSupportedException {
-        return super.clone();
+    protected Warehouse clone() throws CloneNotSupportedException {
+        return (Warehouse)super.clone();
     }
 }

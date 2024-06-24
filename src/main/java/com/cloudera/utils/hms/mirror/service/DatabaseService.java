@@ -24,16 +24,11 @@ import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.SourceLocationMap;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.util.UrlUtils;
@@ -49,6 +44,8 @@ import java.util.*;
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.*;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Service
 @Slf4j
@@ -58,7 +55,7 @@ public class DatabaseService {
     private ConnectionPoolService connectionPoolService;
     private ExecuteSessionService executeSessionService;
     private QueryDefinitionsService queryDefinitionsService;
-    private TranslatorService translatorService;
+    //    private TranslatorService translatorService;
     private ConfigService configService;
 
     @Autowired
@@ -81,10 +78,10 @@ public class DatabaseService {
         this.queryDefinitionsService = queryDefinitionsService;
     }
 
-    @Autowired
-    public void setTranslatorService(TranslatorService translatorService) {
-        this.translatorService = translatorService;
-    }
+//    @Autowired
+//    public void setTranslatorService(TranslatorService translatorService) {
+//        this.translatorService = translatorService;
+//    }
 
     public Warehouse addWarehousePlan(String database, String external, String managed) {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
@@ -100,10 +97,59 @@ public class DatabaseService {
         return warehouseMapBuilder.removeWarehousePlan(database);
     }
 
-    public Warehouse getWarehousePlan(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
-        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-        return warehouseMapBuilder.getWarehousePlans().get(database);
+    public Warehouse getWarehousePlan(String database) throws MissingDataPointException {
+        HmsMirrorConfig config = executeSessionService.getLoadedSession().getConfig();
+        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
+        // Find it by a Warehouse Plan
+        Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(database);
+        if (isNull(warehouse)) {
+            ExecuteSession session = executeSessionService.getActiveSession();
+            // Get the default Warehouse defined for the config.
+            warehouse = session.getConfig().getTransfer().getWarehouse();
+            if (isNull(warehouse)) {
+                // Look for Location in the right DB Definition for Migration Strategies.
+                switch (config.getDataStrategy()) {
+                    case SCHEMA_ONLY:
+                    case EXPORT_IMPORT:
+                    case HYBRID:
+                    case SQL:
+                    case COMMON:
+                    case LINKED:
+                        if (nonNull(config.getCluster(Environment.RIGHT).getEnvVars())) {
+                            String extDir = config.getCluster(Environment.RIGHT).getEnvVars().get(EXT_DB_LOCATION_PROP);
+                            String manDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
+                            if (extDir != null && manDir != null) {
+                                warehouse = new Warehouse(extDir, manDir);
+                                session.addWarning(WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV);
+                            } else {
+                                session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                                throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
+                                        ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+                                        "set the global warehouse locations.");
+                            }
+                        } else {
+                            session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                            throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
+                                    ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+                                    "set the global warehouse locations.");
+                        }
+                        break;
+                    default: // STORAGE_MIGRATION should set these manually.
+                        session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                        throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
+                                ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+                                "set the global warehouse locations.");
+                }
+                if (isNull(warehouse)) {
+                    session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                    throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
+                            ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+                            "set the global warehouse locations.");
+
+                }
+            }
+        }
+        return warehouse;
     }
 
     public Map<String, Warehouse> getWarehousePlans() {
@@ -324,63 +370,72 @@ public class DatabaseService {
         HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
         RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
 
-        if (config.getCluster(Environment.RIGHT) == null) {
-            // With no RIGHT cluster, don't continue.
-            return Boolean.TRUE;
-        }
+        try {
 
-        // Start with the LEFT definition.
-        Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
-        Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
-        String database = null;
-        String location = null;
-        String managedLocation = null;
-        String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
-        String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
+            if (config.getCluster(Environment.RIGHT) == null) {
+                if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
+                    Cluster cluster = config.getCluster(Environment.LEFT).clone();
+                    config.getClusters().put(Environment.RIGHT, cluster);
+                } else {
+                    // With no RIGHT cluster, don't continue.
+                    return Boolean.TRUE;
+                }
+            }
 
-        if (!config.isResetRight()) {
-            // Don't buildout RIGHT side with inplace downgrade of ACID tables.
-            if (!config.getMigrateACID().isDowngradeInPlace()) {
-                switch (config.getDataStrategy()) {
-                    case CONVERT_LINKED:
-                        // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
-                        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-                        location = dbDefRight.get(DB_LOCATION);
-                        managedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
+            // Start with the LEFT definition.
+            Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
+            Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
+            String database = null;
+            String location = null;
+            String managedLocation = null;
+            String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
+            String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
 
-                        if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                            location = location.replace(leftNamespace, rightNamespace);
-                            String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
-                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
-                            dbDefRight.put(DB_LOCATION, location);
-                        }
-                        if (managedLocation != null) {
-                            managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
-                            if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                                String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDBMngdLocationSql));
-                            } else {
-                                String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDBMngdLocationSql));
-                                dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
+            if (!config.isResetRight()) {
+                // Don't buildout RIGHT side with inplace downgrade of ACID tables.
+                if (!config.getMigrateACID().isDowngradeInPlace()) {
+                    switch (config.getDataStrategy()) {
+                        case CONVERT_LINKED:
+                            // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
+                            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                            location = dbDefRight.get(DB_LOCATION);
+                            managedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
+
+                            if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                location = location.replace(leftNamespace, rightNamespace);
+                                String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
+                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
+                                dbDefRight.put(DB_LOCATION, location);
                             }
-                            dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
-                        }
+                            if (managedLocation != null) {
+                                managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
+                                if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                    String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDBMngdLocationSql));
+                                } else {
+                                    String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDBMngdLocationSql));
+                                    dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
+                                }
+                                dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
+                            }
 
-                        break;
-                    default:
-                        // Start with the LEFT definition.
-                        dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
-                        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-                        location = dbDefLeft.get(DB_LOCATION);
-                        Warehouse dbWarehouse = null;
-                        try {
-                            dbWarehouse = translatorService.getDatabaseWarehouse(dbMirror.getName());
-                        } catch (MissingDataPointException e) {
-                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
-                            return Boolean.FALSE;
-                        }
-                        if (config.getTransfer().getCommonStorage() == null) {
+                            break;
+                        default:
+                            // Start with the LEFT definition.
+                            dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
+                            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                            location = dbDefLeft.get(DB_LOCATION);
+                            Warehouse dbWarehouse = null;
+//                        try {
+                            dbWarehouse = getWarehousePlan(dbMirror.getName());
+                            // Shouldn't be null
+                            assert dbWarehouse != null;
+//                        } catch (MissingDataPointException e) {
+//                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
+//                            return Boolean.FALSE;
+//                        }
+                            if (config.getTransfer().getCommonStorage() == null) {
                                 location = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
@@ -390,243 +445,243 @@ public class DatabaseService {
                                         + "/" + dbMirror.getName() + ".db";
                             }
 
-                        if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
-                            // Check for Managed Location.
-                            managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
-                        }
-                        if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                            if (config.getTransfer().getCommonStorage() == null) {
-                                managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
-                                        + dbWarehouse.getManagedDirectory()
-                                        + "/" + dbMirror.getName() + ".db";
-                            } else {
-                                managedLocation = config.getTransfer().getCommonStorage()
-                                        + dbWarehouse.getManagedDirectory()
-                                        + "/" + dbMirror.getName() + ".db";
+                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                                // Check for Managed Location.
+                                managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
                             }
-                            // Check is the Managed Location matches the system default.  If it does,
-                            //  then we don't need to set it.
-                            String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
-                            String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
-                            String defaultManagedLocation = envDefaultFS + envWarehouseDir;
-                            log.info("Comparing Managed Location: {} to default: {}", managedLocation, defaultManagedLocation);
-                            if (managedLocation.startsWith(defaultManagedLocation)) {
-                                managedLocation = null;
-                                log.info("The location for the DB '{}' is the same as the default FS + warehouse dir.  The database location will NOT be set and will depend on the system default.", database);
-                                dbMirror.addIssue(Environment.RIGHT, "The location for the DB '" + database
-                                        + "' is the same as the default FS + warehouse dir. The database " +
-                                        "location will NOT be set and will depend on the system default.");
+                            if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                                if (config.getTransfer().getCommonStorage() == null) {
+                                    managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
+                                            + dbWarehouse.getManagedDirectory()
+                                            + "/" + dbMirror.getName() + ".db";
+                                } else {
+                                    managedLocation = config.getTransfer().getCommonStorage()
+                                            + dbWarehouse.getManagedDirectory()
+                                            + "/" + dbMirror.getName() + ".db";
+                                }
+                                // Check is the Managed Location matches the system default.  If it does,
+                                //  then we don't need to set it.
+                                String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
+                                String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
+                                String defaultManagedLocation = envDefaultFS + envWarehouseDir;
+                                log.info("Comparing Managed Location: {} to default: {}", managedLocation, defaultManagedLocation);
+                                if (managedLocation.startsWith(defaultManagedLocation)) {
+                                    managedLocation = null;
+                                    log.info("The location for the DB '{}' is the same as the default FS + warehouse dir.  The database location will NOT be set and will depend on the system default.", database);
+                                    dbMirror.addIssue(Environment.RIGHT, "The location for the DB '" + database
+                                            + "' is the same as the default FS + warehouse dir. The database " +
+                                            "location will NOT be set and will depend on the system default.");
+                                }
                             }
-                        }
 
-                        switch (config.getDataStrategy()) {
-                            case HYBRID:
-                            case EXPORT_IMPORT:
-                            case SCHEMA_ONLY:
-                            case SQL:
-                            case LINKED:
-                                if (location != null) {
-                                    location = location.replace(leftNamespace, rightNamespace);
-                                    // https://github.com/cloudera-labs/hms-mirror/issues/13
-                                    // LOCATION to MANAGED LOCATION silent translation for HDP 3 migrations.
-                                    if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
-                                        String locationMinusNS = location.substring(rightNamespace.length());
-                                        if (locationMinusNS.startsWith(DEFAULT_MANAGED_BASE_DIR)) {
-                                            // Translate to managed.
-                                            managedLocation = location;
-                                            // Set to null to skip processing.
-                                            location = null;
-                                            dbMirror.addIssue(Environment.RIGHT, "The LEFT's DB 'LOCATION' element was defined " +
-                                                    "as the default 'managed' location in later versions of Hive3.  " +
-                                                    "We've adjusted the DB to set the MANAGEDLOCATION setting instead, " +
-                                                    "to avoid future conflicts. If your target environment is HDP3, this setting " +
-                                                    "will FAIL since the MANAGEDLOCATION property for a Database doesn't exist. " +
-                                                    "Fix the source DB's location element to avoid this translation.");
-                                        }
-                                    }
-
-                                }
-                                if (managedLocation != null) {
-                                    managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
-                                }
-                                if (config.getDbPrefix() != null || config.getDbRename() != null) {
-                                    // adjust locations.
+                            switch (config.getDataStrategy()) {
+                                case HYBRID:
+                                case EXPORT_IMPORT:
+                                case SCHEMA_ONLY:
+                                case SQL:
+                                case LINKED:
                                     if (location != null) {
-                                        location = UrlUtils.removeLastDirFromUrl(location) + "/"
-                                                + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
+                                        location = location.replace(leftNamespace, rightNamespace);
+                                        // https://github.com/cloudera-labs/hms-mirror/issues/13
+                                        // LOCATION to MANAGED LOCATION silent translation for HDP 3 migrations.
+                                        if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                                            String locationMinusNS = location.substring(rightNamespace.length());
+                                            if (locationMinusNS.startsWith(DEFAULT_MANAGED_BASE_DIR)) {
+                                                // Translate to managed.
+                                                managedLocation = location;
+                                                // Set to null to skip processing.
+                                                location = null;
+                                                dbMirror.addIssue(Environment.RIGHT, "The LEFT's DB 'LOCATION' element was defined " +
+                                                        "as the default 'managed' location in later versions of Hive3.  " +
+                                                        "We've adjusted the DB to set the MANAGEDLOCATION setting instead, " +
+                                                        "to avoid future conflicts. If your target environment is HDP3, this setting " +
+                                                        "will FAIL since the MANAGEDLOCATION property for a Database doesn't exist. " +
+                                                        "Fix the source DB's location element to avoid this translation.");
+                                            }
+                                        }
+
                                     }
                                     if (managedLocation != null) {
-                                        managedLocation = UrlUtils.removeLastDirFromUrl(managedLocation) + "/"
-                                                + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
+                                        managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
                                     }
-                                }
-                                if (config.isReadOnly() && !config.isLoadingTestData()) {
-                                    log.debug("Config set to 'read-only'.  Validating FS before continuing");
-                                    CliEnvironment cli = executeSessionService.getCliEnvironment();
+                                    if (config.getDbPrefix() != null || config.getDbRename() != null) {
+                                        // adjust locations.
+                                        if (location != null) {
+                                            location = UrlUtils.removeLastDirFromUrl(location) + "/"
+                                                    + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
+                                        }
+                                        if (managedLocation != null) {
+                                            managedLocation = UrlUtils.removeLastDirFromUrl(managedLocation) + "/"
+                                                    + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db";
+                                        }
+                                    }
+                                    if (config.isReadOnly() && !config.isLoadingTestData()) {
+                                        log.debug("Config set to 'read-only'.  Validating FS before continuing");
+                                        CliEnvironment cli = executeSessionService.getCliEnvironment();
 
-                                    // Check that location exists.
-                                    String dbLocation = null;
-                                    if (location != null) {
-                                        dbLocation = location;
-                                    } else {
-                                        // Get location for DB. If it's not there than:
-                                        //     SQL query to get default from Hive.
-                                        String defaultDBLocProp = null;
-                                        if (config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                                            defaultDBLocProp = LEGACY_DB_LOCATION_PROP;
+                                        // Check that location exists.
+                                        String dbLocation = null;
+                                        if (location != null) {
+                                            dbLocation = location;
                                         } else {
-                                            defaultDBLocProp = EXT_DB_LOCATION_PROP;
-                                        }
-
-                                        Connection conn = null;
-                                        Statement stmt = null;
-                                        ResultSet resultSet = null;
-                                        try {
-                                            conn = connectionPoolService.getHS2EnvironmentConnection(Environment.RIGHT);
-                                            //hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
-
-                                            stmt = conn.createStatement();
-
-                                            String dbLocSql = "SET " + defaultDBLocProp;
-                                            resultSet = stmt.executeQuery(dbLocSql);
-                                            if (resultSet.next()) {
-                                                String propset = resultSet.getString(1);
-                                                String dbLocationPrefix = propset.split("=")[1];
-                                                dbLocation = dbLocationPrefix + dbMirror.getName().toLowerCase(Locale.ROOT) + ".db";
-                                                log.debug("{} location is: {}", database, dbLocation);
-
+                                            // Get location for DB. If it's not there than:
+                                            //     SQL query to get default from Hive.
+                                            String defaultDBLocProp = null;
+                                            if (config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                                                defaultDBLocProp = LEGACY_DB_LOCATION_PROP;
                                             } else {
-                                                // Could get property.
-                                                throw new RuntimeException("Could not determine DB Location for: " + database);
+                                                defaultDBLocProp = EXT_DB_LOCATION_PROP;
                                             }
-                                        } catch (SQLException throwables) {
-                                            log.error("Issue", throwables);
-                                            throw new RuntimeException(throwables);
-                                        } finally {
-                                            if (resultSet != null) {
-                                                try {
-                                                    resultSet.close();
-                                                } catch (SQLException sqlException) {
-                                                    // ignore
+
+                                            Connection conn = null;
+                                            Statement stmt = null;
+                                            ResultSet resultSet = null;
+                                            try {
+                                                conn = connectionPoolService.getHS2EnvironmentConnection(Environment.RIGHT);
+                                                //hmsMirrorConfig.getCluster(Environment.RIGHT).getConnection();
+
+                                                stmt = conn.createStatement();
+
+                                                String dbLocSql = "SET " + defaultDBLocProp;
+                                                resultSet = stmt.executeQuery(dbLocSql);
+                                                if (resultSet.next()) {
+                                                    String propset = resultSet.getString(1);
+                                                    String dbLocationPrefix = propset.split("=")[1];
+                                                    dbLocation = dbLocationPrefix + dbMirror.getName().toLowerCase(Locale.ROOT) + ".db";
+                                                    log.debug("{} location is: {}", database, dbLocation);
+
+                                                } else {
+                                                    // Could get property.
+                                                    throw new RuntimeException("Could not determine DB Location for: " + database);
                                                 }
-                                            }
-                                            if (stmt != null) {
-                                                try {
-                                                    stmt.close();
-                                                } catch (SQLException sqlException) {
-                                                    // ignore
+                                            } catch (SQLException throwables) {
+                                                log.error("Issue", throwables);
+                                                throw new RuntimeException(throwables);
+                                            } finally {
+                                                if (resultSet != null) {
+                                                    try {
+                                                        resultSet.close();
+                                                    } catch (SQLException sqlException) {
+                                                        // ignore
+                                                    }
                                                 }
-                                            }
-                                            if (conn != null) {
-                                                try {
-                                                    conn.close();
-                                                } catch (SQLException throwables) {
-                                                    //
+                                                if (stmt != null) {
+                                                    try {
+                                                        stmt.close();
+                                                    } catch (SQLException sqlException) {
+                                                        // ignore
+                                                    }
+                                                }
+                                                if (conn != null) {
+                                                    try {
+                                                        conn.close();
+                                                    } catch (SQLException throwables) {
+                                                        //
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                    if (dbLocation != null) {
-                                        try {
+                                        if (dbLocation != null) {
+                                            try {
 //                                            CommandReturn cr = cli.processInput("connect");
-                                            CommandReturn testCr = cli.processInput("test -d " + dbLocation);
-                                            if (testCr.isError()) {
-                                                // Doesn't exist.  So we can't create the DB in a "read-only" mode.
-                                                runStatus.addError(RO_DB_DOESNT_EXIST, dbLocation,
-                                                        testCr.getError(), testCr.getCommand(), dbMirror.getName());
-                                                dbMirror.addIssue(Environment.RIGHT, runStatus.getErrorMessage(RO_DB_DOESNT_EXIST));
-                                                rtn = Boolean.FALSE;
+                                                CommandReturn testCr = cli.processInput("test -d " + dbLocation);
+                                                if (testCr.isError()) {
+                                                    // Doesn't exist.  So we can't create the DB in a "read-only" mode.
+                                                    runStatus.addError(RO_DB_DOESNT_EXIST, dbLocation,
+                                                            testCr.getError(), testCr.getCommand(), dbMirror.getName());
+                                                    dbMirror.addIssue(Environment.RIGHT, runStatus.getErrorMessage(RO_DB_DOESNT_EXIST));
+                                                    rtn = Boolean.FALSE;
 //                                                throw new RuntimeException(hmsMirrorConfig.getProgression().getErrorMessage(RO_DB_DOESNT_EXIST));
+                                                }
+                                            } catch (DisabledException e) {
+                                                log.warn("Unable to test location {} because the CLI Interface is disabled.", dbLocation);
+                                                dbMirror.addIssue(Environment.RIGHT, "Unable to test location " + dbLocation + " because the CLI Interface is disabled. " +
+                                                        "This may lead to issues when creating the database in 'read-only' mode.  ");
                                             }
-                                        } catch (DisabledException e) {
-                                            log.warn("Unable to test location {} because the CLI Interface is disabled.", dbLocation);
-                                            dbMirror.addIssue(Environment.RIGHT, "Unable to test location " + dbLocation + " because the CLI Interface is disabled. " +
-                                                    "This may lead to issues when creating the database in 'read-only' mode.  ");
+                                        } else {
+                                            // Can't determine location.
+                                            // TODO: What to do here.
+                                            log.error("{}: Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in 'read-only' mode without knowing where it should go and validating existance.", dbMirror.getName());
+                                            throw new RuntimeException(dbMirror.getName() + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
+                                                    "'read-only' mode without knowing where it should go and validating existance.");
                                         }
-                                    } else {
-                                        // Can't determine location.
-                                        // TODO: What to do here.
-                                        log.error("{}: Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in 'read-only' mode without knowing where it should go and validating existance.", dbMirror.getName());
-                                        throw new RuntimeException(dbMirror.getName() + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
-                                                "'read-only' mode without knowing where it should go and validating existance.");
-                                    }
 //                                    } finally {
 //                                        config.getCliEnv().returnSession(main);
 //                                    }
-                                }
-
-                                String createDbL = MessageFormat.format(CREATE_DB, database);
-                                StringBuilder sbL = new StringBuilder();
-                                sbL.append(createDbL).append("\n");
-                                if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
-                                    sbL.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
-                                }
-                                // TODO: DB Properties.
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
-
-                                if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                                    String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
-                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
-                                    dbDefRight.put(DB_LOCATION, location);
-                                }
-                                if (managedLocation != null) {
-                                    if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                                        String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
-                                        dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
-                                        dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
-                                    } else {
-                                        String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
-                                        dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
-                                        dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
-                                        dbDefRight.put(DB_LOCATION, managedLocation);
                                     }
-                                }
 
-                                break;
-                            case DUMP:
-                                String createDb = MessageFormat.format(CREATE_DB, database);
-                                StringBuilder sb = new StringBuilder();
-                                sb.append(createDb).append("\n");
-                                if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
-                                    sb.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
-                                }
-                                if (location != null) {
-                                    sb.append(DB_LOCATION).append(" \"").append(location).append("\"\n");
-                                }
-                                if (managedLocation != null) {
-                                    sb.append(DB_MANAGED_LOCATION).append(" \"").append(managedLocation).append("\"\n");
-                                }
-                                // TODO: DB Properties.
-                                dbMirror.getSql(Environment.LEFT).add(new Pair(CREATE_DB_DESC, sb.toString()));
-                                break;
-                            case COMMON:
-                                String createDbCom = MessageFormat.format(CREATE_DB, database);
-                                StringBuilder sbCom = new StringBuilder();
-                                sbCom.append(createDbCom).append("\n");
-                                if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
-                                    sbCom.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
-                                }
-                                if (location != null) {
-                                    sbCom.append(DB_LOCATION).append(" \"").append(location).append("\"\n");
-                                }
-                                if (managedLocation != null) {
-                                    sbCom.append(DB_MANAGED_LOCATION).append(" \"").append(managedLocation).append("\"\n");
-                                }
-                                // TODO: DB Properties.
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbCom.toString()));
-                                break;
-                            case STORAGE_MIGRATION:
+                                    String createDbL = MessageFormat.format(CREATE_DB, database);
+                                    StringBuilder sbL = new StringBuilder();
+                                    sbL.append(createDbL).append("\n");
+                                    if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
+                                        sbL.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
+                                    }
+                                    // TODO: DB Properties.
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
+
+                                    if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                        String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
+                                        dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
+                                        dbDefRight.put(DB_LOCATION, location);
+                                    }
+                                    if (managedLocation != null) {
+                                        if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                            String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
+                                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
+                                            dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
+                                        } else {
+                                            String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
+                                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
+                                            dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
+                                            dbDefRight.put(DB_LOCATION, managedLocation);
+                                        }
+                                    }
+
+                                    break;
+                                case DUMP:
+                                    String createDb = MessageFormat.format(CREATE_DB, database);
+                                    StringBuilder sb = new StringBuilder();
+                                    sb.append(createDb).append("\n");
+                                    if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
+                                        sb.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
+                                    }
+                                    if (location != null) {
+                                        sb.append(DB_LOCATION).append(" \"").append(location).append("\"\n");
+                                    }
+                                    if (managedLocation != null) {
+                                        sb.append(DB_MANAGED_LOCATION).append(" \"").append(managedLocation).append("\"\n");
+                                    }
+                                    // TODO: DB Properties.
+                                    dbMirror.getSql(Environment.LEFT).add(new Pair(CREATE_DB_DESC, sb.toString()));
+                                    break;
+                                case COMMON:
+                                    String createDbCom = MessageFormat.format(CREATE_DB, database);
+                                    StringBuilder sbCom = new StringBuilder();
+                                    sbCom.append(createDbCom).append("\n");
+                                    if (dbDefLeft.get(COMMENT) != null && !dbDefLeft.get(COMMENT).trim().isEmpty()) {
+                                        sbCom.append(COMMENT).append(" \"").append(dbDefLeft.get(COMMENT)).append("\"\n");
+                                    }
+                                    if (location != null) {
+                                        sbCom.append(DB_LOCATION).append(" \"").append(location).append("\"\n");
+                                    }
+                                    if (managedLocation != null) {
+                                        sbCom.append(DB_MANAGED_LOCATION).append(" \"").append(managedLocation).append("\"\n");
+                                    }
+                                    // TODO: DB Properties.
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbCom.toString()));
+                                    break;
+                                case STORAGE_MIGRATION:
 //                                StringBuilder sbLoc = new StringBuilder();
 //                                sbLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
 //                                sbLoc.append(hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory());
 //                                sbLoc.append("/");
 //                                sbLoc.append(database);
 //                                sbLoc.append(".db");
-                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
-                                    String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
-                                    dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
-                                    dbDefRight.put(DB_LOCATION, location);
-                                }
+                                    if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                        String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
+                                        dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
+                                        dbDefRight.put(DB_LOCATION, location);
+                                    }
 
 //                                StringBuilder sbMngdLoc = new StringBuilder();
 //                                sbMngdLoc.append(hmsMirrorConfig.getTransfer().getCommonStorage());
@@ -634,44 +689,51 @@ public class DatabaseService {
 //                                sbMngdLoc.append("/");
 //                                sbMngdLoc.append(database);
 //                                sbMngdLoc.append(".db");
-                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
-                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
-                                    dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
-                                    dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
-                                } else {
-                                    String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
-                                    dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
-                                    dbMirror.addIssue(Environment.LEFT, HDPHIVE3_DB_LOCATION.getDesc());
-                                    dbDefRight.put(DB_LOCATION, managedLocation);
-                                }
+                                    if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                        String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
+                                        dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
+                                        dbDefRight.put(DB_MANAGED_LOCATION, managedLocation);
+                                    } else {
+                                        String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, database, managedLocation);
+                                        dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
+                                        dbMirror.addIssue(Environment.LEFT, HDPHIVE3_DB_LOCATION.getDesc());
+                                        dbDefRight.put(DB_LOCATION, managedLocation);
+                                    }
 
-                                dbMirror.addIssue(Environment.LEFT, "This process, when 'executed' will leave the original tables intact in their renamed " +
-                                        "version.  They are NOT automatically cleaned up.  Run the produced '" +
-                                        dbMirror.getName() + "_LEFT_CleanUp_execute.sql' " +
-                                        "file to permanently remove them.  Managed and External/Purge table data will be " +
-                                        "removed when dropping these tables.  External non-purge table data will remain in storage.");
+                                    dbMirror.addIssue(Environment.LEFT, "This process, when 'executed' will leave the original tables intact in their renamed " +
+                                            "version.  They are NOT automatically cleaned up.  Run the produced '" +
+                                            dbMirror.getName() + "_LEFT_CleanUp_execute.sql' " +
+                                            "file to permanently remove them.  Managed and External/Purge table data will be " +
+                                            "removed when dropping these tables.  External non-purge table data will remain in storage.");
 
-                                break;
-                        }
+                                    break;
+                            }
+                    }
+                } else {
+                    // Downgrade in place.
+                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+                        // Set the location to the external directory for the database.
+                        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                        location = config.getCluster(Environment.LEFT).getHcfsNamespace() + config.getTransfer().getWarehouse().getExternalDirectory() +
+                                "/" + database + ".db";
+                        String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
+                        dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
+                        dbDefLeft.put(DB_LOCATION, location);
+                    }
                 }
             } else {
-                // Downgrade in place.
-                if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
-                    // Set the location to the external directory for the database.
-                    database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-                    location = config.getCluster(Environment.LEFT).getHcfsNamespace() + config.getTransfer().getWarehouse().getExternalDirectory() +
-                            "/" + database + ".db";
-                    String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
-                    dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
-                    dbDefLeft.put(DB_LOCATION, location);
-                }
+                // Reset Right DB.
+                database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                String dropDb = MessageFormat.format(DROP_DB, database);
+                dbMirror.getSql(Environment.RIGHT).add(new Pair(DROP_DB_DESC, dropDb));
             }
-        } else {
-            // Reset Right DB.
-            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-            String dropDb = MessageFormat.format(DROP_DB, database);
-            dbMirror.getSql(Environment.RIGHT).add(new Pair(DROP_DB_DESC, dropDb));
+        } catch (MissingDataPointException e) {
+            rtn = Boolean.FALSE;
+            log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
+            // TODO: Do we need to use the LEFT here when it's STORAGE_MIGRATION?
+            dbMirror.addIssue(Environment.RIGHT, MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
         }
+
         return rtn;
     }
 

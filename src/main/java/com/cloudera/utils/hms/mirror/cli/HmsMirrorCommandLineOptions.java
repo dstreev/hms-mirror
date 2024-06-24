@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
-import com.cloudera.utils.hms.mirror.domain.WarehouseConfig;
+import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
@@ -43,6 +43,7 @@ import org.springframework.core.annotation.Order;
 import java.io.File;
 import java.util.*;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Configuration
@@ -462,11 +463,11 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configExternalWarehouseDirectory(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
         return args -> {
             log.info("external-warehouse-directory: {}", value);
-            if (hmsMirrorConfig.getTransfer().getWarehouse() == null)
-                hmsMirrorConfig.getTransfer().setWarehouse(new WarehouseConfig());
+            if (isNull(hmsMirrorConfig.getTransfer().getWarehouse()))
+                hmsMirrorConfig.getTransfer().setWarehouse(new Warehouse());
             String ewdStr = value;
             // Remove/prevent duplicate namespace config.
-            if (hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
+            if (nonNull(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                 if (ewdStr.startsWith(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                     ewdStr = ewdStr.substring(hmsMirrorConfig.getTransfer().getCommonStorage().length());
                     log.warn("External Warehouse Location Modified (stripped duplicate namespace): {}", ewdStr);
@@ -1346,11 +1347,11 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configWarehouseDirectory(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.warehouse-directory}") String value) {
         return args -> {
             log.info("warehouse-directory: {}", value);
-            if (hmsMirrorConfig.getTransfer().getWarehouse() == null)
-                hmsMirrorConfig.getTransfer().setWarehouse(new WarehouseConfig());
+            if (isNull(hmsMirrorConfig.getTransfer().getWarehouse()))
+                hmsMirrorConfig.getTransfer().setWarehouse(new Warehouse());
             String wdStr = value;
             // Remove/prevent duplicate namespace config.
-            if (hmsMirrorConfig.getTransfer().getCommonStorage() != null) {
+            if (nonNull(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                 if (wdStr.startsWith(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                     wdStr = wdStr.substring(hmsMirrorConfig.getTransfer().getCommonStorage().length());
                     log.warn("Managed Warehouse Location Modified (stripped duplicate namespace): {}", wdStr);

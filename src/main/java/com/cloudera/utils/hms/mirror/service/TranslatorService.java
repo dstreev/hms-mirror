@@ -47,12 +47,13 @@ public class TranslatorService {
     @Getter
     private ExecuteSessionService executeSessionService = null;
 
-    private ConfigService configService;
+//    private ConfigService configService;
+    private DatabaseService databaseService;
 
-    @Autowired
-    public void setConfigService(ConfigService configService) {
-        this.configService = configService;
-    }
+//    @Autowired
+//    public void setConfigService(ConfigService configService) {
+//        this.configService = configService;
+//    }
 
     /**
      * @param consolidationLevel how far up the directory hierarchy to go to build the distcp list based on the sources
@@ -138,6 +139,11 @@ public class TranslatorService {
             return newLocation;
         else
             return originalLocation;
+    }
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
     }
 
     @Autowired
@@ -281,7 +287,7 @@ public class TranslatorService {
         return rtn;
     }
 
-    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws MismatchException {
+    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws MismatchException, MissingDataPointException {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
@@ -334,14 +340,17 @@ public class TranslatorService {
             newLocation = sbDir.toString();
         } else if (config.isResetToDefaultLocation()) {
             // RDL
-            if (TableUtils.isManaged(tableMirror.getEnvironmentTable(Environment.LEFT)) && config.getTransfer().getWarehouse().getManagedDirectory() != null) {
-                sbDir.append(config.getTransfer().getWarehouse().getManagedDirectory()).append("/");
+            Warehouse warehouse = databaseService.getWarehousePlan(dbName);
+            // This shouldn't be null. Should've been caught earlier.
+            assert warehouse != null;
+            if (TableUtils.isManaged(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+                sbDir.append(warehouse.getManagedDirectory()).append("/");
                 sbDir.append(dbName).append(".db").append("/").append(tableName);
                 if (partitionSpec != null)
                     sbDir.append("/").append(partitionSpec);
                 newLocation = sbDir.toString();
-            } else if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT)) && config.getTransfer().getWarehouse().getExternalDirectory() != null) {
-                sbDir.append(config.getTransfer().getWarehouse().getExternalDirectory()).append("/");
+            } else if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+                sbDir.append(warehouse.getExternalDirectory()).append("/");
                 sbDir.append(dbName).append(".db").append("/").append(tableName);
                 if (partitionSpec != null)
                     sbDir.append("/").append(partitionSpec);

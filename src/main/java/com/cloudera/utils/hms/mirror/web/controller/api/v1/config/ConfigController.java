@@ -509,17 +509,17 @@ public class ConfigController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warehouse Details set",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = WarehouseConfig.class))})})
+                            schema = @Schema(implementation = Warehouse.class))})})
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/transfer/warehouse")
-    public WarehouseConfig setTransferWarehouse(@RequestParam(name = "sessionId", required = false) String sessionId,
+    public Warehouse setTransferWarehouse(@RequestParam(name = "sessionId", required = false) String sessionId,
                                                 @RequestParam(value = "managedDirectory", required = false) String managedDirectory,
                                                 @RequestParam(value = "externalDirectory", required = false) String externalDirectory
     ) throws SessionRunningException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        WarehouseConfig warehouseConfig = executeSessionService.getLoadedSession().getConfig().getTransfer().getWarehouse();
+        Warehouse warehouseConfig = executeSessionService.getLoadedSession().getConfig().getTransfer().getWarehouse();
 
         if (managedDirectory != null) {
             log.info("{}: Setting Warehouse 'managedDirectory' to: {}", sessionId, managedDirectory);

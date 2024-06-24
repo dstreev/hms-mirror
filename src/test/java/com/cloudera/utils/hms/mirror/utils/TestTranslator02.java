@@ -54,15 +54,15 @@ public class TestTranslator02 extends TranslatorTestBase {
         executeSessionService.setConnectionPoolService(connectionPoolService);
 
         ExecuteSession session = executeSessionService.createSession(ExecuteSessionService.DEFAULT, config);
+        ConfigService configService = new ConfigService();
+        executeSessionService.setConfigService(configService);
         executeSessionService.setLoadedSession(session);
         executeSessionService.transitionLoadedSessionToActive();
 
-        ConfigService configService = new ConfigService();
-        executeSessionService.setConfigService(configService);
 //        configService.setExecuteSessionService(executeSessionService);
         translatorService = new TranslatorService();
         translatorService.setExecuteSessionService(executeSessionService);
-        translatorService.setConfigService(configService);
+//        translatorService.setConfigService(configService);
 
 
     }

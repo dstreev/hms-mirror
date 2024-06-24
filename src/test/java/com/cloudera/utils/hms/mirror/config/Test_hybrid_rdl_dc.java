@@ -87,6 +87,7 @@ public class Test_hybrid_rdl_dc extends E2EBaseTest {
         // Verify the return code.
         long expected = getCheckCode(
                 MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
+                MessageCode.DISTCP_REQUIRES_EPL,
                 MessageCode.LINK_TEST_SKIPPED_WITH_IS,
                 MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
                 MessageCode.DISTCP_WO_TABLE_FILTERS

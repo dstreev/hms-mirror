@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
+import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
@@ -108,6 +109,23 @@ public class Test_sm_wd_epl_rdl_dc_odd extends E2EBaseTest {
         // Verify the return code.
         assertEquals("Return Code Failure: " + rtn, 1L, rtn);
     }
+
+    @Test
+    public void warningCodeTest() {
+        // Get Runtime Return Code.
+        long actual = getWarningCode();
+        // Verify the return code.
+        long expected = getCheckCode(
+                MessageCode.DISTCP_WO_TABLE_FILTERS,
+                MessageCode.STORAGE_MIGRATION_NAMESPACE_LEFT,
+                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
+                MessageCode.STORAGE_MIGRATION_DISTCP_EXECUTE
+        );
+
+        assertEquals("Warning Code Failure: ", expected, actual);
+
+    }
+
 
     @Test
     public void sqlTest() {

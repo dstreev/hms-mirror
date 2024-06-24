@@ -32,6 +32,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.feature.Feature;
 import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
 import com.cloudera.utils.hms.stage.ReturnStatus;
@@ -621,6 +622,10 @@ public class TableService {
         } catch (MismatchException e) {
             log.error("Error building table schema: {}", e.getMessage(), e);
             source.addIssue("Error building table schema: " + e.getMessage());
+            rtn = Boolean.FALSE;
+        } catch (MissingDataPointException e) {
+            log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
+            source.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
             rtn = Boolean.FALSE;
         }
         return rtn;

@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.legacy_to_cdp;
 
+import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +70,9 @@ public class Test_hybrid_mao_da_ro_cs extends E2EBaseTest {
         // Verify the return code.
 //        long check = MessageCode.RO_VALID_STRATEGIES.getLong();
         // The long value of 96'th bit is 4294967296.
-        long check = 4294967296l;
+
+//        long check = 4294967296l;
+        long check = getCheckCode(MessageCode.RO_VALID_STRATEGIES);
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 
