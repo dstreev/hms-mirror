@@ -225,7 +225,9 @@ public enum MessageCode {
     WAREHOUSE_DIRECTORIES_NOT_DEFINED(108, "The warehouse directories are NOT defined.  " +
             "Please add them and try again."),
     WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV(109, "The warehouse directories were retrieved from the Hive environment.  If these are not the intended " +
-            "directories, add the warehouse directories to the configuration and try again.");
+            "directories, add the warehouse directories to the configuration and try again."),
+    STORAGE_MIGRATION_GLMS_NOT_BUILT(110, "The global location maps (GLMs) have not been built yet.  We found warehouse definitions but no GLM's.  " +
+            "Please build or create GLM's and try again.");
 
     private int code = 0;
     private String desc = null;

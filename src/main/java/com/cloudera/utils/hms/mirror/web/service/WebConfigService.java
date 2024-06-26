@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.service;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -32,7 +33,10 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.cloudera.utils.hms.mirror.util.ModelUtils.getSupportedDataStrategies;
+
 @Service
+@Slf4j
 public class WebConfigService {
 
     private String configPath = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg";
@@ -79,7 +83,18 @@ public class WebConfigService {
 
         for (File file : listOfFiles) {
             if (file.isFile()) {
-                configList.add(file.getName());
+                // Attempt to load and check that it is one of the supported config.
+                log.info("Checking config file: " + file.getName());
+                try {
+                    HmsMirrorConfig lclConfig = HmsMirrorConfig.loadConfig(file.getName());
+                    if (lclConfig != null && getSupportedDataStrategies().contains(lclConfig.getDataStrategy())) {
+                        configList.add(file.getName());
+                    } else {
+                        log.warn("Config file: " + file.getName() + " is not supported.  It isn't one of the currently supported data strategies.");
+                    }
+                } catch (Exception e) {
+                    log.error("Error loading config file: " + file.getName());
+                }
             }
         }
         return configList;

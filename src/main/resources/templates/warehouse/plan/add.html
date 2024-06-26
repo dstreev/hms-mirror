@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>View Config</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+
+</head>
+<body>
+<header>
+    <h1 class="dlm-header" th:text="#{'warehouse.plan.' + ${ACTION}}"></h1>
+</header>
+<main>
+    <fieldset>
+        <legend th:text="#{warehouse.plan}"/>
+        <form class="pure-form pure-form-aligned" th:action="@{/warehouse/plan/save}" method="post">
+            <div class="pure-control-group">
+                <label for="database" th:text="#{database}"/>
+                <th:block th:if="${AVAILABLE_DATABASES != null}">
+                    <select id="DATABASE" name="DATABASE" class="pure-input-4-5">
+                        <option th:each="cet: ${AVAILABLE_DATABASES}"
+                                th:value="${cet}"
+                                th:text="${cet}"/>
+                    </select>
+                </th:block>
+                <th:block th:unless="${AVAILABLE_DATABASES != null}">
+                    <input id="DATABASE" name="DATABASE" type="text"/>
+                </th:block>
+            </div>
+            <div class="pure-control-group">
+                <label for="EXTERNAL_DIRECTORY" th:text="#{external.warehouse}"/>
+                <input class="pure-input-4-5" id="EXTERNAL_DIRECTORY" name="EXTERNAL_DIRECTORY" type="text"/>
+            </div>
+            <div class="pure-control-group">
+                <label for="MANAGED_DIRECTORY" th:text="#{managed.warehouse}"/>
+                <input class="pure-input-4-5" id="MANAGED_DIRECTORY" name="MANAGED_DIRECTORY" type="text"/>
+            </div>
+            <div class="pure-control-group">
+                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.add}"/>
+            </div>
+        </form>
+    </fieldset>
+
+</main>
+</body>
+</html>

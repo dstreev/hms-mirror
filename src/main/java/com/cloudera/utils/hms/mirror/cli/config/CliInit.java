@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -215,7 +216,11 @@ public class CliInit {
         return args -> {
             ExecuteSession session = executeSessionService.createSession(null, builtConfig);
             executeSessionService.setLoadedSession(session);
-            Boolean transitioned = executeSessionService.transitionLoadedSessionToActive();
+            try {
+                executeSessionService.transitionLoadedSessionToActive();
+            } catch (SessionException e) {
+                throw new RuntimeException(e);
+            }
 
             log.info("Session transitioned to active.");
             builtConfig.setValidated(Boolean.TRUE);

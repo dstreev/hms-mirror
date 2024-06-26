@@ -25,10 +25,7 @@ import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHybridImpl;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +40,7 @@ import java.util.Set;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_CONNECTION_ISSUE;
 import static com.cloudera.utils.hms.mirror.MessageCode.ENVIRONMENT_DISCONNECTED;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Component
@@ -50,6 +48,8 @@ import static java.util.Objects.nonNull;
 @Setter
 @Slf4j
 public class ConnectionPoolService implements ConnectionPools {
+
+    private boolean connected = false;
 
     private HmsMirrorConfig hmsMirrorConfig;
     private ExecuteSession executeSession;
@@ -153,6 +153,8 @@ public class ConnectionPoolService implements ConnectionPools {
     @Override
     public void close() {
         if (connectionPools != null) {
+            // Set State of Connection.
+            connected = false;
             getConnectionPools().close();
         }
     }
@@ -175,8 +177,37 @@ public class ConnectionPoolService implements ConnectionPools {
         if (hmsMirrorConfig == null) {
             throw new RuntimeException("Configuration not set.  Connections can't be established.");
         }
-
-        switch (hmsMirrorConfig.getConnectionPoolLib()) {
+        ConnectionPoolType cpt = hmsMirrorConfig.getConnectionPoolLib();
+        if (cpt == null) {
+            // Need to calculate the connectio pool type:
+            // When both clusters are defined:
+                // Use DBCP2 when both clusters are non-legacy
+                // Use HYBRID when one cluster is legacy and the other is not
+                // Use HIKARICP when both clusters are non-legacy.
+            // When only the left cluster is defined:
+                // Use DBCP2 when the left cluster is legacy
+                // Use HIKARICP when the left cluster is non-legacy
+            if (isNull(hmsMirrorConfig.getCluster(Environment.RIGHT))) {
+                if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+                    cpt = ConnectionPoolType.DBCP2;
+                } else {
+                    cpt = ConnectionPoolType.HIKARICP;
+                }
+            } else {
+                if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()
+                        && hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                    cpt = ConnectionPoolType.DBCP2;
+                } else if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()
+                        || hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                    cpt = ConnectionPoolType.HYBRID;
+                } else {
+                    cpt = ConnectionPoolType.HIKARICP;
+                }
+            }
+        } else {
+            log.info("Connection Pool Type explicitly set to: {}", cpt);
+        }
+        switch (cpt) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
                 rtn = new ConnectionPoolsDBCP2Impl(executeSession);
@@ -330,6 +361,8 @@ public class ConnectionPoolService implements ConnectionPools {
             }
             throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");
         }
+        // Set state of connection.
+        connected = true;
     }
 
 }

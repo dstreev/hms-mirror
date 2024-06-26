@@ -21,13 +21,14 @@ import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.util.ModelUtils;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
 import com.jcabi.manifests.Manifests;
+import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
+import static java.util.Objects.isNull;
 
 @Controller
 @RequestMapping(path = "/config")
@@ -73,16 +76,17 @@ public class ConfigMVController implements ControllerReferences {
     }
 
     @RequestMapping(value = "/home", method = RequestMethod.GET)
-    public String home(Model model) {
+    public String home(Model model,
+                       @Value("${hms-mirror.config.testing}") Boolean testing) {
         model.addAttribute(ACTION, "home");
 
-        ExecuteSession executeSession = executeSessionService.getLoadedSession();
+//        ExecuteSession executeSession = executeSessionService.getLoadedSession();
 
         // Get list of available configs
         List<String> configs = webConfigService.getConfigList();
         model.addAttribute(CONFIG_LIST, configs);
 
-        sessionToModel(model);
+        sessionToModel(model, testing);
 
         // Get list of Reports
         model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
@@ -108,7 +112,7 @@ public class ConfigMVController implements ControllerReferences {
 //
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     public String create(Model model,
-                         @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy) throws SessionRunningException {
+                         @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy) throws SessionException {
         model.addAttribute(ACTION, "create");
         // Clear the loaded and active session.
         executeSessionService.clearLoadedSession();
@@ -121,14 +125,27 @@ public class ConfigMVController implements ControllerReferences {
 //        model.addAttribute(CONFIG, session.getConfig());
 //        model.addAttribute(SESSION_ID, session.getSessionId());
 
-        sessionToModel(model);
+        sessionToModel(model, Boolean.FALSE);
 
         return "/config/view";
     }
 
-    private void sessionToModel(Model model) {
+    private void sessionToModel(Model model, Boolean testing) {
 
-        ExecuteSession session = executeSessionService.getLoadedSession();
+
+        // This is so we can try to load a list of available databases.
+        try {
+            log.info("Attempting connection to get list of databases.");
+            executeSessionService.transitionLoadedSessionToActive();
+        } catch (SessionException e) {
+            log.warn("Error transitioning to active session: {}", e.getMessage());
+        }
+
+//        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
+//        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+
+        ExecuteSession session = executeSessionService.getActiveSession();
+
         RunContainer runContainer = new RunContainer();
         model.addAttribute(RUN_CONTAINER, runContainer);
         if (session != null) {
@@ -138,12 +155,14 @@ public class ConfigMVController implements ControllerReferences {
             model.addAttribute(CONFIG, session.getConfig());
 
             runContainer.setSaveAs(session.getSessionId());
-            // TODO: Remove, for testing only.
-            if (session.getRunStatus() == null) {
+            // For testing only.
+            if (testing && isNull(session.getRunStatus())) {
                 RunStatus runStatus = new RunStatus();
                 runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                 runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
                 model.addAttribute(RUN_STATUS, runStatus);
+            } else {
+                model.addAttribute(RUN_STATUS, session.getRunStatus());
             }
         }
         model.addAttribute(RUN_CONTAINER, runContainer);
@@ -151,17 +170,17 @@ public class ConfigMVController implements ControllerReferences {
     }
 
     @RequestMapping(value = "/edit", method = RequestMethod.GET)
-    public String edit(Model model) throws SessionRunningException {
+    public String edit(Model model) throws SessionException {
         executeSessionService.clearActiveSession();
         model.addAttribute(ACTION, "edit");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
-        sessionToModel(model);
+        sessionToModel(model, Boolean.FALSE);
         return "/config/view";
     }
 
     @RequestMapping(value = "/save", method = RequestMethod.POST)
     public String save(Model model,
-                       @ModelAttribute(CONFIG) HmsMirrorConfig config) throws SessionRunningException {
+                       @ModelAttribute(CONFIG) HmsMirrorConfig config) throws SessionException {
         executeSessionService.clearActiveSession();
         model.addAttribute(ACTION, "view");
 
@@ -177,7 +196,7 @@ public class ConfigMVController implements ControllerReferences {
         // Reset to the merged config.
         session.setConfig(config);
         model.addAttribute(READ_ONLY, Boolean.TRUE);
-        sessionToModel(model);
+        sessionToModel(model, Boolean.FALSE);
         return "/config/view";
     }
 
@@ -187,7 +206,7 @@ public class ConfigMVController implements ControllerReferences {
     @RequestMapping(value = "/persist", method = RequestMethod.POST)
     public String persist(Model model,
                           @Value("${hms-mirror.config.path}") String configPath,
-                          @ModelAttribute(PERSIST) PersistContainer persistContainer) throws IOException, SessionRunningException {
+                          @ModelAttribute(PERSIST) PersistContainer persistContainer) throws IOException, SessionException {
         // Get the current session config.
         ExecuteSession curSession = executeSessionService.getLoadedSession();
         HmsMirrorConfig currentConfig = curSession.getConfig();
@@ -219,7 +238,7 @@ public class ConfigMVController implements ControllerReferences {
             configService.saveConfig(config, configFullFilename, Boolean.TRUE);
         }
 
-        sessionToModel(model);
+        sessionToModel(model, Boolean.FALSE);
         model.addAttribute(ACTION, "view");
 
         ModelUtils.allEnumsForModel(model);
@@ -228,7 +247,7 @@ public class ConfigMVController implements ControllerReferences {
 
     @RequestMapping(value = "/reload", method = RequestMethod.POST)
     public String reload(Model model,
-                         @RequestParam(value = SESSION_ID, required = true) String sessionId) throws SessionRunningException {
+                         @RequestParam(value = SESSION_ID, required = true) String sessionId) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -241,7 +260,7 @@ public class ConfigMVController implements ControllerReferences {
         executeSessionService.setLoadedSession(session);
 
         // Set it as the current session.
-        sessionToModel(model);
+        sessionToModel(model, Boolean.FALSE);
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
@@ -250,36 +269,16 @@ public class ConfigMVController implements ControllerReferences {
     }
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)
-    public String view(Model model) throws SessionRunningException {
+    public String view(Model model) throws SessionException {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
-        sessionToModel(model);
-        return "/config/view";
-    }
-
-    @RequestMapping(value = "/warehouse/plan/add", method = RequestMethod.POST)
-    public String addDatabase(Model model,
-                              @RequestParam(value = DATABASE, required = true) String database,
-                              @RequestParam(value = EXTERNAL_DIRECTORY, required = true) String externalDirectory,
-                              @RequestParam(value = MANAGED_DIRECTORY, required = true) String managedDirectory
-    ) throws SessionRunningException {
-        // Don't reload if running.
-        executeSessionService.clearActiveSession();
-
-        log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
-
-        databaseService.addWarehousePlan(database, externalDirectory, managedDirectory);
-
-        model.addAttribute(ACTION, "view");
-        model.addAttribute(READ_ONLY, Boolean.TRUE);
-        sessionToModel(model);
-
+        sessionToModel(model, Boolean.FALSE);
         return "/config/view";
     }
 
 //    @RequestMapping(value = "/cluster/init", method = RequestMethod.GET)
 //    public String initCluster(Model model,
-//            @RequestParam(value = ENVIRONMENT, required = true) String environment) throws SessionRunningException {
+//            @RequestParam(value = ENVIRONMENT, required = true) String environment) throws SessionException {
 //        // Don't reload if running.
 //        executeSessionService.clearActiveSession();
 //

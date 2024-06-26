@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.validation.constraints.NotNull;
 
@@ -51,7 +50,7 @@ public class DatabaseMVController {
 
     @RequestMapping(value = "/{database}/warehousePlan/delete", method = RequestMethod.GET)
     public String deleteWarehousePlan(Model model,
-                         @PathVariable @NotNull String database) throws SessionRunningException {
+                         @PathVariable @NotNull String database) throws SessionException {
         executeSessionService.clearActiveSession();
 
         databaseService.removeWarehousePlan(database);

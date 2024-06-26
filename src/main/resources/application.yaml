@@ -13,6 +13,7 @@ hadoop:
     api: "true"
 hms-mirror:
   config:
+    testing: "false"
     output-dir: "false"
     path: ${HOME}/.hms-mirror/cfg
     filename: "default.yaml"

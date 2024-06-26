@@ -318,7 +318,7 @@ public class DatabaseService {
     public List<String> listAvailableDatabases(Environment environment) {
         List<String> dbs = new ArrayList<>();
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);
             if (conn != null) {

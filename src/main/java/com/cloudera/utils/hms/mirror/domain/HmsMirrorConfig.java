@@ -72,7 +72,7 @@ public class HmsMirrorConfig implements Cloneable {
 
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
     @Getter
-    private ConnectionPoolType connectionPoolLib = HYBRID; // DBCP2 is Alternate.
+    private ConnectionPoolType connectionPoolLib; // DBCP2 is Alternate.
     private DataStrategyEnum dataStrategy = DataStrategyEnum.SCHEMA_ONLY;
     private boolean databaseOnly = Boolean.FALSE;
     private boolean dumpTestData = Boolean.FALSE;

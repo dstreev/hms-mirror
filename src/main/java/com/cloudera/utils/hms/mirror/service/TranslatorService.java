@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
@@ -394,7 +394,7 @@ public class TranslatorService {
         return dirBuilder.toString().trim();
     }
 
-    public void addGlobalLocationMap(String source, String target) throws SessionRunningException {
+    public void addGlobalLocationMap(String source, String target) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -402,7 +402,7 @@ public class TranslatorService {
         hmsMirrorConfig.getTranslator().addGlobalLocationMap(source, target);
     }
 
-    public String removeGlobalLocationMap(String source) throws SessionRunningException {
+    public String removeGlobalLocationMap(String source) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -415,7 +415,7 @@ public class TranslatorService {
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
 
-    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionRunningException {
+    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 

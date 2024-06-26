@@ -79,7 +79,7 @@ public class Test_so_fel extends E2EBaseTest {
     @Test
     public void issueTest_01() {
         validateTableIssueCount("assorted_test_db", "ext_part_01",
-                Environment.RIGHT, 2);
+                Environment.RIGHT, 3);
     }
 
     @Test

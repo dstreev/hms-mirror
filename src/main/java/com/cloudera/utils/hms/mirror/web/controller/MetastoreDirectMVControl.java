@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +66,7 @@ public class MetastoreDirectMVControl {
     public String save(Model model,
                        @Value("${hms-mirror.config.path}") String configPath,
                        @ModelAttribute("environment") Environment environment,
-                       @ModelAttribute("metastoreDirect") DBStore metastoreDirect) throws IOException, SessionRunningException {
+                       @ModelAttribute("metastoreDirect") DBStore metastoreDirect) throws IOException, SessionException {
         // Ensure we are in an editable state.
         executeSessionService.clearActiveSession();
         // Get the current session config.

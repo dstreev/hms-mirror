@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -81,7 +81,7 @@ public class TranslatorController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.PUT, value = "/")
     public Translator setTransfer(
-            @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation ) throws SessionRunningException {
+            @RequestParam(value = "forceExternalLocation", required = false) Boolean forceExternalLocation ) throws SessionException {
 
         // Don't reload if running.
         executeSessionService.clearActiveSession();
@@ -105,7 +105,7 @@ public class TranslatorController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap")
     public void addGlobalLocationMap(@RequestParam(name = "source", required = true) String source,
-                                     @RequestParam(name = "target", required = true) String target) throws SessionRunningException {
+                                     @RequestParam(name = "target", required = true) String target) throws SessionException {
         log.info("Adding global location map for source: {} and target: {}", source, target);
         // Don't reload if running.
         executeSessionService.clearActiveSession();
@@ -124,7 +124,7 @@ public class TranslatorController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.DELETE, value = "/globalLocationMap")
-    public String removeGlobalLocationMap(@RequestParam(name = "source", required = true) String source) throws SessionRunningException {
+    public String removeGlobalLocationMap(@RequestParam(name = "source", required = true) String source) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -165,7 +165,7 @@ public class TranslatorController {
                                                  @RequestParam(name = "buildSources", required = false) Boolean buildSources,
                                                  @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
                                                  @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
-            throws MismatchException, SessionRunningException, RequiredConfigurationException {
+            throws MismatchException, SessionException, RequiredConfigurationException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : true;
         if (!dryrun) {

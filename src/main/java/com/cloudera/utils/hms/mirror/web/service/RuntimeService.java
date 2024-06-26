@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
@@ -66,7 +66,7 @@ public class RuntimeService {
         this.translatorService = translatorService;
     }
 
-    public RunStatus start(Boolean dryrun, boolean autoGLM) throws RequiredConfigurationException, MismatchException, SessionRunningException {
+    public RunStatus start(Boolean dryrun, boolean autoGLM) throws RequiredConfigurationException, MismatchException, SessionException {
 
         // This is the fastest way to build the database source and the glm from those.  It does require that the
         //   user has already defined Warehouse Plans for the databases they are interested in.

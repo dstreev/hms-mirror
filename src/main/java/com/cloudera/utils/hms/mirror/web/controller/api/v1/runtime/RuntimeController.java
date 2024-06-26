@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,18 +32,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipOutputStream;
 
 @CrossOrigin
 @RestController
@@ -79,7 +72,7 @@ public class RuntimeController {
     public RunStatus start(
 //            @RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun,
-                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM) throws MismatchException, RequiredConfigurationException, SessionRunningException {
+                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM) throws MismatchException, RequiredConfigurationException, SessionException {
         boolean lclAutoGLM = autoGLM != null && autoGLM;
         return runtimeService.start(dryrun, lclAutoGLM);
     }

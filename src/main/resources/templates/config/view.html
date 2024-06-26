@@ -33,95 +33,54 @@
 
 <form id="run_action">
     <div class="pure-g">
-        <div class="pure-u-1-8">
+        <div class="pure-u-1-4">
+            <p th:text="#{config.desc}"/>
+            <p th:if="${RUN_STATUS != null}" th:text="#{config.run.desc}"/>
             <div class="pure-button-group">
                 <a class="pure-button" th:href="@{/config/home}"
-                   th:if="${READ_ONLY}" th:text="#{button.home}"/>
-                <!--    &nbsp;&nbsp;&nbsp;-->
-            </div>
-        </div>
-        <div class="pure-u-1-8">
-            <div class="pure-button-group">
+                   th:text="#{button.home}"/>
                 <a class="pure-button pure-button-primary" th:href="@{/config/edit}"
                    th:if="${READ_ONLY}" th:text="#{button.edit}"/>
-                <!--    &nbsp;&nbsp;&nbsp;-->
             </div>
         </div>
-        <div class="pure-u-1-4">
-
-        </div>
-        <div class="pure-u-1-2 pure-form-aligned">
-            <fieldset th:if="${READ_ONLY}">
-                <legend th:text="#{execute}"/>
-                <div class="pure-g">
-                    <div class="pure-u-1-3">
-                        <div class="pure-control-group tooltip" th:if="${READ_ONLY}">
-                            <span class="tooltiptext" th:text="#{dryrun.tooltip}"></span>
-                            <label for="dryrun" th:text="#{dryrun}"/>
-                            <input class="pure-input-2-3" id="DRY_RUN" type="checkbox" th:checked="true"/>
+        <div class="pure-u-3-4">
+            <div class="pure-g" th:if="${RUN_STATUS != null}">
+                <div class="pure-u-1">
+                    <fieldset>
+                        <legend th:text="#{run.status}"/>
+                        <div class="pure-control-group pure-u-1">
+                            <label for="run_status" th:text="#{run.progress}"/>
+                            <input type="text" id="run_status" th:value="${RUN_STATUS.progress}" readonly="true"/>
                         </div>
-                        <div class="pure-control-group tooltip" th:if="${READ_ONLY}">
-                            <span class="tooltiptext" th:text="#{auto.glm.tooltip}"></span>
-                            <label for="auto_glm" name="AUTO_GLM" th:text="#{auto.glm}"/>
-                            <input class="pure-input-2-3" id="auto_glm" type="checkbox" th:value="true"/>
-                        </div>
-                    </div>
-                    <div class="pure-u-1-3"></div>
-
-                    <div class="pure-u-1-3">
-                        <div class="pure-control-group tooltip" th:if="${READ_ONLY}">
-                            <span class="tooltiptext" th:text="#{execute.tooltip}"></span>
-                            <button class="pure-button" th:href="@{/runtime/start}" th:formmethod="post" type="submit"
-                                    th:text="#{button.start}"/>
-                        </div>
-                    </div>
+                        <fieldset>
+                            <legend th:text="#{run.status.errors}"/>
+                            <ul>
+                                <li th:each="error: ${RUN_STATUS.errors.getMessages()}" th:text="${error}"/>
+                            </ul>
+                        </fieldset>
+                        <fieldset>
+                            <legend th:text="#{run.status.warnings}"/>
+                            <ul>
+                                <li th:each="warning: ${RUN_STATUS.warnings.getMessages()}" th:text="${warning}"/>
+                            </ul>
+                        </fieldset>
+                    </fieldset>
                 </div>
+            </div>
         </div>
-        </fieldset>
-    </div>
     </div>
 </form>
 
 <hr class="solid"/>
 
-<form class="pure-form pure-form-aligned" id="persist_action" th:object="${RUN_CONTAINER}">
-    <fieldset th:if="${READ_ONLY}">
-        <legend th:text="#{config.actions}"/>
-<!--        <div class="">-->
-            <div class="pure-control-group">
-                <label for="saveas" th:text="#{saveAs}"/>
-                <input class="pure-input-2-3" type="text" th:field="*{saveAs}"/>
-            </div>
-            <div class="pure-control-group">
-                <label for="saveasdefault" th:text="#{saveAsDefault}"/>
-                <input id="saveasdefault" type="checkbox" th:field="*{saveAsDefault}"/>
-            </div>
-            <div class="pure-control-group" th:if="${CONFIG.translator != null}">
-                <label for="stripmappings" th:text="#{stripMappings}"/>
-                <input id="stripmappings" type="checkbox" th:field="*{stripMappings}"/>
-            </div>
-            <div class="pure-control-group" th:unless="${CONFIG.clusters[RIGHT] == null}">
-                <label for="flipconfig" th:text="#{flip.configs}"/>
-                <input id="flipconfig" type="checkbox" th:field="*{flipConfigs}"/>
-            </div>
-            <div class="pure-button-group">
-                <button class="pure-button pure-button-primary" th:formaction="@{/config/persist}"
-                        th:formmethod="post" type="submit" th:text="#{button.persist}"/>
-            </div>
-<!--        </div>-->
-    </fieldset>
-</form>
-
-
 <fieldset th:disabled="${READ_ONLY}">
     <legend th:text="#{config}"/>
     <form id="config_action" th:object="${CONFIG}">
-        <div class="pure-button-group">
+        <div class="pure-button-group" th:unless="${READ_ONLY}">
             <button class="pure-button pure-button-primary" th:formaction="@{/config/save}"
-                    th:unless="${READ_ONLY}"
                     th:formmethod="post" type="submit" th:text="#{button.save}"/>
             <a class="pure-button" th:href="@{/config/view}"
-               th:unless="${READ_ONLY}" th:text="#{button.cancel}"/>
+               th:text="#{button.cancel}"/>
         </div>
 
         <hr class="solid" th:unless="${READ_ONLY}"/>
@@ -177,7 +136,7 @@
                         <div class="pure-control-group"
                              th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
                             <label for="strict" th:text="#{config.transfer.storageMigration.strict}"></label>
-                            <input type="checkbox" id="strict"
+                            <input type="checkbox" id="strict" th:disabled="true"
                                    th:field="*{transfer.storageMigration.strict}"
                                    th:checked="${CONFIG.transfer.storageMigration.strict}"/>
                         </div>
@@ -857,27 +816,12 @@
         <legend th:text="#{warehouse.plans}"/>
         <div class="pure-g">
             <div class="pure-u-1-5">
-                <fieldset>
-                    <legend th:text="#{warehouse.plan.add}"/>
-                    <form class="pure-form" th:action="@{/config/warehouse/plan/add}" method="post">
-                        <div class="pure-control-group">
-                            <label for="database" th:text="#{database}"/>
-                            <input id="database" name="DATABASE" type="text"/>
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="extDir" th:text="#{external.warehouse}"/>
-                            <input id="extDir" name="EXTERNAL_DIRECTORY" type="text"/>
-                        </div>
-                        <div class="pure-control-group">
-                            <label for="mngdDir" th:text="#{managed.warehouse}"/>
-                            <input id="mngdDir" name="MANAGED_DIRECTORY" type="text"/>
-                        </div>
-                        <div class="pure-control-group">
-                            <button class="pure-button pure-button-primary" type="submit" th:text="#{button.add}"/>
-                        </div>
-                    </form>
-                </fieldset>
-                <!--                <a class="pure-button" th:href="@{/translator/warehousePlan/create}" th:text="#{button.add}"/>-->
+                <form class="pure-form" th:action="@{/warehouse/plan/add}" method="get">
+                    <div class="pure-control-group">
+                        <button class="pure-button pure-button-primary" type="submit"
+                                th:text="#{button.add}"/>
+                    </div>
+                </form>
             </div>
             <div class="pure-u-4-5">
                 <table class="pure-table">
@@ -915,17 +859,17 @@
             <!--          dryrun, buildSources, consolidationLevel, partitionLevelMisMatch -->
             <div class="pure-control-group">
                 <label for="glm_dryrun" th:text="#{dryrun}"/>
-                <input id="glm_dryrun" type="checkbox" name="glm_dryrun"
-                       th:checked="true"
+                <input id="glm_dryrun" type="checkbox" name="GLM_DRYRUN"
+                       th:checked="true">
             </div>
             <div class="pure-control-group">
                 <label for="buildSources" th:text="#{build.sources}"/>
-                <input id="buildSources" type="checkbox" name="buildSources"
+                <input id="buildSources" type="checkbox" name="BUILD_SOURCES"
                        th:checked="true"/>
             </div>
             <div class="pure-control-group">
                 <label for="consolidationLevel" th:text="#{consolidation.level}"/>
-                <select id="consolidationLevel" name="consolidationLevel">
+                <select id="consolidationLevel" name="CONSOLIDATION_LEVEL">
                     <option value="1" selected>1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -936,7 +880,7 @@
             </div>
             <div class="pure-control-group">
                 <label for="partitionLevelMisMatch" th:text="#{partition.level.mismatch}"/>
-                <input id="partitionLevelMisMatch" type="checkbox" name="partitionLevelMisMatch"
+                <input id="partitionLevelMisMatch" type="checkbox" name="PARTITION_LEVEL_MISMATCH"
                        th:checked="true"/>
             </div>
             <div class="pure-control-group">

@@ -18,13 +18,11 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +31,6 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -121,15 +118,15 @@ public class ExecuteSessionService {
         return session;
     }
 
-    public void clearLoadedSession() throws SessionRunningException {
+    public void clearLoadedSession() throws SessionException {
         clearActiveSession();
         loadedSession = null;
     }
 
-    public void clearActiveSession() throws SessionRunningException {
+    public void clearActiveSession() throws SessionException {
         if (activeSession != null) {
            if (activeSession.getRunning().get()) {
-               throw new SessionRunningException("Session is still running.  You can't change the session while it is running.");
+               throw new SessionException("Session is still running.  You can't change the session while it is running.");
            } else {
             activeSession = null;
            };
@@ -141,7 +138,11 @@ public class ExecuteSessionService {
     public ExecuteSession getActiveSession() {
         if (activeSession == null) {
             log.warn("No active session.  Transitioning loaded session to active.");
-            transitionLoadedSessionToActive();
+            try {
+                transitionLoadedSessionToActive();
+            } catch (SessionException e) {
+                //throw new RuntimeException(e);
+            }
 //            throw new RuntimeException("No active session. Try configuring a session first.");
         }
         return activeSession;
@@ -176,16 +177,16 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessions separate.  The active session is the
         one that will be referenced during the run.
      */
-    public Boolean transitionLoadedSessionToActive() {
+    public Boolean transitionLoadedSessionToActive() throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
         if (activeSession != null && activeSession.getRunning().get()) {
-            throw new RuntimeException("Session is still running.  Cannot transition to active.");
+            throw new SessionException("Session is still running.  Cannot transition to active.");
         }
 
         // This should get the loaded session and clone it.
         if (loadedSession == null) {
-            throw new RuntimeException("No session loaded.");
+            throw new SessionException("No session loaded.");
         }
 
 //        ExecuteSession loadedSession = getSession(null);

@@ -19,11 +19,14 @@ package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import org.springframework.ui.Model;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ModelUtils implements ControllerReferences {
 
@@ -50,9 +53,19 @@ public class ModelUtils implements ControllerReferences {
         model.addAttribute(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
     }
 
+    public static List<DataStrategyEnum> getSupportedDataStrategies() {
+        List<DataStrategyEnum> supportedDataStrategies = new ArrayList<>();
+        supportedDataStrategies.add(DataStrategyEnum.STORAGE_MIGRATION);
+        return supportedDataStrategies;
+    }
+
     public static void configSupportDataStrategyForModel(Model model) {
         // Add SUPPORTED and UNSUPPORTED to the model
-        model.addAttribute(SUPPORTED_DATA_STRATEGIES, new String[]{"STORAGE_MIGRATION"});
+//        List<String> supportedDataStrategies = new ArrayList<>();
+//        for (DataStrategyEnum dataStrategy : getSupportedDataStrategies()) {
+//            supportedDataStrategies.add(dataStrategy.name());
+//        }
+        model.addAttribute(SUPPORTED_DATA_STRATEGIES, getSupportedDataStrategies().toArray(new DataStrategyEnum[0]));
     }
 
     public static void configSupportedHiveDriverClassesForModel(Model model) {
@@ -66,7 +79,7 @@ public class ModelUtils implements ControllerReferences {
             Method method = null;
             try {
                 method = clazz.getMethod("values");
-                Enum<?>[] enums = (Enum<?>[])method.invoke(null);
+                Enum<?>[] enums = (Enum<?>[]) method.invoke(null);
                 String[] enumNames = new String[enums.length];
                 for (int i = 0; i < enums.length; i++) {
                     enumNames[i] = enums[i].name();

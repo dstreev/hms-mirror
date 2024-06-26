@@ -19,7 +19,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.*;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
@@ -171,7 +171,7 @@ public class ConfigController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/reload/{id}")
-    public HmsMirrorConfig reload(@PathVariable @NotNull String id) throws SessionRunningException {
+    public HmsMirrorConfig reload(@PathVariable @NotNull String id) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -275,7 +275,7 @@ public class ConfigController {
             @RequestParam(value = "skipLegacyTranslation", required = false) Boolean skipLegacyTranslation,
             @RequestParam(value = "sync", required = false) Boolean sync,
             @RequestParam(value = "transferOwnership", required = false) Boolean transferOwnership
-    ) throws SessionRunningException {
+    ) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -369,7 +369,7 @@ public class ConfigController {
                                  @RequestParam(value = "tblExcludeRegEx", required = false) String excludeRegEx,
                                  @RequestParam(value = "tblRegEx", required = false) String regEx,
                                  @RequestParam(value = "tblSizeLimit", required = false) String tblSizeLimit,
-                                 @RequestParam(value = "tblPartitionLimit", required = false) String tblPartitionLimit) throws SessionRunningException {
+                                 @RequestParam(value = "tblPartitionLimit", required = false) String tblPartitionLimit) throws SessionException {
 
         // Don't reload if running.
         executeSessionService.clearActiveSession();
@@ -413,7 +413,7 @@ public class ConfigController {
                                       @RequestParam(value = "acid-downgrade", required = false) Boolean downgrade,
                                       @RequestParam(value = "acid-inplace-downgrade", required = false) Boolean inplace,
                                       @RequestParam(value = "non-native", required = false) Boolean nonNative,
-                                      @RequestParam(value = "views", required = false) Boolean views) throws SessionRunningException {
+                                      @RequestParam(value = "views", required = false) Boolean views) throws SessionException {
 
         // Don't reload if running.
         executeSessionService.clearActiveSession();
@@ -470,7 +470,7 @@ public class ConfigController {
                                       @RequestParam(value = "remoteWorkingDirectory", required = false) String remoteWorkingDirectory,
                                       @RequestParam(value = "intermediateStorage", required = false) String intermediateStorage,
                                       @RequestParam(value = "commonStorage", required = false) String commonStorage
-    ) throws SessionRunningException {
+    ) throws SessionException {
 
         // Don't reload if running.
         executeSessionService.clearActiveSession();
@@ -515,7 +515,7 @@ public class ConfigController {
     public Warehouse setTransferWarehouse(@RequestParam(name = "sessionId", required = false) String sessionId,
                                                 @RequestParam(value = "managedDirectory", required = false) String managedDirectory,
                                                 @RequestParam(value = "externalDirectory", required = false) String externalDirectory
-    ) throws SessionRunningException {
+    ) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -544,7 +544,7 @@ public class ConfigController {
                                                 @RequestParam(value = "dataMovementStrategy", required = false) DataMovementStrategyEnum dataMovementStrategy,
                                                 @RequestParam(value = "dataFlow", required = false) DistcpFlowEnum dataFlow,
                                                 @RequestParam(value = "strict", required = false) Boolean strict
-    ) throws SessionRunningException {
+    ) throws SessionException {
 
         // Don't reload if running.
         executeSessionService.clearActiveSession();

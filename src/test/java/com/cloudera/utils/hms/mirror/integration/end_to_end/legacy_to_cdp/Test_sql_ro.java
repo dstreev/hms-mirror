@@ -72,6 +72,10 @@ public class Test_sql_ro extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
+        // Under normal conditions, this should fail because the DB doesn't exist yet and
+        // this state would compromise the integrity of the data.  Under test conditions,
+        // this doesn't get triggered because of the "loadTestData" method.
+        // This test is currently a false positive.
         long check = MessageCode.RO_DB_DOESNT_EXIST.getLong();
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }

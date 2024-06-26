@@ -21,7 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.support.RunContainer;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +48,7 @@ public class RuntimeMVController {
 
     @RequestMapping(method = RequestMethod.POST, value = "/start")
     public String start(Model model,
-            @ModelAttribute(RUN_CONTAINER) RunContainer runContainer) throws MismatchException, RequiredConfigurationException, SessionRunningException {
+            @ModelAttribute(RUN_CONTAINER) RunContainer runContainer) throws MismatchException, RequiredConfigurationException, SessionException {
         boolean lclAutoGLM = runContainer.getAutoGLM() != null && runContainer.getAutoGLM();
         RunStatus runStatus =  runtimeService.start(runContainer.getDryrun(), lclAutoGLM);
         // Not necessary..  will be fetched in config/home

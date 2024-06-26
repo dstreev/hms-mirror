@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionRunningException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -63,7 +63,7 @@ public class TranslatorMVController {
 
     @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
     public String removeGlobalLocationMap(Model model,
-                                          @PathVariable @NotNull String source) throws SessionRunningException {
+                                          @PathVariable @NotNull String source) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
@@ -75,11 +75,11 @@ public class TranslatorMVController {
 
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public String buildGLMFromPlans(Model model,
-                                    @RequestParam(name = "glm_dryrun", required = false) Boolean dryrun,
-                                    @RequestParam(name = "buildSources", required = false) Boolean buildSources,
-                                    @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
-                                    @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
-            throws MismatchException, SessionRunningException, RequiredConfigurationException {
+                                    @RequestParam(name = GLM_DRYRUN, required = true) Boolean dryrun,
+                                    @RequestParam(name = BUILD_SOURCES, required = true) Boolean buildSources,
+                                    @RequestParam(name = PARTITION_LEVEL_MISMATCH, required = true) Boolean partitionLevelMisMatch,
+                                    @RequestParam(name = CONSOLIDATION_LEVEL, required = true) Integer consolidationLevel)
+            throws MismatchException, SessionException, RequiredConfigurationException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : true;
 

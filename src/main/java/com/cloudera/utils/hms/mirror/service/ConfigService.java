@@ -36,6 +36,7 @@ import java.util.TreeSet;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
@@ -758,12 +759,18 @@ public class ConfigService {
                 }
             }
             // If the warehouses aren't set and there are no GLM entries...
-            if (config.getTransfer().getWarehouse() == null ||
-                    (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                            config.getTransfer().getWarehouse().getExternalDirectory() == null)) {
-                if (config.getTranslator().getGlobalLocationMap().isEmpty()) {
+            if (isNull(config.getTransfer().getWarehouse()) ||
+                    (isNull(config.getTransfer().getWarehouse().getManagedDirectory()) ||
+                            isNull(config.getTransfer().getWarehouse().getExternalDirectory()))) {
+                if (!doWareHousePlansExist(session)) {
                     runStatus.addError(STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS);
                     rtn = Boolean.FALSE;
+                } else {
+                    // Check if there are any GLM's defined.
+                    if (config.getTranslator().getGlobalLocationMap().isEmpty()) {
+                        runStatus.addError(STORAGE_MIGRATION_GLMS_NOT_BUILT);
+                        rtn = Boolean.FALSE;
+                    }
                 }
             }
         }
@@ -921,13 +928,14 @@ public class ConfigService {
                 runStatus.addError(LEFT_KERB_JAR_LOCATION);
             }
 
-            HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
 
-            if (rightHS2 != null) {
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
                 // TODO: Add validation for -rid (right-is-disconnected) option.
                 // - Only applies to SCHEMA_ONLY, SQL, EXPORT_IMPORT, and HYBRID data strategies.
                 // -
                 //
+                HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
+
                 if (config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION
                         && !rightHS2.isValidUri()) {
                     if (!config.getDataStrategy().equals(DataStrategyEnum.DUMP)) {

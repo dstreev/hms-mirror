@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.exceptions;
 
-public class SessionRunningException extends Throwable {
-    public SessionRunningException(String s) {
+public class SessionException extends Throwable {
+    public SessionException(String s) {
         super(s);
     }
 }
