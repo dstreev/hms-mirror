@@ -42,7 +42,7 @@ public class RunStatus implements Comparable<RunStatus> {
     private final Messages errors = new Messages(150);
     @JsonIgnore
     private final Messages warnings = new Messages(150);
-
+    @JsonIgnore Integer concurrency;
     @JsonIgnore
     Future<Boolean> runningTask = null;
 

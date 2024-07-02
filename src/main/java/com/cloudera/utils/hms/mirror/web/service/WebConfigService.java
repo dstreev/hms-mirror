@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.list.TreeList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -32,6 +33,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static com.cloudera.utils.hms.mirror.util.ModelUtils.getSupportedDataStrategies;
 
@@ -66,9 +69,9 @@ public class WebConfigService {
     /*
     Scan the config directory and return a list of all the config files.
      */
-    public List<String> getConfigList() {
+    public Set<String> getConfigList() {
         // Scan a directory and return a list of all the files with a .yaml extension.
-        List<String> configList = new ArrayList<>();
+        Set<String> configList = new TreeSet<>();
 
         // Users home directory
         String cfgPath = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg";

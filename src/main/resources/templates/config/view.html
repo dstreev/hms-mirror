@@ -37,11 +37,42 @@
             <p th:text="#{config.desc}"/>
             <p th:if="${RUN_STATUS != null}" th:text="#{config.run.desc}"/>
             <div class="pure-button-group">
-                <a class="pure-button" th:href="@{/config/home}"
+                <a class="pure-button pure-input-1-3" th:href="@{/config/home}"
                    th:text="#{button.home}"/>
-                <a class="pure-button pure-button-primary" th:href="@{/config/edit}"
+                <a class="pure-button pure-button-primary pure-input-1-3" th:href="@{/config/edit}"
                    th:if="${READ_ONLY}" th:text="#{button.edit}"/>
             </div>
+            <hr class="solid"/>
+            <fieldset>
+                <legend th:text="#{password.management}"/>
+                <div class="pure-control-group">
+                    <label for="passwordkey" th:text="#{password.key}"/>
+                    <input type="text" id="passwordkey" name="PASSWORD_KEY"/>
+                </div>
+                <div th:unless="${CONFIG.encryptedPasswords}">
+                    <div class="pure-button-group">
+                        <button class="pure-button pure-button-primary"
+                                th:formaction="@{/config/encryptPasswords}"
+                                th:formmethod="post" type="submit"
+                                th:text="#{button.encrypt}"/>
+                    </div>
+                </div>
+                <div th:if="${CONFIG.encryptedPasswords}">
+                    <p th:text="#{encrypted.password.reset}"/>
+                    <div class="pure-button-group">
+                        <button class="pure-button pure-button-primary"
+                                th:formaction="@{/config/decryptPasswords}"
+                                th:formmethod="post" type="submit"
+                                th:text="#{button.decrypt}"/>
+                    </div>
+                </div>
+                <div>
+                    <button class="pure-button"
+                            th:formaction="@{/password/view}"
+                            th:formmethod="get" type="submit"
+                            th:text="#{button.view}"/>
+                </div>
+            </fieldset>
         </div>
         <div class="pure-u-3-4">
             <div class="pure-g" th:if="${RUN_STATUS != null}">
@@ -604,7 +635,7 @@
                                     </div>
 
                                     <div class="pure-control-group"
-                                         th:if="${('SCHEMA_ONLY HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION SCHEMA_ONLY HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>
                                         <input type="checkbox" name="hs2legacy"
                                                th:field="*{clusters[__${env}__].legacyHive}"
@@ -612,14 +643,14 @@
                                     </div>
 
                                     <div class="pure-control-group"
-                                         th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="cine" th:text="#{cluster.cine}"/>
                                         <input id="cine" type="checkbox"
                                                th:field="*{clusters[__${env}__].createIfNotExists}"
                                                th:checked="${CONFIG.clusters[__${env}__]?.createIfNotExists}"/>
                                     </div>
                                     <div class="pure-control-group"
-                                         th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="hdphive3" th:text="#{cluster.hdp.hive3}"/>
                                         <input id="hdphive3" type="checkbox"
                                                th:field="*{clusters[__${env}__].hdpHive3}"
@@ -627,28 +658,28 @@
                                     </div>
 
                                     <div class="pure-control-group"
-                                         th:if="${('SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="partauto" th:text="#{cluster.partition.auto}"/>
                                         <input id="partauto" type="checkbox"
                                                th:field="*{clusters[__${env}__].partitionDiscovery.auto}"
                                                th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.auto}"/>
                                     </div>
                                     <div class="pure-control-group"
-                                         th:if="${('SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="partmsck" th:text="#{cluster.partition.msck}"/>
                                         <input id="partmsck" type="checkbox"
                                                th:field="*{clusters[__${env}__].partitionDiscovery.initMSCK}"
                                                th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.initMSCK}"/>
                                     </div>
                                     <div class="pure-control-group"
-                                         th:if="${('HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="tblstats" th:text="#{cluster.enable.table.stats}"/>
                                         <input id="tblstats" type="checkbox"
                                                th:field="*{clusters[__${env}__].enableAutoTableStats}"
                                                th:checked="${CONFIG.clusters[__${env}__]?.enableAutoTableStats}"/>
                                     </div>
                                     <div class="pure-control-group"
-                                         th:if="${('HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                                         th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
                                         <label for="colstats" th:text="#{cluster.enable.colums.stats}"/>
                                         <input id="colstats" type="checkbox"
                                                th:field="*{clusters[__${env}__].enableAutoColumnStats}"
@@ -706,10 +737,31 @@
                                         <label for="hs2password" th:text="#{hive.server2.password}"/>
                                         <!--                                    TODO: Issue with password getting translated through when using the 'password'-->
                                         <!--                                           input type. -->
-                                        <input class="pure-input-1-2" id="hs2password" type="text"
+
+                                        <input class="pure-input-1-2" id="hs2password" type="password"
                                                autocomplete="off"
+                                               th:unless="${READ_ONLY && !CONFIG.encryptedPasswords}"
                                                th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[password]}"
                                                placeholder="Set Hive Server2 Password"/>
+                                        <input class="pure-input-1-2" id="hs2password" type="text" autocomplete="off"
+                                               th:if="${READ_ONLY && !CONFIG.encryptedPasswords}"
+                                               value="-- not encrypted --" readonly/>
+                                        <input class="pure-input-1-2" id="hs2password" type="text" autocomplete="off"
+                                               th:if="${READ_ONLY && CONFIG.encryptedPasswords}" value="-- encrypted --"
+                                               readonly/>
+                                    </div>
+                                    <div class="pure-control-group">
+                                        <label for="hs2maxWaitMillis" th:text="#{hive.server2.max.wait.ms}"/>
+                                        <input class="pure-input-1-2" type="number" id="hs2maxWaitMillis"
+                                               autocomplete="off"
+                                               th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"/>
+                                        <!--                                               th:value="${CONFIG.clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"/>-->
+                                    </div>
+                                    <div class="pure-control-group">
+                                        <label for="hs2maxTotal" th:text="#{hive.server2.max.total}"/>
+                                        <input class="pure-input-1-2" type="number" id="hs2maxTotal" autocomplete="off"
+                                               th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>
+                                        <!--                                               th:value="${CONFIG.clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>-->
                                     </div>
                                     <div class="pure-control-group">
                                         <label for="hs2jars" th:text="#{hive.server2.jars}"/>
@@ -718,16 +770,6 @@
                                                placeholder="Set HiveServer2 JDBC Driver Jar File(s)"/>
                                         <span class="pure-form-message-inline">Local file(s) on application server host.</span>
                                     </div>
-                                    <!--                                    <div class="pure-button-group">-->
-                                    <!--                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.edit}"-->
-                                    <!--                                        th:formaction="@{/config/cluster/edit}" th:formmethod="post"/>-->
-                                    <!--                                        <a class="pure-button" th:href="@{/hiveServer2/edit?environment=__${env}__}"-->
-                                    <!--                                           th:text="#{button.edit}"/>-->
-                                    <!--                                <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>-->
-                                    <!--                                    </div>-->
-
-                                    <!--                        </div>-->
-                                    <!--                    </div>-->
                                 </div>
                             </fieldset>
                             <fieldset>
@@ -764,10 +806,26 @@
                                     </div>
                                     <div class="pure-control-group">
                                         <label for="metastorepassword" th:text="#{metastore.direct.password}"/>
-                                        <input class="pure-input-1-4" id="metastorepassword" type="text"
-                                               th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[password]}"
+                                        <!--                                        <input class="pure-input-1-4" id="metastorepassword" type="password"-->
+                                        <!--                                               th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[password]}"-->
+                                        <!--                                               autocomplete="off" th:unless="${READ_ONLY}"-->
+                                        <!--                                               placeholder="Set Metastore Password"/>-->
+                                        <!--                                        <input class="pure-input-1-2" id="metastorepassword" type="text" autocomplete="off"-->
+                                        <!--                                               th:if="${READ_ONLY}" value="***********" readonly/>-->
+                                        <input class="pure-input-1-2" id="metastorepassword" type="password"
                                                autocomplete="off"
+                                               th:unless="${READ_ONLY && !CONFIG.encryptedPasswords}"
+                                               th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[password]}"
                                                placeholder="Set Metastore Password"/>
+                                        <input class="pure-input-1-2" id="metastorepassword" type="text"
+                                               autocomplete="off"
+                                               th:if="${READ_ONLY && !CONFIG.encryptedPasswords}"
+                                               value="-- not encrypted --" readonly/>
+                                        <input class="pure-input-1-2" id="metastorepassword" type="text"
+                                               autocomplete="off"
+                                               th:if="${READ_ONLY && CONFIG.encryptedPasswords}" value="-- encrypted --"
+                                               readonly/>
+
                                     </div>
                                     <div class="pure-control-group">
                                         <label for="metastoreinitsql" th:text="#{metastore.init.sql}"/>
@@ -858,9 +916,16 @@
 
             <!--          dryrun, buildSources, consolidationLevel, partitionLevelMisMatch -->
             <div class="pure-control-group">
-                <label for="glm_dryrun" th:text="#{dryrun}"/>
+                <label for="glm_dryrun" th:text="#{dry.run}"/>
                 <input id="glm_dryrun" type="checkbox" name="GLM_DRYRUN"
-                       th:checked="true">
+                       th:checked="true"/>
+                <!--                <select id="glm_dryrun" class="pure-input-1" name="GLM_DRYRUN">-->
+                <!--                    <option th:each="bool: ${BOOLEANS}"-->
+                <!--                            th:value="${bool}"-->
+                <!--                            th:text="${bool}"-->
+                <!--                            th:selected="true"/>-->
+                <!--                </select>-->
+
             </div>
             <div class="pure-control-group">
                 <label for="buildSources" th:text="#{build.sources}"/>
@@ -901,7 +966,7 @@
                 <tr>
                     <td>
                         <a class="pure-button"
-                           th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                           th:href="@{/templates/translator/globalLocationMap/delete?source=__${glm.key}__}"
                            th:text="#{delete}"/>
                     </td>
                     <td><label th:text="${glm.key}"/></td>

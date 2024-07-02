@@ -21,6 +21,7 @@ import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,10 +35,9 @@ import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
+
+import static java.util.Objects.nonNull;
 
 @Slf4j
 public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
@@ -51,8 +51,11 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
     @Setter
     private ExecuteSession executeSession;
 
-    public ConnectionPoolsDBCP2Impl(ExecuteSession executeSession) {
+    private PasswordService passwordService;
+
+    public ConnectionPoolsDBCP2Impl(ExecuteSession executeSession, PasswordService passwordService) {
         this.executeSession = executeSession;
+        this.passwordService = passwordService;
     }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
@@ -168,8 +171,18 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
         for (Environment environment : environments) {
             HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
             if (!hs2Config.isDisconnected()) {
+                // Make a copy.
+                Properties connProperties = new Properties();
+                connProperties.putAll(hs2Config.getConnectionProperties());
+                // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
+                if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
+                    String encryptedPassword = connProperties.getProperty("password");
+                    String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
+                    connProperties.setProperty("password", decryptedPassword);
+                }
+
                 ConnectionFactory connectionFactory =
-                        new DriverManagerConnectionFactory(hs2Config.getUri(), hs2Config.getConnectionProperties());
+                        new DriverManagerConnectionFactory(hs2Config.getUri(), connProperties);
 
                 PoolableConnectionFactory poolableConnectionFactory =
                         new PoolableConnectionFactory(connectionFactory, null);
@@ -208,8 +221,19 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
             DBStore metastoreDirectConfig = metastoreDirectConfigs.get(environment);
 
             if (metastoreDirectConfig != null) {
+
+                // Make a copy.
+                Properties connProperties = new Properties();
+                connProperties.putAll(metastoreDirectConfig.getConnectionProperties());
+                // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
+                if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
+                    String encryptedPassword = connProperties.getProperty("password");
+                    String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
+                    connProperties.setProperty("password", decryptedPassword);
+                }
+
                 ConnectionFactory msconnectionFactory =
-                        new DriverManagerConnectionFactory(metastoreDirectConfig.getUri(), metastoreDirectConfig.getConnectionProperties());
+                        new DriverManagerConnectionFactory(metastoreDirectConfig.getUri(), connProperties);
 
                 PoolableConnectionFactory mspoolableConnectionFactory =
                         new PoolableConnectionFactory(msconnectionFactory, null);

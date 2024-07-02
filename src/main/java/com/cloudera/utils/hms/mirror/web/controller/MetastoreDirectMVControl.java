@@ -36,6 +36,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 
+import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.ACTION;
+
 @Controller
 @RequestMapping(path = "/metastoreDirect")
 @Slf4j
@@ -51,7 +53,7 @@ public class MetastoreDirectMVControl {
     @RequestMapping(value = "/edit", method = RequestMethod.GET)
     public String edit(Model model,
                        @RequestParam(value = "environment", required = true) String environment) {
-        model.addAttribute("action", "edit");
+        model.addAttribute(ACTION, "edit");
         ExecuteSession curSession = executeSessionService.getLoadedSession();
         HmsMirrorConfig currentConfig = curSession.getConfig();
         Cluster cluster = currentConfig.getCluster(Environment.valueOf(environment));

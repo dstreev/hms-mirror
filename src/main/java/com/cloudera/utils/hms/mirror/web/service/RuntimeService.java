@@ -31,6 +31,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.Future;
@@ -66,7 +67,8 @@ public class RuntimeService {
         this.translatorService = translatorService;
     }
 
-    public RunStatus start(Boolean dryrun, boolean autoGLM) throws RequiredConfigurationException, MismatchException, SessionException {
+    public RunStatus start(Boolean dryrun, boolean autoGLM,
+                           Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException {
 
         // This is the fastest way to build the database source and the glm from those.  It does require that the
         //   user has already defined Warehouse Plans for the databases they are interested in.
@@ -80,7 +82,7 @@ public class RuntimeService {
         RunStatus runStatus = null;
         ExecuteSession session = null;
 
-        if (executeSessionService.transitionLoadedSessionToActive()) {
+        if (executeSessionService.transitionLoadedSessionToActive(concurrency)) {
 
             session = executeSessionService.getActiveSession();
 

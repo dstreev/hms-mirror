@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @CrossOrigin
 @RestController
@@ -82,7 +83,7 @@ public class ConfigController {
     })
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/list")
-    public List<String> getConfigList() {
+    public Set<String> getConfigList() {
         log.info("Getting Config List");
         return webConfigService.getConfigList();
     }

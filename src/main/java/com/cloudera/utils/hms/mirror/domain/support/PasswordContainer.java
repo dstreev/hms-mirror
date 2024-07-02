@@ -17,22 +17,18 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class RunContainer {
-    private Boolean dryrun = Boolean.TRUE;
-    private Boolean autoGLM = Boolean.FALSE;
-    private String sessionId;
-    private String passwordKey;
-    private DataStrategyEnum dataStrategy;
+public class PasswordContainer {
 
-    private String saveAs = "change_me.yaml";
-    private boolean stripMappings = Boolean.TRUE;
-    private boolean saveAsDefault = Boolean.FALSE;
-    private boolean flipConfigs = Boolean.FALSE;
+    private String leftHS2;
+    private String rightHS2;
+    private String leftMetastore;
+    private String rightMetastore;
+    private String testPassword;
+    private String passwordKey;
 
 }

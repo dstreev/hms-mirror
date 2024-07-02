@@ -30,6 +30,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
@@ -72,9 +73,10 @@ public class RuntimeController {
     public RunStatus start(
 //            @RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun,
-                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM) throws MismatchException, RequiredConfigurationException, SessionException {
+                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM,
+                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
         boolean lclAutoGLM = autoGLM != null && autoGLM;
-        return runtimeService.start(dryrun, lclAutoGLM);
+        return runtimeService.start(dryrun, lclAutoGLM, maxThreads);
     }
 
 

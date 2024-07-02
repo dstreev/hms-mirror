@@ -37,61 +37,75 @@ import org.springframework.core.annotation.Order;
 @Setter
 public class PasswordOptions {
 
-    @Bean
+//    @Bean
+//    @Order(1)
+//    @ConditionalOnProperty(prefix = "hms-mirror",
+//            name = "config.filename",
+//            matchIfMissing = true)
+//    HmsMirrorConfig loadHmsMirrorConfigFromFile(@Value("${hms-mirror.config.filename}") String configFilename) {
+//        HmsMirrorConfig hmsMirrorConfig;
+//        try {
+//            hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);
+//        } catch(RuntimeException rte) {
+//            // Couldn't locate the config file.
+//            log.error("Couldn't locate the config file: {}. Creating empty hmsMirrorConfig object", configFilename);
+//            hmsMirrorConfig = new HmsMirrorConfig();
+//        }
+//        return hmsMirrorConfig;
+//    }
+
+//    @Bean
+//    ExecuteSession executeSession(HmsMirrorConfig hmsMirrorConfig) {
+//        ExecuteSession executeSession = new ExecuteSession();
+//        executeSession.setRunStatus(new RunStatus());
+//        executeSession.setConfig(hmsMirrorConfig);
+//        return executeSession;
+//    }
+
+    @Bean("password")
     @Order(1)
-    @ConditionalOnProperty(prefix = "hms-mirror",
-            name = "config.filename",
-            matchIfMissing = true)
-    HmsMirrorConfig loadHmsMirrorConfigFromFile(@Value("${hms-mirror.config.filename}") String configFilename) {
-        HmsMirrorConfig hmsMirrorConfig;
-        try {
-            hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);
-        } catch(RuntimeException rte) {
-            // Couldn't locate the config file.
-            log.error("Couldn't locate the config file: {}. Creating empty hmsMirrorConfig object", configFilename);
-            hmsMirrorConfig = new HmsMirrorConfig();
-        }
-        return hmsMirrorConfig;
+    Password configPassword() {
+        Password password = new Password();
+        return password;
     }
 
     @Bean
-    ExecuteSession executeSession(HmsMirrorConfig hmsMirrorConfig) {
-        ExecuteSession executeSession = new ExecuteSession();
-        executeSession.setRunStatus(new RunStatus());
-        executeSession.setConfig(hmsMirrorConfig);
-        return executeSession;
-    }
-
-    @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.decrypt-password")
-    CommandLineRunner configDecryptPassword(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.decrypt-password}") String value) {
+    CommandLineRunner configDecryptPassword(Password password, @Value("${hms-mirror.config.decrypt-password}") String value) {
         return args -> {
             log.info("decrypt-password: {}", value);
-            hmsMirrorConfig.setEncryptedPassword(value);
+            password.setValue(value);
+            password.setConversion(Password.Conversion.DECRYPT);
+//            hmsMirrorConfig.setEncryptedPassword(value);
         };
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.password")
-    CommandLineRunner configPassword(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.password}") String value) {
+    CommandLineRunner configPassword(Password password, @Value("${hms-mirror.config.password}") String value) {
         return args -> {
             log.info("password: {}", "********");
-            hmsMirrorConfig.setPassword(value);
+            password.setValue(value);
+            password.setConversion(Password.Conversion.ENCRYPT);
+//            executeSession.setPassword(value);
+//            hmsMirrorConfig.setPassword(value);
         };
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.password-key")
-    CommandLineRunner configPasswordKey(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.password-key}") String value) {
+    CommandLineRunner configPasswordKey(Password password, @Value("${hms-mirror.config.password-key}") String value) {
         return args -> {
             log.info("password-key: {}", value);
-            hmsMirrorConfig.setPasswordKey(value);
+            password.setPasswordKey(value);
+//            executeSession.setPasswordKey(value);
+//            hmsMirrorConfig.setPasswordKey(value);
         };
     }
 

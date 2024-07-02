@@ -21,6 +21,7 @@ import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -35,6 +36,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
+import static java.util.Objects.nonNull;
+
 @Slf4j
 public class ConnectionPoolsHikariImpl implements ConnectionPools {
 
@@ -47,8 +50,11 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
     @Setter
     private ExecuteSession executeSession;
 
-    public ConnectionPoolsHikariImpl(ExecuteSession executeSession) {
+    private PasswordService passwordService;
+
+    public ConnectionPoolsHikariImpl(ExecuteSession executeSession, PasswordService passwordService) {
         this.executeSession = executeSession;
+        this.passwordService = passwordService;
     }
 
     public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
@@ -163,9 +169,20 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
                                 //      Connection.isValid() api (JDBC4) and prevents Hikari-CP from attempting to call it.
                                 props.put("connectionTestQuery", "SELECT 1");
                             }
+
+                            // Make a copy.
+                            Properties connProperties = new Properties();
+                            connProperties.putAll(hs2Config.getConnectionProperties());
+                            // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
+                            if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
+                                String encryptedPassword = connProperties.getProperty("password");
+                                String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
+                                connProperties.setProperty("password", decryptedPassword);
+                            }
+
                             HikariConfig config = new HikariConfig(props);
                             config.setJdbcUrl(hs2Config.getUri());
-                            config.setDataSourceProperties(hs2Config.getConnectionProperties());
+                            config.setDataSourceProperties(connProperties);
                             HikariDataSource poolingDatasource = new HikariDataSource(config);
 
                             hs2DataSources.put(environment, poolingDatasource);
@@ -207,9 +224,19 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
 
             if (metastoreDirectConfig != null) {
 
+                // Make a copy.
+                Properties connProperties = new Properties();
+                connProperties.putAll(metastoreDirectConfig.getConnectionProperties());
+                // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
+                if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
+                    String encryptedPassword = connProperties.getProperty("password");
+                    String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
+                    connProperties.setProperty("password", decryptedPassword);
+                }
+
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl(metastoreDirectConfig.getUri());
-                config.setDataSourceProperties(metastoreDirectConfig.getConnectionProperties());
+                config.setDataSourceProperties(connProperties);
                 HikariDataSource poolingDatasource = new HikariDataSource(config);
 
                 metastoreDirectDataSources.put(environment, poolingDatasource);

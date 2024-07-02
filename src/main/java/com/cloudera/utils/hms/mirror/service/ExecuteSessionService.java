@@ -18,8 +18,11 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -42,6 +45,8 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
+
+import static java.util.Objects.nonNull;
 
 @Service
 @Slf4j
@@ -103,7 +108,7 @@ public class ExecuteSessionService {
     }
 
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
-        String sessionName = sessionId != null? sessionId : DEFAULT;
+        String sessionName = sessionId != null ? sessionId : DEFAULT;
 
         ExecuteSession session;
         if (sessions.containsKey(sessionName)) {
@@ -125,13 +130,14 @@ public class ExecuteSessionService {
 
     public void clearActiveSession() throws SessionException {
         if (activeSession != null) {
-           if (activeSession.getRunning().get()) {
-               throw new SessionException("Session is still running.  You can't change the session while it is running.");
-           } else {
-            activeSession = null;
-           };
-           // Close the connection pools, so they can be reset.
-           connectionPoolService.close();
+            if (activeSession.getRunning().get()) {
+                throw new SessionException("Session is still running.  You can't change the session while it is running.");
+            } else {
+                activeSession = null;
+            }
+            ;
+            // Close the connection pools, so they can be reset.
+            connectionPoolService.close();
         }
     }
 
@@ -139,7 +145,7 @@ public class ExecuteSessionService {
         if (activeSession == null) {
             log.warn("No active session.  Transitioning loaded session to active.");
             try {
-                transitionLoadedSessionToActive();
+                transitionLoadedSessionToActive(null);
             } catch (SessionException e) {
                 //throw new RuntimeException(e);
             }
@@ -177,7 +183,7 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessions separate.  The active session is the
         one that will be referenced during the run.
      */
-    public Boolean transitionLoadedSessionToActive() throws SessionException {
+    public Boolean transitionLoadedSessionToActive(Integer concurrency) throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
         if (activeSession != null && activeSession.getRunning().get()) {
@@ -189,10 +195,36 @@ public class ExecuteSessionService {
             throw new SessionException("No session loaded.");
         }
 
-//        ExecuteSession loadedSession = getSession(null);
+        HmsMirrorConfig config = loadedSession.getConfig();
+
+        // Setup connection concurrency
+        // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+        if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(concurrency)) {
+            Cluster cluster = config.getCluster(Environment.LEFT);
+            cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
+            cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
+            if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
+            }
+        }
+        if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(concurrency)) {
+            Cluster cluster = config.getCluster(Environment.RIGHT);
+            if (cluster.getHiveServer2() != null) {
+                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
+                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
+                }
+            }
+        }
+
+        // TODO: Set Metastore Direct Concurrency.
+
         ExecuteSession session = loadedSession.clone();
-//        HmsMirrorConfig resolvedConfig = loadedSession.getConfig();
-//        session.setResolvedConfig(resolvedConfig);
 
         // Connection Service should be set to the resolved config.
         connectionPoolService.close();
@@ -220,6 +252,7 @@ public class ExecuteSessionService {
 
         // Create the RunStatus and Conversion objects.
         RunStatus runStatus = new RunStatus();
+        runStatus.setConcurrency(concurrency);
         // Link the RunStatus to the session so users know what session details to retrieve.
         runStatus.setSessionId(session.getSessionId());
         session.setRunStatus(runStatus);
@@ -301,7 +334,7 @@ public class ExecuteSessionService {
         header.setContentType(new MediaType("application", "force-download"));
 
         String downloadFilename = id + ".zip";
-        header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename="+downloadFilename);
+        header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + downloadFilename);
 
         return new HttpEntity<>(new ByteArrayResource(Files.readAllBytes(Paths.get(zipFileName))), header);
     }

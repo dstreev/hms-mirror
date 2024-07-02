@@ -29,6 +29,7 @@ public interface ControllerReferences {
     String CONFIG = "CONFIG";
     String CLUSTER = "CLUSTER";
     String CURRENT_CONFIG = "CURRENT_CONFIG";
+    String CONCURRENCY = "CONCURRENCY";
     String AVAILABLE_DATABASES = "AVAILABLE_DATABASES";
     String CONFIG_LIST = "CONFIG_LIST";
     String DATA_STRATEGY = "DATA_STRATEGY";
@@ -55,4 +56,6 @@ public interface ControllerReferences {
     String BUILD_SOURCES = "BUILD_SOURCES";
     String PARTITION_LEVEL_MISMATCH = "PARTITION_LEVEL_MISMATCH";
     String CONSOLIDATION_LEVEL = "CONSOLIDATION_LEVEL";
+    String PASSWORDS = "PASSWORDS";
+    String PASSWORD_KEY = "PASSWORD_KEY";
 }

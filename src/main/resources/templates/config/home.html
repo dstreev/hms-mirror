@@ -99,6 +99,32 @@
                                 </form>
                             </fieldset>
                         </div>
+                        <div class="pure-u-1" th:if="${RUN_STATUS.errors.getMessages().length == 0}">
+                            <fieldset>
+                                <legend th:text="#{execute}"/>
+                                <form class="pure-form pure-form-aligned" th:object="${RUN_CONTAINER}">
+                                    <div class="pure-g">
+                                        <div class="pure-u-1-4">
+                                            <div class="pure-control-group tooltip">
+                                                <!-- Dry Run -->
+                                                <label for="dryrun" th:text="#{dry.run}"/>
+                                                <input id="dryrun" type="checkbox" th:field="*{dryrun}"/>
+                                            </div>
+                                            <div class="pure-control-group tooltip">
+                                                <!-- Auto GLM -->
+                                                <label for="autoglm" th:text="#{auto.glm}"/>
+                                                <input id="autoglm" type="checkbox" th:field="*{autoGLM}"/>
+                                            </div>
+                                            <div class="pure-control-group tooltip">
+                                                <!-- PasswordApp Key -->
+                                                <label for="pkey" th:text="#{password.key}"/>
+                                                <input class="pure-input-2-3" type="text" th:field="*{passwordKey}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </fieldset>
+                        </div>
                     </div>
                 </div>
             </th:block>

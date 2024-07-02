@@ -82,14 +82,14 @@ public enum MessageCode {
             "storage options `-is` or `-cs`.  `distcp` is NOT required since the data has already been moved while preparing " +
             "the ACID table."),
     DISTCP_REQUIRES_EPL(34, "You should specify `-epl` when using `distcp` to ensure the partition locations are evaluated."),
-//    PASSWORD_DECRYPT_ISSUE(34, "Password Decrypt Issue."),
+//    PASSWORD_DECRYPT_ISSUE(34, "PasswordApp Decrypt Issue."),
 //    SQL_DISTCP_ONLY_W_DA_ACID (34, "SQL Strategy with `distcp` is only valid for ACID table transfers.  " +
 //            "Use SCHEMA_ONLY from External and Legacy Managed (Non-Transactional) tables."),
 
-    ENCRYPT_PASSWORD_ISSUE(35, "Issue Encrypting Password"),
+    ENCRYPT_PASSWORD_ISSUE(35, "Issue Encrypting PasswordApp"),
     DECRYPTING_PASSWORD_ISSUE(36, "Issue decrypting password {0}"),
     PKEY_PASSWORD_CFG(37, "Need to include '-pkey' with '-p'."),
-    PASSWORD_CFG(38, "Password en/de crypt"),
+    PASSWORD_CFG(38, "PasswordApp en/de crypt"),
     VALID_ACID_DA_IP_STRATEGIES(39, "Inplace Downgrade of ACID tables only valid for the SQL data strategy"),
     COMMON_STORAGE_WITH_DA_IP(40, "Common Storage (-cs) is not a valid option for the ACID downgrades inplace."),
     INTERMEDIATE_STORAGE_WITH_DA_IP(41, "Intermediate Storage (-is) is not a valid option for the ACID downgrades inplace."),

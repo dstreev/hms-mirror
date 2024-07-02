@@ -26,14 +26,16 @@ import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import java.util.Map;
+
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.*;
 
@@ -75,38 +77,38 @@ public class TranslatorMVController {
 
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public String buildGLMFromPlans(Model model,
-                                    @RequestParam(name = GLM_DRYRUN, required = true) Boolean dryrun,
-                                    @RequestParam(name = BUILD_SOURCES, required = true) Boolean buildSources,
-                                    @RequestParam(name = PARTITION_LEVEL_MISMATCH, required = true) Boolean partitionLevelMisMatch,
-                                    @RequestParam(name = CONSOLIDATION_LEVEL, required = true) Integer consolidationLevel)
+                                    @RequestParam(name = GLM_DRYRUN, required = false) Boolean dryrun,
+                                    @RequestParam(name = BUILD_SOURCES, required = false) Boolean buildSources,
+                                    @RequestParam(name = PARTITION_LEVEL_MISMATCH, required = false) Boolean partitionLevelMisMatch,
+                                    @RequestParam(name = CONSOLIDATION_LEVEL, required = false) Integer consolidationLevel,
+                                    @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads)
             throws MismatchException, SessionException, RequiredConfigurationException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : true;
 
         // Reset Connections and reload most current config.
         executeSessionService.clearActiveSession();
-        if (executeSessionService.transitionLoadedSessionToActive()) {
+        if (!executeSessionService.transitionLoadedSessionToActive(maxThreads)) {
+            log.warn("Couldn't transition fully.  Will try to build sources anyhow.");
+        }
 
-            boolean lclBuildSources = buildSources != null ? buildSources : false;
-            int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
-            boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
+        boolean lclBuildSources = buildSources != null ? buildSources : false;
+        int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
+        boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
 
-            if (lclBuildSources) {
-                WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
-                model.addAttribute(SOURCES, wmb.getSources());
-            }
+        if (lclBuildSources) {
+            WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
+            model.addAttribute(SOURCES, wmb.getSources());
+        }
 
-            Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
+        Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
 
-            if (dryrun) {
-                model.addAttribute(ACTION, "view.dryrun");
-                model.addAttribute(GLOBAL_LOCATION_MAP, globalLocationMap);
-                return "/globalLocationMap/view_edit";
-            } else {
-                return "redirect:/config/view";
-            }
+        if (dryrun) {
+            model.addAttribute(ACTION, "view.dryrun");
+            model.addAttribute(GLOBAL_LOCATION_MAP, globalLocationMap);
+            return "/translator/globalLocationMap/view_edit";
         } else {
-            return "redirect:/config/home";
+            return "redirect:/config/view";
         }
     }
 

@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ExecuteSession implements Cloneable {
 
     private String sessionId;
+    private String passwordKey;
+
     private final AtomicBoolean running = new AtomicBoolean(false);
     private RunStatus runStatus;
 //    private HmsMirrorConfig resolvedConfig;

@@ -583,38 +583,38 @@ public class ConfigService {
             }
         }
 
-        if (config.isFlip() &&
-                config.getCluster(Environment.LEFT) == null) {
-            runStatus.addError(FLIP_WITHOUT_RIGHT);
-            rtn = Boolean.FALSE;
-        }
+//        if (config.isFlip() &&
+//                config.getCluster(Environment.LEFT) == null) {
+//            runStatus.addError(FLIP_WITHOUT_RIGHT);
+//            rtn = Boolean.FALSE;
+//        }
 
-        if (config.getTransfer().getConcurrency() > 4 &&
-                !config.isLoadingTestData()) {
-            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
-            if (config.getCluster(Environment.LEFT) != null) {
-                Cluster cluster = config.getCluster(Environment.LEFT);
-                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
-                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
-                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
-                }
-            }
-            if (config.getCluster(Environment.RIGHT) != null) {
-                Cluster cluster = config.getCluster(Environment.RIGHT);
-                if (cluster.getHiveServer2() != null) {
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
-                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
-                    }
-                }
-            }
-        }
+//        if (config.getTransfer().getConcurrency() > 4 &&
+//                !config.isLoadingTestData()) {
+//            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+//            if (config.getCluster(Environment.LEFT) != null) {
+//                Cluster cluster = config.getCluster(Environment.LEFT);
+//                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
+//                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
+//                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
+//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
+//                }
+//            }
+//            if (config.getCluster(Environment.RIGHT) != null) {
+//                Cluster cluster = config.getCluster(Environment.RIGHT);
+//                if (cluster.getHiveServer2() != null) {
+//                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
+//                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
+//                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
+//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
+//                    }
+//                }
+//            }
+//        }
 
         if (config.getTransfer().getStorageMigration().isDistcp()) {
             if (config.getDataStrategy() == DataStrategyEnum.EXPORT_IMPORT

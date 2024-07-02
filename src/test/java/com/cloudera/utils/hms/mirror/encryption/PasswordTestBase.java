@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.password.Password;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +30,25 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("no-cli")
 public class PasswordTestBase {
 
-    private ExecuteSession executeSession;
+    protected Password password;
     protected PasswordService passwordService = new PasswordService();
 
     @Autowired
-    public void setExecuteSession(ExecuteSession executeSession) {
-        this.executeSession = executeSession;
+    public void setPassword(Password password) {
+        this.password = password;
+    }
+
+    public String doIt() {
+        String value = null;
+        switch (password.getConversion()) {
+            case DECRYPT:
+                value = passwordService.decryptPassword(password.getPasswordKey(), password.getValue());
+                break;
+            case ENCRYPT:
+                value = passwordService.encryptPassword(password.getPasswordKey(), password.getValue());
+                break;
+        }
+        return value;
     }
 
 }

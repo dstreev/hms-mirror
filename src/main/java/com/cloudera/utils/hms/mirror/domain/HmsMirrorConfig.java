@@ -84,8 +84,7 @@ public class HmsMirrorConfig implements Cloneable {
     private Filter filter = new Filter();
     private boolean skipLinkCheck = Boolean.FALSE;
     private List<String> databases = new ArrayList<>();
-    @JsonIgnore
-    private String encryptedPassword;
+
     private LegacyTranslations legacyTranslations = new LegacyTranslations();
     /*
    Prefix the DB with this to create an alternate db.
@@ -99,6 +98,7 @@ public class HmsMirrorConfig implements Cloneable {
     private boolean execute = Boolean.FALSE;
     /*
     Use 'flip' to switch LEFT and RIGHT cluster definitions.  Allows you to change the direction of the calls.
+    This is now controlled while 'saving/persisting' the configuration.
      */
     @Deprecated
     private boolean flip = Boolean.FALSE;
@@ -111,10 +111,11 @@ public class HmsMirrorConfig implements Cloneable {
     private Optimization optimization = new Optimization();
     private String outputDirectory = System.getProperty("user.home") + System.getProperty("file.separator")
             + ".hms-mirror/reports/";
-    @JsonIgnore
-    private String password;
-    @JsonIgnore
-    private String passwordKey;
+//    @JsonIgnore
+//    private String password;
+    private boolean encryptedPasswords = Boolean.FALSE;
+//    @JsonIgnore
+//    private String passwordKey;
 
     private boolean quiet = Boolean.FALSE;
     /*
@@ -434,6 +435,7 @@ public class HmsMirrorConfig implements Cloneable {
         return execute;
     }
 
+    @JsonIgnore
     public Boolean isFlip() {
         return flip;
     }

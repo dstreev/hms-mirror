@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.password.Password;
+import com.cloudera.utils.hms.mirror.password.PasswordApp;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,7 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Password.class,
+@SpringBootTest(classes = PasswordApp.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
@@ -56,12 +56,10 @@ public class Test_decrypt_fail extends PasswordTestBase {
     @Test
     public void validatePassword() {
 
-        String decryptedPassword = getPasswordService().decryptPassword(
-                getExecuteSession().getConfig().getPasswordKey(),
-                getExecuteSession().getConfig().getEncryptedPassword());
+        String value = doIt();
 
         // The decrypt value should be null because the password is not encrypted correctly.
-        assertNull("Decrypt Password Failure",  decryptedPassword);
+        assertNull("Decrypt PasswordApp Failure",  value);
 
     }
 

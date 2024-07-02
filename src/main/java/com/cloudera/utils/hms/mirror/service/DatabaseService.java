@@ -167,6 +167,14 @@ public class DatabaseService {
     // Look at the Warehouse Plans and pull the database/table/partition locations the metastoreDirect.
     public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
         Boolean rtn = Boolean.TRUE;
+        if (!connectionPoolService.isConnected()) {
+            try {
+                connectionPoolService.init();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
 

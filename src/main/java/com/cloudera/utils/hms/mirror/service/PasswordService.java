@@ -43,42 +43,42 @@ public class PasswordService {
         return password;
     }
 
-    public boolean decryptConfigPasswords(HmsMirrorConfig hmsMirrorConfig) {
-        boolean success = true;
-        if (hmsMirrorConfig.getPasswordKey() != null) {
-            List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
-            for (Environment environment: environments) {
-                // Decrypt Passwords
-                Protect protect = new Protect(hmsMirrorConfig.getPasswordKey());
-                if (hmsMirrorConfig.getCluster(environment) != null
-                        && hmsMirrorConfig.getCluster(environment).getHiveServer2() != null
-                        && hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password") != null) {
-                    try {
-                        hmsMirrorConfig.getCluster(environment).getHiveServer2()
-                                .getConnectionProperties().setProperty("password",
-                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password")));
-                        log.warn("Password decrypted for {} HS2 Configuration", environment);
-                    } catch (Exception e) {
-                        log.error("Issue decrypting password for {} HS2 Configuration", environment);
-                        success = false;
-                    }
-                }
-                if (hmsMirrorConfig.getCluster(environment).getMetastoreDirect() != null
-                        && hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password") != null) {
-                    try {
-                        hmsMirrorConfig.getCluster(environment).getMetastoreDirect()
-                                .getConnectionProperties().setProperty("password",
-                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password")));
-                        log.warn("Password decrypted for {} Metastore Direct Configuration", environment);
-                    } catch (Exception e) {
-                        log.error("Issue decrypting password for {} Metastore Direct Configuration", environment);
-                        success = false;
-                    }
-                }
-            }
-        }
-        return success;
-    }
+//    public boolean decryptConfigPasswords(HmsMirrorConfig hmsMirrorConfig) {
+//        boolean success = true;
+//        if (hmsMirrorConfig.getPasswordKey() != null) {
+//            List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
+//            for (Environment environment: environments) {
+//                // Decrypt Passwords
+//                Protect protect = new Protect(hmsMirrorConfig.getPasswordKey());
+//                if (hmsMirrorConfig.getCluster(environment) != null
+//                        && hmsMirrorConfig.getCluster(environment).getHiveServer2() != null
+//                        && hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password") != null) {
+//                    try {
+//                        hmsMirrorConfig.getCluster(environment).getHiveServer2()
+//                                .getConnectionProperties().setProperty("password",
+//                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password")));
+//                        log.warn("PasswordApp decrypted for {} HS2 Configuration", environment);
+//                    } catch (Exception e) {
+//                        log.error("Issue decrypting password for {} HS2 Configuration", environment);
+//                        success = false;
+//                    }
+//                }
+//                if (hmsMirrorConfig.getCluster(environment).getMetastoreDirect() != null
+//                        && hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password") != null) {
+//                    try {
+//                        hmsMirrorConfig.getCluster(environment).getMetastoreDirect()
+//                                .getConnectionProperties().setProperty("password",
+//                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password")));
+//                        log.warn("PasswordApp decrypted for {} Metastore Direct Configuration", environment);
+//                    } catch (Exception e) {
+//                        log.error("Issue decrypting password for {} Metastore Direct Configuration", environment);
+//                        success = false;
+//                    }
+//                }
+//            }
+//        }
+//        return success;
+//    }
 
     public String encryptPassword(String passwordKey, String password) {
         // Used to generate encrypted password.
@@ -93,12 +93,12 @@ public class PasswordService {
                     log.error("Error encrypting password: {} with password key {}", password, passwordKey);
                 }
             } else {
-                // Missing Password to Encrypt.
-                log.error("Missing Password to Encrypt");
+                // Missing PasswordApp to Encrypt.
+                log.error("Missing PasswordApp to Encrypt");
             }
         } else {
-            log.error("Missing Password Key used the encrypt the password");
-//            throw new RuntimeException("Missing Password Key");
+            log.error("Missing PasswordApp Key used the encrypt the password");
+//            throw new RuntimeException("Missing PasswordApp Key");
         }
         return epassword;
     }

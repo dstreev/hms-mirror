@@ -19,6 +19,8 @@ package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
+import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
@@ -110,7 +112,6 @@ public class CliInit {
             throw new RuntimeException(e);
         }
         log.info("Config loaded.");
-        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
         return hmsMirrorConfig;
     }
 
@@ -212,12 +213,41 @@ public class CliInit {
     @Bean
     // Needs to happen after all the configs have been set.
     @Order(15)
-    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig builtConfig) {
+    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig builtConfig,
+                                                      @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
         return args -> {
             ExecuteSession session = executeSessionService.createSession(null, builtConfig);
             executeSessionService.setLoadedSession(session);
+
+            // Sync the concurrency for the connections.
+            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+            if (builtConfig.getCluster(Environment.LEFT) != null) {
+                Cluster cluster = builtConfig.getCluster(Environment.LEFT);
+                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(maxThreads / 2));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(maxThreads / 2));
+                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(maxThreads));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(maxThreads));
+                }
+            }
+            if (builtConfig.getCluster(Environment.RIGHT) != null) {
+                Cluster cluster = builtConfig.getCluster(Environment.RIGHT);
+                if (cluster.getHiveServer2() != null) {
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(maxThreads / 2));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(maxThreads / 2));
+                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(maxThreads));
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(maxThreads));
+                    }
+                }
+            }
+
+
+
             try {
-                executeSessionService.transitionLoadedSessionToActive();
+                executeSessionService.transitionLoadedSessionToActive(maxThreads);
             } catch (SessionException e) {
                 throw new RuntimeException(e);
             }

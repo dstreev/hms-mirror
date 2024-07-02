@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.password.Password;
+import com.cloudera.utils.hms.mirror.password.PasswordApp;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,11 +29,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Password.class,
+@SpringBootTest(classes = PasswordApp.class,
         args = {
 //                "--hms-mirror.config.data-strategy=EXPORT_IMPORT",
                 "--hms-mirror.config.password-key=test",
-//                "--hms-mirror.config.decrypt-password=FNLmFEI0F/n8acz45c3jVExMounSBklX",
+                "--hms-mirror.config.decrypt-password=FNLmFEI0F/n8acz45c3jVExMounSBklX",
 //                "--hms-mirror.config.migrate-acid=true",
 //                "--hms-mirror.config.migrate-acid-only=true",
 //                "--hms-mirror.config.warehouse-directory=/warehouse/managed",
@@ -54,30 +54,17 @@ import static org.junit.Assert.assertEquals;
 @Slf4j
 public class Test_decrypt_cfg extends PasswordTestBase {
 
-    @Before
-    public void setup() {
-        passwordService.decryptConfigPasswords(getExecuteSession().getConfig());
-    }
+//    @Before
+//    public void setup() {
+//        passwordService.decryptConfigPasswords(getExecuteSession().getConfig());
+//    }
+
 
     @Test
-    public void validateLeftPassword() {
+    public void validateDecryptPassword() {
         // Get Runtime Return Code.
-        assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getConfig().getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
-    }
-
-    @Test
-    public void validateLeftMSPassword() {
-        // Get Runtime Return Code.
-        assertEquals("Decrypt Password Failure: ", "cdpprivaatebase",
-                getExecuteSession().getConfig().getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
-    }
-
-    @Test
-    public void validateRightPassword() {
-        // Get Runtime Return Code.
-        assertEquals("Decrypt Password Failure: ", "myspecialpassword",
-                getExecuteSession().getConfig().getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+        String value = doIt();
+        assertEquals("Decrypt PasswordApp Failure: ", "myspecialpassword", value);
     }
 
 }

@@ -30,6 +30,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -56,9 +57,17 @@ public class ConnectionPoolService implements ConnectionPools {
     private ConnectionPools connectionPools = null;
     private EnvironmentService environmentService;
 
+    private PasswordService passwordService;
+
+
     @Autowired
     public void setEnvironmentService(EnvironmentService environmentService) {
         this.environmentService = environmentService;
+    }
+
+    @Autowired
+    public void setPasswordService(PasswordService passwordService) {
+        this.passwordService = passwordService;
     }
 
     public Boolean checkConnections() {
@@ -210,15 +219,15 @@ public class ConnectionPoolService implements ConnectionPools {
         switch (cpt) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
-                rtn = new ConnectionPoolsDBCP2Impl(executeSession);
+                rtn = new ConnectionPoolsDBCP2Impl(executeSession, passwordService);
                 break;
             case HIKARICP:
                 log.info("Using HIKARICP Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHikariImpl(executeSession);
+                rtn = new ConnectionPoolsHikariImpl(executeSession, passwordService);
                 break;
             case HYBRID:
                 log.info("Using HYBRID Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHybridImpl(executeSession);
+                rtn = new ConnectionPoolsHybridImpl(executeSession, passwordService);
                 break;
         }
         // Initialize the connection pools
