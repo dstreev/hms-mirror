@@ -95,9 +95,13 @@ public class Translator implements Cloneable {
                                boolean partitionLevelMismatch) {
         if (warehouseMapBuilder == null)
             warehouseMapBuilder = new WarehouseMapBuilder();
-        TableType type = TableType.valueOf(tableType);
-        warehouseMapBuilder.addSourceLocation(database, table, type, null, source, null,
-                consolidationLevelBase, partitionLevelMismatch);
+        try {
+            TableType type = TableType.valueOf(tableType);
+            warehouseMapBuilder.addSourceLocation(database, table, type, null, source, null,
+                    consolidationLevelBase, partitionLevelMismatch);
+        } catch (IllegalArgumentException iae) {
+            log.info("Not a supported table type: {}", tableType);
+        }
     }
 
     public void addPartitionSource(String database, String table, String tableType, String partitionSpec,

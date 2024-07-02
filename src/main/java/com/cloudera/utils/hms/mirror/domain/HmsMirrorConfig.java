@@ -114,8 +114,10 @@ public class HmsMirrorConfig implements Cloneable {
 //    @JsonIgnore
 //    private String password;
     private boolean encryptedPasswords = Boolean.FALSE;
-//    @JsonIgnore
-//    private String passwordKey;
+
+    /* We do NOT persist this to file.  It's only used during session to decrypt at runtime. */
+    @JsonIgnore
+    private String passwordKey;
 
     private boolean quiet = Boolean.FALSE;
     /*

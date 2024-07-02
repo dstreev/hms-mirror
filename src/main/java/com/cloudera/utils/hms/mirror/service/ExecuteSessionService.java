@@ -228,7 +228,7 @@ public class ExecuteSessionService {
 
         // Connection Service should be set to the resolved config.
         connectionPoolService.close();
-        connectionPoolService.setHmsMirrorConfig(session.getConfig());
+//        connectionPoolService.setHmsMirrorConfig(session.getConfig());
         connectionPoolService.setExecuteSession(session);
 
 //        try {

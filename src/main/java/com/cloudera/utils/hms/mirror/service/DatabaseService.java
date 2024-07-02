@@ -31,6 +31,7 @@ import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -172,6 +173,8 @@ public class DatabaseService {
                 connectionPoolService.init();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
+            } catch (SessionException se) {
+                throw new RuntimeException(se);
             }
         }
 

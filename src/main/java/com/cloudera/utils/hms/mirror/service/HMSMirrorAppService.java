@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.stage.ReturnStatus;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -101,6 +102,10 @@ public class HMSMirrorAppService {
             connectionPoolService.init();
         } catch (SQLException e) {
             log.error("Issue refreshing connection pool", e);
+            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
+            return new AsyncResult<>(Boolean.FALSE);
+        } catch (SessionException se) {
+            log.error("Issue with Session", se);
             runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
             return new AsyncResult<>(Boolean.FALSE);
         }

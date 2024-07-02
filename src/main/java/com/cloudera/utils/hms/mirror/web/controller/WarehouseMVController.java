@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -60,7 +61,7 @@ public class WarehouseMVController {
     }
 
     @RequestMapping(value = "/plan/add", method = RequestMethod.GET)
-    public String addWarehousePlan(Model model) throws SQLException {
+    public String addWarehousePlan(Model model) throws SQLException, SessionException {
         if (!connectionPoolService.isConnected()) {
             connectionPoolService.init();
         }

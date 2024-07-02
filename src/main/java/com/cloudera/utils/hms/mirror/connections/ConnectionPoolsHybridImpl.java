@@ -18,9 +18,10 @@
 package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.util.DriverUtils;
 import com.zaxxer.hikari.HikariConfig;
@@ -28,13 +29,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 
 import javax.sql.DataSource;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -139,13 +138,13 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
         return metastoreDirectDataSources.get(environment);
     }
 
-    public void init() throws SQLException {
+    public void init() throws SQLException, SessionException {
         if (!executeSession.getConfig().isLoadingTestData()) {
             initHS2Drivers();
             initHS2PooledDataSources();
             // Only init if we are going to use it. (`-epl`).
 //            if (configService.loadPartitionMetadata()) {
-                initMetastoreDataSources();
+            initMetastoreDataSources();
 //            }
         }
     }
@@ -171,7 +170,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
         }
     }
 
-    protected void initHS2PooledDataSources() {
+    protected void initHS2PooledDataSources() throws SessionException {
         Set<Environment> environments = hiveServerConfigs.keySet();
 
         for (Environment environment : environments) {
@@ -183,10 +182,14 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
                     Properties connProperties = new Properties();
                     connProperties.putAll(hs2Config.getConnectionProperties());
                     // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
-                    if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
-                        String encryptedPassword = connProperties.getProperty("password");
-                        String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
-                        connProperties.setProperty("password", decryptedPassword);
+                    if (executeSession.getConfig().isEncryptedPasswords()) {
+                        if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
+                            String encryptedPassword = connProperties.getProperty("password");
+                            String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
+                            connProperties.setProperty("password", decryptedPassword);
+                        } else {
+                            throw new SessionException("Passwords encrypted, but no password key present.");
+                        }
                     }
 
                     ConnectionFactory connectionFactory =
@@ -234,10 +237,14 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
                                 Properties connProperties = new Properties();
                                 connProperties.putAll(hs2Config.getConnectionProperties());
                                 // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
-                                if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
-                                    String encryptedPassword = connProperties.getProperty("password");
-                                    String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
-                                    connProperties.setProperty("password", decryptedPassword);
+                                if (executeSession.getConfig().isEncryptedPasswords()) {
+                                    if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
+                                        String encryptedPassword = connProperties.getProperty("password");
+                                        String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
+                                        connProperties.setProperty("password", decryptedPassword);
+                                    } else {
+                                        throw new SessionException("Passwords encrypted, but no password key present.");
+                                    }
                                 }
 
                                 HikariConfig config = new HikariConfig(props);
@@ -277,7 +284,7 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
         }
     }
 
-    protected void initMetastoreDataSources() {
+    protected void initMetastoreDataSources() throws SessionException {
         // Metastore Direct
         Set<Environment> environments = metastoreDirectConfigs.keySet();
         for (Environment environment : environments) {
@@ -288,10 +295,14 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
                 Properties connProperties = new Properties();
                 connProperties.putAll(metastoreDirectConfig.getConnectionProperties());
                 // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
-                if (nonNull(executeSession.getPasswordKey()) && !executeSession.getPasswordKey().isEmpty()) {
-                    String encryptedPassword = connProperties.getProperty("password");
-                    String decryptedPassword = passwordService.decryptPassword(executeSession.getPasswordKey(), encryptedPassword);
-                    connProperties.setProperty("password", decryptedPassword);
+                if (executeSession.getConfig().isEncryptedPasswords()) {
+                    if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
+                        String encryptedPassword = connProperties.getProperty("password");
+                        String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
+                        connProperties.setProperty("password", decryptedPassword);
+                    } else {
+                        throw new SessionException("Passwords encrypted, but no password key present.");
+                    }
                 }
 
                 HikariConfig config = new HikariConfig();

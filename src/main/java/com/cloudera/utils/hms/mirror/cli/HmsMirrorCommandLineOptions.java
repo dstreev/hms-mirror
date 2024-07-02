@@ -821,10 +821,10 @@ public class HmsMirrorCommandLineOptions {
     @Order(1)
     @ConditionalOnProperty(
             name = "hms-mirror.config.password-key")
-    CommandLineRunner configPasswordKey(ExecuteSession executeSession, @Value("${hms-mirror.config.password-key}") String value) {
+    CommandLineRunner configPasswordKey(HmsMirrorConfig config, @Value("${hms-mirror.config.password-key}") String value) {
         return args -> {
             log.info("password-key: {}", value);
-            executeSession.setPasswordKey(value);
+            config.setPasswordKey(value);
         };
     }
 
