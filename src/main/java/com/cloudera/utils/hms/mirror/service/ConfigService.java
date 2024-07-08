@@ -149,6 +149,10 @@ public class ConfigService {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = session.getConfig();
 
+        if (isNull(cli)) {
+            return Boolean.TRUE;
+        }
+
         if (config.isSkipLinkCheck() || config.isLoadingTestData()) {
             log.warn("Skipping Link Check.");
             rtn = Boolean.TRUE;
@@ -767,7 +771,7 @@ public class ConfigService {
                     rtn = Boolean.FALSE;
                 } else {
                     // Check if there are any GLM's defined.
-                    if (config.getTranslator().getGlobalLocationMap().isEmpty()) {
+                    if (config.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
                         runStatus.addError(STORAGE_MIGRATION_GLMS_NOT_BUILT);
                         rtn = Boolean.FALSE;
                     }

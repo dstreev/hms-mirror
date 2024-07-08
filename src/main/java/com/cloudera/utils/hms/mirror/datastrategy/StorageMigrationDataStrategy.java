@@ -75,7 +75,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -179,7 +179,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         String useDb = null;
         String database = null;
@@ -224,7 +224,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -337,8 +337,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION, let.getName(), partSpec, newPartLocation);
                             String partSpecDesc = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION_DESC, partSpec);
                             let.addSql(partSpecDesc, addPartSql);
-                            if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null &&
-                                    hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
+                            // Getting an NPE here when using GLM's.
+//                            if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null &&
+//                                    hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
                                 if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                                     // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
                                     if (!newPartLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
@@ -369,7 +370,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                                     }
 
                                 }
-                            }
+//                            }
                         } catch (MismatchException rte) {
                             noIssues = Boolean.FALSE;
                             tableMirror.addIssue(Environment.LEFT, rte.getMessage());

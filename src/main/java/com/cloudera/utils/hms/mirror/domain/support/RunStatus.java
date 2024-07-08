@@ -150,7 +150,6 @@ public class RunStatus implements Comparable<RunStatus> {
                 this.progress = ProgressEnum.CANCEL_FAILED;
                 rtn = Boolean.FALSE;
             }
-            ;
         }
         return rtn;
     }

@@ -167,8 +167,8 @@ public class Conversion {
     }
 
     public String toReport(String database, ExecuteSessionService executeSessionService) throws JsonProcessingException {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
 
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

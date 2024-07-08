@@ -69,7 +69,7 @@ public class TranslatorController {
     @RequestMapping(method = RequestMethod.GET, value = "/")
     public Translator getTransfer() {
         log.debug("Getting Translator Details");
-        return executeSessionService.getActiveSession().getConfig().getTranslator();
+        return executeSessionService.getSession().getConfig().getTranslator();
     }
 
     // Translator
@@ -88,9 +88,9 @@ public class TranslatorController {
 
         if (forceExternalLocation != null) {
             log.info("Setting Translator 'forceExternalLocation' to: {}", forceExternalLocation);
-            executeSessionService.getActiveSession().getConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
+            executeSessionService.getSession().getConfig().getTranslator().setForceExternalLocation(forceExternalLocation);
         }
-        return executeSessionService.getActiveSession().getConfig().getTranslator();
+        return executeSessionService.getSession().getConfig().getTranslator();
     }
 
     @Operation(summary = "Add GLM")

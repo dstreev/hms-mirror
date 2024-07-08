@@ -69,7 +69,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);

@@ -61,7 +61,7 @@ public class Mirror {
         int rtnCode = (int) returnCode;
         if ((returnCode * -1) > Integer.MAX_VALUE) {
             log.error("Return code is greater than Integer.MAX_VALUE.  Setting return code to Integer.MAX_VALUE. Check Logs for errors.");
-            for (String message : executeSessionService.getActiveSession().getRunStatus().getErrors().getMessages()) {
+            for (String message : executeSessionService.getSession().getRunStatus().getErrors().getMessages()) {
                 log.error(message);
             }
             rtnCode = Integer.MAX_VALUE;

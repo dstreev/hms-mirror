@@ -31,7 +31,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.Future;
@@ -67,7 +66,7 @@ public class RuntimeService {
         this.translatorService = translatorService;
     }
 
-    public RunStatus start(Boolean dryrun, boolean autoGLM,
+    public RunStatus start(boolean dryrun, boolean autoGLM,
                            Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException {
 
         // This is the fastest way to build the database source and the glm from those.  It does require that the
@@ -84,7 +83,7 @@ public class RuntimeService {
 
         if (executeSessionService.transitionLoadedSessionToActive(concurrency)) {
 
-            session = executeSessionService.getActiveSession();
+            session = executeSessionService.getSession();
 
             runStatus = session.getRunStatus();
 //            if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
@@ -97,7 +96,7 @@ public class RuntimeService {
             if (runStatus.reset()) {
                 runStatus.setProgress(ProgressEnum.STARTED);
                 // Set the dryrun flag.
-                executeSessionService.getActiveSession().getConfig().setExecute(!dryrun);
+                executeSessionService.getSession().getConfig().setExecute(!dryrun);
 
                 // Start job in a separate thread.
                 Future<Boolean> runningTask = hmsMirrorAppService.run();
@@ -109,7 +108,7 @@ public class RuntimeService {
                 runStatus.setRunningTask(runningTask);
             }
         } else {
-            session = executeSessionService.getActiveSession();
+            session = executeSessionService.getSession();
             runStatus = session.getRunStatus();
         }
         return runStatus;

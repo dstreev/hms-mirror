@@ -69,11 +69,11 @@ public class ReportWriterService {
     }
 
     public void wrapup () {
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        Conversion conversion = executeSessionService.getSession().getConversion();
         log.info("Wrapping up the Application Workflow");
         log.info("Setting 'running' to FALSE");
-        executeSessionService.getActiveSession().getRunning().set(Boolean.FALSE);
+        executeSessionService.getSession().getRunning().set(Boolean.FALSE);
 
         // Give the underlying threads a chance to finish.
         try {
@@ -93,7 +93,7 @@ public class ReportWriterService {
     }
 
     public void writeReport() {
-        ExecuteSession session = executeSessionService.getActiveSession();
+        ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
         log.info("Writing CLI report and artifacts to directory: {}", config.getOutputDirectory());
 //        if (!setupError) {
@@ -113,7 +113,7 @@ public class ReportWriterService {
         }
 
         // Write out the config used to run this session.
-        HmsMirrorConfig resolvedConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig resolvedConfig = executeSessionService.getSession().getConfig();
         String configOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
         try {
             mapper.writeValue(new File(configOutputFile), resolvedConfig);

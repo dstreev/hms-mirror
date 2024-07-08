@@ -202,7 +202,7 @@ public class ConfigController {
                         @PathVariable @NotNull String id,
                         @RequestParam(value = "overwrite", required = false) Boolean overwrite) throws IOException {
         log.info("{}: Save current config to: {}", sessionId, id);
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         //Session(sessionId).getHmsMirrorConfig();
         // Save to the hms-mirror.config.path as 'id'.
         String configPath = springEnv.getProperty("hms-mirror.config.path");
@@ -447,13 +447,13 @@ public class ConfigController {
         }
         if (nonNative != null) {
             log.info("{}: Setting Migrate ACID 'nonNative' to: {}", sessionId, nonNative);
-            executeSessionService.getActiveSession().getConfig().setMigratedNonNative(nonNative);
+            executeSessionService.getSession().getConfig().setMigratedNonNative(nonNative);
         }
         if (views != null) {
             log.info("{}: Setting Migrate ACID 'views' to: {}", sessionId, views);
-            executeSessionService.getActiveSession().getConfig().getMigrateVIEW().setOn(views);
+            executeSessionService.getSession().getConfig().getMigrateVIEW().setOn(views);
         }
-        return executeSessionService.getActiveSession().getConfig();
+        return executeSessionService.getSession().getConfig();
     }
 
     // Transfer

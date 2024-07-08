@@ -26,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static java.util.Objects.isNull;
+
 @Getter
 @Setter
 @Slf4j
@@ -35,6 +37,7 @@ public class ExecuteSession implements Cloneable {
 //    private String passwordKey;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private boolean connected = Boolean.FALSE;
     private RunStatus runStatus;
 //    private HmsMirrorConfig resolvedConfig;
     private HmsMirrorConfig config;
@@ -55,6 +58,15 @@ public class ExecuteSession implements Cloneable {
 
     public void addWarning(MessageCode code, Object... args) {
         getRunStatus().addWarning(code, args);
+    }
+
+
+    public RunStatus getRunStatus() {
+        if (isNull(runStatus)) {
+            return new RunStatus();
+        } else {
+            return runStatus;
+        }
     }
 
     @Override

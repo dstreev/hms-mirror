@@ -21,7 +21,6 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.PasswordContainer;
-import com.cloudera.utils.hms.mirror.domain.support.PersistContainer;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +58,7 @@ public class PasswordMVController {
         // From View Page of Config, collect passwords and check them for
         //   decrypt and encrypt.  Doesn't save them, just tests.
         // Get current config.
-        ExecuteSession executeSession = executeSessionService.getActiveSession();
+        ExecuteSession executeSession = executeSessionService.getSession();
         HmsMirrorConfig config = executeSession.getConfig();
         PasswordContainer passwordContainer = new PasswordContainer();
         if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2())) {

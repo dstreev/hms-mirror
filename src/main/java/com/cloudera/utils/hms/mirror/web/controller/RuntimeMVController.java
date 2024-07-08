@@ -51,12 +51,14 @@ public class RuntimeMVController {
     public String start(Model model,
             @ModelAttribute(RUN_CONTAINER) RunContainer runContainer,
                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
-        boolean lclAutoGLM = runContainer.getAutoGLM() != null && runContainer.getAutoGLM();
-        RunStatus runStatus =  runtimeService.start(runContainer.getDryrun(), lclAutoGLM, maxThreads);
+//        boolean lclAutoGLM = runContainer.getAutoGLM() != null && runContainer.getAutoGLM();
+//        boolean lclDryRun = runContainer.getDryrun() != null && runContainer.getDryrun();
+
+        RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(), runContainer.isAutoGLM(), maxThreads);
         runStatus.setConcurrency(maxThreads);
         // Not necessary..  will be fetched in config/home
-        model.addAttribute(RUN_STATUS, runStatus);
-        return "/config/home";
+//        model.addAttribute(RUN_STATUS, runStatus);
+        return "redirect:/config/home";
     }
 
 

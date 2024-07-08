@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OperationStatistics implements Cloneable{
 
     private final OperationStatistic counts = new OperationStatistic();
+    private final OperationStatistic skipped = new OperationStatistic();
     private final OperationStatistic issues = new OperationStatistic();
     private final OperationStatistic failures = new OperationStatistic();
     private final OperationStatistic successes = new OperationStatistic();

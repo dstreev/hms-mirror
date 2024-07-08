@@ -46,7 +46,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         log.debug("Table: {} buildout LINKED Definition", tableMirror.getName());
         EnvironmentTable let = null;
@@ -125,7 +125,7 @@ public class LinkedDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable tet = getEnvironmentTable(Environment.TRANSFER, tableMirror);

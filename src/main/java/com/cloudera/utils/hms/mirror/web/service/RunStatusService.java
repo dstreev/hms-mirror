@@ -40,12 +40,12 @@ public class RunStatusService {
     public RunStatus getRunStatus(String sessionId) {
         RunStatus runStatus = null;
         if (sessionId == null) {
-            runStatus = executeSessionService.getActiveSession().getRunStatus();
+            runStatus = executeSessionService.getSession().getRunStatus();
         } else {
             runStatus = executeSessionService.getSession(sessionId).getRunStatus();
         }
 
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        Conversion conversion = executeSessionService.getSession().getConversion();
 
         // Reset the inProgressTables with what's currently working.
         runStatus.getInProgressTables().clear();

@@ -64,7 +64,7 @@ public class TranslatorService {
     public synchronized Map<String, Map<String, Set<String>>> buildDistcpList(String database, Environment environment, int consolidationLevel) {
         Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         // get the map for a db.
         Set<String> databases = hmsMirrorConfig.getTranslator().getTranslationMap().keySet();
@@ -121,7 +121,7 @@ public class TranslatorService {
 
     public String processGlobalLocationMap(String originalLocation) {
         String newLocation = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         if (!hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
             log.debug("Checking location: {} for replacement element in global location map.", originalLocation);
@@ -153,7 +153,7 @@ public class TranslatorService {
 
     public Warehouse getDatabaseWarehouse(String database) throws MissingDataPointException {
         Warehouse dbWarehouse = null;
-        ExecuteSession session = executeSessionService.getActiveSession();
+        ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
         dbWarehouse = config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().get(database);
         if (dbWarehouse == null) {
@@ -203,7 +203,7 @@ public class TranslatorService {
 
     public Boolean translatePartitionLocations(TableMirror tblMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         Map<String, String> dbRef = tblMirror.getParent().getDBDefinition(Environment.RIGHT);
         Boolean chkLocation = config.getTransfer().getWarehouse().getManagedDirectory() != null && config.getTransfer().getWarehouse().getExternalDirectory() != null;
@@ -291,7 +291,7 @@ public class TranslatorService {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         String dbName = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
 
@@ -398,7 +398,7 @@ public class TranslatorService {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         hmsMirrorConfig.getTranslator().addGlobalLocationMap(source, target);
     }
 
@@ -406,20 +406,20 @@ public class TranslatorService {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         return hmsMirrorConfig.getTranslator().removeGlobalLocationMap(source);
     }
 
     public Map<String, String> getGlobalLocationMap() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
 
     public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
         // Don't reload if running.
-        executeSessionService.clearActiveSession();
+//        executeSessionService.clearActiveSession();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         Translator translator = hmsMirrorConfig.getTranslator();
         Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
 

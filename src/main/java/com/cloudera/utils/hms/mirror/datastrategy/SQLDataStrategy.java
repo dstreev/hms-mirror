@@ -61,7 +61,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     public Boolean buildOutDefinition(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -145,7 +145,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getCommonStorage() != null) {
@@ -223,7 +223,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 

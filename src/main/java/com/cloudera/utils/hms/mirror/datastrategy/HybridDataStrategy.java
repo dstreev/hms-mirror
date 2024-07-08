@@ -63,7 +63,7 @@ public class HybridDataStrategy extends DataStrategyBase implements DataStrategy
     @Override
     public Boolean execute(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         // Need to look at table.  ACID tables go to doACID()
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);

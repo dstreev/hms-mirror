@@ -62,15 +62,20 @@ public class WarehouseMVController {
 
     @RequestMapping(value = "/plan/add", method = RequestMethod.GET)
     public String addWarehousePlan(Model model) throws SQLException, SessionException {
-        if (!connectionPoolService.isConnected()) {
-            connectionPoolService.init();
+        if (executeSessionService.transitionLoadedSessionToActive(1)) {
+            if (!connectionPoolService.isConnected()) {
+                connectionPoolService.init();
+            }
+            model.addAttribute(ACTION, "add");
+
+            List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
+            model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+
+            return "/warehouse/plan/add";
+        } else {
+            // TODO: Need to provide reason why going back to view.
+            return "redirect:/config/view";
         }
-        model.addAttribute(ACTION, "add");
-
-        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
-        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
-
-        return "/warehouse/plan/add";
     }
 
     @RequestMapping(value = "/plan/save", method = RequestMethod.POST)
@@ -80,7 +85,7 @@ public class WarehouseMVController {
                               @RequestParam(value = MANAGED_DIRECTORY, required = true) String managedDirectory
     ) throws SessionException {
         // Don't reload if running.
-        executeSessionService.clearActiveSession();
+//        executeSessionService.clearActiveSession();
 
         log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
 

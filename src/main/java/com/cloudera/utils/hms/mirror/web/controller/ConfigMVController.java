@@ -144,17 +144,16 @@ public class ConfigMVController implements ControllerReferences {
 
 
         // This is so we can try to load a list of available databases.
-        try {
-            log.info("Attempting connection to get list of databases.");
-            executeSessionService.transitionLoadedSessionToActive(concurrency);
-        } catch (SessionException e) {
-            log.warn("Error transitioning to active session: {}", e.getMessage());
-        }
+//        try {
+//            log.info("Attempting connection to get list of databases.");
+//            executeSessionService.transitionLoadedSessionToActive(concurrency);
+//        } catch (SessionException e) {
+//            log.warn("Error transitioning to active session: {}", e.getMessage());
+//        }
 
 //        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
 //        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
-
-        ExecuteSession session = executeSessionService.getActiveSession();
+        ExecuteSession session = executeSessionService.getSession();
 
         RunContainer runContainer = new RunContainer();
         model.addAttribute(RUN_CONTAINER, runContainer);
@@ -185,7 +184,7 @@ public class ConfigMVController implements ControllerReferences {
     @RequestMapping(value = "/edit", method = RequestMethod.GET)
     public String edit(Model model,
                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
-        executeSessionService.clearActiveSession();
+//        executeSessionService.clearActiveSession();
         model.addAttribute(ACTION, "edit");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
         sessionToModel(model, maxThreads, Boolean.FALSE);
@@ -199,7 +198,7 @@ public class ConfigMVController implements ControllerReferences {
         executeSessionService.clearActiveSession();
         model.addAttribute(ACTION, "view");
 
-        ExecuteSession session = executeSessionService.getLoadedSession();
+        ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig currentConfig = session.getConfig();
 
         // Merge Passwords
@@ -240,6 +239,9 @@ public class ConfigMVController implements ControllerReferences {
         // Reset to the merged config.
         session.setConfig(config);
         model.addAttribute(READ_ONLY, Boolean.TRUE);
+
+        executeSessionService.transitionLoadedSessionToActive(maxThreads);
+
         sessionToModel(model, maxThreads, Boolean.FALSE);
         return "/config/view";
     }
@@ -255,7 +257,7 @@ public class ConfigMVController implements ControllerReferences {
         // Get the current session config.
         executeSessionService.clearActiveSession();
 
-        ExecuteSession curSession = executeSessionService.getLoadedSession();
+        ExecuteSession curSession = executeSessionService.getSession();
         HmsMirrorConfig currentConfig = curSession.getConfig();
 
         if (persistContainer.isFlipConfigs()) {
@@ -297,7 +299,7 @@ public class ConfigMVController implements ControllerReferences {
                          @RequestParam(value = SESSION_ID, required = true) String sessionId,
                          @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
         // Don't reload if running.
-        executeSessionService.clearActiveSession();
+        executeSessionService.clearLoadedSession();
 
         log.info("ReLoading Config: {}", sessionId);
         HmsMirrorConfig config = configService.loadConfig(sessionId);
@@ -306,6 +308,8 @@ public class ConfigMVController implements ControllerReferences {
         // Create a new session
         ExecuteSession session = executeSessionService.createSession(sessionId, config);
         executeSessionService.setLoadedSession(session);
+
+        executeSessionService.transitionLoadedSessionToActive(maxThreads);
 
         // Set it as the current session.
         sessionToModel(model, maxThreads, Boolean.FALSE);

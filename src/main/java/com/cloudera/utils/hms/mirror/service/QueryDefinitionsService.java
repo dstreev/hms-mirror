@@ -49,7 +49,7 @@ public class QueryDefinitionsService {
     }
 
     public QueryDefinitions getQueryDefinitions(Environment environment) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         QueryDefinitions queryDefinitions = queryDefinitionsMap.get(environment);
         if (queryDefinitions == null) {

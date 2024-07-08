@@ -104,8 +104,8 @@ public class TransferService {
         ReturnStatus rtn = new ReturnStatus();
 //        rtn.setStatus(ReturnStatus.Status.SUCCESS);
 //        Boolean successful = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
 
         try {
             Date start = new Date();

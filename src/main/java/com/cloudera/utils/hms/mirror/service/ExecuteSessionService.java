@@ -46,6 +46,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
@@ -141,18 +142,25 @@ public class ExecuteSessionService {
         }
     }
 
-    public ExecuteSession getActiveSession() {
-        if (activeSession == null) {
-            log.warn("No active session.  Transitioning loaded session to active.");
-            try {
-                transitionLoadedSessionToActive(null);
-            } catch (SessionException e) {
-                //throw new RuntimeException(e);
-            }
-//            throw new RuntimeException("No active session. Try configuring a session first.");
-        }
-        return activeSession;
+    public ExecuteSession getSession() {
+        if (activeSession != null)
+            return activeSession;
+        else
+            return loadedSession;
     }
+
+//    public ExecuteSession getSession() {
+//        if (activeSession == null) {
+//            log.warn("No active session.  Transitioning loaded session to active.");
+////            try {
+////                transitionLoadedSessionToActive(null);
+////            } catch (SessionException e) {
+////                //throw new RuntimeException(e);
+////            }
+////            throw new RuntimeException("No active session. Try configuring a session first.");
+//        }
+//        return activeSession;
+//    }
 
     /*
     If sessionId is null, then pull the 'current' session.
@@ -186,6 +194,7 @@ public class ExecuteSessionService {
     public Boolean transitionLoadedSessionToActive(Integer concurrency) throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
+
         if (activeSession != null && activeSession.getRunning().get()) {
             throw new SessionException("Session is still running.  Cannot transition to active.");
         }
@@ -195,23 +204,16 @@ public class ExecuteSessionService {
             throw new SessionException("No session loaded.");
         }
 
-        HmsMirrorConfig config = loadedSession.getConfig();
+        ExecuteSession session = getSession();
+        // If it's connected (Active Session), don't go through all this again.
+        if (isNull(session) || !session.isConnected()) {
+            log.debug("Configure and setup Session");
+            HmsMirrorConfig config = loadedSession.getConfig();
 
-        // Setup connection concurrency
-        // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
-        if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(concurrency)) {
-            Cluster cluster = config.getCluster(Environment.LEFT);
-            cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
-            cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
-            if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-                cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
-                cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-                cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
-            }
-        }
-        if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(concurrency)) {
-            Cluster cluster = config.getCluster(Environment.RIGHT);
-            if (cluster.getHiveServer2() != null) {
+            // Setup connection concurrency
+            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(concurrency)) {
+                Cluster cluster = config.getCluster(Environment.LEFT);
                 cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
                 cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
                 if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
@@ -220,16 +222,27 @@ public class ExecuteSessionService {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
                 }
             }
-        }
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(concurrency)) {
+                Cluster cluster = config.getCluster(Environment.RIGHT);
+                if (cluster.getHiveServer2() != null) {
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
+                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
+                    }
+                }
+            }
 
-        // TODO: Set Metastore Direct Concurrency.
+            // TODO: Set Metastore Direct Concurrency.
 
-        ExecuteSession session = loadedSession.clone();
+            session = loadedSession.clone();
 
-        // Connection Service should be set to the resolved config.
-        connectionPoolService.close();
+            // Connection Service should be set to the resolved config.
+            connectionPoolService.close();
 //        connectionPoolService.setHmsMirrorConfig(session.getConfig());
-        connectionPoolService.setExecuteSession(session);
+            connectionPoolService.setExecuteSession(session);
 
 //        try {
 //            connectionPoolService.init();
@@ -238,39 +251,44 @@ public class ExecuteSessionService {
 //            throw new RuntimeException("Error initializing connection pool.", e);
 //        }
 
-        // Set the active session id to the current date and time.
-        DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-        session.setSessionId(dtf.format(new Date()));
+            // Set the active session id to the current date and time.
+            DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+            session.setSessionId(dtf.format(new Date()));
 
-        String sessionReportDir = null;
-        if (amendSessionIdToReportDir) {
-            sessionReportDir = reportOutputDirectory + File.separator + session.getSessionId();
+            String sessionReportDir = null;
+            if (amendSessionIdToReportDir) {
+                sessionReportDir = reportOutputDirectory + File.separator + session.getSessionId();
+            } else {
+                sessionReportDir = reportOutputDirectory;
+            }
+            session.getConfig().setOutputDirectory(sessionReportDir);
+
+            // Create the RunStatus and Conversion objects.
+            RunStatus runStatus = new RunStatus();
+            runStatus.setConcurrency(concurrency);
+            // Link the RunStatus to the session so users know what session details to retrieve.
+            runStatus.setSessionId(session.getSessionId());
+            session.setRunStatus(runStatus);
+            session.setConversion(new Conversion());
+            // Clear all previous run states from sessions to keep memory usage down.
+            for (Map.Entry<String, ExecuteSession> entry : executeSessionMap.entrySet()) {
+                entry.getValue().setConversion(null);
+                entry.getValue().setRunStatus(null);
+            }
+            activeSession = session;
+
+            // Validate the session.
+            rtn = configService.validate(activeSession, getCliEnvironment());
+
+            // Set whether the config has been validated.
+            activeSession.getConfig().setValidated(rtn);
+
+            executeSessionMap.put(session.getSessionId(), session);
+            // Set connected flag.
+            activeSession.setConnected(Boolean.TRUE);
         } else {
-            sessionReportDir = reportOutputDirectory;
+            log.debug("Session connected already");
         }
-        session.getConfig().setOutputDirectory(sessionReportDir);
-
-        // Create the RunStatus and Conversion objects.
-        RunStatus runStatus = new RunStatus();
-        runStatus.setConcurrency(concurrency);
-        // Link the RunStatus to the session so users know what session details to retrieve.
-        runStatus.setSessionId(session.getSessionId());
-        session.setRunStatus(runStatus);
-        session.setConversion(new Conversion());
-        // Clear all previous run states from sessions to keep memory usage down.
-        for (Map.Entry<String, ExecuteSession> entry : executeSessionMap.entrySet()) {
-            entry.getValue().setConversion(null);
-            entry.getValue().setRunStatus(null);
-        }
-        activeSession = session;
-
-        // Validate the session.
-        rtn = configService.validate(activeSession, getCliEnvironment());
-
-        // Set whether the config has been validated.
-        activeSession.getConfig().setValidated(rtn);
-
-        executeSessionMap.put(session.getSessionId(), session);
         return rtn;
     }
 

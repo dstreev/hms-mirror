@@ -72,8 +72,8 @@ public class HMSMirrorAppService {
 
     public long getReturnCode() {
         long rtn = 0L;
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        Conversion conversion = executeSessionService.getSession().getConversion();
         rtn = runStatus.getErrors().getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
@@ -84,8 +84,8 @@ public class HMSMirrorAppService {
 
     public long getWarningCode() {
         long rtn = 0L;
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        Conversion conversion = executeSessionService.getSession().getConversion();
         rtn = runStatus.getWarnings().getReturnCode();
         return rtn;
     }
@@ -93,10 +93,11 @@ public class HMSMirrorAppService {
     @Async("executionThreadPool")
     public Future<Boolean> run() {
         Boolean rtn = Boolean.TRUE;
-        ExecuteSession session = executeSessionService.getActiveSession();
+        ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
         RunStatus runStatus = session.getRunStatus();
         Conversion conversion = session.getConversion();
+        OperationStatistics stats = runStatus.getOperationStatistics();
 
         try {// Refresh the connection pool.
             connectionPoolService.init();
@@ -135,7 +136,7 @@ public class HMSMirrorAppService {
         }
 
         log.info("Setting 'running' to TRUE");
-        getExecuteSessionService().getActiveSession().getRunning().set(Boolean.TRUE);
+        session.getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
         log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",",config.getDatabases()));
@@ -143,6 +144,7 @@ public class HMSMirrorAppService {
         if (config.isLoadingTestData()) {
             List<String> databases = new ArrayList<>();
             for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                stats.getCounts().incrementDatabases();
                 databases.add(dbMirror.getName());
             }
 //            String[] dbs = databases.toArray(new String[0]);
@@ -163,7 +165,7 @@ public class HMSMirrorAppService {
                         String db = rs.getString(1);
                         Matcher matcher = config.getFilter().getDbFilterPattern().matcher(db);
                         if (matcher.find()) {
-                            runStatus.getOperationStatistics().getCounts().incrementDatabases();
+                            stats.getCounts().incrementDatabases();
                             databases.add(db);
                         }
                     }
@@ -172,7 +174,8 @@ public class HMSMirrorAppService {
             } catch (SQLException se) {
                 // Issue
                 log.error("Issue getting databases for dbRegEx", se);
-                executeSessionService.getActiveSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
+                stats.getFailures().incrementDatabases();
+                executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
                 reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
             } finally {
@@ -181,7 +184,7 @@ public class HMSMirrorAppService {
                         conn.close();
                     } catch (SQLException e) {
                         log.error("Issue closing connection for LEFT", e);
-                        executeSessionService.getActiveSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
+                        executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
                     }
                 }
             }
@@ -214,6 +217,7 @@ public class HMSMirrorAppService {
         if (!config.isLoadingTestData()) {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
             for (String database : config.getDatabases()) {
+                runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 DBMirror dbMirror = conversion.addDatabase(database);
                 try {
                     // Get the Database definitions for the LEFT and RIGHT clusters.
@@ -230,7 +234,7 @@ public class HMSMirrorAppService {
                     }
                 } catch (SQLException se) {
                     log.error("Issue getting databases", se);
-                    executeSessionService.getActiveSession().addError(MISC_ERROR, "Issue getting databases");
+                    executeSessionService.getSession().addError(MISC_ERROR, "Issue getting databases");
                     runStatus.getOperationStatistics().getFailures().incrementDatabases();
                     runStatus.setStage(StageEnum.DATABASES, CollectionEnum.ERRORED);
                     reportWriterService.wrapup();
@@ -364,6 +368,7 @@ public class HMSMirrorAppService {
                     TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
                     if (tableMirror.isRemove()) {
                         // Setup the filtered out tables so they can be reported w/ reason.
+                        stats.getSkipped().incrementTables();
                         log.info("Table: {}.{} is being removed from further processing. Reason: {}", dbMirror.getName(), table, tableMirror.getRemoveReason());
                         dbMirror.getFilteredOut().put(table, tableMirror.getRemoveReason());
                     }

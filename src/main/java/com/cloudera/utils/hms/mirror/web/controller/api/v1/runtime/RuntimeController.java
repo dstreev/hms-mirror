@@ -93,7 +93,7 @@ public class RuntimeController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/cancel")
     public RunStatus cancel() {
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
         runStatus.cancel();
         return runStatus;
     }

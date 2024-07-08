@@ -104,7 +104,7 @@ public class DatabaseService {
         // Find it by a Warehouse Plan
         Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(database);
         if (isNull(warehouse)) {
-            ExecuteSession session = executeSessionService.getActiveSession();
+            ExecuteSession session = executeSessionService.getSession();
             // Get the default Warehouse defined for the config.
             warehouse = session.getConfig().getTransfer().getWarehouse();
             if (isNull(warehouse)) {
@@ -284,7 +284,7 @@ public class DatabaseService {
 
     public boolean loadEnvironmentVars() {
         boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         for (Environment environment : environments) {
             if (hmsMirrorConfig.getCluster(environment) != null) {
@@ -310,14 +310,14 @@ public class DatabaseService {
                     // Issue
                     rtn = Boolean.FALSE;
                     log.error("Issue getting database connection", se);
-                    executeSessionService.getActiveSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
+                    executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
                 } finally {
                     if (conn != null) {
                         try {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing LEFT database connection", e);
-                            executeSessionService.getActiveSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
+                            executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
                         }
                     }
                 }
@@ -329,7 +329,7 @@ public class DatabaseService {
     public List<String> listAvailableDatabases(Environment environment) {
         List<String> dbs = new ArrayList<>();
         Connection conn = null;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);
             if (conn != null) {
@@ -378,8 +378,8 @@ public class DatabaseService {
     public boolean buildDBStatements(DBMirror dbMirror) {
 //        Config config = Context.getInstance().getConfig();
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
-        RunStatus runStatus = executeSessionService.getActiveSession().getRunStatus();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
 
         try {
 
@@ -750,8 +750,11 @@ public class DatabaseService {
 
     public boolean createDatabases() {
         boolean rtn = true;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
-        Conversion conversion = executeSessionService.getActiveSession().getConversion();
+        ExecuteSession session = executeSessionService.getSession();
+        HmsMirrorConfig hmsMirrorConfig = session.getConfig();
+        Conversion conversion = session.getConversion();
+        RunStatus runStatus = session.getRunStatus();
+        OperationStatistics stats = runStatus.getOperationStatistics();
         for (String database : hmsMirrorConfig.getDatabases()) {
             DBMirror dbMirror = conversion.getDatabase(database);
             rtn = buildDBStatements(dbMirror);
@@ -759,10 +762,19 @@ public class DatabaseService {
             if (rtn) {
                 if (!runDatabaseSql(dbMirror, Environment.LEFT)) {
                     rtn = false;
+                    stats.getFailures().incrementDatabases();
+                } else {
+                    stats.getSuccesses().incrementDatabases();
                 }
                 if (!runDatabaseSql(dbMirror, Environment.RIGHT)) {
                     rtn = false;
+                    stats.getFailures().incrementDatabases();
+                } else {
+                    // TODO: Will this double up the success counts?  I think it will..  Will Observed..
+                    stats.getSuccesses().incrementDatabases();
                 }
+            } else {
+                stats.getFailures().incrementDatabases();
             }
         }
         return rtn;
@@ -771,7 +783,7 @@ public class DatabaseService {
     public Boolean getDatabase(DBMirror dbMirror, Environment environment) throws SQLException {
         Boolean rtn = Boolean.FALSE;
         Connection conn = null;
-        HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         try {
             conn = connectionPoolService.getHS2EnvironmentConnection(environment);//getConnection();
@@ -852,7 +864,7 @@ public class DatabaseService {
     public Boolean runDatabaseSql(DBMirror dbMirror, Pair dbSqlPair, Environment environment) {
         // Open the connection and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         Boolean rtn = Boolean.TRUE;
         // Skip when running test data.

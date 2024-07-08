@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -47,6 +48,12 @@ public class TranslatorMVController {
     private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
     private TranslatorService translatorService;
+    private ConfigService configService;
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Autowired
     public void setDatabaseService(DatabaseService databaseService) {
@@ -84,13 +91,13 @@ public class TranslatorMVController {
                                     @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads)
             throws MismatchException, SessionException, RequiredConfigurationException {
         log.info("Building global location maps");
-        boolean lclDryrun = dryrun != null ? dryrun : true;
+        boolean lclDryrun = dryrun != null ? dryrun : false;
 
         // Reset Connections and reload most current config.
         executeSessionService.clearActiveSession();
-        if (!executeSessionService.transitionLoadedSessionToActive(maxThreads)) {
-            log.warn("Couldn't transition fully.  Will try to build sources anyhow.");
-        }
+//        if (!executeSessionService.transitionLoadedSessionToActive(maxThreads)) {
+//            log.warn("Couldn't transition fully.  Will try to build sources anyhow.");
+//        }
 
         boolean lclBuildSources = buildSources != null ? buildSources : false;
         int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
@@ -103,11 +110,12 @@ public class TranslatorMVController {
 
         Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
 
-        if (dryrun) {
+        if (lclDryrun) {
             model.addAttribute(ACTION, "view.dryrun");
             model.addAttribute(GLOBAL_LOCATION_MAP, globalLocationMap);
             return "/translator/globalLocationMap/view_edit";
         } else {
+            configService.validate(executeSessionService.getSession(), null);
             return "redirect:/config/view";
         }
     }

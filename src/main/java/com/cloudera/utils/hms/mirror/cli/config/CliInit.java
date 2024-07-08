@@ -26,7 +26,6 @@ import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -192,7 +191,7 @@ public class CliInit {
             List<String> databases = new ArrayList<>(conversion.getDatabases().keySet());
             config.setDatabases(databases);
             // Replace the conversion in the session.
-            executeSessionService.getActiveSession().setConversion(conversion);
+            executeSessionService.getSession().setConversion(conversion);
         } catch (UnrecognizedPropertyException upe) {
             throw new RuntimeException("\nThere may have been a breaking change in the configuration since the previous " +
                     "release. Review the note below and remove the 'Unrecognized field' from the configuration and try " +
@@ -255,9 +254,9 @@ public class CliInit {
             log.info("Session transitioned to active.");
             builtConfig.setValidated(Boolean.TRUE);
 
-            session = executeSessionService.getActiveSession();
+            session = executeSessionService.getSession();
 
-            HmsMirrorConfig config = executeSessionService.getActiveSession().getConfig();
+            HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
             Conversion conversion = null;
             log.info("Post Processing Conversion");
@@ -265,7 +264,7 @@ public class CliInit {
                 // Load Test Data.
                 loadTestData(session);
 
-                conversion = executeSessionService.getActiveSession().getConversion();
+                conversion = executeSessionService.getSession().getConversion();
 
                 // Clean up the test data to match the configuration.
                 for (DBMirror dbMirror : conversion.getDatabases().values()) {
@@ -311,7 +310,7 @@ public class CliInit {
                     }
                 }
             } else {
-                conversion = executeSessionService.getActiveSession().getConversion();
+                conversion = executeSessionService.getSession().getConversion();
             }
             // Remove Tables from Map.
             for (DBMirror dbMirror : conversion.getDatabases().values()) {

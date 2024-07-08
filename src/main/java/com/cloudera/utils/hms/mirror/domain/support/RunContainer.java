@@ -24,8 +24,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class RunContainer {
-    private Boolean dryrun = Boolean.TRUE;
-    private Boolean autoGLM = Boolean.FALSE;
+    private boolean dryrun = Boolean.TRUE;
+    private boolean autoGLM = Boolean.FALSE;
     private String sessionId;
     private String passwordKey;
     private DataStrategyEnum dataStrategy;
