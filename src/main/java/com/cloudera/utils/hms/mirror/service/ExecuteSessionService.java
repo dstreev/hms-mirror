@@ -251,9 +251,11 @@ public class ExecuteSessionService {
 //            throw new RuntimeException("Error initializing connection pool.", e);
 //        }
 
-            // Set the active session id to the current date and time.
-            DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-            session.setSessionId(dtf.format(new Date()));
+            if (isNull(session.getSessionId())) {
+                // Set the active session id to the current date and time.
+                DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+                session.setSessionId(dtf.format(new Date()));
+            }
 
             String sessionReportDir = null;
             if (amendSessionIdToReportDir) {

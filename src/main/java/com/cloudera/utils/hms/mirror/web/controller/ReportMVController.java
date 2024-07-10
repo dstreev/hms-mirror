@@ -47,8 +47,8 @@ public class ReportMVController implements ControllerReferences {
         return "/report/view";
     }
 
-    @RequestMapping(value = "/download", method = RequestMethod.GET)
-    public void downloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
+    @RequestMapping(value = "/doDownload", method = RequestMethod.POST)
+    public void doDownloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
                 HttpServletResponse response) {
         try {
             HttpEntity<ByteArrayResource> entity = executeSessionService.getZippedReport(report_id);

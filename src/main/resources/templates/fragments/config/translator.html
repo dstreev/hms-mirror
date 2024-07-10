@@ -18,28 +18,28 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 <head>
-    <title>Home Config</title>
+    <title>Load Create</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
-<!--    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">-->
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div class="pure-g">
-    <div class="pure-u-1" th:insert="fragments/header::header">
-    </div>
-    <div class="pure-u-1-6" th:insert="fragments/nav::left_nav">
-    </div>
-    <div class="pure-u-5-6">
-            <div class="pure-u-1" th:insert="fragments/session::session">
-            </div>
-            <div class="pure-u-1" th:insert="fragments/run_status :: run_status">
-            </div>
-    </div>
-    <div class="pure-u-1" th:insert="fragments/footer::footer">
-    </div>
+<div th:fragment="translator">
+<!--    <fieldset>-->
+<!--        <legend th:text="#{config.translator}"/>-->
+        <div th:insert="fragments/config/warehousePlans::warehousePlans">
+
+        </div>
+        <div th:insert="fragments/config/glm::glm">
+
+        </div>
+        <div th:insert="fragments/config/glmSources::glmSources">
+
+        </div>
+<!--    </fieldset>-->
 </div>
 </body>
 </html>

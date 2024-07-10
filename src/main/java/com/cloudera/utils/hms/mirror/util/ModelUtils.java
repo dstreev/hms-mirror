@@ -56,6 +56,13 @@ public class ModelUtils implements ControllerReferences {
     public static List<DataStrategyEnum> getSupportedDataStrategies() {
         List<DataStrategyEnum> supportedDataStrategies = new ArrayList<>();
         supportedDataStrategies.add(DataStrategyEnum.STORAGE_MIGRATION);
+        supportedDataStrategies.add(DataStrategyEnum.DUMP);
+        supportedDataStrategies.add(DataStrategyEnum.SCHEMA_ONLY);
+        supportedDataStrategies.add(DataStrategyEnum.SQL);
+        supportedDataStrategies.add(DataStrategyEnum.EXPORT_IMPORT);
+        supportedDataStrategies.add(DataStrategyEnum.HYBRID);
+        supportedDataStrategies.add(DataStrategyEnum.COMMON);
+
         return supportedDataStrategies;
     }
 

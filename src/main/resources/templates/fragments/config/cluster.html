@@ -1,0 +1,278 @@
+<!--
+  ~ Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~  
+  -->
+
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <title>Session</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+</head>
+<body>
+
+<div th:fragment="main (env)" >
+    <fieldset th:unless="${CONFIG.clusters[__${env}__] == null}" th:disabled="${READ_ONLY}">
+        <legend th:text="#{${env} + '.cluster'}"/>
+        <div class="pure-g">
+            <div class="pure-u-1-3">
+                <fieldset>
+                    <legend th:text="#{attributes}"/>
+                    <div class="pure-form pure-form-aligned">
+
+                        <input type="hidden" th:field="*{clusters[__${env}__].environment}"
+                               th:value="${CONFIG.clusters[__${env}__]?.environment}"/>
+                        <div class="pure-control-group">
+                            <label for="leftNamespace" th:text="#{hcfs.namespace}"/>
+                            <input class="pure-input-2-3" id="leftNamespace" type="text"
+                                   th:field="*{clusters[__${env}__].hcfsNamespace}"
+                                   placeholder="Set Namespace"/>
+                        </div>
+
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION SCHEMA_ONLY HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>
+                            <input type="checkbox" name="hs2legacy"
+                                   th:field="*{clusters[__${env}__].legacyHive}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.legacyHive}"/>
+                        </div>
+
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="cine" th:text="#{cluster.cine}"/>
+                            <input id="cine" type="checkbox"
+                                   th:field="*{clusters[__${env}__].createIfNotExists}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.createIfNotExists}"/>
+                        </div>
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="hdphive3" th:text="#{cluster.hdp.hive3}"/>
+                            <input id="hdphive3" type="checkbox"
+                                   th:field="*{clusters[__${env}__].hdpHive3}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.hdpHive3}"/>
+                        </div>
+
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="partauto" th:text="#{cluster.partition.auto}"/>
+                            <input id="partauto" type="checkbox"
+                                   th:field="*{clusters[__${env}__].partitionDiscovery.auto}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.auto}"/>
+                        </div>
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="partmsck" th:text="#{cluster.partition.msck}"/>
+                            <input id="partmsck" type="checkbox"
+                                   th:field="*{clusters[__${env}__].partitionDiscovery.initMSCK}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.initMSCK}"/>
+                        </div>
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="tblstats" th:text="#{cluster.enable.table.stats}"/>
+                            <input id="tblstats" type="checkbox"
+                                   th:field="*{clusters[__${env}__].enableAutoTableStats}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.enableAutoTableStats}"/>
+                        </div>
+                        <div class="pure-control-group"
+                             th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                            <label for="colstats" th:text="#{cluster.enable.colums.stats}"/>
+                            <input id="colstats" type="checkbox"
+                                   th:field="*{clusters[__${env}__].enableAutoColumnStats}"
+                                   th:checked="${CONFIG.clusters[__${env}__]?.enableAutoColumnStats}"/>
+                        </div>
+                        <!--                                <div class="pure-button-group">-->
+                        <!--                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.edit}"-->
+                        <!--                                        th:formaction="@{/config/cluster/edit}" th:formmethod="post"/>-->
+                        <!--                                    <a class="pure-button" th:href="@{/cluster/edit?environment=__${env}__}"-->
+                        <!--                                       th:text="#{button.edit}"/>-->
+                        <!--                                <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>-->
+                        <!--                                </div>-->
+                    </div>
+                </fieldset>
+            </div>
+            <div class="pure-u-2-3">
+                <fieldset>
+                    <legend th:text="#{hive.server2}"/>
+                    <div class="pure-form pure-form-aligned">
+                        <input type="hidden"
+                               th:field="*{clusters[__${env}__].hiveServer2.disconnected}"
+                               th:checked="${CONFIG.clusters[__${env}__]?.hiveServer2?.disconnected}"/>
+
+                        <div class="pure-control-group">
+                            <label for="hive_driverclass" th:text="#{hive.server2.uri}"/>
+                            <select id="hive_driverclass" class="pure-input-1-2"
+                                    th:field="*{clusters[__${env}__].hiveServer2.driverClassName}">
+                                <option th:each="cet: ${SUPPORTED_HIVE_DRIVER_CLASSES}"
+                                        th:value="${cet}"
+                                        th:text="${cet}"
+                                        th:selected="${cet.equals(CONFIG.clusters[__${env}__].hiveServer2.driverClassName)}"/>
+                            </select>
+                        </div>
+                        <input type="hidden"
+                               th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"
+                               th:value="${CONFIG.clusters[__${env}__].hiveServer2?.connectionProperties[maxWaitMillis]}"/>
+                        <input type="hidden"
+                               th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"
+                               th:value="${CONFIG.clusters[__${env}__].hiveServer2?.connectionProperties[maxTotal]}"/>
+
+                        <div class="pure-control-group">
+                            <label for="hs2uri" th:text="#{hive.server2.uri}"/>
+                            <input class="pure-input-1-2" id="hs2uri" type="text"
+                                   th:field="*{clusters[__${env}__].hiveServer2.uri}"
+                                   placeholder="Set HiveServer2 JDBC URI"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="hs2user" th:text="#{hive.server2.user}"/>
+                            <input class="pure-input-1-2" id="hs2user" type="text"
+                                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[user]}"
+                                   placeholder="Set HiveServer2 User"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="hs2password" th:text="#{hive.server2.password}"/>
+                            <input class="pure-input-1-2" id="hs2password" type="password"
+                                   autocomplete="off"
+                                   th:unless="${READ_ONLY}"
+                                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[password]}"
+                                   placeholder="Set Hive Server2 Password"/>
+                            <input class="pure-input-1-2" id="hs2password" type="text"
+                                   autocomplete="off"
+                                   th:if="${READ_ONLY && !CONFIG.encryptedPasswords}"
+                                   value="-- not encrypted --" readonly/>
+                            <input class="pure-input-1-2" id="hs2password" type="text"
+                                   autocomplete="off"
+                                   th:if="${READ_ONLY && CONFIG.encryptedPasswords}"
+                                   value="-- encrypted --"
+                                   readonly/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="hs2maxWaitMillis"
+                                   th:text="#{hive.server2.max.wait.ms}"/>
+                            <input class="pure-input-1-2" type="number" id="hs2maxWaitMillis"
+                                   autocomplete="off"
+                                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"/>
+                            <!--                                               th:value="${CONFIG.clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"/>-->
+                        </div>
+                        <!--                                    <div class="pure-control-group">-->
+                        <!--                                        <label for="hs2maxTotal" th:text="#{hive.server2.max.total}"/>-->
+                        <input class="pure-input-1-2" type="hidden" id="hs2maxTotal"
+                               autocomplete="off"
+                               th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>
+                        <!--                                               th:value="${CONFIG.clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>-->
+                        <!--                                    </div>-->
+                        <div class="pure-control-group">
+                            <label for="hs2jars" th:text="#{hive.server2.jars}"/>
+                            <input class="pure-input-1-2" id="hs2jars" type="text"
+                                   th:field="*{clusters[__${env}__].hiveServer2.jarFile}"
+                                   placeholder="Set HiveServer2 JDBC Driver Jar File(s)"/>
+                            <span class="pure-form-message-inline">Local file(s) on application server host.</span>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend th:text="#{metastore.direct}"/>
+                    <div class="pure-form pure-form-aligned">
+
+                        <!--                            Hidden Field to support all Metastore Direct Options -->
+                        <!--                            initSql-->
+                        <!--                            connectionPool.min-->
+                        <!--                            connectionPool.max-->
+                        <!--                            connectionPool.timeout-->
+                        <div class="pure-control-group">
+                            <label for="metastoreuri" th:text="#{metastore.direct.uri}"/>
+                            <input class="pure-input-3-4" id="metastoreuri" type="text"
+                                   th:field="*{clusters[__${env}__].metastoreDirect.uri}"
+                                   placeholder="Set Metastore JDBC URI"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="metastoretype"
+                                   th:text="#{metastore.direct.type}"></label>
+                            <select id="metastoretype"
+                                    th:field="*{clusters[__${env}__].metastoreDirect.type}">
+                                <option th:each="cet: ${db_types}"
+                                        th:value="${cet}"
+                                        th:text="${cet}"
+                                        th:selected="${cet.equals(CONFIG.clusters[__${env}__]?.metastoreDirect?.type)}"/>
+                            </select>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="metastoreuser" th:text="#{metastore.direct.user}"/>
+                            <input class="pure-input-1-4" id="metastoreuser" type="text"
+                                   th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[user]}"
+                                   placeholder="Set Metastore User"/>
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="metastorepassword"
+                                   th:text="#{metastore.direct.password}"/>
+                            <!--                                        <input class="pure-input-1-4" id="metastorepassword" type="password"-->
+                            <!--                                               th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[password]}"-->
+                            <!--                                               autocomplete="off" th:unless="${READ_ONLY}"-->
+                            <!--                                               placeholder="Set Metastore Password"/>-->
+                            <!--                                        <input class="pure-input-1-2" id="metastorepassword" type="text" autocomplete="off"-->
+                            <!--                                               th:if="${READ_ONLY}" value="***********" readonly/>-->
+                            <input class="pure-input-1-2" id="metastorepassword" type="password"
+                                   autocomplete="off"
+                                   th:unless="${READ_ONLY}"
+                                   th:field="*{clusters[__${env}__].metastoreDirect.connectionProperties[password]}"
+                                   placeholder="Set Metastore Password"/>
+                            <input class="pure-input-1-2" id="metastorepassword" type="text"
+                                   autocomplete="off"
+                                   th:if="${READ_ONLY && !CONFIG.encryptedPasswords}"
+                                   value="-- not encrypted --" readonly/>
+                            <input class="pure-input-1-2" id="metastorepassword" type="text"
+                                   autocomplete="off"
+                                   th:if="${READ_ONLY && CONFIG.encryptedPasswords}"
+                                   value="-- encrypted --"
+                                   readonly/>
+
+                        </div>
+                        <div class="pure-control-group">
+                            <label for="metastoreinitsql" th:text="#{metastore.init.sql}"/>
+                            <input type="text" class="pure-input-2-3" id="metastoreinitsql"
+                                   th:field="*{clusters[__${env}__].metastoreDirect.initSql}"
+                                   th:value="${CONFIG.clusters[__${env}__]?.metastoreDirect?.initSql}"/>
+                        </div>
+                        <!--                                    <div class="pure-control-group">-->
+                        <!--                                        <label for="metastorecpmin" th:text="#{metastore.connectionpool.min}"/>-->
+                        <input type="hidden" id="metastorecpmin"
+                               th:field="*{clusters[__${env}__].metastoreDirect.connectionPool.min}"
+                               th:value="${CONFIG.clusters[__${env}__]?.metastoreDirect?.connectionPool.min}"/>
+                        <!--                                    </div>-->
+                        <!--                                    <div class="pure-control-group">-->
+                        <!--                                        <label for="metastorecpmax" th:text="#{metastore.connectionpool.max}"/>-->
+                        <input type="hidden" id="metastorecpmax"
+                               th:field="*{clusters[__${env}__].metastoreDirect.connectionPool.max}"
+                               th:value="${CONFIG.clusters[__${env}__]?.metastoreDirect?.connectionPool.max}"/>
+                        <!--                                    </div>-->
+                        <div class="pure-control-group">
+                            <label for="metastoretimeout" th:text="#{metastore.timeout}"/>
+                            <input type="number" id="metastoretimeout"
+                                   th:field="*{clusters[__${env}__].metastoreDirect.connectionPool.timeout}"
+                                   th:value="${CONFIG.clusters[__${env}__]?.metastoreDirect?.connectionPool.timeout}"/>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </fieldset>
+</div>
+
+</body>
+</html>

@@ -34,15 +34,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static com.cloudera.utils.hms.mirror.MessageCode.ENCRYPTED_PASSWORD_CHANGE_ATTEMPT;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -82,14 +82,20 @@ public class ConfigMVController implements ControllerReferences {
         this.webConfigService = webConfigService;
     }
 
+    @RequestMapping(value = "/", method = RequestMethod.GET)
+    public String index(Model model,
+                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+        sessionToModel(model, maxThreads, null);
+        return "index";
+    }
+
     @RequestMapping(value = "/home", method = RequestMethod.GET)
     public String home(Model model,
                        @Value("${hms-mirror.config.testing}") Boolean testing,
                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
-        model.addAttribute(ACTION, "home");
+//        model.addAttribute(ACTION, "home");
 
 //        ExecuteSession executeSession = executeSessionService.getLoadedSession();
-        model.addAttribute(CONCURRENCY, maxThreads);
 
         // Get list of available configs
         Set<String> configs = webConfigService.getConfigList();
@@ -99,30 +105,38 @@ public class ConfigMVController implements ControllerReferences {
 
         // Get list of Reports
         model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
-        try {
-            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
-        } catch (IllegalArgumentException iae) {
-            model.addAttribute(VERSION, "Unknown");
-        }
 
-        return "/config/home";
+        return "config/home";
     }
 
+    @RequestMapping(value = "/init", method = RequestMethod.GET)
+    public String init(Model model,
+                       @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
+        model.addAttribute(ACTION, "init");
+        // Clear the loaded and active session.
+//        executeSessionService.clearLoadedSession();
+        // Create new Session (with blank config)
+//        HmsMirrorConfig config = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
+//        ExecuteSession session = executeSessionService.createSession(NEW_CONFIG, config);
+        // Set the Loaded Session
+//        executeSessionService.setLoadedSession(session);
+//        // Setup Model for MVC
+//        model.addAttribute(CONFIG, session.getConfig());
+//        model.addAttribute(SESSION_ID, session.getSessionId());
 
-    //    @RequestMapping(value = "/list", method = RequestMethod.GET)
-//    public String list(Model model) {
-//        String loadedSessionId = executeSessionService.getLoadedSession().getSessionId();
-//        List<String> configs = webConfigService.getConfigList();
-//        model.addAttribute("action", "list");
-//        model.addAttribute("loadedSessionId", loadedSessionId);
-//        model.addAttribute("configs", configs);
-//        return "/config/list";
-//    }
-//
-    @RequestMapping(value = "/create", method = RequestMethod.POST)
-    public String create(Model model,
-                         @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy,
-                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
+        // Get list of available configs
+        Set<String> configs = webConfigService.getConfigList();
+        model.addAttribute(CONFIG_LIST, configs);
+
+        sessionToModel(model, maxThreads, Boolean.FALSE);
+
+        return "config/init";
+    }
+
+    @RequestMapping(value = "/doCreate", method = RequestMethod.POST)
+    public String doCreate(Model model,
+                           @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy,
+                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
         model.addAttribute(ACTION, "create");
         // Clear the loaded and active session.
         executeSessionService.clearLoadedSession();
@@ -140,32 +154,27 @@ public class ConfigMVController implements ControllerReferences {
         return "/config/view";
     }
 
-    private void sessionToModel(Model model, Integer concurrency, Boolean testing) {
+    public void sessionToModel(Model model, Integer concurrency, Boolean testing) {
 
+        boolean lclTesting = testing != null && testing;
 
-        // This is so we can try to load a list of available databases.
-//        try {
-//            log.info("Attempting connection to get list of databases.");
-//            executeSessionService.transitionLoadedSessionToActive(concurrency);
-//        } catch (SessionException e) {
-//            log.warn("Error transitioning to active session: {}", e.getMessage());
-//        }
+        model.addAttribute(CONCURRENCY, concurrency);
 
-//        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
-//        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
         ExecuteSession session = executeSessionService.getSession();
 
         RunContainer runContainer = new RunContainer();
         model.addAttribute(RUN_CONTAINER, runContainer);
         if (session != null) {
             runContainer.setSessionId(session.getSessionId());
-            runContainer.setDataStrategy(session.getConfig().getDataStrategy());
 
             model.addAttribute(CONFIG, session.getConfig());
 
-            runContainer.setSaveAs(session.getSessionId());
+            PersistContainer persistContainer = new PersistContainer();
+            persistContainer.setSaveAs(session.getSessionId());
+            model.addAttribute(PERSIST, persistContainer);
+
             // For testing only.
-            if (testing && isNull(session.getRunStatus())) {
+            if (lclTesting && isNull(session.getRunStatus())) {
                 RunStatus runStatus = new RunStatus();
                 runStatus.setConcurrency(concurrency);
                 runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
@@ -177,7 +186,13 @@ public class ConfigMVController implements ControllerReferences {
                 model.addAttribute(RUN_STATUS, runStatus);
             }
         }
-        model.addAttribute(RUN_CONTAINER, runContainer);
+
+        try {
+            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
+        } catch (IllegalArgumentException iae) {
+            model.addAttribute(VERSION, "Unknown");
+        }
+
         ModelUtils.allEnumsForModel(model);
     }
 
@@ -185,18 +200,20 @@ public class ConfigMVController implements ControllerReferences {
     public String edit(Model model,
                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
 //        executeSessionService.clearActiveSession();
-        model.addAttribute(ACTION, "edit");
+//        model.addAttribute(ACTION, "edit");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
         sessionToModel(model, maxThreads, Boolean.FALSE);
         return "/config/view";
     }
 
-    @RequestMapping(value = "/save", method = RequestMethod.POST)
-    public String save(Model model,
-                       @ModelAttribute(CONFIG) HmsMirrorConfig config,
-                       @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
+    @RequestMapping(value = "/doSave", method = RequestMethod.POST)
+    public String doSave(Model model,
+                         @ModelAttribute(CONFIG) HmsMirrorConfig config,
+//                         @PathVariable @NotNull ConfigSection section,
+                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
         executeSessionService.clearActiveSession();
-        model.addAttribute(ACTION, "view");
+
+        AtomicReference<Boolean> passwordCheck = new AtomicReference<>(Boolean.FALSE);
 
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig currentConfig = session.getConfig();
@@ -208,8 +225,12 @@ public class ConfigMVController implements ControllerReferences {
                 String currentPassword = (String) currentConfig.getClusters().get(env).getHiveServer2().getConnectionProperties().get("password");
                 String newPassword = (String) cluster.getHiveServer2().getConnectionProperties().get("password");
                 if (newPassword != null && !newPassword.isEmpty()) {
-                    // Set new Password
-                    cluster.getHiveServer2().getConnectionProperties().put("password", newPassword);
+                    // Set new Password, IF the current passwords aren't ENCRYPTED...  set warning if they attempted.
+                    if (config.isEncryptedPasswords()) {
+                        passwordCheck.set(Boolean.TRUE);
+                    } else {
+                        cluster.getHiveServer2().getConnectionProperties().put("password", newPassword);
+                    }
                 } else {
                     // Restore original password
                     cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
@@ -222,7 +243,11 @@ public class ConfigMVController implements ControllerReferences {
                 String newPassword = (String) cluster.getMetastoreDirect().getConnectionProperties().get("password");
                 if (newPassword != null && !newPassword.isEmpty()) {
                     // Set new password
-                    cluster.getMetastoreDirect().getConnectionProperties().put("password", newPassword);
+                    if (config.isEncryptedPasswords()) {
+                        passwordCheck.set(Boolean.TRUE);
+                    } else {
+                        cluster.getMetastoreDirect().getConnectionProperties().put("password", newPassword);
+                    }
                 } else {
                     // Restore Original password
                     cluster.getMetastoreDirect().getConnectionProperties().put("password", currentPassword);
@@ -230,30 +255,40 @@ public class ConfigMVController implements ControllerReferences {
             }
         });
 
-        // Merge
-//        currentConfig.getClusters().forEach((env, cluster) -> {
-//            config.getClusters().put(env, cluster);
-//        });
+        // Merge Translator
         config.setTranslator(currentConfig.getTranslator());
 
         // Reset to the merged config.
         session.setConfig(config);
+
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
         executeSessionService.transitionLoadedSessionToActive(maxThreads);
+        if (passwordCheck.get()) {
+            ExecuteSession session1 = executeSessionService.getSession();
+            session1.getRunStatus().getErrors().set(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
+        }
 
         sessionToModel(model, maxThreads, Boolean.FALSE);
+
         return "/config/view";
     }
 
 
-    // TODO: Need to adjust this to a persist only. Adjust SessionContainer (drop) and replace with
-    //      GET path variables to control how to save.
-    @RequestMapping(value = "/persist", method = RequestMethod.POST)
+    @RequestMapping(value = "/persist", method = RequestMethod.GET)
     public String persist(Model model,
-                          @Value("${hms-mirror.config.path}") String configPath,
-                          @ModelAttribute(PERSIST) PersistContainer persistContainer,
                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws IOException, SessionException {
+
+        sessionToModel(model, maxThreads, false);
+
+        return "config/persist";
+    }
+
+    @RequestMapping(value = "/doPersist", method = RequestMethod.POST)
+    public String doPersist(Model model,
+                            @Value("${hms-mirror.config.path}") String configPath,
+                            @ModelAttribute(PERSIST) PersistContainer persistContainer,
+                            @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws IOException, SessionException {
         // Get the current session config.
         executeSessionService.clearActiveSession();
 
@@ -278,6 +313,7 @@ public class ConfigMVController implements ControllerReferences {
             configService.saveConfig(config, configFullFilename, Boolean.TRUE);
         }
         if (!persistContainer.getSaveAs().isEmpty()) {
+            curSession.setSessionId(persistContainer.getSaveAs());
             if (!(persistContainer.getSaveAs().contains(".yaml") || persistContainer.getSaveAs().contains(".yml"))) {
                 persistContainer.setSaveAs(persistContainer.getSaveAs() + ".yaml");//saveAs += ".yaml";
             }
@@ -294,10 +330,10 @@ public class ConfigMVController implements ControllerReferences {
         return "/config/view";
     }
 
-    @RequestMapping(value = "/reload", method = RequestMethod.POST)
-    public String reload(Model model,
-                         @RequestParam(value = SESSION_ID, required = true) String sessionId,
-                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
+    @RequestMapping(value = "/doReload", method = RequestMethod.POST)
+    public String doReload(Model model,
+                           @RequestParam(value = SESSION_ID, required = true) String sessionId,
+                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearLoadedSession();
 
@@ -308,6 +344,9 @@ public class ConfigMVController implements ControllerReferences {
         // Create a new session
         ExecuteSession session = executeSessionService.createSession(sessionId, config);
         executeSessionService.setLoadedSession(session);
+
+        // Set to null, so it will reset.
+        session.setSessionId(null);
 
         executeSessionService.transitionLoadedSessionToActive(maxThreads);
 
@@ -323,15 +362,15 @@ public class ConfigMVController implements ControllerReferences {
     @RequestMapping(value = "/view", method = RequestMethod.GET)
     public String view(Model model,
                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
-        model.addAttribute(ACTION, "view");
+//        model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
         sessionToModel(model, maxThreads, Boolean.FALSE);
         return "/config/view";
     }
 
-    @RequestMapping(value = "/encryptPasswords", method = RequestMethod.POST)
-    public String encryptPasswords(Model model,
-                                   @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
+    @RequestMapping(value = "/doEncryptPasswords", method = RequestMethod.POST)
+    public String doEncryptPasswords(Model model,
+                                     @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
         executeSessionService.clearActiveSession();
         if (!newConfig.isEncryptedPasswords() && nonNull(newConfig.getPasswordKey()) && !newConfig.getPasswordKey().isEmpty()) {
             String passwordKey = newConfig.getPasswordKey();
@@ -373,9 +412,9 @@ public class ConfigMVController implements ControllerReferences {
         return "redirect:/config/view";
     }
 
-    @RequestMapping(value = "/decryptPasswords", method = RequestMethod.POST)
-    public String decryptPasswords(Model model,
-                                   @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
+    @RequestMapping(value = "/doDecryptPasswords", method = RequestMethod.POST)
+    public String doDecryptPasswords(Model model,
+                                     @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
         executeSessionService.clearActiveSession();
         if (newConfig.isEncryptedPasswords() && nonNull(newConfig.getPasswordKey()) && !newConfig.getPasswordKey().isEmpty()) {
             String passwordKey = newConfig.getPasswordKey();
@@ -418,19 +457,4 @@ public class ConfigMVController implements ControllerReferences {
         return "redirect:/config/view";
     }
 
-
-    //    @RequestMapping(value = "/cluster/init", method = RequestMethod.GET)
-//    public String initCluster(Model model,
-//            @RequestParam(value = ENVIRONMENT, required = true) String environment) throws SessionException {
-//        // Don't reload if running.
-//        executeSessionService.clearActiveSession();
-//
-//        Environment env = Environment.valueOf(environment);
-//        ExecuteSession session = executeSessionService.getLoadedSession();
-//        HmsMirrorConfig config = session.getConfig();
-//        config.initClusterFor(env);
-//        sessionToModel(model);
-//
-//        return "/config/view";
-//    }
 }

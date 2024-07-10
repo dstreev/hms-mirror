@@ -88,7 +88,7 @@ public enum MessageCode {
 
     ENCRYPT_PASSWORD_ISSUE(35, "Issue Encrypting PasswordApp"),
     DECRYPTING_PASSWORD_ISSUE(36, "Issue decrypting password {0}"),
-    PKEY_PASSWORD_CFG(37, "Need to include '-pkey' with '-p'."),
+    PKEY_PASSWORD_CFG(37, "Passwords are encrypted.  You must supply a password key to run the process. For CLIL '-pkey' with '-p'."),
     PASSWORD_CFG(38, "PasswordApp en/de crypt"),
     VALID_ACID_DA_IP_STRATEGIES(39, "Inplace Downgrade of ACID tables only valid for the SQL data strategy"),
     COMMON_STORAGE_WITH_DA_IP(40, "Common Storage (-cs) is not a valid option for the ACID downgrades inplace."),
@@ -227,7 +227,10 @@ public enum MessageCode {
     WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV(109, "The warehouse directories were retrieved from the Hive environment.  If these are not the intended " +
             "directories, add the warehouse directories to the configuration and try again."),
     STORAGE_MIGRATION_GLMS_NOT_BUILT(110, "The global location maps (GLMs) have not been built yet.  We found warehouse definitions but no GLM's.  " +
-            "Please build or create GLM's and try again.");
+            "Please build or create GLM's and try again."),
+    ENCRYPTED_PASSWORD_CHANGE_ATTEMPT(111, "Password can NOT be changed while ENCRYPTED.  Decrypt them first to change/add a password then Re-encrytped them before saving."),
+    PASSWORDS_ENCRYPTED(112,"Passwords are encrypted.  Too change/add a password, you must decrypt them first.");
+
 
     private int code = 0;
     private String desc = null;

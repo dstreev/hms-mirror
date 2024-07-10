@@ -33,7 +33,7 @@
   <legend th:text="#{${environment}}"/>
   <fieldset>
     <legend th:text="#{hive.server2}"/>
-    <form  class="pure-form pure-form-aligned" id="config_form" th:action="@{/templates/hiveServer2/save}"
+    <form  class="pure-form pure-form-aligned" id="config_form" th:action="@{/WEB-INF/templates/hiveServer2/save}"
           th:object="${hiveServer2}" method="post">
 
       <input type="hidden" name="environment" th:value="${environment}"/>

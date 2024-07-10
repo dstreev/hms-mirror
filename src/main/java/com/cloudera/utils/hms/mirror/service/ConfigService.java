@@ -213,24 +213,49 @@ public class ConfigService {
 
         switch (dataStrategy) {
             case DUMP:
-                // TODO: Need to setup LEFT with HS2 config.
+                rtn.getMigrateACID().setOn(Boolean.TRUE);
+                Cluster leftDump = new Cluster();
+                leftDump.setLegacyHive(Boolean.FALSE);
+                rtn.getClusters().put(Environment.LEFT, leftDump);
                 break;
             case STORAGE_MIGRATION:
                 rtn.getMigrateACID().setOn(Boolean.TRUE);
-                Cluster left = new Cluster();
-                left.setLegacyHive(Boolean.FALSE);
-                rtn.getClusters().put(Environment.LEFT, left);
-                left.setMetastoreDirect(new DBStore());
-                left.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
+                Cluster leftSM = new Cluster();
+                leftSM.setLegacyHive(Boolean.FALSE);
+                rtn.getClusters().put(Environment.LEFT, leftSM);
+                leftSM.setMetastoreDirect(new DBStore());
+                leftSM.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
                 rtn.getTransfer().setCommonStorage("ofs://NEED_TO_SET_THIS");
                 rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
-                left.setHiveServer2(new HiveServer2Config());
+                leftSM.setHiveServer2(new HiveServer2Config());
                 break;
             case SCHEMA_ONLY:
             case SQL:
             case EXPORT_IMPORT:
             case HYBRID:
-                // TODO: Need to setup LEFT and RIGHT clusters with HS2 config.  Metastore Direct on LEFT is optional.
+                Cluster leftT = new Cluster();
+                leftT.setLegacyHive(Boolean.TRUE);
+                rtn.getClusters().put(Environment.LEFT, leftT);
+                leftT.setMetastoreDirect(new DBStore());
+                leftT.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
+                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
+                leftT.setHiveServer2(new HiveServer2Config());
+                Cluster rightT = new Cluster();
+                rightT.setLegacyHive(Boolean.FALSE);
+                rtn.getClusters().put(Environment.RIGHT, rightT);
+                break;
+            case COMMON:
+                Cluster leftC = new Cluster();
+                leftC.setLegacyHive(Boolean.TRUE);
+                rtn.getClusters().put(Environment.LEFT, leftC);
+                leftC.setMetastoreDirect(new DBStore());
+                leftC.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
+                rtn.getTransfer().setCommonStorage("hdfs|s3a|ofs://NEED_TO_SET_THIS");
+                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
+                leftC.setHiveServer2(new HiveServer2Config());
+                Cluster rightC = new Cluster();
+                rightC.setLegacyHive(Boolean.FALSE);
+                rtn.getClusters().put(Environment.RIGHT, rightC);
                 break;
 //            case ICEBERG_CONVERSION:
 //                break;
@@ -435,6 +460,13 @@ public class ConfigService {
                         rtn = Boolean.FALSE;
                     }
                 }
+        }
+
+        if (config.isEncryptedPasswords()) {
+            runStatus.addWarning(PASSWORDS_ENCRYPTED);
+            if (isNull(config.getPasswordKey())) {
+                runStatus.addError(PKEY_PASSWORD_CFG);
+            }
         }
 
         if (config.getCluster(Environment.LEFT).isHdpHive3() &&

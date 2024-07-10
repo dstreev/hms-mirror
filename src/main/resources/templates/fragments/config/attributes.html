@@ -1,0 +1,472 @@
+<!--
+  ~ Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~  
+  -->
+
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <title>Session</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+</head>
+<body>
+
+<div th:fragment="main">
+    <fieldset th:disabled="${READ_ONLY}">
+        <legend th:text="#{attributes}"/>
+        <div class="pure-g pure-form-aligned">
+            <div class="pure-u-1-3">
+                <div class="pure-control-group">
+                    <label for="datastrategy" th:text="#{config.dataStrategy}"/>
+                    <input type="text" id="datastrategy" th:field="*{dataStrategy}"
+                           th:value="${CONFIG.dataStrategy}" readonly/>
+                </div>
+                <!-- Common Storage -->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                    <label for="commonStorage" th:text="#{config.transfer.commonStorage}"></label>
+                    <input class="pure-input-1" id="commonStorage" type="text"
+                           th:field="*{transfer.commonStorage}"
+                           placeholder="Set Common Storage"/>
+                </div>
+            </div>
+            <div class="pure-u-1-3">
+                <fieldset>
+                    <legend th:text="#{config.data.movement}"/>
+                    <!-- Data Movement Strategy -->
+                    <div class="pure-control-group"
+                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                        <label for="dataMovementStrategy"
+                               th:text="#{config.transfer.storageMigration.dataMovementStrategy}"></label>
+                        <select id="dataMovementStrategy" class="pure-input-1"
+                                th:field="*{transfer.storageMigration.dataMovementStrategy}">
+                            <option th:each="cet: ${datamovementstrategyenums}"
+                                    th:value="${cet}"
+                                    th:text="${cet}"
+                                    th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataMovementStrategy)}"/>
+                        </select>
+                    </div>
+
+                    <!-- Data Flow -->
+                    <div class="pure-control-group"
+                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                        <label for="dataFlow"
+                               th:text="#{config.transfer.storageMigration.dataFlow}"></label>
+                        <select id="dataFlow" class="pure-input-1"
+                                th:field="*{transfer.storageMigration.dataFlow}">
+                            <option th:each="cet: ${distcpflowenums}"
+                                    th:value="${cet}"
+                                    th:text="${cet}"
+                                    th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataFlow)}"/>
+                        </select>
+                    </div>
+
+                    <!-- Strict -->
+                    <div class="pure-control-group"
+                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                        <label for="strict"
+                               th:text="#{config.transfer.storageMigration.strict}"></label>
+                        <input type="checkbox" id="strict" th:disabled="true"
+                               th:field="*{transfer.storageMigration.strict}"
+                               th:checked="${CONFIG.transfer.storageMigration.strict}"/>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="pure-1-3" th:insert="fragments/config/standards::standards">
+            </div>
+            <div class="pure-u-1-3" th:insert="fragments/config/optimizations::optimizations">
+            </div>
+            <div class="pure-u-1-3">
+                <!-- Hidden -->
+                <!-- Migrate ACID ON -->
+                <div class="pure-control-group">
+                    <!--                        <label for="migrateACIDon" th:text="#{config.migrateACID.on}"></label>-->
+                    <input type="hidden" name="migrateACIDon"
+                           th:field="*{migrateACID.on}"
+                           th:checked="${CONFIG.migrateACID.on}"/>
+                </div>
+
+                <!-- Databases (Managed via Warehouse Plans) -->
+                <fieldset>
+                    <legend th:text=" #{config.databases}"/>
+                    <div class="pure-form-stacked">
+                        <label th:text="#{config.databases.control}"/>
+                        <div class="pure-control-group">
+                            <input disabled="disabled" class="pure-input-1-3"
+                                   th:each="database, itemStat: *{databases}" type="text"
+                                   th:field="*{databases[__${itemStat.index}__]}"/>
+                        </div>
+                        <!--                            <div class="pure-button-group">-->
+                        <!--                                &lt;!&ndash;                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.edit}"&ndash;&gt;-->
+                        <!--                                &lt;!&ndash;                                        th:formaction="@{/config/cluster/edit}" th:formmethod="post"/>&ndash;&gt;-->
+                        <!--                                <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>-->
+                        <!--                                &lt;!&ndash;                                <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>&ndash;&gt;-->
+                        <!--                            </div>-->
+
+                    </div>
+                </fieldset>
+
+            </div>
+
+            <div class="pure-u-1-3">
+            </div>
+            <!--            <div class="pure-u-1-4">-->
+            <!--                <fieldset>-->
+            <!--                    <legend th:text="#{config.transfer}"/>-->
+            <!--                    &lt;!&ndash;                    transfer:&ndash;&gt;-->
+            <!--                    &lt;!&ndash;                        transferPrefix: "hms_mirror_transfer_"&ndash;&gt;-->
+            <!--                    <div class="pure-form pure-form-stacked">-->
+            <!--                        <div class="pure-control-group" th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
+            <!--                            <label class="pure-input-1" for="transferPrefix" th:text="#{config.transfer.transferPrefix}"></label>-->
+            <!--                            <input class="pure-input-1" id="transferPrefix" type="text"-->
+            <!--                                   th:field="*{transfer.transferPrefix}"-->
+            <!--                                   placeholder="Set Transfer Prefix"/>-->
+            <!--                        </div>-->
+            <!--                        &lt;!&ndash;                        shadowPrefix: "hms_mirror_shadow_"&ndash;&gt;-->
+            <!--                        <div class="pure-control-group tooltip" th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
+            <!--                            <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>-->
+            <!--                            <label class="pure-label" for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>-->
+            <!--                            <input class="pure-input-1" id="shadowPrefix" type="text"-->
+            <!--                                   th:field="*{transfer.shadowPrefix}"-->
+            <!--                                   placeholder="Set Shadow Prefix"/>-->
+            <!--                        </div>-->
+            <!--                        &lt;!&ndash;                        exportBaseDirPrefix: "/apps/hive/warehouse/export_"&ndash;&gt;-->
+            <!--                        <div class="pure-control-group" th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
+            <!--                            <label for="exportBaseDirPrefix" th:text="#{config.transfer.exportBaseDirPrefix}"></label>-->
+            <!--                            <input class="pure-input-1" id="exportBaseDirPrefix" type="text"-->
+            <!--                                   th:field="*{transfer.exportBaseDirPrefix}"-->
+            <!--                                   placeholder="Set Export Base Dir Prefix"/>-->
+            <!--                        </div>-->
+            <!--                        &lt;!&ndash;                        remoteWorkingDirectory: "hms_mirror_working"&ndash;&gt;-->
+            <!--                        <div class="pure-control-group" th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
+            <!--                            <label for="remoteWorkingDirectory"-->
+            <!--                                   th:text="#{config.transfer.remoteWorkingDirectory}"></label>-->
+            <!--                            <input class="pure-input-1" id="remoteWorkingDirectory" type="text"-->
+            <!--                                   th:field="*{transfer.remoteWorkingDirectory}"-->
+            <!--                                   placeholder="Set Remote Working Directory"/>-->
+            <!--                        </div>-->
+            <!--                        &lt;!&ndash;                        intermediateStorage: null&ndash;&gt;-->
+            <!--                        <div class="pure-control-group" th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
+            <!--                            <label for="intermediateStorage" th:text="#{config.transfer.intermediateStorage}"></label>-->
+            <!--                            <input class="pure-input-1" id="intermediateStorage" type="text"-->
+            <!--                                   th:field="*{transfer.intermediateStorage}"-->
+            <!--                                   placeholder="Set Intermediate Storage"/>-->
+            <!--                        </div>-->
+            <!--                        &lt;!&ndash;                        commonStorage: "ofs://OHOME90"&ndash;&gt;-->
+            <!--                        &lt;!&ndash;                        storageMigration:&ndash;&gt;-->
+            <!--                        &lt;!&ndash;                            dataMovementStrategy: "DISTCP"&ndash;&gt;-->
+            <!--                        &lt;!&ndash;                            dataFlow: "PULL"&ndash;&gt;-->
+            <!--                        &lt;!&ndash;                            strict: true&ndash;&gt;-->
+            <!--                    </div>-->
+            <!--                </fieldset>-->
+            <!--            </div>-->
+            <!--            <div class="pure-1-4">-->
+            <!--                <fieldset>-->
+            <!--                    <legend th:text="#{config.connection.details}"/>-->
+            <!--                    &lt;!&ndash;                    skipLinkCheck: false&ndash;&gt;-->
+            <!--                    <div class="pure-control-group tooltip">-->
+            <!--                        <span class="tooltiptext" th:text="#{config.skipLinkCheck.tooltip}"></span>-->
+            <!--                        <label for="skipLinkCheck" th:text="#{config.skipLinkCheck}"></label>-->
+            <!--                        <input type="checkbox" name="skipLinkCheck"-->
+            <!--                               th:field="*{skipLinkCheck}"-->
+            <!--                               th:checked="${CONFIG.skipLinkCheck}"/>-->
+            <!--                    </div>-->
+
+            <!--                </fieldset>-->
+            <!--                &lt;!&ndash;                    copyAvroSchemaUrls: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="copyAvroSchemaUrls" th:text="#{config.copyAvroSchemaUrls}"></label>-->
+            <!--                    <input type="checkbox" name="copyAvroSchemaUrls"-->
+            <!--                           th:field="*{copyAvroSchemaUrls}"-->
+            <!--                           th:checked="${CONFIG.copyAvroSchemaUrls}"/>-->
+            <!--                </div>-->
+
+            <!--                &lt;!&ndash;                    databaseOnly: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="databaseOnly" th:text="#{config.databaseOnly}"></label>-->
+            <!--                    <input type="checkbox" name="databaseOnly"-->
+            <!--                           th:field="*{databaseOnly}"-->
+            <!--                           th:checked="${CONFIG.databaseOnly}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    dbPrefix: null&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="dbPrefix" th:text="#{config.dbPrefix}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="dbPrefix" type="text"-->
+            <!--                           th:field="*{dbPrefix}"-->
+            <!--                           placeholder="Set Database Prefix"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    dbRename: null&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="dbRename" th:text="#{config.dbRename}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="dbRename" type="text"-->
+            <!--                           th:field="*{dbRename}"-->
+            <!--                           placeholder="Set Database Rename"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    dumpSource: "LEFT"&ndash;&gt;-->
+            <!--                <div class="pure-control-group" th:if="${CONFIG.dataStrategy == 'DUMP'}">-->
+            <!--                    <label for="dumpSource" th:text="#{config.dumpSource}"></label>-->
+            <!--                    <select id="dumpSource" th:field="*{dumpSource}">-->
+            <!--                        <option th:each="cet: ${ENVIRONMENTS}"-->
+            <!--                                th:value="${cet}"-->
+            <!--                                th:text="${cet}"-->
+            <!--                                th:selected="${cet.equals(CONFIG.dumpSource)}"/>-->
+            <!--                    </select>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    hybrid:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        exportImportPartitionLimit: 100&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="exportImportPartitionLimit"-->
+            <!--                           th:text="#{config.hybrid.exportImportPartitionLimit}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="exportImportPartitionLimit" type="number"-->
+            <!--                           th:field="*{hybrid.exportImportPartitionLimit}"-->
+            <!--                           placeholder="Set Export Import Partition Limit"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        sqlPartitionLimit: 3000&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="sqlPartitionLimit" th:text="#{config.hybrid.sqlPartitionLimit}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="sqlPartitionLimit" type="number"-->
+            <!--                           th:field="*{hybrid.sqlPartitionLimit}"-->
+            <!--                           placeholder="Set SQL Partition Limit"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        sqlSizeLimit: 1073741824&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="sqlSizeLimit" th:text="#{config.hybrid.sqlSizeLimit}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="sqlSizeLimit" type="number"-->
+            <!--                           th:field="*{hybrid.sqlSizeLimit}"-->
+            <!--                           placeholder="Set SQL Size Limit"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    icebergConfig:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        version: 2&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="icebergConfigVersion" th:text="#{config.icebergConfig.version}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="icebergConfigVersion" type="number"-->
+            <!--                           th:field="*{icebergConfig.version}"-->
+            <!--                           placeholder="Set Iceberg Config"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        tableProperties: {}&ndash;&gt;-->
+
+            <!--                &lt;!&ndash;                    migrateACID:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        "on": true&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        only: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateACIDonly" th:text="#{config.migrateACID.only}"></label>-->
+            <!--                    <input type="checkbox" name="migrateACIDonly"-->
+            <!--                           th:field="*{migrateACID.only}"-->
+            <!--                           th:checked="${CONFIG.migrateACID.only}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        artificialBucketThreshold: 2&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateACIDartificialBucketThreshold"-->
+            <!--                           th:text="#{config.migrateACID.artificialBucketThreshold}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="migrateACIDartificialBucketThreshold" type="number"-->
+            <!--                           th:field="*{migrateACID.artificialBucketThreshold}"-->
+            <!--                           placeholder="Set Artificial Bucket Threshold"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        partitionLimit: 500&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateACIDpartitionLimit"-->
+            <!--                           th:text="#{config.migrateACID.partitionLimit}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="migrateACIDpartitionLimit" type="number"-->
+            <!--                           th:field="*{migrateACID.partitionLimit}"-->
+            <!--                           placeholder="Set Partition Limit"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        downgrade: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateACIDdowngrade" th:text="#{config.migrateACID.downgrade}"></label>-->
+            <!--                    <input type="checkbox" name="migrateACIDdowngrade"-->
+            <!--                           th:field="*{migrateACID.downgrade}"-->
+            <!--                           th:checked="${CONFIG.migrateACID.downgrade}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        inplace: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateACIDinplace" th:text="#{config.migrateACID.inplace}"></label>-->
+            <!--                    <input type="checkbox" name="migrateACIDinplace"-->
+            <!--                           th:field="*{migrateACID.inplace}"-->
+            <!--                           th:checked="${CONFIG.migrateACID.inplace}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    migrateVIEW:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        "on": false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migrateVIEWon" th:text="#{config.migrateVIEW.on}"></label>-->
+            <!--                    <input type="checkbox" name="migrateVIEWon"-->
+            <!--                           th:field="*{migrateVIEW.on}"-->
+            <!--                           th:checked="${CONFIG.migrateVIEW.on}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    migratedNonNative: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="migratedNonNative" th:text="#{config.migratedNonNative}"></label>-->
+            <!--                    <input type="checkbox" name="migratedNonNative"-->
+            <!--                           th:field="*{migratedNonNative}"-->
+            <!--                           th:checked="${CONFIG.migratedNonNative}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    optimization:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        sortDynamicPartitionInserts: false&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        compressTextOutput: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="compressTextOutput" th:text="#{config.optimization.compressTextOutput}"></label>-->
+            <!--                    <input type="checkbox" name="compressTextOutput"-->
+            <!--                           th:field="*{optimization.compressTextOutput}"-->
+            <!--                           th:checked="${CONFIG.optimization.compressTextOutput}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        skipStatsCollection: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="skipStatsCollection" th:text="#{config.optimization.skipStatsCollection}"></label>-->
+            <!--                    <input type="checkbox" name="skipStatsCollection"-->
+            <!--                           th:field="*{optimization.skipStatsCollection}"-->
+            <!--                           th:checked="${CONFIG.optimization.skipStatsCollection}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        overrides:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                            left: {}&ndash;&gt;-->
+            <!--                &lt;!&ndash;                            right: {}&ndash;&gt;-->
+            <!--                &lt;!&ndash;                        buildShadowStatistics: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="buildShadowStatistics" th:text="#{config.optimization.buildShadowStatistics}"></label>-->
+            <!--                    <input type="checkbox" name="buildShadowStatistics"-->
+            <!--                           th:field="*{optimization.buildShadowStatistics}"-->
+            <!--                           th:checked="${CONFIG.optimization.buildShadowStatistics}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    outputDirectory: "/Users/dstreev/.hms-mirror/reports/2024-06-06_09-24-20"&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    quiet: false&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    readOnly: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="readOnly" th:text="#{config.readOnly}"></label>-->
+            <!--                    <input type="checkbox" name="readOnly"-->
+            <!--                           th:field="*{readOnly}"-->
+            <!--                           th:checked="${CONFIG.readOnly}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    noPurge: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="noPurge" th:text="#{config.noPurge}"></label>-->
+            <!--                    <input type="checkbox" name="noPurge"-->
+            <!--                           th:field="*{noPurge}"-->
+            <!--                           th:checked="${CONFIG.noPurge}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    replace: false&ndash;&gt;-->
+            <!--                &lt;!&ndash;                <div class="pure-control-group">&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    <label for="replace" th:text="#{config.replace}"></label>&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    <input type="checkbox" name="replace"&ndash;&gt;-->
+            <!--                &lt;!&ndash;                           th:field="*{replace}"&ndash;&gt;-->
+            <!--                &lt;!&ndash;                           th:checked="${CONFIG.replace}"/>&ndash;&gt;-->
+            <!--                &lt;!&ndash;                </div>&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    resetRight: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="resetRight" th:text="#{config.resetRight}"></label>-->
+            <!--                    <input type="checkbox" name="resetRight"-->
+            <!--                           th:field="*{resetRight}"-->
+            <!--                           th:checked="${CONFIG.resetRight}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    resetToDefaultLocation: false&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    skipFeatures: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="skipFeatures" th:text="#{config.skipFeatures}"></label>-->
+            <!--                    <input type="checkbox" name="skipFeatures"-->
+            <!--                           th:field="*{skipFeatures}"-->
+            <!--                           th:checked="${CONFIG.skipFeatures}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    skipLegacyTranslation: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="skipLegacyTranslation" th:text="#{config.skipLegacyTranslation}"></label>-->
+            <!--                    <input type="checkbox" name="skipLegacyTranslation"-->
+            <!--                           th:field="*{skipLegacyTranslation}"-->
+            <!--                           th:checked="${CONFIG.skipLegacyTranslation}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    sqlOutput: true&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="sqlOutput" th:text="#{config.sqlOutput}"></label>-->
+            <!--                    <input type="checkbox" name="sqlOutput"-->
+            <!--                           th:field="*{sqlOutput}"-->
+            <!--                           th:checked="${CONFIG.sqlOutput}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    sync: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="sync" th:text="#{config.sync}"></label>-->
+            <!--                    <input type="checkbox" name="sync"-->
+            <!--                           th:field="*{sync}"-->
+            <!--                           th:checked="${CONFIG.sync}"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                        warehouse:&ndash;&gt;-->
+            <!--                &lt;!&ndash;                            managedDirectory: null&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="managedDirectory" th:text="#{config.transfer.warehouse.managedDirectory}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="managedDirectory" type="text"-->
+            <!--                           th:field="*{transfer.warehouse.managedDirectory}"-->
+            <!--                           placeholder="Set Managed Directory"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                            externalDirectory: null&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="externalDirectory" th:text="#{config.transfer.warehouse.externalDirectory}"></label>-->
+            <!--                    <input class="pure-input-1-3" id="externalDirectory" type="text"-->
+            <!--                           th:field="*{transfer.warehouse.externalDirectory}"-->
+            <!--                           placeholder="Set External Directory"/>-->
+            <!--                </div>-->
+            <!--                &lt;!&ndash;                    transferOwnership: false&ndash;&gt;-->
+            <!--                <div class="pure-control-group">-->
+            <!--                    <label for="transferOwnership" th:text="#{config.transferOwnership}"></label>-->
+            <!--                    <input type="checkbox" name="transferOwnership"-->
+            <!--                           th:field="*{transferOwnership}"-->
+            <!--                           th:checked="${CONFIG.transferOwnership}"/>-->
+            <!--                </div>-->
+
+            <!--                <fieldset>-->
+            <!--                    <legend th:text="#{config.filter}"/>-->
+
+            <!--                    <div class="pure-control-group">-->
+            <!--                        <label for="tblExcludeRegEx" th:text="#{config.filter.tblExcludeRegEx}"/>-->
+            <!--                        <input class="pure-input-1-3" id="tblExcludeRegEx" type="text"-->
+            <!--                               th:field="*{filter.tblExcludeRegEx}"-->
+            <!--                               placeholder="Exclude Filter RegEx"/>-->
+            <!--                    </div>-->
+            <!--                    <div class="pure-control-group">-->
+            <!--                        <label for="tblRegEx" th:text="#{config.filter.tblRegEx}"/>-->
+            <!--                        <input class="pure-input-1-3" id="tblRegEx" type="text"-->
+            <!--                               th:field="*{filter.tblRegEx}"-->
+            <!--                               placeholder="Include Filter RegEx"/>-->
+            <!--                    </div>-->
+            <!--                    <div class="pure-control-group">-->
+            <!--                        <label for="tblSizeLimit" th:text="#{config.filter.tblSizeLimit}"/>-->
+            <!--                        <input class="pure-input-1-3" id="tblSizeLimit" type="number"-->
+            <!--                               th:field="*{filter.tblSizeLimit}"-->
+            <!--                               placeholder="Table Size Limit"/>-->
+            <!--                    </div>-->
+            <!--                    <div class="pure-control-group">-->
+            <!--                        <label for="tblPartitionLimit" th:text="#{config.filter.tblPartitionLimit}"/>-->
+            <!--                        <input class="pure-input-1-3" id="tblPartitionLimit" type="number"-->
+            <!--                               th:field="*{filter.tblPartitionLimit}"-->
+            <!--                               placeholder="Table Partition Limit"/>-->
+            <!--                    </div>-->
+            <!--                </fieldset>-->
+
+            <!--            </div>-->
+            <!--            <div class="pure-u-2-4 pure-form-stacked">-->
+            <!--                &lt;!&ndash;                    <label th:text="#{config.databases}"/>&ndash;&gt;-->
+            <!--                &lt;!&ndash;                    <input disabled="disabled"&ndash;&gt;-->
+            <!--                &lt;!&ndash;                           th:each="database, itemStat: *{databases}" type="text"&ndash;&gt;-->
+            <!--                &lt;!&ndash;                           th:field="*{databases[__${itemStat.index}__]}"/>&ndash;&gt;-->
+            <!--            </div>-->
+            <!--                Hidden Fields -->
+            <!--                Translator-->
+            <!--                <input type="hidden" th:field="*{translator}"></input>-->
+
+        </div>
+    </fieldset>
+</div>
+</body>
+</html>

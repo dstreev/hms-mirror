@@ -48,7 +48,7 @@ public class DatabaseMVController {
         this.executeSessionService = executeSessionService;
     }
 
-    @RequestMapping(value = "/{database}/warehousePlan/delete", method = RequestMethod.GET)
+    @RequestMapping(value = "/{database}/warehousePlan", method = RequestMethod.DELETE)
     public String deleteWarehousePlan(Model model,
                          @PathVariable @NotNull String database) throws SessionException {
         executeSessionService.clearActiveSession();

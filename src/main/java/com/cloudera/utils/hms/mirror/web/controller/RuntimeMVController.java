@@ -47,8 +47,15 @@ public class RuntimeMVController {
         this.runtimeService = runtimeService;
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/start")
+
+    @RequestMapping(value = "/start", method = RequestMethod.GET)
     public String start(Model model,
+                          @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+        return "runtime/index";
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/doStart")
+    public String doStart(Model model,
             @ModelAttribute(RUN_CONTAINER) RunContainer runContainer,
                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
 //        boolean lclAutoGLM = runContainer.getAutoGLM() != null && runContainer.getAutoGLM();

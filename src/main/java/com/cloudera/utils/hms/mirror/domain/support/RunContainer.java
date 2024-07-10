@@ -27,12 +27,6 @@ public class RunContainer {
     private boolean dryrun = Boolean.TRUE;
     private boolean autoGLM = Boolean.FALSE;
     private String sessionId;
-    private String passwordKey;
-    private DataStrategyEnum dataStrategy;
-
-    private String saveAs = "change_me.yaml";
-    private boolean stripMappings = Boolean.TRUE;
-    private boolean saveAsDefault = Boolean.FALSE;
-    private boolean flipConfigs = Boolean.FALSE;
+//    private DataStrategyEnum dataStrategy;
 
 }

@@ -15,21 +15,14 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.config;
+package com.cloudera.utils.hms.mirror.domain.support;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-@Configuration
-public class WebConfig implements WebMvcConfigurer {
-
-    @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/")
-                .setViewName("forward:/config/");
-        registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
-    }
-
+public enum ConfigSection {
+    PASSWORD_MANAGEMENT,
+    ATTRIBUTES,
+    FILTER,
+    LEFT_CLUSTER,
+    RIGHT_CLUSTER,
+    TRANSLATOR,
+    TRANSFER;
 }
