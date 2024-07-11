@@ -43,6 +43,7 @@ import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType.HYBRID;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
+import static java.util.Objects.nonNull;
 
 @Slf4j
 @Getter
@@ -176,6 +177,24 @@ public class HmsMirrorConfig implements Cloneable {
     private Translator translator = new Translator();
     @JsonIgnore
     private boolean validated = Boolean.FALSE;
+
+    @JsonIgnore
+    public boolean canDecryptPasswords() {
+        if (encryptedPasswords && nonNull(passwordKey)) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
+    @JsonIgnore
+    public boolean canEncryptPasswords() {
+        if (!encryptedPasswords && nonNull(passwordKey)) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
 
     // Handle null databases from config load.
     public List<String> getDatabases() {

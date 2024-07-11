@@ -29,6 +29,7 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -166,15 +167,13 @@ public class DatabaseService {
     }
 
     // Look at the Warehouse Plans and pull the database/table/partition locations the metastoreDirect.
-    public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException {
+    public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException, EncryptionException, SessionException {
         Boolean rtn = Boolean.TRUE;
         if (!connectionPoolService.isConnected()) {
             try {
                 connectionPoolService.init();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
-            } catch (SessionException se) {
-                throw new RuntimeException(se);
             }
         }
 

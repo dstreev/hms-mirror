@@ -19,11 +19,13 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.util.Protect;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,55 +34,21 @@ import java.util.List;
 @Getter
 public class PasswordService {
 
-    public String decryptPassword(String passwordKey, String decryptPassword) {
+    public String decryptPassword(String passwordKey, String decryptPassword) throws EncryptionException {
         Protect protect = new Protect(passwordKey);
         String password = null;
         try {
             password = protect.decrypt(decryptPassword);
-        } catch (Exception e) {
-            log.error("Error decrypting encrypted password: {} with key: {}", decryptPassword, passwordKey);
+        } catch (RuntimeException rte) {
+            String message = MessageFormat.format("Error decrypting encrypted password: {0} with key: {1}", decryptPassword, passwordKey);
+            log.error(message);
+            throw new EncryptionException(message, rte);
+
         }
         return password;
     }
 
-//    public boolean decryptConfigPasswords(HmsMirrorConfig hmsMirrorConfig) {
-//        boolean success = true;
-//        if (hmsMirrorConfig.getPasswordKey() != null) {
-//            List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
-//            for (Environment environment: environments) {
-//                // Decrypt Passwords
-//                Protect protect = new Protect(hmsMirrorConfig.getPasswordKey());
-//                if (hmsMirrorConfig.getCluster(environment) != null
-//                        && hmsMirrorConfig.getCluster(environment).getHiveServer2() != null
-//                        && hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password") != null) {
-//                    try {
-//                        hmsMirrorConfig.getCluster(environment).getHiveServer2()
-//                                .getConnectionProperties().setProperty("password",
-//                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getHiveServer2().getConnectionProperties().getProperty("password")));
-//                        log.warn("PasswordApp decrypted for {} HS2 Configuration", environment);
-//                    } catch (Exception e) {
-//                        log.error("Issue decrypting password for {} HS2 Configuration", environment);
-//                        success = false;
-//                    }
-//                }
-//                if (hmsMirrorConfig.getCluster(environment).getMetastoreDirect() != null
-//                        && hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password") != null) {
-//                    try {
-//                        hmsMirrorConfig.getCluster(environment).getMetastoreDirect()
-//                                .getConnectionProperties().setProperty("password",
-//                                        protect.decrypt(hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getConnectionProperties().getProperty("password")));
-//                        log.warn("PasswordApp decrypted for {} Metastore Direct Configuration", environment);
-//                    } catch (Exception e) {
-//                        log.error("Issue decrypting password for {} Metastore Direct Configuration", environment);
-//                        success = false;
-//                    }
-//                }
-//            }
-//        }
-//        return success;
-//    }
-
-    public String encryptPassword(String passwordKey, String password) {
+    public String encryptPassword(String passwordKey, String password) throws EncryptionException {
         // Used to generate encrypted password.
         String epassword = null;
         if (passwordKey != null) {
@@ -89,8 +57,10 @@ public class PasswordService {
                 epassword = null;
                 try {
                     epassword = protect.encrypt(password);
-                } catch (Exception e) {
-                    log.error("Error encrypting password: {} with password key {}", password, passwordKey);
+                } catch (RuntimeException rte) {
+                    String message = MessageFormat.format("Error encrypting password: {0} with password key {1}", password, passwordKey);
+                    log.error(message);
+                    throw new EncryptionException(message, rte);
                 }
             } else {
                 // Missing PasswordApp to Encrypt.

@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
@@ -38,7 +39,7 @@ import java.text.MessageFormat;
 @Slf4j
 public class PasswordApp {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws EncryptionException {
         // Translate the legacy command line arguments to Spring Boot arguments
         //    before starting the application.
         log.info("Translating command line arguments to Spring Boot arguments");

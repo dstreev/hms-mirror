@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.encryption;
 
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.password.Password;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.Getter;
@@ -38,7 +39,7 @@ public class PasswordTestBase {
         this.password = password;
     }
 
-    public String doIt() {
+    public String doIt() throws EncryptionException {
         String value = null;
         switch (password.getConversion()) {
             case DECRYPT:

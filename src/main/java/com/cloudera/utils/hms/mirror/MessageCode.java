@@ -87,7 +87,7 @@ public enum MessageCode {
 //            "Use SCHEMA_ONLY from External and Legacy Managed (Non-Transactional) tables."),
 
     ENCRYPT_PASSWORD_ISSUE(35, "Issue Encrypting PasswordApp"),
-    DECRYPTING_PASSWORD_ISSUE(36, "Issue decrypting password {0}"),
+    DECRYPTING_PASSWORD_ISSUE(36, "Issue decrypting password(s)"),
     PKEY_PASSWORD_CFG(37, "Passwords are encrypted.  You must supply a password key to run the process. For CLI '-pkey' with '-p'."),
     PASSWORD_CFG(38, "PasswordApp en/de crypt"),
     VALID_ACID_DA_IP_STRATEGIES(39, "Inplace Downgrade of ACID tables only valid for the SQL data strategy"),

@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.service;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -67,7 +68,7 @@ public class RuntimeService {
     }
 
     public RunStatus start(boolean dryrun, boolean autoGLM,
-                           Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException {
+                           Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
 
         // This is the fastest way to build the database source and the glm from those.  It does require that the
         //   user has already defined Warehouse Plans for the databases they are interested in.

@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -74,7 +75,7 @@ public class RuntimeController {
 //            @RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun,
                            @RequestParam(name = "autoGLM", required = false) Boolean autoGLM,
-                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
+                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException, EncryptionException {
         boolean lclAutoGLM = autoGLM != null && autoGLM;
         return runtimeService.start(dryrun, lclAutoGLM, maxThreads);
     }

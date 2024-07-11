@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.Getter;
 import lombok.Setter;
@@ -253,7 +254,7 @@ public class ConnectionPoolService implements ConnectionPools {
     }
 
     @Override
-    public void init() throws SQLException, SessionException {
+    public void init() throws SQLException, SessionException, EncryptionException {
 //        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getActiveSession().getResolvedConfig();
 //        ExecuteSession executeSession = executeSessionService.getActiveSession();
         RunStatus runStatus = executeSession.getRunStatus();

@@ -21,6 +21,8 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.PasswordContainer;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.extern.slf4j.Slf4j;
@@ -79,11 +81,11 @@ public class PasswordMVController {
 
     @RequestMapping(value = "/decrypt", method = RequestMethod.POST)
     public String decrypt(Model model,
-                                @ModelAttribute(PASSWORDS) PasswordContainer passwordContainer) {
+                                @ModelAttribute(PASSWORDS) PasswordContainer passwordContainer) throws EncryptionException, RequiredConfigurationException {
         PasswordContainer newPasswordContainer = new PasswordContainer();
 
         if (isNull(passwordContainer.getPasswordKey()) || passwordContainer.getPasswordKey().isEmpty()) {
-            throw new RuntimeException("Need to specify password key");
+            throw new RequiredConfigurationException("Need to specify password key");
         }
         if (nonNull(passwordContainer.getLeftHS2()) && !passwordContainer.getLeftHS2().isEmpty()) {
             newPasswordContainer.setLeftHS2(passwordService.decryptPassword(
@@ -111,11 +113,11 @@ public class PasswordMVController {
 
     @RequestMapping(value = "/encrypt", method = RequestMethod.POST)
     public String encrypt(Model model,
-                          @ModelAttribute(PASSWORDS) PasswordContainer passwordContainer) {
+                          @ModelAttribute(PASSWORDS) PasswordContainer passwordContainer) throws EncryptionException, RequiredConfigurationException {
         PasswordContainer newPasswordContainer = new PasswordContainer();
 
         if (isNull(passwordContainer.getPasswordKey()) || passwordContainer.getPasswordKey().isEmpty()) {
-            throw new RuntimeException("Need to specify password key");
+            throw new RequiredConfigurationException("Need to specify password key");
         }
         if (nonNull(passwordContainer.getLeftHS2()) && !passwordContainer.getLeftHS2().isEmpty()) {
             newPasswordContainer.setLeftHS2(passwordService.encryptPassword(

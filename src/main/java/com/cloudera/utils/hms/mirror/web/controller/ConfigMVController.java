@@ -17,30 +17,33 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.PersistContainer;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.mirror.util.ModelUtils;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
-import com.jcabi.manifests.Manifests;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENCRYPTED_PASSWORD_CHANGE_ATTEMPT;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Controller
@@ -140,7 +143,7 @@ public class ConfigMVController implements ControllerReferences {
     public String doCreate(Model model,
                            @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy,
                            @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
-        model.addAttribute(READ_ONLY,  Boolean.FALSE);
+        model.addAttribute(READ_ONLY, Boolean.FALSE);
         // Clear the loaded and active session.
         executeSessionService.clearLoadedSession();
         // Create new Session (with blank config)
@@ -330,43 +333,43 @@ public class ConfigMVController implements ControllerReferences {
         return "/config/view";
     }
 
-    @RequestMapping(value = "/doEncryptPasswords", method = RequestMethod.POST)
-    public String doEncryptPasswords(Model model,
-                                     @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
+    @RequestMapping(value = "/doEncryptPasswords", method = RequestMethod.GET)
+    public String doEncryptPasswords(Model model) throws SessionException, EncryptionException {
         executeSessionService.clearActiveSession();
-        if (!newConfig.isEncryptedPasswords() && nonNull(newConfig.getPasswordKey()) && !newConfig.getPasswordKey().isEmpty()) {
-            String passwordKey = newConfig.getPasswordKey();
-            HmsMirrorConfig config = executeSessionService.getLoadedSession().getConfig();
+
+        // Work with the current session config.  All the values should've been saved already to allow this.
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        if (!config.isEncryptedPasswords() && nonNull(config.getPasswordKey()) && !config.getPasswordKey().isEmpty()) {
+            String passwordKey = config.getPasswordKey();
             String lhs2 = null;
             String lms = null;
             String rhs2 = null;
             String rms = null;
-            if (!config.isEncryptedPasswords()) {
-                if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2())) {
-                    lhs2 = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
-                    rhs2 = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
-                    lms = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
-                    rms = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
-                }
-                config.setEncryptedPasswords(Boolean.TRUE);
-                if (nonNull(lhs2)) {
-                    config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().setProperty("password", lhs2);
-                }
-                if (nonNull(rhs2)) {
-                    config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().setProperty("password", rhs2);
-                }
-                if (nonNull(lms)) {
-                    config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().setProperty("password", lms);
-                }
-                if (nonNull(rms)) {
-                    config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().setProperty("password", rms);
-                }
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2())) {
+                lhs2 = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
+                rhs2 = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
+                lms = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
+                rms = passwordService.encryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+            }
+            config.setEncryptedPasswords(Boolean.TRUE);
+            if (nonNull(lhs2)) {
+                config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().setProperty("password", lhs2);
+            }
+            if (nonNull(rhs2)) {
+                config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().setProperty("password", rhs2);
+            }
+            if (nonNull(lms)) {
+                config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().setProperty("password", lms);
+            }
+            if (nonNull(rms)) {
+                config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().setProperty("password", rms);
             }
         } else {
             throw new SessionException("Inconsistent state: Encrypted, Password Key, etc. . Can't encrypt.");
@@ -374,43 +377,43 @@ public class ConfigMVController implements ControllerReferences {
         return "redirect:/config/view";
     }
 
-    @RequestMapping(value = "/doDecryptPasswords", method = RequestMethod.POST)
-    public String doDecryptPasswords(Model model,
-                                     @ModelAttribute(CONFIG) HmsMirrorConfig newConfig) throws SessionException {
+    @RequestMapping(value = "/doDecryptPasswords", method = RequestMethod.GET)
+    public String doDecryptPasswords(Model model) throws SessionException, EncryptionException {
         executeSessionService.clearActiveSession();
-        if (newConfig.isEncryptedPasswords() && nonNull(newConfig.getPasswordKey()) && !newConfig.getPasswordKey().isEmpty()) {
-            String passwordKey = newConfig.getPasswordKey();
-            HmsMirrorConfig config = executeSessionService.getLoadedSession().getConfig();
+
+        // Work with the current session config.  All the values should've been saved already to allow this.
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        if (config.isEncryptedPasswords() && nonNull(config.getPasswordKey()) && !config.getPasswordKey().isEmpty()) {
+            String passwordKey = config.getPasswordKey();
             String lhs2 = null;
             String lms = null;
             String rhs2 = null;
             String rms = null;
-            if (config.isEncryptedPasswords()) {
-                if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2())) {
-                    lhs2 = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
-                    rhs2 = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
-                    lms = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
-                }
-                if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
-                    rms = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
-                }
-                config.setEncryptedPasswords(Boolean.FALSE);
-                if (nonNull(lhs2)) {
-                    config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().setProperty("password", lhs2);
-                }
-                if (nonNull(rhs2)) {
-                    config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().setProperty("password", rhs2);
-                }
-                if (nonNull(lms)) {
-                    config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().setProperty("password", lms);
-                }
-                if (nonNull(rms)) {
-                    config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().setProperty("password", rms);
-                }
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2())) {
+                lhs2 = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
+                rhs2 = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
+                lms = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+            }
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
+                rms = passwordService.decryptPassword(passwordKey, config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
+            }
+            config.setEncryptedPasswords(Boolean.FALSE);
+            if (nonNull(lhs2)) {
+                config.getCluster(Environment.LEFT).getHiveServer2().getConnectionProperties().setProperty("password", lhs2);
+            }
+            if (nonNull(rhs2)) {
+                config.getCluster(Environment.RIGHT).getHiveServer2().getConnectionProperties().setProperty("password", rhs2);
+            }
+            if (nonNull(lms)) {
+                config.getCluster(Environment.LEFT).getMetastoreDirect().getConnectionProperties().setProperty("password", lms);
+            }
+            if (nonNull(rms)) {
+                config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().setProperty("password", rms);
             }
         } else {
             throw new SessionException("Inconsistent state. Encrypted, PasswordKey, etc. . Can't decrypt.");

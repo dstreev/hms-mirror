@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.password.PasswordApp;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -53,7 +54,7 @@ import static org.junit.Assert.assertEquals;
 public class Test_decrypt extends PasswordTestBase {
 
     @Test
-    public void validateDecryptPassword() {
+    public void validateDecryptPassword() throws EncryptionException {
 
         String decryptedPassword = doIt();
 

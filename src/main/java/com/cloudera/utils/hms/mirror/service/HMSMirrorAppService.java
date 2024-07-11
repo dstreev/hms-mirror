@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.Getter;
@@ -38,8 +39,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.CONNECTION_ISSUE;
-import static com.cloudera.utils.hms.mirror.MessageCode.MISC_ERROR;
+import static com.cloudera.utils.hms.mirror.MessageCode.*;
 
 @Service
 @Getter
@@ -108,6 +108,10 @@ public class HMSMirrorAppService {
         } catch (SessionException se) {
             log.error("Issue with Session", se);
             runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
+            return new AsyncResult<>(Boolean.FALSE);
+        } catch (EncryptionException e) {
+            log.error("Issue with Decryption", e);
+            runStatus.addError(DECRYPTING_PASSWORD_ISSUE);
             return new AsyncResult<>(Boolean.FALSE);
         }
 

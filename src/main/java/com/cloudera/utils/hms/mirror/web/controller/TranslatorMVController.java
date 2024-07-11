@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -93,7 +94,7 @@ public class TranslatorMVController {
                                     @RequestParam(name = PARTITION_LEVEL_MISMATCH, required = false) Boolean partitionLevelMisMatch,
                                     @RequestParam(name = CONSOLIDATION_LEVEL, required = false) Integer consolidationLevel,
                                     @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads)
-            throws MismatchException, SessionException, RequiredConfigurationException {
+            throws MismatchException, SessionException, RequiredConfigurationException, EncryptionException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : false;
 

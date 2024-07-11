@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -165,7 +166,7 @@ public class TranslatorController {
                                                  @RequestParam(name = "buildSources", required = false) Boolean buildSources,
                                                  @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
                                                  @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)
-            throws MismatchException, SessionException, RequiredConfigurationException {
+            throws MismatchException, SessionException, RequiredConfigurationException, EncryptionException {
         log.info("Building global location maps");
         boolean lclDryrun = dryrun != null ? dryrun : true;
         if (!dryrun) {

@@ -30,58 +30,60 @@
 <body>
 
 <div th:fragment="main">
-    <!--    <div class="pure-u-1">-->
-    <!--        Password Management-->
-    <!--        Attributes-->
-    <!--        Left Cluster-->
-    <!--        Right Cluster-->
-    <!--        Transfer-->
-    <!--        Translator-->
-    <h4 th:text="#{config.dataStrategy(${CONFIG.dataStrategy})}"/>
-
-    <div class="pure-menu pure-menu-horizontal menubox">
-        <!--            <a href="#" class="pure-menu-heading pure-menu-link">BRAND</a>-->
-        <ul class="pure-menu-list">
-            <li class="pure-menu-item">
-                <a th:text="#{messages(${RUN_STATUS.getErrors().getMessages().length})}" href="#"
-                   class="pure-menu-link" onclick="openSection(event, 'messages')"/>
-            </li>
-            <li class="pure-menu-item">
-                <a th:text="#{password.management}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'password_management')"/>
-            </li>
-            <li class="pure-menu-item">
-                <a th:text="#{config.filter}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'filter')"/>
-            </li>
-            <li class="pure-menu-item">
-                <a th:text="#{attributes}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'attributes')"/>
-            </li>
-            <li class="pure-menu-item" th:if="${CONFIG.getCluster('LEFT') != null}">
-                <a th:text="#{LEFT.cluster}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'left_cluster')"/>
-            </li>
-            <li class="pure-menu-item" th:if="${CONFIG.getCluster('RIGHT') != null}">
-                <a th:text="#{RIGHT.cluster}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'right_cluster')"/>
-            </li>
-<!--            <li class="pure-menu-item">-->
-<!--                <a th:text="#{config.transfer}" href="#" class="pure-menu-link"-->
-<!--                   onclick="openSection(event, 'transfer')"/>-->
-<!--            </li>-->
-            <li class="pure-menu-item">
-                <a th:text="#{config.translator}" href="#" class="pure-menu-link"
-                   onclick="openSection(event, 'translator')"/>
-            </li>
-        </ul>
-    </div>
-
-    <div id="messages" class="tabcontent">
-        <div th:insert="fragments/messages::view">
-        </div>
-    </div>
     <form id="config_action" th:object="${CONFIG}">
+
+        <!--    <div class="pure-u-1">-->
+        <!--        Password Management-->
+        <!--        Attributes-->
+        <!--        Left Cluster-->
+        <!--        Right Cluster-->
+        <!--        Transfer-->
+        <!--        Translator-->
+        <h4 th:text="#{config.dataStrategy(${CONFIG.dataStrategy})}"/>
+
+        <div class="pure-menu pure-menu-horizontal menubox">
+            <!--            <a href="#" class="pure-menu-heading pure-menu-link">BRAND</a>-->
+            <ul class="pure-menu-list">
+                <li class="pure-menu-item" th:unless="${READ_ONLY}">
+                    <button class="pure-button pure-button-primary" th:formaction="@{/config/doSave}"
+                            th:formmethod="post" type="submit" th:text="#{button.save}"/>
+                </li>
+
+                <li class="pure-menu-item">
+                    <a th:text="#{messages(${RUN_STATUS.getErrors().getMessages().length})}" href="#"
+                       class="pure-menu-link" onclick="openSection(event, 'messages')"/>
+                </li>
+                <li class="pure-menu-item">
+                    <a th:text="#{password.management}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'password_management')"/>
+                </li>
+                <li class="pure-menu-item">
+                    <a th:text="#{config.filter}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'filter')"/>
+                </li>
+                <li class="pure-menu-item">
+                    <a th:text="#{attributes}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'attributes')"/>
+                </li>
+                <li class="pure-menu-item" th:if="${CONFIG.getCluster('LEFT') != null}">
+                    <a th:text="#{LEFT.cluster}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'left_cluster')"/>
+                </li>
+                <li class="pure-menu-item" th:if="${CONFIG.getCluster('RIGHT') != null}">
+                    <a th:text="#{RIGHT.cluster}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'right_cluster')"/>
+                </li>
+                <li class="pure-menu-item">
+                    <a th:text="#{config.translator}" href="#" class="pure-menu-link"
+                       onclick="openSection(event, 'translator')"/>
+                </li>
+            </ul>
+        </div>
+
+        <div id="messages" class="tabcontent">
+            <div th:insert="fragments/messages::view">
+            </div>
+        </div>
         <div id="password_management" class="tabcontent">
             <div th:insert="fragments/config/passwordManagement::main"></div>
         </div>
@@ -101,22 +103,7 @@
         <div id="right_cluster" class="tabcontent" th:if="${CONFIG.getCluster('RIGHT') != null}">
             <div th:insert="fragments/config/cluster::main('RIGHT')"></div>
         </div>
-
-        <br/>
-        <div class="pure-button-group" th:unless="${READ_ONLY}">
-            <button class="pure-button pure-button-primary" th:formaction="@{/config/doSave}"
-                    th:formmethod="post" type="submit" th:text="#{button.save}"
-                    style="float: right"
-            />
-        </div>
-
     </form>
-
-<!--    <div id="transfer" class="tabcontent"-->
-<!--         th:if="${('COMMON HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">-->
-<!--        <div th:insert="fragments/config/transfer::view"></div>-->
-<!--    </div>-->
-
     <div id="translator" class="tabcontent">
         <div class="pure-u-1" th:insert="fragments/config/translator::translator">
         </div>

@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
@@ -68,7 +69,7 @@ public class WarehouseMVController {
     }
 
     @RequestMapping(value = "/plan/add", method = RequestMethod.GET)
-    public String addWarehousePlan(Model model) throws SQLException, SessionException {
+    public String addWarehousePlan(Model model) throws SQLException, SessionException, EncryptionException {
         if (executeSessionService.transitionLoadedSessionToActive(1, Boolean.TRUE)) {
             if (!connectionPoolService.isConnected()) {
                 connectionPoolService.init();

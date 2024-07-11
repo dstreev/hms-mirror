@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.support.RunContainer;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -64,7 +65,7 @@ public class RuntimeMVController {
     @RequestMapping(method = RequestMethod.POST, value = "/doStart")
     public String doStart(Model model,
             @ModelAttribute(RUN_CONTAINER) RunContainer runContainer,
-                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
+                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException, EncryptionException {
 //        boolean lclAutoGLM = runContainer.isAutoGLM() != null && runContainer.getAutoGLM();
 //        boolean lclDryRun = runContainer.isDryrun() != null && runContainer.getDryrun();
 

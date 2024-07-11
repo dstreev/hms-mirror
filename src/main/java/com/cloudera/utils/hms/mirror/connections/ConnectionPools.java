@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.connections;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 
 import java.sql.Connection;
@@ -37,6 +38,6 @@ public interface ConnectionPools {
 
     Connection getMetastoreDirectEnvironmentConnection(Environment environment) throws SQLException;
 
-    void init() throws SQLException, SessionException;
+    void init() throws SQLException, SessionException, EncryptionException;
 
 }
