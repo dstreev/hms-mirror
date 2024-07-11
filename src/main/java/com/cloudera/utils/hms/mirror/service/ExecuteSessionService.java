@@ -191,9 +191,8 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessions separate.  The active session is the
         one that will be referenced during the run.
      */
-    public Boolean transitionLoadedSessionToActive(Integer concurrency) throws SessionException {
+    public Boolean transitionLoadedSessionToActive(Integer concurrency, boolean connectionCheckOnly) throws SessionException {
         Boolean rtn = Boolean.TRUE;
-
 
         if (activeSession != null && activeSession.getRunning().get()) {
             throw new SessionException("Session is still running.  Cannot transition to active.");
@@ -280,14 +279,14 @@ public class ExecuteSessionService {
             activeSession = session;
 
             // Validate the session.
-            rtn = configService.validate(activeSession, getCliEnvironment());
+            rtn = configService.validate(activeSession, getCliEnvironment(), connectionCheckOnly);
 
             // Set whether the config has been validated.
             activeSession.getConfig().setValidated(rtn);
 
             executeSessionMap.put(session.getSessionId(), session);
             // Set connected flag.
-            activeSession.setConnected(Boolean.TRUE);
+//            activeSession.setConnected(Boolean.TRUE);
         } else {
             log.debug("Session connected already");
         }

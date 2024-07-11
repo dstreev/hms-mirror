@@ -32,20 +32,22 @@
     <th:block th:if="${RUN_STATUS != null}">
         <!--    <fieldset th:if="${RUN_STATUS != null}">-->
         <!--        <legend th:text="#{messages}"/>-->
-        <fieldset th:unless="${RUN_STATUS.errors.getMessages().length == 0}">
-            <legend th:text="#{run.status.errors}"/>
+        <div th:unless="${RUN_STATUS.errors.getMessages().length == 0}">
+<!--            <legend th:text="#{run.status.errors}"/>-->
+            <h4 th:text="#{run.status.errors}"/>
             <ul>
                 <li th:each="error: ${RUN_STATUS.errors.getMessages()}"
                     th:text="${error}"/>
             </ul>
-        </fieldset>
-        <fieldset th:unless="${RUN_STATUS.warnings.getMessages().length == 0}">
-            <legend th:text="#{run.status.warnings}"/>
+        </div>
+        <div th:unless="${RUN_STATUS.warnings.getMessages().length == 0}">
+<!--            <legend th:text="#{run.status.warnings}"/>-->
+            <h4 th:text="#{run.status.warnings}"/>
             <ul>
                 <li th:each="warning: ${RUN_STATUS.warnings.getMessages()}"
                     th:text="${warning}"/>
             </ul>
-        </fieldset>
+        </div>
         <!--    </fieldset>-->
     </th:block>
 </div>

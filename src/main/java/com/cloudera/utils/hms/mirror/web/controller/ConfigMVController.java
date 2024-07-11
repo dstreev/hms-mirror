@@ -22,10 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hms.mirror.service.DatabaseService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.PasswordService;
+import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.mirror.util.ModelUtils;
 import com.cloudera.utils.hms.mirror.web.service.WebConfigService;
 import com.jcabi.manifests.Manifests;
@@ -56,6 +53,7 @@ public class ConfigMVController implements ControllerReferences {
     private PasswordService passwordService;
     private WebConfigService webConfigService;
     private DatabaseService databaseService;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setConfigService(ConfigService configService) {
@@ -82,10 +80,15 @@ public class ConfigMVController implements ControllerReferences {
         this.webConfigService = webConfigService;
     }
 
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
+
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public String index(Model model,
                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
-        sessionToModel(model, maxThreads, null);
+        uiModelService.sessionToModel(model, maxThreads, null);
         return "index";
     }
 
@@ -101,7 +104,7 @@ public class ConfigMVController implements ControllerReferences {
         Set<String> configs = webConfigService.getConfigList();
         model.addAttribute(CONFIG_LIST, configs);
 
-        sessionToModel(model, maxThreads, testing);
+        uiModelService.sessionToModel(model, maxThreads, testing);
 
         // Get list of Reports
         model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
@@ -128,7 +131,7 @@ public class ConfigMVController implements ControllerReferences {
         Set<String> configs = webConfigService.getConfigList();
         model.addAttribute(CONFIG_LIST, configs);
 
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
         return "config/init";
     }
@@ -137,7 +140,7 @@ public class ConfigMVController implements ControllerReferences {
     public String doCreate(Model model,
                            @RequestParam(value = DATA_STRATEGY, required = true) String dataStrategy,
                            @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
-        model.addAttribute(ACTION, "create");
+        model.addAttribute(READ_ONLY,  Boolean.FALSE);
         // Clear the loaded and active session.
         executeSessionService.clearLoadedSession();
         // Create new Session (with blank config)
@@ -149,52 +152,11 @@ public class ConfigMVController implements ControllerReferences {
 //        model.addAttribute(CONFIG, session.getConfig());
 //        model.addAttribute(SESSION_ID, session.getSessionId());
 
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
         return "/config/view";
     }
 
-    public void sessionToModel(Model model, Integer concurrency, Boolean testing) {
-
-        boolean lclTesting = testing != null && testing;
-
-        model.addAttribute(CONCURRENCY, concurrency);
-
-        ExecuteSession session = executeSessionService.getSession();
-
-        RunContainer runContainer = new RunContainer();
-        model.addAttribute(RUN_CONTAINER, runContainer);
-        if (session != null) {
-            runContainer.setSessionId(session.getSessionId());
-
-            model.addAttribute(CONFIG, session.getConfig());
-
-            PersistContainer persistContainer = new PersistContainer();
-            persistContainer.setSaveAs(session.getSessionId());
-            model.addAttribute(PERSIST, persistContainer);
-
-            // For testing only.
-            if (lclTesting && isNull(session.getRunStatus())) {
-                RunStatus runStatus = new RunStatus();
-                runStatus.setConcurrency(concurrency);
-                runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
-                runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
-                model.addAttribute(RUN_STATUS, runStatus);
-            } else {
-                RunStatus runStatus = session.getRunStatus();
-                runStatus.setConcurrency(concurrency);
-                model.addAttribute(RUN_STATUS, runStatus);
-            }
-        }
-
-        try {
-            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
-        } catch (IllegalArgumentException iae) {
-            model.addAttribute(VERSION, "Unknown");
-        }
-
-        ModelUtils.allEnumsForModel(model);
-    }
 
     @RequestMapping(value = "/edit", method = RequestMethod.GET)
     public String edit(Model model,
@@ -202,7 +164,7 @@ public class ConfigMVController implements ControllerReferences {
 //        executeSessionService.clearActiveSession();
 //        model.addAttribute(ACTION, "edit");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
         return "/config/view";
     }
 
@@ -263,13 +225,13 @@ public class ConfigMVController implements ControllerReferences {
 
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
-        executeSessionService.transitionLoadedSessionToActive(maxThreads);
+        executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
         if (passwordCheck.get()) {
             ExecuteSession session1 = executeSessionService.getSession();
             session1.getRunStatus().getErrors().set(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
         }
 
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
         return "/config/view";
     }
@@ -279,7 +241,7 @@ public class ConfigMVController implements ControllerReferences {
     public String persist(Model model,
                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws IOException, SessionException {
 
-        sessionToModel(model, maxThreads, false);
+        uiModelService.sessionToModel(model, maxThreads, false);
 
         return "config/persist";
     }
@@ -322,7 +284,7 @@ public class ConfigMVController implements ControllerReferences {
             configService.saveConfig(config, configFullFilename, Boolean.TRUE);
         }
 
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
@@ -348,10 +310,10 @@ public class ConfigMVController implements ControllerReferences {
         // Set to null, so it will reset.
         session.setSessionId(null);
 
-        executeSessionService.transitionLoadedSessionToActive(maxThreads);
+        executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
 
         // Set it as the current session.
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
@@ -364,7 +326,7 @@ public class ConfigMVController implements ControllerReferences {
                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
 //        model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
-        sessionToModel(model, maxThreads, Boolean.FALSE);
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
         return "/config/view";
     }
 

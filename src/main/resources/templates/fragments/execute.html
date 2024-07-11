@@ -56,6 +56,13 @@
                 </div>
             </form>
         </fieldset>
+        <th:block th:unless="${RUN_STATUS.errors.getMessages().length == 0}">
+            <p th:text="#{session.errors}"/>
+            <div th:insert="fragments/messages::view"></div>
+        </th:block>
+    </div>
+    <div th:unless="${RUN_STATUS != null}">
+        <p th:text="#{session.not.available}"/>
     </div>
 </div>
 

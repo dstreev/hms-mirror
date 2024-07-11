@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.service.UIModelService;
 import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,16 +42,22 @@ import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.
 public class RuntimeMVController {
 
     private RuntimeService runtimeService;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setRuntimeService(RuntimeService runtimeService) {
         this.runtimeService = runtimeService;
     }
 
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public String start(Model model,
                           @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+        uiModelService.sessionToModel(model, maxThreads, false);
         return "runtime/index";
     }
 
@@ -58,8 +65,8 @@ public class RuntimeMVController {
     public String doStart(Model model,
             @ModelAttribute(RUN_CONTAINER) RunContainer runContainer,
                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException {
-//        boolean lclAutoGLM = runContainer.getAutoGLM() != null && runContainer.getAutoGLM();
-//        boolean lclDryRun = runContainer.getDryrun() != null && runContainer.getDryrun();
+//        boolean lclAutoGLM = runContainer.isAutoGLM() != null && runContainer.getAutoGLM();
+//        boolean lclDryRun = runContainer.isDryrun() != null && runContainer.getDryrun();
 
         RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(), runContainer.isAutoGLM(), maxThreads);
         runStatus.setConcurrency(maxThreads);

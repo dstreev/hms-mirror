@@ -27,20 +27,21 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="warehousePlans">
-    <fieldset>
-        <legend th:text="#{warehouse.plans}"/>
+<div th:fragment="view">
+<!--    <fieldset>-->
+<!--        <legend th:text="#{warehouse.plans}"/>-->
+        <h4 th:text="#{warehouse.plans}"/>
         <div class="pure-g">
             <div class="pure-u-1-5">
-                <form class="pure-form" th:action="@{/warehouse/plan/add}" method="get">
+<!--                <form class="pure-form" th:action="@{/warehouse/plan/add}" method="get">-->
                     <div class="pure-control-group">
-                        <button class="pure-button pure-button-primary" type="submit"
+                        <a class="pure-button pure-button-primary" th:href="@{/warehouse/plan/add}"
                                 th:text="#{button.add}"/>
                     </div>
-                </form>
+<!--                </form>-->
             </div>
             <div class="pure-u-4-5">
-                <table class="pure-table">
+                <table class="pure-table" th:if="${CONFIG.translator.warehouseMapBuilder.warehousePlans.size() > 0}">
                     <thead>
                     <tr>
                         <th></th>
@@ -67,7 +68,7 @@
                 </table>
             </div>
         </div>
-    </fieldset>
+<!--    </fieldset>-->
 </div>
 </body>
 </html>

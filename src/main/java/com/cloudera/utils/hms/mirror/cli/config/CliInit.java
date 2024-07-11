@@ -246,7 +246,7 @@ public class CliInit {
 
 
             try {
-                executeSessionService.transitionLoadedSessionToActive(maxThreads);
+                executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
             } catch (SessionException e) {
                 throw new RuntimeException(e);
             }

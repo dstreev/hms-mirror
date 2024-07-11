@@ -17,7 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.service.UIModelService;
 import com.cloudera.utils.hms.mirror.web.controller.ConfigMVController;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,17 +31,32 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class MirrorExceptionHandler implements ControllerReferences {
 
     private ConfigMVController configMVController;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setConfigMVController(ConfigMVController configMVController) {
         this.configMVController = configMVController;
     }
 
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
+
     @ExceptionHandler(value = SessionException.class)
     public String sessionExceptionHandler(Model model, SessionException exception) {
         model.addAttribute(TYPE, "Session Exception");
         model.addAttribute(MESSAGE, exception.getMessage());
-        configMVController.sessionToModel(model, 0, false);
+        uiModelService.sessionToModel(model, 0, false);
         return "error";
+    }
+
+    @ExceptionHandler(value = RequiredConfigurationException.class)
+    public String reqConfigExceptionHandler(Model model, RequiredConfigurationException exception) {
+        model.addAttribute(TYPE, "Required Configuration");
+        model.addAttribute(MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(model, 0, false);
+        return "error";
+
     }
 }

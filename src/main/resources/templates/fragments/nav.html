@@ -52,15 +52,11 @@
         <ul class="pure-menu-list" th:if="${CONFIG != null}">
             <li class="pure-menu-item">
                 <a class="pure-menu-link" th:text="#{execute}"
-                   th:href="@{/config/view}"/>
-            </li>
-            <li class="pure-menu-item">
-                <a class="pure-menu-link" th:text="#{messages}"
-                   th:href="@{/config/view}"/>
+                   th:href="@{/runtime/start}"/>
             </li>
             <li class="pure-menu-item">
                 <a class="pure-menu-link" th:text="#{status}"
-                   th:href="@{/config/edit}"/>
+                   th:href="@{/config/home}"/>
             </li>
         </ul>
     </div>

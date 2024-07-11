@@ -81,7 +81,7 @@ public class RuntimeService {
         RunStatus runStatus = null;
         ExecuteSession session = null;
 
-        if (executeSessionService.transitionLoadedSessionToActive(concurrency)) {
+        if (executeSessionService.transitionLoadedSessionToActive(concurrency, Boolean.FALSE)) {
 
             session = executeSessionService.getSession();
 

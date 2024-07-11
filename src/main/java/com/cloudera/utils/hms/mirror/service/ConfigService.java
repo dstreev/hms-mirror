@@ -215,6 +215,8 @@ public class ConfigService {
             case DUMP:
                 rtn.getMigrateACID().setOn(Boolean.TRUE);
                 Cluster leftDump = new Cluster();
+                leftDump.setHiveServer2(new HiveServer2Config());
+                leftDump.setMetastoreDirect(new DBStore());
                 leftDump.setLegacyHive(Boolean.FALSE);
                 rtn.getClusters().put(Environment.LEFT, leftDump);
                 break;
@@ -241,12 +243,14 @@ public class ConfigService {
                 rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
                 leftT.setHiveServer2(new HiveServer2Config());
                 Cluster rightT = new Cluster();
+                rightT.setHiveServer2(new HiveServer2Config());
                 rightT.setLegacyHive(Boolean.FALSE);
                 rtn.getClusters().put(Environment.RIGHT, rightT);
                 break;
             case COMMON:
                 Cluster leftC = new Cluster();
                 leftC.setLegacyHive(Boolean.TRUE);
+//                leftC.setHiveServer2(new HiveServer2Config());
                 rtn.getClusters().put(Environment.LEFT, leftC);
                 leftC.setMetastoreDirect(new DBStore());
                 leftC.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
@@ -314,18 +318,20 @@ public class ConfigService {
 //        }
 //    }
 
-    public Boolean validate(ExecuteSession session, CliEnvironment cli) {
+    public Boolean validateForConnections(ExecuteSession session) {
         Boolean rtn = Boolean.TRUE;
 
-//        ExecuteSession session = executeSessionService.getActiveSession();
         HmsMirrorConfig config = session.getConfig();
 
         RunStatus runStatus = session.getRunStatus();
-        // Reset the config validated flag.
-        runStatus.setConfigValidated(Boolean.FALSE);
 
-        // Set distcp options.
-        canDeriveDistcpPlan(session);
+        if (config.isEncryptedPasswords()) {
+            runStatus.addWarning(PASSWORDS_ENCRYPTED);
+            if (isNull(config.getPasswordKey()) || config.getPasswordKey().isEmpty()) {
+                runStatus.addError(PKEY_PASSWORD_CFG);
+                rtn = Boolean.FALSE;
+            }
+        }
 
         List<Environment> envList = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         Set<Environment> envSet = new TreeSet<>(envList);
@@ -378,40 +384,40 @@ public class ConfigService {
                                 }
                             }
                         }
-                        // If evaluate partition locations is set, we need metastore_direct set on LEFT.
-                        if (env == Environment.LEFT) {
-                            if (config.isEvaluatePartitionLocation()) {
-                                if (config.getCluster(env).getMetastoreDirect() == null) {
-                                    if (!config.isLoadingTestData()) {
-                                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, env);
-                                        rtn = Boolean.FALSE;
-                                    }
-                                } else {
-                                    // Check the config values;
+                    }
+                    // If evaluate partition locations is set, we need metastore_direct set on LEFT.
+                    if (env == Environment.LEFT) {
+                        if (config.isEvaluatePartitionLocation()) {
+                            if (config.getCluster(env).getMetastoreDirect() == null) {
+                                if (!config.isLoadingTestData()) {
+                                    runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, env);
+                                    rtn = Boolean.FALSE;
+                                }
+                            } else {
+                                // Check the config values;
                                     /* Minimum Values:
                                     - type
                                     - uri
                                     - username
                                     - password
                                      */
-                                    if (!config.isLoadingTestData()) {
-                                        DBStore dbStore = config.getCluster(env).getMetastoreDirect();
-                                        if (dbStore.getType() == null) {
-                                            runStatus.addError(MISSING_PROPERTY, "type", "Metastore Direct", env);
-                                            rtn = Boolean.FALSE;
-                                        }
-                                        if (dbStore.getUri() == null) {
-                                            runStatus.addError(MISSING_PROPERTY, "uri", "Metastore Direct", env);
-                                            rtn = Boolean.FALSE;
-                                        }
-                                        if (dbStore.getConnectionProperties().getProperty("user") == null) {
-                                            runStatus.addError(MISSING_PROPERTY, "user", "Metastore Direct", env);
-                                            rtn = Boolean.FALSE;
-                                        }
-                                        if (dbStore.getConnectionProperties().getProperty("password") == null) {
-                                            runStatus.addError(MISSING_PROPERTY, "password", "Metastore Direct", env);
-                                            rtn = Boolean.FALSE;
-                                        }
+                                if (!config.isLoadingTestData()) {
+                                    DBStore dbStore = config.getCluster(env).getMetastoreDirect();
+                                    if (dbStore.getType() == null) {
+                                        runStatus.addError(MISSING_PROPERTY, "type", "Metastore Direct", env);
+                                        rtn = Boolean.FALSE;
+                                    }
+                                    if (dbStore.getUri() == null) {
+                                        runStatus.addError(MISSING_PROPERTY, "uri", "Metastore Direct", env);
+                                        rtn = Boolean.FALSE;
+                                    }
+                                    if (dbStore.getConnectionProperties().getProperty("user") == null) {
+                                        runStatus.addError(MISSING_PROPERTY, "user", "Metastore Direct", env);
+                                        rtn = Boolean.FALSE;
+                                    }
+                                    if (dbStore.getConnectionProperties().getProperty("password") == null) {
+                                        runStatus.addError(MISSING_PROPERTY, "password", "Metastore Direct", env);
+                                        rtn = Boolean.FALSE;
                                     }
                                 }
                             }
@@ -428,6 +434,109 @@ public class ConfigService {
                 break;
 
         }
+
+
+        if (config.isEvaluatePartitionLocation() && !config.isLoadingTestData()) {
+            switch (config.getDataStrategy()) {
+                case SCHEMA_ONLY:
+                case DUMP:
+                    // Check the metastore_direct config on the LEFT.
+                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
+                        rtn = Boolean.FALSE;
+                    }
+                    runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
+                    break;
+                case STORAGE_MIGRATION:
+                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
+                        rtn = Boolean.FALSE;
+                    }
+                    if (!config.getTransfer().getStorageMigration().isDistcp()) {
+                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
+                        rtn = Boolean.FALSE;
+                    }
+                    break;
+                default:
+                    runStatus.addError(EVALUATE_PARTITION_LOCATION_USE);
+                    rtn = Boolean.FALSE;
+            }
+        }
+
+        // Set maxConnections to Concurrency.
+        // Don't validate connections or url's if we're working with test data.
+        if (!config.isLoadingTestData()) {
+            HiveServer2Config leftHS2 = config.getCluster(Environment.LEFT).getHiveServer2();
+            if (!leftHS2.isValidUri()) {
+                rtn = Boolean.FALSE;
+                runStatus.addError(LEFT_HS2_URI_INVALID);
+            }
+
+            if (leftHS2.isKerberosConnection() && leftHS2.getJarFile() != null) {
+                rtn = Boolean.FALSE;
+                runStatus.addError(LEFT_KERB_JAR_LOCATION);
+            }
+
+
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
+                // TODO: Add validation for -rid (right-is-disconnected) option.
+                // - Only applies to SCHEMA_ONLY, SQL, EXPORT_IMPORT, and HYBRID data strategies.
+                // -
+                //
+                HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
+
+                if (config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION
+                        && !rightHS2.isValidUri()) {
+                    if (!config.getDataStrategy().equals(DataStrategyEnum.DUMP)) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(RIGHT_HS2_URI_INVALID);
+                    }
+                } else {
+
+                    if (rightHS2.isKerberosConnection()
+                            && rightHS2.getJarFile() != null) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(RIGHT_KERB_JAR_LOCATION);
+                    }
+
+                    if (leftHS2.isKerberosConnection()
+                            && rightHS2.isKerberosConnection()
+                            && (config.getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive())) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(KERB_ACROSS_VERSIONS);
+                    }
+                }
+            } else {
+                if (!(config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION
+                        || config.getDataStrategy() == DataStrategyEnum.DUMP)) {
+                    if (!config.getMigrateACID().isDowngradeInPlace()) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(RIGHT_HS2_DEFINITION_MISSING);
+                    }
+                }
+            }
+        }
+
+        return rtn;
+    }
+
+    public Boolean validate(ExecuteSession session, CliEnvironment cli, boolean connectionCheckOnly) {
+        Boolean rtn = Boolean.TRUE;
+
+        HmsMirrorConfig config = session.getConfig();
+
+        RunStatus runStatus = session.getRunStatus();
+
+        rtn = validateForConnections(session);
+        if (connectionCheckOnly) {
+            return rtn;
+        }
+
+        // Reset the config validated flag.
+        runStatus.setConfigValidated(Boolean.FALSE);
+
+        // Set distcp options.
+        canDeriveDistcpPlan(session);
 
         switch (config.getDataStrategy()) {
             case DUMP:
@@ -460,13 +569,6 @@ public class ConfigService {
                         rtn = Boolean.FALSE;
                     }
                 }
-        }
-
-        if (config.isEncryptedPasswords()) {
-            runStatus.addWarning(PASSWORDS_ENCRYPTED);
-            if (isNull(config.getPasswordKey())) {
-                runStatus.addError(PKEY_PASSWORD_CFG);
-            }
         }
 
         if (config.getCluster(Environment.LEFT).isHdpHive3() &&
@@ -579,33 +681,6 @@ public class ConfigService {
                 }
         }
 
-        if (config.isEvaluatePartitionLocation() && !config.isLoadingTestData()) {
-            switch (config.getDataStrategy()) {
-                case SCHEMA_ONLY:
-                case DUMP:
-                    // Check the metastore_direct config on the LEFT.
-                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
-                        rtn = Boolean.FALSE;
-                    }
-                    runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
-                    break;
-                case STORAGE_MIGRATION:
-                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
-                        rtn = Boolean.FALSE;
-                    }
-                    if (!config.getTransfer().getStorageMigration().isDistcp()) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
-                        rtn = Boolean.FALSE;
-                    }
-                    break;
-                default:
-                    runStatus.addError(EVALUATE_PARTITION_LOCATION_USE);
-                    rtn = Boolean.FALSE;
-            }
-        }
-
         // Only allow db rename with a single database.
         if (config.getDbRename() != null &&
                 config.getDatabases().size() > 1) {
@@ -618,39 +693,6 @@ public class ConfigService {
                 runStatus.addWarning(IGNORING_TBL_FILTERS_W_TEST_DATA);
             }
         }
-
-//        if (config.isFlip() &&
-//                config.getCluster(Environment.LEFT) == null) {
-//            runStatus.addError(FLIP_WITHOUT_RIGHT);
-//            rtn = Boolean.FALSE;
-//        }
-
-//        if (config.getTransfer().getConcurrency() > 4 &&
-//                !config.isLoadingTestData()) {
-//            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
-//            if (config.getCluster(Environment.LEFT) != null) {
-//                Cluster cluster = config.getCluster(Environment.LEFT);
-//                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
-//                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
-//                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
-//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-//                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
-//                }
-//            }
-//            if (config.getCluster(Environment.RIGHT) != null) {
-//                Cluster cluster = config.getCluster(Environment.RIGHT);
-//                if (cluster.getHiveServer2() != null) {
-//                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(config.getTransfer().getConcurrency() / 2));
-//                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(config.getTransfer().getConcurrency() / 2));
-//                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(config.getTransfer().getConcurrency()));
-//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-//                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(config.getTransfer().getConcurrency()));
-//                    }
-//                }
-//            }
-//        }
 
         if (config.getTransfer().getStorageMigration().isDistcp()) {
             if (config.getDataStrategy() == DataStrategyEnum.EXPORT_IMPORT
@@ -950,59 +992,6 @@ public class ConfigService {
         // TODO: Check the connections.
         // If the environments are mix of legacy and non-legacy, check the connections for kerberos or zk.
 
-        // Set maxConnections to Concurrency.
-        // Don't validate connections or url's if we're working with test data.
-        if (!config.isLoadingTestData()) {
-            HiveServer2Config leftHS2 = config.getCluster(Environment.LEFT).getHiveServer2();
-            if (!leftHS2.isValidUri()) {
-                rtn = Boolean.FALSE;
-                runStatus.addError(LEFT_HS2_URI_INVALID);
-            }
-
-            if (leftHS2.isKerberosConnection() && leftHS2.getJarFile() != null) {
-                rtn = Boolean.FALSE;
-                runStatus.addError(LEFT_KERB_JAR_LOCATION);
-            }
-
-
-            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
-                // TODO: Add validation for -rid (right-is-disconnected) option.
-                // - Only applies to SCHEMA_ONLY, SQL, EXPORT_IMPORT, and HYBRID data strategies.
-                // -
-                //
-                HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
-
-                if (config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION
-                        && !rightHS2.isValidUri()) {
-                    if (!config.getDataStrategy().equals(DataStrategyEnum.DUMP)) {
-                        rtn = Boolean.FALSE;
-                        runStatus.addError(RIGHT_HS2_URI_INVALID);
-                    }
-                } else {
-
-                    if (rightHS2.isKerberosConnection()
-                            && rightHS2.getJarFile() != null) {
-                        rtn = Boolean.FALSE;
-                        runStatus.addError(RIGHT_KERB_JAR_LOCATION);
-                    }
-
-                    if (leftHS2.isKerberosConnection()
-                            && rightHS2.isKerberosConnection()
-                            && (config.getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive())) {
-                        rtn = Boolean.FALSE;
-                        runStatus.addError(KERB_ACROSS_VERSIONS);
-                    }
-                }
-            } else {
-                if (!(config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION
-                        || config.getDataStrategy() == DataStrategyEnum.DUMP)) {
-                    if (!config.getMigrateACID().isDowngradeInPlace()) {
-                        rtn = Boolean.FALSE;
-                        runStatus.addError(RIGHT_HS2_DEFINITION_MISSING);
-                    }
-                }
-            }
-        }
 
         if (rtn) {
             // Last check for errors.

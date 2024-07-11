@@ -30,15 +30,16 @@
 <body>
 
 <div th:fragment="main">
-    <fieldset th:disabled="${READ_ONLY}">
-        <legend th:text="#{attributes}"/>
+    <fieldset th:disabled="${READ_ONLY}" style="border: 0;">
+        <!--        <legend th:text="#{attributes}"/>-->
         <div class="pure-g pure-form-aligned">
-            <div class="pure-u-1-3">
-                <div class="pure-control-group">
-                    <label for="datastrategy" th:text="#{config.dataStrategy}"/>
-                    <input type="text" id="datastrategy" th:field="*{dataStrategy}"
-                           th:value="${CONFIG.dataStrategy}" readonly/>
-                </div>
+            <div class="pure-u-1-2">
+<!--                <h4 th:text="#{config.dataStrategy(${CONFIG.dataStrategy})}"/>-->
+                <!--                <div class="pure-control-group">-->
+                <!--                    <label for="datastrategy" th:text="#{config.dataStrategy}"/>-->
+                <input type="hidden" id="datastrategy" th:field="*{dataStrategy}"
+                       th:value="${CONFIG.dataStrategy}" readonly/>
+                <!--                </div>-->
                 <!-- Common Storage -->
                 <div class="pure-control-group"
                      th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
@@ -47,56 +48,89 @@
                            th:field="*{transfer.commonStorage}"
                            placeholder="Set Common Storage"/>
                 </div>
-            </div>
-            <div class="pure-u-1-3">
-                <fieldset>
-                    <legend th:text="#{config.data.movement}"/>
-                    <!-- Data Movement Strategy -->
-                    <div class="pure-control-group"
-                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
-                        <label for="dataMovementStrategy"
-                               th:text="#{config.transfer.storageMigration.dataMovementStrategy}"></label>
-                        <select id="dataMovementStrategy" class="pure-input-1"
-                                th:field="*{transfer.storageMigration.dataMovementStrategy}">
-                            <option th:each="cet: ${datamovementstrategyenums}"
-                                    th:value="${cet}"
-                                    th:text="${cet}"
-                                    th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataMovementStrategy)}"/>
-                        </select>
-                    </div>
 
-                    <!-- Data Flow -->
-                    <div class="pure-control-group"
-                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
-                        <label for="dataFlow"
-                               th:text="#{config.transfer.storageMigration.dataFlow}"></label>
-                        <select id="dataFlow" class="pure-input-1"
-                                th:field="*{transfer.storageMigration.dataFlow}">
-                            <option th:each="cet: ${distcpflowenums}"
-                                    th:value="${cet}"
-                                    th:text="${cet}"
-                                    th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataFlow)}"/>
-                        </select>
-                    </div>
+                <h4 th:text="#{config.data.movement}"/>
+                <!-- Data Movement Strategy -->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                    <label for="dataMovementStrategy"
+                           th:text="#{config.transfer.storageMigration.dataMovementStrategy}"></label>
+                    <select id="dataMovementStrategy" class="pure-input-1"
+                            th:field="*{transfer.storageMigration.dataMovementStrategy}">
+                        <option th:each="cet: ${datamovementstrategyenums}"
+                                th:value="${cet}"
+                                th:text="${cet}"
+                                th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataMovementStrategy)}"/>
+                    </select>
+                </div>
 
-                    <!-- Strict -->
-                    <div class="pure-control-group"
-                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
-                        <label for="strict"
-                               th:text="#{config.transfer.storageMigration.strict}"></label>
-                        <input type="checkbox" id="strict" th:disabled="true"
-                               th:field="*{transfer.storageMigration.strict}"
-                               th:checked="${CONFIG.transfer.storageMigration.strict}"/>
-                    </div>
-                </fieldset>
-            </div>
-            <div class="pure-1-3" th:insert="fragments/config/standards::standards">
-            </div>
-            <div class="pure-u-1-3" th:insert="fragments/config/optimizations::optimizations">
-            </div>
-            <div class="pure-u-1-3">
-                <!-- Hidden -->
-                <!-- Migrate ACID ON -->
+                <!-- Data Flow -->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                    <label for="dataFlow"
+                           th:text="#{config.transfer.storageMigration.dataFlow}"></label>
+                    <select id="dataFlow" class="pure-input-1"
+                            th:field="*{transfer.storageMigration.dataFlow}">
+                        <option th:each="cet: ${distcpflowenums}"
+                                th:value="${cet}"
+                                th:text="${cet}"
+                                th:selected="${cet.equals(CONFIG.transfer.storageMigration.dataFlow)}"/>
+                    </select>
+                </div>
+
+                <!-- Strict -->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+                    <input type="checkbox" id="strict" th:disabled="true"
+                           th:field="*{transfer.storageMigration.strict}"
+                           th:checked="${CONFIG.transfer.storageMigration.strict}"/>
+                    <label for="strict"
+                           th:text="#{config.transfer.storageMigration.strict}"></label>
+                </div>
+
+                <h4 th:text="#{transfer.details}"/>
+                <div class="pure-control-group"
+                     th:if="${('COMMON HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                    <label class="pure-input-1-3" for="transferPrefix" th:text="#{config.transfer.transferPrefix}"></label>
+                    <input class="pure-input-2-3" id="transferPrefix" type="text"
+                           th:field="*{transfer.transferPrefix}"
+                           placeholder="Set Transfer Prefix"/>
+                </div>
+                <!--                        shadowPrefix: "hms_mirror_shadow_"-->
+                <div class="pure-control-group tooltip"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                    <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>
+                    <label class="pure-input-1-3" for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>
+                    <input class="pure-input-2-3" id="shadowPrefix" type="text"
+                           th:field="*{transfer.shadowPrefix}"
+                           placeholder="Set Shadow Prefix"/>
+                </div>
+                <!--                        exportBaseDirPrefix: "/apps/hive/warehouse/export_"-->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                    <label class="pure-input-1-3" for="exportBaseDirPrefix" th:text="#{config.transfer.exportBaseDirPrefix}"></label>
+                    <input class="pure-input-2-3" id="exportBaseDirPrefix" type="text"
+                           th:field="*{transfer.exportBaseDirPrefix}"
+                           placeholder="Set Export Base Dir Prefix"/>
+                </div>
+                <!--                        remoteWorkingDirectory: "hms_mirror_working"-->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                    <label class="pure-input-1-3" for="remoteWorkingDirectory"
+                           th:text="#{config.transfer.remoteWorkingDirectory}"></label>
+                    <input class="pure-input-2-3" id="remoteWorkingDirectory" type="text"
+                           th:field="*{transfer.remoteWorkingDirectory}"
+                           placeholder="Set Remote Working Directory"/>
+                </div>
+                <!--                        intermediateStorage: null-->
+                <div class="pure-control-group"
+                     th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                    <label class="pure-input-1-3" for="intermediateStorage" th:text="#{config.transfer.intermediateStorage}"></label>
+                    <input class="pure-input-2-3" id="intermediateStorage" type="text"
+                           th:field="*{transfer.intermediateStorage}"
+                           placeholder="Set Intermediate Storage"/>
+                </div>
+
                 <div class="pure-control-group">
                     <!--                        <label for="migrateACIDon" th:text="#{config.migrateACID.on}"></label>-->
                     <input type="hidden" name="migrateACIDon"
@@ -104,30 +138,39 @@
                            th:checked="${CONFIG.migrateACID.on}"/>
                 </div>
 
-                <!-- Databases (Managed via Warehouse Plans) -->
-                <fieldset>
-                    <legend th:text=" #{config.databases}"/>
-                    <div class="pure-form-stacked">
-                        <label th:text="#{config.databases.control}"/>
-                        <div class="pure-control-group">
-                            <input disabled="disabled" class="pure-input-1-3"
-                                   th:each="database, itemStat: *{databases}" type="text"
-                                   th:field="*{databases[__${itemStat.index}__]}"/>
-                        </div>
-                        <!--                            <div class="pure-button-group">-->
-                        <!--                                &lt;!&ndash;                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.edit}"&ndash;&gt;-->
-                        <!--                                &lt;!&ndash;                                        th:formaction="@{/config/cluster/edit}" th:formmethod="post"/>&ndash;&gt;-->
-                        <!--                                <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>-->
-                        <!--                                &lt;!&ndash;                                <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>&ndash;&gt;-->
-                        <!--                            </div>-->
-
-                    </div>
-                </fieldset>
-
             </div>
-
-            <div class="pure-u-1-3">
+            <div class="pure-u-1-2">
+                <div th:insert="fragments/config/optimizations::optimizations"></div>
+                <div th:insert="fragments/config/standards::standards"></div>
             </div>
+            <!--            <div class="pure-u-1-3">-->
+            <!-- Hidden -->
+            <!-- Migrate ACID ON -->
+
+            <!-- Databases (Managed via Warehouse Plans) -->
+            <!--                <fieldset>-->
+            <!--                    <legend th:text=" #{config.databases}"/>-->
+            <!--                    <div class="pure-form-stacked">-->
+            <!--                        <label th:text="#{config.databases.control}"/>-->
+            <!--                        <div class="pure-control-group">-->
+            <!--                            <input disabled="disabled" class="pure-input-1-3"-->
+            <!--                                   th:each="database, itemStat: *{databases}" type="text"-->
+            <!--                                   th:field="*{databases[__${itemStat.index}__]}"/>-->
+            <!--                        </div>-->
+            <!--                            <div class="pure-button-group">-->
+            <!--                                &lt;!&ndash;                                <button class="pure-button pure-button-primary" type="submit" th:text="#{button.edit}"&ndash;&gt;-->
+            <!--                                &lt;!&ndash;                                        th:formaction="@{/config/cluster/edit}" th:formmethod="post"/>&ndash;&gt;-->
+            <!--                                <a class="pure-button" th:href="@{/config/edit}" th:text="#{button.edit}"/>-->
+            <!--                                &lt;!&ndash;                                <a class="pure-button" th:href="@{/config/home}" th:text="#{button.home}"/>&ndash;&gt;-->
+            <!--                            </div>-->
+
+            <!--                    </div>-->
+            <!--                </fieldset>-->
+
+            <!--            </div>-->
+
+            <!--            <div class="pure-u-1-3">-->
+            <!--            </div>-->
             <!--            <div class="pure-u-1-4">-->
             <!--                <fieldset>-->
             <!--                    <legend th:text="#{config.transfer}"/>-->

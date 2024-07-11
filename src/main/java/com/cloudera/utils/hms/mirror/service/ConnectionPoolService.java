@@ -305,6 +305,12 @@ public class ConnectionPoolService implements ConnectionPools {
                 getConnectionPools().addMetastoreDirect(Environment.RIGHT, getConfig().getCluster(Environment.RIGHT).getMetastoreDirect());
             }
         }
+
+        if (getConfig().isConnectionKerberized()) {
+            log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
+            environmentService.setupGSS();
+        }
+
         try {
             // TODO: Should we try to close first to clean up any existing connections?
             getConnectionPools().init();
@@ -349,24 +355,21 @@ public class ConnectionPoolService implements ConnectionPools {
             log.error("Issue initializing connections.  Check driver locations", cnfe);
             throw new RuntimeException(cnfe);
         }
-//            hmsMirrorConfig.getCluster(Environment.LEFT).setPools(connectionPoolService.getConnectionPools());
-        switch (getConfig().getDataStrategy()) {
-            case DUMP:
-                // Don't load the datasource for the right with DUMP strategy.
-                break;
-            default:
-                // Don't set the Pools when Disconnected.
-                if (nonNull(getConfig().getCluster(Environment.RIGHT))
-                        && nonNull(getConfig().getCluster(Environment.RIGHT).getHiveServer2())
-                        && !getConfig().getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
-//                        getConfig().getCluster(Environment.RIGHT).setPools(connectionPoolService.getConnectionPools());
-                }
-        }
 
-        if (getConfig().isConnectionKerberized()) {
-            log.debug("Detected a Kerberized JDBC Connection.  Attempting to setup/initialize GSS.");
-            environmentService.setupGSS();
-        }
+//            hmsMirrorConfig.getCluster(Environment.LEFT).setPools(connectionPoolService.getConnectionPools());
+//        switch (getConfig().getDataStrategy()) {
+//            case DUMP:
+//                // Don't load the datasource for the right with DUMP strategy.
+//                break;
+//            default:
+//                // Don't set the Pools when Disconnected.
+//                if (nonNull(getConfig().getCluster(Environment.RIGHT))
+//                        && nonNull(getConfig().getCluster(Environment.RIGHT).getHiveServer2())
+//                        && !getConfig().getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
+////                        getConfig().getCluster(Environment.RIGHT).setPools(connectionPoolService.getConnectionPools());
+//                }
+//        }
+
         log.debug("Checking Hive Connections");
         if (!getConfig().isLoadingTestData() && !checkConnections()) {
             log.error("Check Hive Connections Failed.");
@@ -377,6 +380,7 @@ public class ConnectionPoolService implements ConnectionPools {
         }
         // Set state of connection.
         connected = true;
+        executeSession.setConnected(Boolean.TRUE);
     }
 
 }

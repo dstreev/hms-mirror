@@ -27,9 +27,10 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="glmSources">
-    <fieldset>
-        <legend th:text="#{builder.sources}"/>
+<div th:fragment="view">
+<!--    <fieldset>-->
+<!--        <legend th:text="#{builder.sources}"/>-->
+    <h4 th:text="#{builder.sources}"/>
         <ul id="tree">
             <th:block
                     th:each="source: ${CONFIG.translator.warehouseMapBuilder.sources}">
@@ -84,7 +85,7 @@
                 </li>
             </th:block>
         </ul>
-    </fieldset>
+<!--    </fieldset>-->
 </div>
 </body>
 </html>

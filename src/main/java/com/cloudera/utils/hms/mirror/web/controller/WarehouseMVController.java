@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.UIModelService;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,7 @@ public class WarehouseMVController {
     private ExecuteSessionService executeSessionService;
     private DatabaseService databaseService;
     private ConnectionPoolService connectionPoolService;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setConnectionPoolService(ConnectionPoolService connectionPoolService) {
@@ -60,9 +62,14 @@ public class WarehouseMVController {
         this.databaseService = databaseService;
     }
 
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
+
     @RequestMapping(value = "/plan/add", method = RequestMethod.GET)
     public String addWarehousePlan(Model model) throws SQLException, SessionException {
-        if (executeSessionService.transitionLoadedSessionToActive(1)) {
+        if (executeSessionService.transitionLoadedSessionToActive(1, Boolean.TRUE)) {
             if (!connectionPoolService.isConnected()) {
                 connectionPoolService.init();
             }
@@ -73,8 +80,10 @@ public class WarehouseMVController {
 
             return "/warehouse/plan/add";
         } else {
-            // TODO: Need to provide reason why going back to view.
-            return "redirect:/config/view";
+            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+            model.addAttribute(TYPE, "Connections");
+            model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
+            return "error";
         }
     }
 

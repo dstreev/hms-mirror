@@ -96,6 +96,12 @@ input {
     background-color: #ccc;
 }
 
+h4.tabheader {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-bottom: none;
+}
 
 /* Style the tab content */
 .tabcontent {

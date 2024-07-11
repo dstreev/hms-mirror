@@ -17,14 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.ConfigService;
-import com.cloudera.utils.hms.mirror.service.DatabaseService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +47,7 @@ public class TranslatorMVController {
     private ExecuteSessionService executeSessionService;
     private TranslatorService translatorService;
     private ConfigService configService;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setConfigService(ConfigService configService) {
@@ -70,6 +69,11 @@ public class TranslatorMVController {
         this.translatorService = translatorService;
     }
 
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
+
     @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
     public String removeGlobalLocationMap(Model model,
                                           @PathVariable @NotNull String source) throws SessionException {
@@ -85,7 +89,7 @@ public class TranslatorMVController {
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
     public String buildGLMFromPlans(Model model,
                                     @RequestParam(name = GLM_DRYRUN, required = false) Boolean dryrun,
-                                    @RequestParam(name = BUILD_SOURCES, required = false) Boolean buildSources,
+//                                    @RequestParam(name = BUILD_SOURCES, required = false) Boolean buildSources,
                                     @RequestParam(name = PARTITION_LEVEL_MISMATCH, required = false) Boolean partitionLevelMisMatch,
                                     @RequestParam(name = CONSOLIDATION_LEVEL, required = false) Integer consolidationLevel,
                                     @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads)
@@ -95,28 +99,38 @@ public class TranslatorMVController {
 
         // Reset Connections and reload most current config.
         executeSessionService.clearActiveSession();
-//        if (!executeSessionService.transitionLoadedSessionToActive(maxThreads)) {
-//            log.warn("Couldn't transition fully.  Will try to build sources anyhow.");
-//        }
+        if (executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.TRUE)) {
 
-        boolean lclBuildSources = buildSources != null ? buildSources : false;
-        int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
-        boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
+//            boolean lclBuildSources = buildSources != null ? buildSources : false;
+            int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
+            boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
 
-        if (lclBuildSources) {
-            WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
-            model.addAttribute(SOURCES, wmb.getSources());
-        }
+//            if (lclBuildSources) {
+                WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
+                model.addAttribute(SOURCES, wmb.getSources());
+//            }
 
-        Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
+            Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
 
-        if (lclDryrun) {
-            model.addAttribute(ACTION, "view.dryrun");
-            model.addAttribute(GLOBAL_LOCATION_MAP, globalLocationMap);
-            return "/translator/globalLocationMap/view_edit";
+            if (lclDryrun) {
+//                model.addAttribute(ACTION, "view.dryrun");
+                HmsMirrorConfig lclConfig = new HmsMirrorConfig();
+                lclConfig.getTranslator().setOrderedGlobalLocationMap(globalLocationMap);
+                lclConfig.getTranslator().setWarehouseMapBuilder(wmb);
+                model.addAttribute(CONFIG, lclConfig);
+                return "translator/globalLocationMap/view";
+            } else {
+                HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+                config.getTranslator().setWarehouseMapBuilder(wmb);
+                config.getTranslator().setGlobalLocationMap(globalLocationMap);
+                configService.validate(executeSessionService.getSession(), null, Boolean.FALSE);
+                return "redirect:/config/view";
+            }
         } else {
-            configService.validate(executeSessionService.getSession(), null);
-            return "redirect:/config/view";
+            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+            model.addAttribute(TYPE, "Connections");
+            model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
+            return "error";
         }
     }
 

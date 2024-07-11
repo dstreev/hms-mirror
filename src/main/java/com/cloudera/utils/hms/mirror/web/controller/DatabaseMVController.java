@@ -17,6 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -27,13 +29,14 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.validation.constraints.NotNull;
 
 @Controller
 @RequestMapping(path = "/database")
 @Slf4j
-public class DatabaseMVController {
+public class DatabaseMVController implements ControllerReferences {
 
     private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
@@ -47,6 +50,37 @@ public class DatabaseMVController {
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
+
+    @RequestMapping(value = "/add", method = RequestMethod.POST)
+    public String addDatabase(Model model,
+                              @RequestParam(value = DATABASES, required = true) String databases) throws SessionException {
+        executeSessionService.clearActiveSession();
+
+        ExecuteSession session = executeSessionService.getSession();
+        HmsMirrorConfig config = session.getConfig();
+
+        String[] dbs = databases.split(",");
+        for (String db: dbs) {
+            config.getDatabases().add(db);
+        }
+
+        return "redirect:/config/view";
+    }
+
+    @RequestMapping(value = "/{database}/delete", method = RequestMethod.GET)
+    public String deleteDatabase(Model model,
+                                      @PathVariable @NotNull String database) throws SessionException {
+        executeSessionService.clearActiveSession();
+
+        ExecuteSession session = executeSessionService.getSession();
+        HmsMirrorConfig config = session.getConfig();
+
+        config.getDatabases().remove(database);
+
+        return "redirect:/config/view";
+    }
+
+
 
     @RequestMapping(value = "/{database}/warehousePlan", method = RequestMethod.DELETE)
     public String deleteWarehousePlan(Model model,
