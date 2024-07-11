@@ -17,16 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
-import com.cloudera.utils.hms.mirror.web.controller.ConfigMVController;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
-import org.bouncycastle.openssl.EncryptionException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
 
 @ControllerAdvice
 public class MirrorExceptionHandler {
@@ -39,27 +40,36 @@ public class MirrorExceptionHandler {
     }
 
     @ExceptionHandler(value = SessionException.class)
-    public String sessionExceptionHandler(Model model, SessionException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Session Exception");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ModelAndView sessionExceptionHandler(HttpServletRequest request, SessionException exception) {
+        ModelAndView mv = new ModelAndView();
+
+        mv.addObject(ControllerReferences.TYPE, "Session Exception");
+        mv.addObject(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(mv, 0, false);
+        mv.setViewName("error");
+        return mv;
     }
 
     @ExceptionHandler(value = RequiredConfigurationException.class)
-    public String reqConfigExceptionHandler(Model model, RequiredConfigurationException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Required Configuration");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ModelAndView reqConfigExceptionHandler(HttpServletRequest request, RequiredConfigurationException exception) {
+        ModelAndView mv = new ModelAndView();
+
+        mv.getModel().put(ControllerReferences.TYPE, "Required Configuration");
+        mv.getModel().put(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(mv.getModel(), 0, false);
+        mv.setViewName("error");
+        return mv;
     }
 
     @ExceptionHandler(value = EncryptionException.class)
-    public String encryptionExceptionHandler(Model model, EncryptionException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Encryption/Decryption Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ModelAndView encryptionExceptionHandler(HttpServletRequest request, EncryptionException exception) {
+        ModelAndView mv = new ModelAndView();
+
+        mv.getModel().put(ControllerReferences.TYPE, "Encryption/Decryption Issue");
+        mv.getModel().put(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(mv.getModel(), 0, false);
+        mv.setViewName("error");
+        return mv;
     }
 
 }

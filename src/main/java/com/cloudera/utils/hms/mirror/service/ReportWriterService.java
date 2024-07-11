@@ -17,9 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

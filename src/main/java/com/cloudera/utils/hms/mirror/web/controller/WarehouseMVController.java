@@ -24,7 +24,6 @@ import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
-import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;

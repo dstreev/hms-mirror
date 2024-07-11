@@ -27,8 +27,28 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ModelUtils implements ControllerReferences {
+
+    public static void allEnumsForMap(Map<String, Object> map) {
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.SerdeType.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.TableType.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.StageEnum.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum.class, map);
+        enumForMap(com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum.class, map);
+        enumForMap(DBStore.DB_TYPE.class, map);
+        configEnvironmentForModel(map);
+        configSupportDataStrategyForModel(map);
+        configSupportedHiveDriverClassesForModel(map);
+        enumForMap(ConnectionPoolType.class, map);
+        map.put("FALSE", "false");
+        map.put("TRUE", "true");
+        booleanForModel(map);
+
+    }
 
     public static void allEnumsForModel(Model model) {
         enumForModel(com.cloudera.utils.hms.mirror.domain.support.SerdeType.class, model);
@@ -53,6 +73,11 @@ public class ModelUtils implements ControllerReferences {
         model.addAttribute(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
     }
 
+    public static void configEnvironmentForModel(Map<String, Object> map) {
+        // Add LEFT and RIGHT to the model
+        map.put(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
+    }
+
     public static List<DataStrategyEnum> getSupportedDataStrategies() {
         List<DataStrategyEnum> supportedDataStrategies = new ArrayList<>();
         supportedDataStrategies.add(DataStrategyEnum.STORAGE_MIGRATION);
@@ -67,17 +92,22 @@ public class ModelUtils implements ControllerReferences {
     }
 
     public static void configSupportDataStrategyForModel(Model model) {
-        // Add SUPPORTED and UNSUPPORTED to the model
-//        List<String> supportedDataStrategies = new ArrayList<>();
-//        for (DataStrategyEnum dataStrategy : getSupportedDataStrategies()) {
-//            supportedDataStrategies.add(dataStrategy.name());
-//        }
         model.addAttribute(SUPPORTED_DATA_STRATEGIES, getSupportedDataStrategies().toArray(new DataStrategyEnum[0]));
+    }
+
+    public static void configSupportDataStrategyForModel(Map<String, Object> map) {
+        map.put(SUPPORTED_DATA_STRATEGIES, getSupportedDataStrategies().toArray(new DataStrategyEnum[0]));
     }
 
     public static void configSupportedHiveDriverClassesForModel(Model model) {
         // Add SUPPORTED and UNSUPPORTED to the model
         model.addAttribute(SUPPORTED_HIVE_DRIVER_CLASSES,
+                new String[]{"org.apache.hive.jdbc.HiveDriver", "com.cloudera.hive.jdbc.HS2Driver"});
+    }
+
+    public static void configSupportedHiveDriverClassesForModel(Map<String, Object> map) {
+        // Add SUPPORTED and UNSUPPORTED to the model
+        map.put(SUPPORTED_HIVE_DRIVER_CLASSES,
                 new String[]{"org.apache.hive.jdbc.HiveDriver", "com.cloudera.hive.jdbc.HS2Driver"});
     }
 
@@ -99,10 +129,37 @@ public class ModelUtils implements ControllerReferences {
         }
     }
 
+    public static void enumForMap(Class clazz, Map<String, Object> map) {
+        if (clazz.isEnum()) {
+            Method method = null;
+            try {
+                method = clazz.getMethod("values");
+                Enum<?>[] enums = (Enum<?>[]) method.invoke(null);
+                String[] enumNames = new String[enums.length];
+                for (int i = 0; i < enums.length; i++) {
+                    enumNames[i] = enums[i].name();
+                }
+                map.put(clazz.getSimpleName().toLowerCase() + "s", enumNames);
+//                model.addAttribute(clazz.getSimpleName().toLowerCase() + "s", enumNames);
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+    }
+
     public static void booleanForModel(Model model) {
         String[] bools = new String[2];
         bools[0] = "false";
         bools[1] = "true";
         model.addAttribute(BOOLEANS, bools);
     }
+
+    public static void booleanForModel(Map<String, Object> map) {
+        String[] bools = new String[2];
+        bools[0] = "false";
+        bools[1] = "true";
+        map.put(BOOLEANS, bools);
+    }
+
 }

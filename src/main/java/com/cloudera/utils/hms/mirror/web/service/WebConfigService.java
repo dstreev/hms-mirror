@@ -18,10 +18,8 @@
 package com.cloudera.utils.hms.mirror.web.service;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.list.TreeList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -31,8 +29,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 

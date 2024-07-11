@@ -17,13 +17,16 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -34,7 +37,10 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;

@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
+import com.cloudera.utils.hms.mirror.service.UIModelService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -44,6 +45,7 @@ public class PasswordMVController {
 
     private ExecuteSessionService executeSessionService;
     private PasswordService passwordService;
+    private UIModelService uiModelService;
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
@@ -53,6 +55,11 @@ public class PasswordMVController {
     @Autowired
     public void setPasswordService(PasswordService passwordService) {
         this.passwordService = passwordService;
+    }
+
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
     }
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)

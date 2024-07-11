@@ -17,9 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.runtime;
 
-import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.PhaseState;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.web.service.RunStatusService;
@@ -31,8 +28,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Objects;
 
 @CrossOrigin
 @RestController

@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
-import lombok.Setter;
 
 /*
 The Warehouse Base is the location base for a databases external and managedDirectory locations. The locations

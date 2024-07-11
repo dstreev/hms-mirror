@@ -17,7 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.SerdeType;

@@ -17,9 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
-import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

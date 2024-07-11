@@ -17,10 +17,13 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
-import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Overrides;
 import com.cloudera.utils.hms.mirror.domain.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;

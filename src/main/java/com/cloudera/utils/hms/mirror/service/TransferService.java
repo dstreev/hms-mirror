@@ -17,14 +17,15 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.*;
+import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.connections.ConnectionException;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.datastrategy.HybridAcidDowngradeInPlaceDataStrategy;
 import com.cloudera.utils.hms.mirror.datastrategy.HybridDataStrategy;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;

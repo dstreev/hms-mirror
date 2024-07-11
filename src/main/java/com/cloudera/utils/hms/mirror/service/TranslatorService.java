@@ -17,9 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.EnvironmentMap;
+import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;

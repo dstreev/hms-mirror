@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -41,7 +41,6 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType.HYBRID;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
 import static java.util.Objects.nonNull;
 

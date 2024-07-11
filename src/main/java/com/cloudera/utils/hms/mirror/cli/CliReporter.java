@@ -17,10 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;

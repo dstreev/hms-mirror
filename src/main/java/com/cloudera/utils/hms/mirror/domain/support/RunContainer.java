@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import lombok.Getter;
 import lombok.Setter;
 

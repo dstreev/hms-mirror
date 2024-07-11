@@ -18,9 +18,6 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 import lombok.Getter;
-import lombok.Setter;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class OperationStatistics implements Cloneable{

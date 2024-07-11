@@ -17,12 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyBase;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyBase;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;

@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 
 public interface DataStrategy {

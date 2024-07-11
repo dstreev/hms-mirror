@@ -31,6 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.util.Map;
 
 import static java.util.Objects.isNull;
 
@@ -47,24 +50,34 @@ public class UIModelService implements ControllerReferences {
         this.executeSessionService = executeSessionService;
     }
 
-    public void sessionToModel(Model model, Integer concurrency, Boolean testing) {
+    public void sessionToModel(ModelAndView mv, Integer concurrency, Boolean testing) {
+        sessionToModel(mv.getModel(), concurrency, testing);
+    }
 
+    public void sessionToModel(Model model, Integer concurrency, Boolean testing) {
+        sessionToModel(model.asMap(), concurrency, testing);
+    }
+
+    public void sessionToModel(Map<String, Object> map, Integer concurrency, Boolean testing) {
         boolean lclTesting = testing != null && testing;
 
-        model.addAttribute(CONCURRENCY, concurrency);
+        map.put(CONCURRENCY, concurrency);
+//        model.addAttribute(CONCURRENCY, concurrency);
 
         ExecuteSession session = executeSessionService.getSession();
 
         RunContainer runContainer = new RunContainer();
-        model.addAttribute(RUN_CONTAINER, runContainer);
+        map.put(RUN_CONTAINER, runContainer);
+//        model.addAttribute(RUN_CONTAINER, runContainer);
         if (session != null) {
             runContainer.setSessionId(session.getSessionId());
-
-            model.addAttribute(CONFIG, session.getConfig());
+            map.put(CONFIG, session.getConfig());
+//            model.addAttribute(CONFIG, session.getConfig());
 
             PersistContainer persistContainer = new PersistContainer();
             persistContainer.setSaveAs(session.getSessionId());
-            model.addAttribute(PERSIST, persistContainer);
+            map.put(PERSIST, persistContainer);
+//            model.addAttribute(PERSIST, persistContainer);
 
             // For testing only.
             if (lclTesting && isNull(session.getRunStatus())) {
@@ -72,21 +85,25 @@ public class UIModelService implements ControllerReferences {
                 runStatus.setConcurrency(concurrency);
                 runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                 runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
-                model.addAttribute(RUN_STATUS, runStatus);
+                map.put(RUN_STATUS, runStatus);
+//                model.addAttribute(RUN_STATUS, runStatus);
             } else {
                 RunStatus runStatus = session.getRunStatus();
                 runStatus.setConcurrency(concurrency);
-                model.addAttribute(RUN_STATUS, runStatus);
+                map.put(RUN_STATUS, runStatus);
+//                model.addAttribute(RUN_STATUS, runStatus);
             }
         }
 
         try {
-            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
+            map.put(VERSION, Manifests.read("HMS-Mirror-Version"));
+//            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
         } catch (IllegalArgumentException iae) {
-            model.addAttribute(VERSION, "Unknown");
+            map.put(VERSION, "Unknown");
+//            model.addAttribute(VERSION, "Unknown");
         }
 
-        ModelUtils.allEnumsForModel(model);
+        ModelUtils.allEnumsForMap(map);
     }
 
 }

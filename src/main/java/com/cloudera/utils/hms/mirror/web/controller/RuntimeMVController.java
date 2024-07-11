@@ -35,7 +35,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.RUN_CONTAINER;
-import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.RUN_STATUS;
 
 @Controller
 @RequestMapping(path = "/runtime")

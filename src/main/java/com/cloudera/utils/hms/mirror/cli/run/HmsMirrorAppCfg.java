@@ -17,11 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.cli.run;
 
-import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
-import com.cloudera.utils.hms.mirror.service.ReportWriterService;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
+import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
 import com.cloudera.utils.hms.mirror.service.*;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

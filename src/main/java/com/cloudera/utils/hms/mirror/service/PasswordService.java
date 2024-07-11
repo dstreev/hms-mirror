@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.util.Protect;
 import lombok.Getter;
@@ -26,8 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.List;
 
 @Service
 @Slf4j

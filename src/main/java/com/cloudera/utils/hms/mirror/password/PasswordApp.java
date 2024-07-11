@@ -19,8 +19,6 @@ package com.cloudera.utils.hms.mirror.password;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import lombok.extern.slf4j.Slf4j;
