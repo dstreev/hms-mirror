@@ -29,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Slf4j
 @Getter
 @Setter
@@ -59,7 +62,7 @@ public class Translator implements Cloneable {
 
     // Needed to handle npe when loaded from json
     public WarehouseMapBuilder getWarehouseMapBuilder() {
-        if (warehouseMapBuilder == null)
+        if (isNull(warehouseMapBuilder))
             warehouseMapBuilder = new WarehouseMapBuilder();
         return warehouseMapBuilder;
     }
@@ -68,11 +71,11 @@ public class Translator implements Cloneable {
     public Translator clone() {
         try {
             Translator clone = (Translator) super.clone();
-            if (globalLocationMap != null)
+            if (nonNull(globalLocationMap))
                 clone.globalLocationMap = new HashMap<>(globalLocationMap);
-            if (orderedGlobalLocationMap != null)
+            if (nonNull(orderedGlobalLocationMap))
                 clone.orderedGlobalLocationMap = new TreeMap<>(orderedGlobalLocationMap);
-            if (warehouseMapBuilder != null)
+            if (nonNull(warehouseMapBuilder))
                 clone.warehouseMapBuilder = (WarehouseMapBuilder)warehouseMapBuilder.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
@@ -93,7 +96,7 @@ public class Translator implements Cloneable {
 
     public void addTableSource(String database, String table, String tableType, String source, int consolidationLevelBase,
                                boolean partitionLevelMismatch) {
-        if (warehouseMapBuilder == null)
+        if (isNull(warehouseMapBuilder))
             warehouseMapBuilder = new WarehouseMapBuilder();
         try {
             TableType type = TableType.valueOf(tableType);
@@ -107,7 +110,7 @@ public class Translator implements Cloneable {
     public void addPartitionSource(String database, String table, String tableType, String partitionSpec,
                                    String tableSource, String partitionSource, int consolidationLevelBase,
                                    boolean partitionLevelMismatch) {
-        if (warehouseMapBuilder == null)
+        if (isNull(warehouseMapBuilder))
             warehouseMapBuilder = new WarehouseMapBuilder();
         TableType type = TableType.valueOf(tableType);
         warehouseMapBuilder.addSourceLocation(database, table, type, partitionSpec, tableSource, partitionSource,
@@ -138,10 +141,10 @@ public class Translator implements Cloneable {
     // This set is ordered by the length of the key in descending order
     // to ensure that the longest path is replaced first.
     public Map<String, String> getOrderedGlobalLocationMap() {
-        if (orderedGlobalLocationMap == null) {
+        if (isNull(orderedGlobalLocationMap)) {
             orderedGlobalLocationMap = new TreeMap<String, String>(new StringLengthComparator());
             // Add the global location map to the ordered map.
-            if (globalLocationMap != null)
+            if (nonNull(globalLocationMap))
                 orderedGlobalLocationMap.putAll(globalLocationMap);
         }
         return orderedGlobalLocationMap;

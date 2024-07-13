@@ -35,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+
 @Service
 @Slf4j
 public class QueryDefinitionsService {
@@ -52,7 +54,7 @@ public class QueryDefinitionsService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         QueryDefinitions queryDefinitions = queryDefinitionsMap.get(environment);
-        if (queryDefinitions == null) {
+        if (isNull(queryDefinitions)) {
             Cluster cluster = hmsMirrorConfig.getCluster(environment);
             DBStore metastoreDirect = cluster.getMetastoreDirect();
             if (metastoreDirect != null) {
@@ -65,7 +67,7 @@ public class QueryDefinitionsService {
                     String dbQueryDefReference = "/" + dbType.toString() + "/metastoreDirect.yaml";
                     try {
                         URL configURL = this.getClass().getResource(dbQueryDefReference);
-                        if (configURL == null) {
+                        if (isNull(configURL)) {
                             throw new RuntimeException("Can't build URL for Resource: " +
                                     dbQueryDefReference);
                         }

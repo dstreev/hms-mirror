@@ -26,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Getter
 @Setter
 @Slf4j
@@ -52,7 +55,7 @@ public class WarehouseMapBuilder implements Cloneable {
     private Map<String, Warehouse> warehousePlans = new HashMap<>();
 
     public Map<String, Warehouse> getWarehousePlans() {
-        if (warehousePlans == null)
+        if (isNull(warehousePlans))
             warehousePlans = new HashMap<>();
         return warehousePlans;
     }
@@ -122,7 +125,7 @@ public class WarehouseMapBuilder implements Cloneable {
 
         String reducedLocation = null;
 
-        if (partitionSpec == null) {
+        if (isBlank(partitionSpec)) {
             // Process Table Source
             reducedLocation = UrlUtils.reduceUrlBy(tableLocation, consolidationLevelBase);
         } else {

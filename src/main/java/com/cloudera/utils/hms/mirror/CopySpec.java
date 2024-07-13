@@ -23,6 +23,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import static java.util.Objects.nonNull;
+
 /*
 Used to define the table type and location you want to create.
  */
@@ -52,7 +54,7 @@ public class CopySpec {
     }
 
     public boolean renameTable() {
-        if (tableNamePrefix != null)
+        if (nonNull(tableNamePrefix))
             return Boolean.TRUE;
         else
             return Boolean.FALSE;

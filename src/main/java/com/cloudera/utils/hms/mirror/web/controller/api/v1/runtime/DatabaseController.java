@@ -39,6 +39,8 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+
 @CrossOrigin
 @RestController
 @Slf4j
@@ -64,7 +66,7 @@ public class DatabaseController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/list")
     public List<String> listAvailableDatabases(@RequestParam(name = "environment", required = false) Environment environment) throws RuntimeException {
-        Environment lclEnv = environment == null ? Environment.LEFT : environment;
+        Environment lclEnv = isNull(environment) ? Environment.LEFT : environment;
         return databaseService.listAvailableDatabases(lclEnv);
     }
 
@@ -166,7 +168,7 @@ public class DatabaseController {
     public WarehouseMapBuilder buildAllDatabaseSources(@RequestParam(name = "consolidationLevelbase", required = false) Integer consolidationLevelBase,
                                            @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch) throws RequiredConfigurationException, EncryptionException, SessionException {
 
-        int consolidationBase = consolidationLevelBase == null ? 1 : consolidationLevelBase;
+        int consolidationBase = isNull(consolidationLevelBase) ? 1 : consolidationLevelBase;
         boolean partitionMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
         return databaseService.buildDatabaseSources(consolidationBase, partitionMismatch);
     }

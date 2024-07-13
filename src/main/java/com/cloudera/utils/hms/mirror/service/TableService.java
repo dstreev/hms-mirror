@@ -58,6 +58,9 @@ import static com.cloudera.utils.hms.mirror.SessionVars.SORT_DYNAMIC_PARTITION_T
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.*;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.DUMP;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Getter
@@ -92,7 +95,7 @@ public class TableService {
         EnvironmentTable source = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable shadow = tableMirror.getEnvironmentTable(Environment.SHADOW);
         EnvironmentTable target = tableMirror.getEnvironmentTable(Environment.RIGHT);
-        if ((!TableUtils.isACID(source) && hmsMirrorConfig.getTransfer().getCommonStorage() != null) ||
+        if ((!TableUtils.isACID(source) && !isBlank(hmsMirrorConfig.getTransfer().getCommonStorage())) ||
                 isACIDDowngradeInPlace(tableMirror, Environment.LEFT)) {
             // Nothing to build.
             return rtn;
@@ -273,7 +276,7 @@ public class TableService {
         EnvironmentTable target = tableMirror.getEnvironmentTable(copySpec.getTarget());
 
         // Since we are building the cluster on request, we need to build the transfer cluster if they don't exist.
-        if (config.getCluster(copySpec.getTarget()) == null) {
+        if (isNull(config.getCluster(copySpec.getTarget()))) {
             Cluster intermediateCluster = null;
             if (copySpec.getTarget() == Environment.SHADOW) {
                 intermediateCluster = config.getCluster(Environment.LEFT).clone();
@@ -647,7 +650,7 @@ public class TableService {
                     String msckTable = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, targetTable.getName());
                     targetTable.addCleanUpSql(new Pair(MirrorConf.MSCK_REPAIR_TABLE_DESC, msckTable));
                 }
-            } else if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
+            } else if (isBlank(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                 rtn = buildShadowToFinalSql(tableMirror);
             }
         }
@@ -931,13 +934,13 @@ public class TableService {
                                         "The name is the result of a previous STORAGE_MIGRATION attempt that has not been " +
                                         "cleaned up.", database, tableName);
                             } else {
-                                if (config.getFilter().getTblRegEx() == null && config.getFilter().getTblExcludeRegEx() == null) {
+                                if (isBlank(config.getFilter().getTblRegEx()) && isBlank(config.getFilter().getTblExcludeRegEx())) {
                                     TableMirror tableMirror = dbMirror.addTable(tableName);
                                     stats.getCounts().incrementTables();
                                     tableMirror.setUnique(df.format(config.getInitDate()));
                                     tableMirror.setMigrationStageMessage("Added to evaluation inventory");
                                     runStatus.getOperationStatistics().getCounts().incrementTables();
-                                } else if (config.getFilter().getTblRegEx() != null) {
+                                } else if (!isBlank(config.getFilter().getTblRegEx())) {
                                     // Filter Tables
                                     assert (config.getFilter().getTblFilterPattern() != null);
                                     Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
@@ -1382,18 +1385,18 @@ public class TableService {
                 // conn will be null if config.execute != true.
                 conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
 
-                if (conn == null && hmsMirrorConfig.isExecute() && !hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
+                if (isNull(conn) && hmsMirrorConfig.isExecute() && !hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
                     // this is a problem.
                     rtn = Boolean.FALSE;
                     tblMirror.addIssue(environment, "Connection missing. This is a bug.");
                 }
 
-                if (conn == null && hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
+                if (isNull(conn) && hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
                     tblMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
                             "The scripts will need to be run 'manually'.");
                 }
 
-                if (conn != null) {
+                if (nonNull(conn)) {
                     Statement stmt = null;
                     try {
                         stmt = conn.createStatement();

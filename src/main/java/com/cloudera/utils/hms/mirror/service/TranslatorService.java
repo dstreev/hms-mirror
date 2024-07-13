@@ -40,7 +40,9 @@ import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
 import static com.cloudera.utils.hms.mirror.SessionVars.MNGD_DB_LOCATION_PROP;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -158,14 +160,14 @@ public class TranslatorService {
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
         dbWarehouse = config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().get(database);
-        if (dbWarehouse == null) {
+        if (isNull(dbWarehouse)) {
             if (config.getTransfer().getWarehouse().getManagedDirectory() != null &&
                     config.getTransfer().getWarehouse().getExternalDirectory() != null) {
                 dbWarehouse = new Warehouse(config.getTransfer().getWarehouse().getExternalDirectory(),
                         config.getTransfer().getWarehouse().getManagedDirectory());
             }
         }
-        if (dbWarehouse == null) {
+        if (isNull(dbWarehouse)) {
             // Look for Location in the right DB Definition for Migration Strategies.
             switch (config.getDataStrategy()) {
                 case SCHEMA_ONLY:
@@ -229,7 +231,7 @@ public class TranslatorService {
                     if (!config.getFilter().isTableFiltering()) {
                         level++;
                     }
-                    if (partitionLocation == null || partitionLocation.isEmpty() ||
+                    if (isBlank(partitionLocation) || partitionLocation.isEmpty() ||
                             partitionLocation.equals(NOT_SET)) {
                         rtn = Boolean.FALSE;
                         continue;
@@ -299,7 +301,7 @@ public class TranslatorService {
 
         String leftNS = config.getCluster(Environment.LEFT).getHcfsNamespace();
         // Set base on rightNS or Common Storage, if specified
-        String rightNS = config.getTransfer().getCommonStorage() == null ?
+        String rightNS = isBlank(config.getTransfer().getCommonStorage()) ?
                 config.getCluster(Environment.RIGHT).getHcfsNamespace() : config.getTransfer().getCommonStorage();
 
         // Get the relative dir.

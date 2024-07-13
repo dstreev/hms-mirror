@@ -55,6 +55,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Configuration
 @Slf4j
 public class CliInit {
@@ -84,7 +87,7 @@ public class CliInit {
             if (!cfgFile.exists()) {
                 // Try loading from resource (classpath).  Mostly for testing.
                 cfgUrl = this.getClass().getResource(configFilename);
-                if (cfgUrl == null) {
+                if (isNull(cfgUrl)) {
                     throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
                 }
                 log.info("Using 'classpath' config: {}", configFilename);
@@ -175,7 +178,7 @@ public class CliInit {
             log.info("Reconstituting Conversion from test data file: {}", filename);
             log.info("Checking 'classpath' for test data file");
             URL configURL = this.getClass().getResource(filename);
-            if (configURL == null) {
+            if (isNull(configURL)) {
                 log.info("Checking filesystem for test data file: {}", filename);
                 File conversionFile = new File(filename);
                 if (!conversionFile.exists())
@@ -220,7 +223,7 @@ public class CliInit {
 
             // Sync the concurrency for the connections.
             // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
-            if (builtConfig.getCluster(Environment.LEFT) != null) {
+            if (nonNull(builtConfig.getCluster(Environment.LEFT)) && nonNull(builtConfig.getCluster(Environment.LEFT).getHiveServer2())) {
                 Cluster cluster = builtConfig.getCluster(Environment.LEFT);
                 cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(maxThreads / 2));
                 cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(maxThreads / 2));
@@ -230,7 +233,7 @@ public class CliInit {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(maxThreads));
                 }
             }
-            if (builtConfig.getCluster(Environment.RIGHT) != null) {
+            if (nonNull(builtConfig.getCluster(Environment.RIGHT)) && nonNull(builtConfig.getCluster(Environment.RIGHT).getHiveServer2())) {
                 Cluster cluster = builtConfig.getCluster(Environment.RIGHT);
                 if (cluster.getHiveServer2() != null) {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(maxThreads / 2));

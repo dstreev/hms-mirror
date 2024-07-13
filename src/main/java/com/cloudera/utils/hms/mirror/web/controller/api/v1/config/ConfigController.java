@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Objects.isNull;
+
 @CrossOrigin
 @RestController
 @Slf4j
@@ -153,7 +155,7 @@ public class ConfigController {
 //        String targetSessionId = sessionId != null? sessionId : id;
         // Get the session and set the config.
         ExecuteSession session = executeSessionService.getSession(sessionId);
-        if (session == null) {
+        if (isNull(session)) {
             session = executeSessionService.createSession(sessionId, config);
         } else {
             session.setConfig(config);

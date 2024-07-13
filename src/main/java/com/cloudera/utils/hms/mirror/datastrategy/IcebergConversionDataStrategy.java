@@ -36,6 +36,8 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+
 /**
  * This class is used to convert a Hive table to an Iceberg table.
  * Docs - https://docs.cloudera.com/cdp-public-cloud/cloud/iceberg-migrate-from-hive/topics/migrating-hive-to-iceberg.html
@@ -68,7 +70,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
         log.debug("Table: {} build Iceberg Conversions", tableMirror.getName());
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        if (let == null) {
+        if (isNull(let)) {
             log.error("Table is null for LEFT");
             return Boolean.FALSE;
         }

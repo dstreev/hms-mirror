@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Objects.isNull;
 import static org.junit.Assert.*;
 
 @Slf4j
@@ -64,7 +65,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
             assertEquals(clone.getCluster(environment).isEnableAutoColumnStats(), hmsMirrorConfig.getCluster(environment).isEnableAutoColumnStats());
             assertEquals(clone.getCluster(environment).isEnableAutoTableStats(), hmsMirrorConfig.getCluster(environment).isEnableAutoTableStats());
             // Hive Server 2
-            if (hmsMirrorConfig.getCluster(environment).getHiveServer2() == null) {
+            if (isNull(hmsMirrorConfig.getCluster(environment).getHiveServer2())) {
                 assertNull(clone.getCluster(environment).getHiveServer2());
             } else {
                 assertEquals(clone.getCluster(environment).getHiveServer2().getUri(), hmsMirrorConfig.getCluster(environment).getHiveServer2().getUri());
@@ -78,7 +79,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
             }
 
             // Metastore
-            if (hmsMirrorConfig.getCluster(environment).getMetastoreDirect() == null) {
+            if (isNull(hmsMirrorConfig.getCluster(environment).getMetastoreDirect())) {
                 assertNull(clone.getCluster(environment).getMetastoreDirect());
             } else {
                 assertEquals(clone.getCluster(environment).getMetastoreDirect().getUri(), hmsMirrorConfig.getCluster(environment).getMetastoreDirect().getUri());

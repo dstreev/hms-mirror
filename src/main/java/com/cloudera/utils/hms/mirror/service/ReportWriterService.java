@@ -45,6 +45,8 @@ import java.nio.file.FileSystems;
 import java.text.DecimalFormat;
 import java.util.*;
 
+import static java.util.Objects.nonNull;
+
 @Component
 @Slf4j
 @Getter
@@ -306,7 +308,7 @@ public class ReportWriterService {
                     runbookFile.write("Execute was **ON**, so many of the scripts have been run already.  Verify status " +
                             "in the above report.  `distcp` actions (if requested/applicable) need to be run manually. " +
                             "Some cleanup scripts may have been run if no `distcp` actions were requested.\n\n");
-                    if (config.getCluster(Environment.RIGHT).getHiveServer2() != null) {
+                    if (nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
                         if (config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()) {
                             runbookFile.write("Process ran with RIGHT environment 'disconnected'.  All RIGHT scripts will need to be run manually.\n\n");
                         }

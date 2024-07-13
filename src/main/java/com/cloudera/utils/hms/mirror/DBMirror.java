@@ -34,6 +34,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Getter
 @Setter
 @Slf4j
@@ -78,7 +81,7 @@ public class DBMirror {
     public void addIssue(Environment environment, String issue) {
         String scrubbedIssue = issue.replace("\n", "<br/>");
         List<String> issuesList = issues.get(environment);
-        if (issuesList == null) {
+        if (isNull(issuesList)) {
             issuesList = new ArrayList<>();
             issues.put(environment, issuesList);
         }
@@ -101,7 +104,7 @@ public class DBMirror {
 
     public Map<String, String> getDBDefinition(Environment environment) {
         Map<String, String> rtn = dbDefinitions.get(environment);
-        if (rtn == null) {
+        if (isNull(rtn)) {
             rtn = new TreeMap<>();
             dbDefinitions.put(environment, rtn);
         }
@@ -129,7 +132,7 @@ public class DBMirror {
         for (String tableName : getTableMirrors().keySet()) {
             TableMirror tableMirror = getTableMirrors().get(tableName);
             Integer count = rtn.get(tableMirror.getPhaseState());
-            if (count != null)
+            if (nonNull(count))
                 rtn.put(tableMirror.getPhaseState(), count + 1);
             else
                 rtn.put(tableMirror.getPhaseState(), 1);
@@ -149,7 +152,7 @@ public class DBMirror {
 
     public List<Pair> getSql(Environment environment) {
         List<Pair> sqlList = null;
-        if (sql.get(environment) == null) {
+        if (isNull(sql.get(environment))) {
             sqlList = new ArrayList<>();
             sql.put(environment, sqlList);
         } else {
@@ -163,7 +166,7 @@ public class DBMirror {
     }
 
     public Map<String, TableMirror> getTableMirrors() {
-        if (tableMirrors == null) {
+        if (isNull(tableMirrors)) {
             tableMirrors = new TreeMap<>();
         }
         return tableMirrors;

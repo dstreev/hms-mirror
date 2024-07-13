@@ -83,6 +83,7 @@ public class PasswordMVController {
             passwordContainer.setRightMetastore(config.getCluster(Environment.RIGHT).getMetastoreDirect().getConnectionProperties().getProperty("password"));
         }
         model.addAttribute(PASSWORDS, passwordContainer);
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
         return "/password/view";
     }
 

@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static java.util.Objects.isNull;
+
 @Slf4j
 @Getter
 @Setter
@@ -33,13 +35,13 @@ public class Overrides {
     private Map<String, String> right = null;
 
     public Map<String, String> getLeft() {
-        if (left == null)
+        if (isNull(left))
             left = new TreeMap<String, String>();
         return left;
     }
 
     public Map<String, String> getRight() {
-        if (right == null)
+        if (isNull(right))
             right = new TreeMap<String, String>();
         return right;
     }

@@ -196,9 +196,11 @@ public class ConfigMVController implements ControllerReferences {
                     } else {
                         cluster.getHiveServer2().getConnectionProperties().put("password", newPassword);
                     }
-                } else {
+                } else if (currentPassword != null) {
                     // Restore original password
                     cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
+                } else {
+                    cluster.getHiveServer2().getConnectionProperties().remove("password");
                 }
             }
 
@@ -213,9 +215,11 @@ public class ConfigMVController implements ControllerReferences {
                     } else {
                         cluster.getMetastoreDirect().getConnectionProperties().put("password", newPassword);
                     }
-                } else {
+                } else if (currentPassword != null){
                     // Restore Original password
                     cluster.getMetastoreDirect().getConnectionProperties().put("password", currentPassword);
+                } else {
+                    cluster.getMetastoreDirect().getConnectionProperties().remove("password");
                 }
             }
         });
@@ -291,7 +295,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
-        ModelUtils.allEnumsForModel(model);
+        ModelUtils.allEnumsForMap(model.asMap());
         return "/config/view";
     }
 
@@ -320,7 +324,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
-        ModelUtils.allEnumsForModel(model);
+        ModelUtils.allEnumsForMap(model.asMap());
         return "/config/view";
     }
 

@@ -46,6 +46,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.DISTCP_FOR_SO_ACID;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -156,7 +157,7 @@ public class TransferService {
                 // Build out DISTCP workplans.
                 if (rtn.getStatus() == ReturnStatus.Status.SUCCESS && config.getTransfer().getStorageMigration().isDistcp()) {
                     // Build distcp reports.
-                    if (config.getTransfer().getIntermediateStorage() != null) {
+                    if (!isBlank(config.getTransfer().getIntermediateStorage())) {
                         // LEFT PUSH INTERMEDIATE
                         // The Transfer Table should be available.
                         String isLoc = config.getTransfer().getIntermediateStorage();
@@ -177,9 +178,9 @@ public class TransferService {
                             fnlLoc = TableUtils.getLocation(ret.getName(), set.getDefinition());
                         } else {
                             fnlLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (fnlLoc == null && config.isResetToDefaultLocation()) {
+                            if (isBlank(fnlLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (config.getTransfer().getCommonStorage() != null) {
+                                if (!isBlank(config.getTransfer().getCommonStorage())) {
                                     sbDir.append(config.getTransfer().getCommonStorage());
                                 } else {
                                     sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
@@ -192,7 +193,8 @@ public class TransferService {
                         config.getTranslator().addTranslation(tableMirror.getParent().getName(), Environment.RIGHT,
                                 isLoc,
                                 fnlLoc, 1);
-                    } else if (config.getTransfer().getCommonStorage() != null && config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
+                    } else if (!isBlank(config.getTransfer().getCommonStorage())
+                            && config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         // LEFT PUSH COMMON
                         String origLoc = TableUtils.isACID(let) ?
                                 TableUtils.getLocation(let.getName(), tet.getDefinition()) :
@@ -207,7 +209,7 @@ public class TransferService {
                         } else {
                             newLoc = TableUtils.getLocation(ret.getName(), ret.getDefinition());
                         }
-                        if (newLoc == null && config.isResetToDefaultLocation()) {
+                        if (isBlank(newLoc) && config.isResetToDefaultLocation()) {
                             String sbDir = config.getTransfer().getCommonStorage() +
                                     config.getTransfer().getWarehouse().getExternalDirectory() + "/" +
                                     HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db" + "/" + tableMirror.getName();
@@ -224,9 +226,9 @@ public class TransferService {
                             rtn.setStatus(ReturnStatus.Status.ERROR);//successful = Boolean.FALSE;
                         } else if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (rLoc == null && config.isResetToDefaultLocation()) {
+                            if (isBlank(rLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (config.getTransfer().getCommonStorage() != null) {
+                                if (!isBlank(config.getTransfer().getCommonStorage())) {
                                     sbDir.append(config.getTransfer().getCommonStorage());
                                 } else {
                                     sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
@@ -240,9 +242,9 @@ public class TransferService {
                                     rLoc, 1);
                         } else {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (rLoc == null && config.isResetToDefaultLocation()) {
+                            if (isBlank(rLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (config.getTransfer().getCommonStorage() != null) {
+                                if (!isBlank(config.getTransfer().getCommonStorage())) {
                                     sbDir.append(config.getTransfer().getCommonStorage());
                                 } else {
                                     sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());

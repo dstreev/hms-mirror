@@ -34,6 +34,7 @@ import java.text.MessageFormat;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.EXPORT_IMPORT_SYNC;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -77,7 +78,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             String exportLoc = null;
 
-            if (config.getTransfer().getIntermediateStorage() != null) {
+            if (!isBlank(config.getTransfer().getIntermediateStorage())) {
                 String isLoc = config.getTransfer().getIntermediateStorage();
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
@@ -87,7 +88,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
 //                    config.getTransfer().getTransferPrefix() + this.getUnique() + "_" +
                         tableMirror.getParent().getName() + "/" +
                         tableMirror.getName();
-            } else if (config.getTransfer().getCommonStorage() != null) {
+            } else if (!isBlank(config.getTransfer().getCommonStorage())) {
                 String isLoc = config.getTransfer().getCommonStorage();
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
@@ -124,8 +125,8 @@ public class ExportCircularResolveService extends DataStrategyBase {
             }
 
             String importLoc = null;
-            if (config.getTransfer().getIntermediateStorage() != null
-                    || config.getTransfer().getCommonStorage() != null) {
+            if (!isBlank(config.getTransfer().getIntermediateStorage())
+                    || !isBlank(config.getTransfer().getCommonStorage())) {
                 importLoc = exportLoc;
             } else {
                 importLoc = config.getCluster(Environment.LEFT).getHcfsNamespace() + exportLoc;
@@ -146,7 +147,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 }
             } else {
                 if (config.isResetToDefaultLocation()) {
-                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+                    if (!isBlank(config.getTransfer().getWarehouse().getExternalDirectory())) {
                         // Build default location, because in some cases when location isn't specified, it will use the "FROM"
                         // location in the IMPORT statement.
                         targetLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
@@ -180,7 +181,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
             } else {
                 ret.addSql(TableUtils.IMPORT_TABLE, importSql);
                 if (!config.getCluster(Environment.RIGHT).isLegacyHive()
-                        && config.isTransferOwnership() && let.getOwner() != null) {
+                        && config.isTransferOwnership() && !isBlank(let.getOwner())) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, let.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
                 }

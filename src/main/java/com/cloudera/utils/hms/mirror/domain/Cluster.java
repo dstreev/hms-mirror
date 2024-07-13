@@ -32,6 +32,9 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 @Slf4j
 @Getter
 @Setter
@@ -114,15 +117,15 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     public Cluster clone() {
         try {
             Cluster clone = (Cluster) super.clone();
-            if (hiveServer2 != null) {
+            if (nonNull(hiveServer2)) {
                 HiveServer2Config hiveServer2Clone = hiveServer2.clone();
                 clone.setHiveServer2(hiveServer2Clone);
             }
-            if (metastoreDirect != null) {
+            if (nonNull(metastoreDirect)) {
                 DBStore metastoreDirectClone = metastoreDirect.clone();
                 clone.setMetastoreDirect(metastoreDirectClone);
             }
-            if (partitionDiscovery != null) {
+            if (nonNull(partitionDiscovery)) {
                 PartitionDiscovery partitionDiscoveryClone = partitionDiscovery.clone();
                 clone.setPartitionDiscovery(partitionDiscoveryClone);
             }
@@ -140,7 +143,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (isNull(o) || getClass() != o.getClass()) return false;
 
         Cluster cluster = (Cluster) o;
 
@@ -190,7 +193,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     }
 
     public boolean isInitialized() {
-        if (hiveServer2 != null && !hiveServer2.isDisconnected()) {
+        if (nonNull(hiveServer2) && !hiveServer2.isDisconnected()) {
             return initialized;
         } else {
             return Boolean.FALSE;

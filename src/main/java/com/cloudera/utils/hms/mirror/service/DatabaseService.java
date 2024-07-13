@@ -48,6 +48,7 @@ import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.*;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -120,7 +121,7 @@ public class DatabaseService {
                         if (nonNull(config.getCluster(Environment.RIGHT).getEnvVars())) {
                             String extDir = config.getCluster(Environment.RIGHT).getEnvVars().get(EXT_DB_LOCATION_PROP);
                             String manDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
-                            if (extDir != null && manDir != null) {
+                            if (!isBlank(extDir) && !isBlank(manDir)) {
                                 warehouse = new Warehouse(extDir, manDir);
                                 session.addWarning(WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV);
                             } else {
@@ -227,7 +228,7 @@ public class DatabaseService {
             conn = getConnectionPoolService().getMetastoreDirectEnvironmentConnection(environment);
             log.info("Loading Partitions from Metastore Direct Connection {}:{}", environment, database);
             QueryDefinitions queryDefinitions = getQueryDefinitionsService().getQueryDefinitions(environment);
-            if (queryDefinitions != null) {
+            if (nonNull(queryDefinitions)) {
                 String dbTableLocationQuery = queryDefinitions.getQueryDefinition("database_table_locations").getStatement();
                 pstmt = conn.prepareStatement(dbTableLocationQuery);
                 pstmt.setString(1, database);
@@ -273,7 +274,7 @@ public class DatabaseService {
             throw new RuntimeException(throwables);
         } finally {
             try {
-                if (conn != null)
+                if (nonNull(conn))
                     conn.close();
             } catch (SQLException throwables) {
                 //
@@ -382,7 +383,7 @@ public class DatabaseService {
 
         try {
 
-            if (config.getCluster(Environment.RIGHT) == null) {
+            if (isNull(config.getCluster(Environment.RIGHT))) {
                 if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
                     Cluster cluster = config.getCluster(Environment.LEFT).clone();
                     config.getClusters().put(Environment.RIGHT, cluster);
@@ -445,7 +446,7 @@ public class DatabaseService {
 //                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
 //                            return Boolean.FALSE;
 //                        }
-                            if (config.getTransfer().getCommonStorage() == null) {
+                            if (isBlank(config.getTransfer().getCommonStorage())) {
                                 location = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
@@ -460,7 +461,7 @@ public class DatabaseService {
                                 managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
                             }
                             if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                                if (config.getTransfer().getCommonStorage() == null) {
+                                if (isBlank(config.getTransfer().getCommonStorage())) {
                                     managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                             + dbWarehouse.getManagedDirectory()
                                             + "/" + dbMirror.getName() + ".db";
@@ -871,19 +872,19 @@ public class DatabaseService {
             try {
                 conn = connectionPoolService.getHS2EnvironmentConnection(environment);
 
-                if (conn == null && hmsMirrorConfig.isExecute()
+                if (isNull(conn) && hmsMirrorConfig.isExecute()
                         && !hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
                     // this is a problem.
                     rtn = Boolean.FALSE;
                     dbMirror.addIssue(environment, "Connection missing. This is a bug.");
                 }
 
-                if (conn == null && hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
+                if (isNull(conn) && hmsMirrorConfig.getCluster(environment).getHiveServer2().isDisconnected()) {
                     dbMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
                             "The scripts will need to be run 'manually'.");
                 }
 
-                if (conn != null) {
+                if (!isNull(conn)) {
                     if (dbMirror != null)
                         log.debug("{} - {}: {}", environment, dbSqlPair.getDescription(), dbMirror.getName());
                     else

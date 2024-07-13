@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
+import static java.util.Objects.isNull;
 import static org.junit.Assert.*;
 
 @Slf4j
@@ -72,7 +73,7 @@ public class E2EBaseTest {
         System.out.println("Test data file: " + testDataSet);
 
         URL configURL = this.getClass().getResource(testDataSet);
-        if (configURL == null) {
+        if (isNull(configURL)) {
 
             File conversionFile = new File(testDataSet);
             if (!conversionFile.exists())

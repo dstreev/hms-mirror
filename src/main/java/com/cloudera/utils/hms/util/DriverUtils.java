@@ -29,6 +29,8 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Slf4j
 public class DriverUtils {
 //    private static final Logger log = LoggerFactory.getLogger(DriverUtils.class);
@@ -39,7 +41,7 @@ public class DriverUtils {
     public static Driver getDriver(String driverClassName, String jarFile, Environment environment) {
         Driver hiveShim = null;
         try {
-            if (jarFile != null) {
+            if (!isBlank(jarFile)) {
                 String[] files = jarFile.split(":");
                 URL[] urls = new URL[files.length];
                 File[] jarFiles = new File[files.length];

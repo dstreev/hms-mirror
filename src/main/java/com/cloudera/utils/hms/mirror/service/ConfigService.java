@@ -38,6 +38,7 @@ import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -67,7 +68,7 @@ public class ConfigService {
                 && nonNull(warehouse.getManagedDirectory()))
                 || !warehouseMapBuilder.getWarehousePlans().isEmpty()) {
             return Boolean.TRUE;
-        } else{
+        } else {
             return Boolean.FALSE;
         }
     }
@@ -350,11 +351,11 @@ public class ConfigService {
             case HYBRID:
             case COMMON:
                 for (Environment env : envSet) {
-                    if (config.getCluster(env) == null) {
+                    if (isNull(config.getCluster(env))) {
                         runStatus.addError(CLUSTER_NOT_DEFINED_OR_CONFIGURED, env);
                         rtn = Boolean.FALSE;
                     } else {
-                        if (config.getCluster(env).getHiveServer2() == null) {
+                        if (isNull(config.getCluster(env).getHiveServer2())) {
                             if (!config.isLoadingTestData()) {
                                 runStatus.addError(HS2_NOT_DEFINED_OR_CONFIGURED, env);
                                 rtn = Boolean.FALSE;
@@ -370,15 +371,15 @@ public class ConfigService {
                              */
                             HiveServer2Config hs2 = config.getCluster(env).getHiveServer2();
                             if (!config.isLoadingTestData()) {
-                                if (hs2.getUri() == null) {
+                                if (isBlank(hs2.getUri())) {
                                     runStatus.addError(MISSING_PROPERTY, "uri", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
-                                if (hs2.getDriverClassName() == null) {
+                                if (isBlank(hs2.getDriverClassName())) {
                                     runStatus.addError(MISSING_PROPERTY, "driverClassName", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
-                                if (!hs2.isKerberosConnection() && hs2.getConnectionProperties().getProperty("user") == null) {
+                                if (!hs2.isKerberosConnection() && isBlank(hs2.getConnectionProperties().getProperty("user"))) {
                                     runStatus.addError(MISSING_PROPERTY, "user", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
@@ -388,7 +389,7 @@ public class ConfigService {
                     // If evaluate partition locations is set, we need metastore_direct set on LEFT.
                     if (env == Environment.LEFT) {
                         if (config.isEvaluatePartitionLocation()) {
-                            if (config.getCluster(env).getMetastoreDirect() == null) {
+                            if (isNull(config.getCluster(env).getMetastoreDirect())) {
                                 if (!config.isLoadingTestData()) {
                                     runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, env);
                                     rtn = Boolean.FALSE;
@@ -403,19 +404,19 @@ public class ConfigService {
                                      */
                                 if (!config.isLoadingTestData()) {
                                     DBStore dbStore = config.getCluster(env).getMetastoreDirect();
-                                    if (dbStore.getType() == null) {
+                                    if (isNull(dbStore.getType())) {
                                         runStatus.addError(MISSING_PROPERTY, "type", "Metastore Direct", env);
                                         rtn = Boolean.FALSE;
                                     }
-                                    if (dbStore.getUri() == null) {
+                                    if (isBlank(dbStore.getUri())) {
                                         runStatus.addError(MISSING_PROPERTY, "uri", "Metastore Direct", env);
                                         rtn = Boolean.FALSE;
                                     }
-                                    if (dbStore.getConnectionProperties().getProperty("user") == null) {
+                                    if (isBlank(dbStore.getConnectionProperties().getProperty("user"))) {
                                         runStatus.addError(MISSING_PROPERTY, "user", "Metastore Direct", env);
                                         rtn = Boolean.FALSE;
                                     }
-                                    if (dbStore.getConnectionProperties().getProperty("password") == null) {
+                                    if (isBlank(dbStore.getConnectionProperties().getProperty("password"))) {
                                         runStatus.addError(MISSING_PROPERTY, "password", "Metastore Direct", env);
                                         rtn = Boolean.FALSE;
                                     }
@@ -441,14 +442,14 @@ public class ConfigService {
                 case SCHEMA_ONLY:
                 case DUMP:
                     // Check the metastore_direct config on the LEFT.
-                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                    if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
                         runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
                         rtn = Boolean.FALSE;
                     }
                     runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
                     break;
                 case STORAGE_MIGRATION:
-                    if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                    if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
                         runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
                         rtn = Boolean.FALSE;
                     }
@@ -472,7 +473,7 @@ public class ConfigService {
                 runStatus.addError(LEFT_HS2_URI_INVALID);
             }
 
-            if (leftHS2.isKerberosConnection() && leftHS2.getJarFile() != null) {
+            if (leftHS2.isKerberosConnection() && !isBlank(leftHS2.getJarFile())) {
                 rtn = Boolean.FALSE;
                 runStatus.addError(LEFT_KERB_JAR_LOCATION);
             }
@@ -547,7 +548,7 @@ public class ConfigService {
                     runStatus.addError(STORAGE_MIGRATION_NOT_AVAILABLE_FOR_LEGACY, Environment.LEFT);
                     rtn = Boolean.FALSE;
                 }
-                if (config.getCluster(Environment.LEFT).getMetastoreDirect() == null) {
+                if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
                     runStatus.addError(METASTORE_DIRECT_CONFIG, Environment.LEFT);
                     rtn = Boolean.FALSE;
                 }
@@ -607,8 +608,8 @@ public class ConfigService {
                 case STORAGE_MIGRATION:
                     // Need to check that we've set some database Warehouse Plans.
                     if (nonNull(config.getTransfer().getWarehouse())) {
-                        if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                                config.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                        if (isBlank(config.getTransfer().getWarehouse().getManagedDirectory()) ||
+                                isBlank(config.getTransfer().getWarehouse().getExternalDirectory())) {
                             if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
                                 runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                                 rtn = Boolean.FALSE;
@@ -631,8 +632,8 @@ public class ConfigService {
                     // Check for warehouse settings.  This will be a warning now that we have the Warehouse Plans
                     // available for a database that is more specific.
                     if (nonNull(config.getTransfer().getWarehouse())) {
-                        if (config.getTransfer().getWarehouse().getManagedDirectory() == null ||
-                                config.getTransfer().getWarehouse().getExternalDirectory() == null) {
+                        if (isBlank(config.getTransfer().getWarehouse().getManagedDirectory()) ||
+                                isBlank(config.getTransfer().getWarehouse().getExternalDirectory())) {
                             runStatus.addWarning(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                         }
                     } else {
@@ -673,8 +674,8 @@ public class ConfigService {
                         runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_RDL);
                         rtn = Boolean.FALSE;
                     }
-                    if (config.getDbPrefix() == null &&
-                            config.getDbRename() == null) {
+                    if (isBlank(config.getDbPrefix()) &&
+                            isBlank(config.getDbRename())) {
                         runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_DBPR);
                         rtn = Boolean.FALSE;
                     }
@@ -730,7 +731,7 @@ public class ConfigService {
                         rtn = Boolean.FALSE;
                     }
                 }
-                if (config.getTransfer().getCommonStorage() != null) {
+                if (!isBlank(config.getTransfer().getCommonStorage())) {
                     runStatus.addError(SQL_DISTCP_ACID_W_STORAGE_OPTS);
                     rtn = Boolean.FALSE;
                 }
@@ -824,7 +825,7 @@ public class ConfigService {
 
         if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
             // The commonStorage and Storage Migration Namespace are the same thing.
-            if (config.getTransfer().getCommonStorage() == null) {
+            if (isBlank(config.getTransfer().getCommonStorage())) {
                 // Use the same namespace, we're assuming that was the intent.
                 config.getTransfer().setCommonStorage(config.getCluster(Environment.LEFT).getHcfsNamespace());
                 // Force reset to default location.
@@ -855,8 +856,8 @@ public class ConfigService {
 
         // Because some just don't get you can't do this...
         if (nonNull(config.getTransfer().getWarehouse())) {
-            if (config.getTransfer().getWarehouse().getManagedDirectory() != null &&
-                    config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+            if ((config.getTransfer().getWarehouse().getManagedDirectory() != null) &&
+                    (config.getTransfer().getWarehouse().getExternalDirectory() != null)) {
                 // Make sure these aren't set to the same location.
                 if (config.getTransfer().getWarehouse().getManagedDirectory().equals(config.getTransfer().getWarehouse().getExternalDirectory())) {
                     runStatus.addError(WAREHOUSE_DIRS_SAME_DIR, config.getTransfer().getWarehouse().getExternalDirectory()
@@ -890,8 +891,8 @@ public class ConfigService {
                 if (!config.getMigrateACID().isDowngradeInPlace()) {
                     if (config.getCluster(Environment.RIGHT).getHiveServer2() != null
                             && !config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()
-                            && config.getTransfer().getIntermediateStorage() == null
-                            && config.getTransfer().getCommonStorage() == null) {
+                            && isBlank(config.getTransfer().getIntermediateStorage())
+                            && isBlank(config.getTransfer().getCommonStorage())) {
 
                         try {
                             if (!config.getMigrateACID().isDowngradeInPlace() && !linkTest(session, cli)) {

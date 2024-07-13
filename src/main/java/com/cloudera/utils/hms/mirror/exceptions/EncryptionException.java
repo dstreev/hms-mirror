@@ -31,6 +31,6 @@ public class EncryptionException extends Throwable {
 
     @Override
     public String getMessage() {
-        return runtimeException.getMessage();
+        return super.getMessage() + "\n\n" + runtimeException.getMessage();
     }
 }

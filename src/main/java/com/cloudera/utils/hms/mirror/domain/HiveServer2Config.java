@@ -24,6 +24,9 @@ import lombok.Setter;
 
 import java.util.Properties;
 
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Getter
 @Setter
 public class HiveServer2Config implements Cloneable {
@@ -33,7 +36,7 @@ public class HiveServer2Config implements Cloneable {
     private String uri = null;
     private boolean disconnected = Boolean.FALSE;
     @Schema(description = "The connection properties for the HiveServer2 connection. EG: user, password, etc.")
-    private Properties connectionProperties;
+    private Properties connectionProperties = new Properties();
     @Schema(description = "The driver class name for the HiveServer2 connection. Default is org.apache.hive.jdbc.HiveDriver. Specify this if you are using a different driver.")
     private String driverClassName = APACHE_HIVE_DRIVER_CLASS_NAME; // default driver.
     @Schema(description = "The path to the jar file for the HiveServer2 connection. Must be specified for non-kerberos connections.  Should be null for kerberos connections and driver should be in 'aux_libs'.")
@@ -51,7 +54,7 @@ public class HiveServer2Config implements Cloneable {
     }
 
     public Properties getConnectionProperties() {
-        if (connectionProperties == null) {
+        if (isNull(connectionProperties)) {
             setConnectionProperties(new Properties());
         }
         return connectionProperties;
@@ -60,7 +63,7 @@ public class HiveServer2Config implements Cloneable {
     @JsonIgnore
     public boolean isKerberosConnection() {
         if (!isDisconnected()) {
-            if (getUri() != null && getUri().contains("principal")) {
+            if (!isBlank(getUri()) && getUri().contains("principal")) {
                 return Boolean.TRUE;
             } else {
                 return Boolean.FALSE;
@@ -74,7 +77,7 @@ public class HiveServer2Config implements Cloneable {
     public boolean isValidUri() {
         Boolean rtn = Boolean.TRUE;
         if (!isDisconnected()) {
-            if (getUri() == null || !getUri().startsWith("jdbc:hive2://")) {
+            if (isBlank(getUri()) || !getUri().startsWith("jdbc:hive2://")) {
                 rtn = Boolean.FALSE;
             }
         }
@@ -83,7 +86,7 @@ public class HiveServer2Config implements Cloneable {
 
     @JsonIgnore
     public boolean isZooKeeperConnection() {
-        if (getUri() != null && getUri().contains("serviceDiscoveryMode=zooKeeper")) {
+        if (!isBlank(getUri()) && getUri().contains("serviceDiscoveryMode=zooKeeper")) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;

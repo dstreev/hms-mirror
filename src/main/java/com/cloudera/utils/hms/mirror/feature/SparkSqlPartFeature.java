@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Slf4j
 public class SparkSqlPartFeature extends BaseFeature implements Feature {
 
@@ -39,7 +41,7 @@ public class SparkSqlPartFeature extends BaseFeature implements Feature {
         for (int i = 0; i < 10; i++) {
             String key = SPARK_SCHEMA_PROPERTY + "." + i;
             String value = TableUtils.getTblProperty(key, schema);
-            if (value != null && value.contains("\\")) {
+            if (!isBlank(value) && value.contains("\\")) {
                 rtn = Boolean.TRUE;
                 break;
             }

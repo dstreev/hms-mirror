@@ -39,6 +39,8 @@ import org.springframework.stereotype.Component;
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Component
 @Slf4j
@@ -94,9 +96,9 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             ret.setCreateStrategy(CreateStrategy.CREATE);
         }
 
-        if (config.getTransfer().getCommonStorage() == null) {
+        if (isBlank(config.getTransfer().getCommonStorage())) {
             // If the temp cluster doesn't exist, create it as a clone of the LEFT.
-            if (config.getCluster(Environment.SHADOW) == null) {
+            if (isNull(config.getCluster(Environment.SHADOW))) {
                 Cluster shadowCluster = config.getCluster(Environment.LEFT).clone();
                 config.getClusters().put(Environment.SHADOW, shadowCluster);
             }

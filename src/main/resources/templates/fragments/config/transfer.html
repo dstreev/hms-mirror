@@ -29,20 +29,23 @@
 <body>
 
 <div th:fragment="view">
-    <div class="pure-form pure-form-stacked">
+    <div class="pure-form pure-form-aligned">
+        <h4 th:text="#{transfer.details}"/>
         <div class="pure-control-group"
              th:if="${('COMMON HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
-            <label class="pure-input-1" for="transferPrefix" th:text="#{config.transfer.transferPrefix}"></label>
-            <input class="pure-input-1" id="transferPrefix" type="text"
+            <label for="transferPrefix" th:text="#{config.transfer.transferPrefix}"></label>
+            <input id="transferPrefix" type="text"
+                   style="width: 90%;"
                    th:field="*{transfer.transferPrefix}"
                    placeholder="Set Transfer Prefix"/>
         </div>
         <!--                        shadowPrefix: "hms_mirror_shadow_"-->
-        <div class="pure-control-group tooltip"
+        <div class="pure-control-group"
              th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
-            <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>
-            <label class="pure-label" for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>
-            <input class="pure-input-1" id="shadowPrefix" type="text"
+<!--            <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>-->
+            <label for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>
+            <input id="shadowPrefix" type="text"
+                   style="width: 90%;"
                    th:field="*{transfer.shadowPrefix}"
                    placeholder="Set Shadow Prefix"/>
         </div>
@@ -50,7 +53,8 @@
         <div class="pure-control-group"
              th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
             <label for="exportBaseDirPrefix" th:text="#{config.transfer.exportBaseDirPrefix}"></label>
-            <input class="pure-input-1" id="exportBaseDirPrefix" type="text"
+            <input id="exportBaseDirPrefix" type="text"
+                   style="width: 90%;"
                    th:field="*{transfer.exportBaseDirPrefix}"
                    placeholder="Set Export Base Dir Prefix"/>
         </div>
@@ -59,7 +63,8 @@
              th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
             <label for="remoteWorkingDirectory"
                    th:text="#{config.transfer.remoteWorkingDirectory}"></label>
-            <input class="pure-input-1" id="remoteWorkingDirectory" type="text"
+            <input id="remoteWorkingDirectory" type="text"
+                   style="width: 90%;"
                    th:field="*{transfer.remoteWorkingDirectory}"
                    placeholder="Set Remote Working Directory"/>
         </div>
@@ -67,15 +72,11 @@
         <div class="pure-control-group"
              th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
             <label for="intermediateStorage" th:text="#{config.transfer.intermediateStorage}"></label>
-            <input class="pure-input-1" id="intermediateStorage" type="text"
+            <input id="intermediateStorage" type="text"
+                   style="width: 90%;"
                    th:field="*{transfer.intermediateStorage}"
                    placeholder="Set Intermediate Storage"/>
         </div>
-        <!--                        commonStorage: "ofs://OHOME90"-->
-        <!--                        storageMigration:-->
-        <!--                            dataMovementStrategy: "DISTCP"-->
-        <!--                            dataFlow: "PULL"-->
-        <!--                            strict: true-->
     </div>
 </div>
 

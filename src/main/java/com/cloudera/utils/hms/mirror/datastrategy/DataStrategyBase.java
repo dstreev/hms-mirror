@@ -33,6 +33,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.util.Objects.isNull;
+
 @Slf4j
 @Getter
 public abstract class DataStrategyBase implements DataStrategy {
@@ -158,7 +160,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
     public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
         EnvironmentTable et = tableMirror.getEnvironments().get(environment);
-        if (et == null) {
+        if (isNull(et)) {
             et = new EnvironmentTable(tableMirror);
             tableMirror.getEnvironments().put(environment, et);
         }

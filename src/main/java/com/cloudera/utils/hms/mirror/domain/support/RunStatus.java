@@ -30,6 +30,8 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static java.util.Objects.isNull;
+
 @Slf4j
 @Getter
 @Setter
@@ -209,7 +211,7 @@ public class RunStatus implements Comparable<RunStatus> {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (isNull(o) || getClass() != o.getClass()) return false;
 
         RunStatus runStatus = (RunStatus) o;
         return Objects.equals(runDate, runStatus.runDate);

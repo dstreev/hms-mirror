@@ -77,7 +77,7 @@ public class ConnectionPoolService implements ConnectionPools {
 
     public Boolean checkConnections() {
         boolean rtn = Boolean.FALSE;
-        if (getConfig() == null) {
+        if (isNull(getConfig())) {
             throw new RuntimeException("Configuration not set.  Connections can't be established.");
         }
 
@@ -93,8 +93,8 @@ public class ConnectionPoolService implements ConnectionPools {
 
         for (Environment env : envs) {
             Cluster cluster = getConfig().getCluster(env);
-            if (cluster != null
-                    && cluster.getHiveServer2() != null
+            if (nonNull(cluster)
+                    && nonNull(cluster.getHiveServer2())
                     && cluster.getHiveServer2().isValidUri()
                     && !cluster.getHiveServer2().isDisconnected()) {
                 Connection conn = null;
@@ -103,7 +103,7 @@ public class ConnectionPoolService implements ConnectionPools {
                     //cluster.getConnection();
                     // May not be set for DUMP strategy (RIGHT cluster)
                     log.debug("{}:: Checking Hive Connection", env);
-                    if (conn != null) {
+                    if (nonNull(conn)) {
 //                        Statement stmt = null;
 //                        ResultSet resultSet = null;
 //                        try {
@@ -140,7 +140,7 @@ public class ConnectionPoolService implements ConnectionPools {
                     rtn = Boolean.FALSE;
                     log.error("{}: Hive Connection check failed.", env, se);
                 } finally {
-                    if (conn != null) {
+                    if (nonNull(conn)) {
                         try {
                             log.info("{}: Closing Connection", env);
                             conn.close();
@@ -166,7 +166,7 @@ public class ConnectionPoolService implements ConnectionPools {
 
     @Override
     public void close() {
-        if (connectionPools != null) {
+        if (nonNull(connectionPools)) {
             // Set State of Connection.
             connected = false;
             getConnectionPools().close();
@@ -174,7 +174,7 @@ public class ConnectionPoolService implements ConnectionPools {
     }
 
     public ConnectionPools getConnectionPools() {
-        if (connectionPools == null) {
+        if (isNull(connectionPools)) {
             try {
                 connectionPools = getConnectionPoolsImpl();
             } catch (SQLException e) {
@@ -188,11 +188,11 @@ public class ConnectionPoolService implements ConnectionPools {
     private ConnectionPools getConnectionPoolsImpl() throws SQLException {
         ConnectionPools rtn = null;
 
-        if (getConfig() == null) {
+        if (isNull(getConfig())) {
             throw new RuntimeException("Configuration not set.  Connections can't be established.");
         }
         ConnectionPoolType cpt = getConfig().getConnectionPoolLib();
-        if (cpt == null) {
+        if (isNull(cpt)) {
             // Need to calculate the connectio pool type:
             // When both clusters are defined:
                 // Use DBCP2 when both clusters are non-legacy
@@ -319,7 +319,7 @@ public class ConnectionPoolService implements ConnectionPools {
                 Statement stmt = null;
                 try {
                     conn = getConnectionPools().getHS2EnvironmentConnection(target);
-                    if (conn == null) {
+                    if (isNull(conn)) {
                         if (target == Environment.RIGHT && getConfig().getCluster(target).getHiveServer2().isDisconnected()) {
                             // Skip error.  Set Warning that we're disconnected.
                             runStatus.addWarning(ENVIRONMENT_DISCONNECTED, target);
@@ -343,10 +343,10 @@ public class ConnectionPoolService implements ConnectionPools {
                     log.error(t.getMessage(), t);
                     runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
                 } finally {
-                    if (stmt != null) {
+                    if (nonNull(stmt)) {
                         stmt.close();
                     }
-                    if (conn != null) {
+                    if (nonNull(conn)) {
                         conn.close();
                     }
                 }

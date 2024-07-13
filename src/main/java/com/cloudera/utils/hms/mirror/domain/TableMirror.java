@@ -32,6 +32,10 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Slf4j
 @Getter
 @Setter
@@ -76,7 +80,7 @@ public class TableMirror {
     }
 
     public void addIssue(Environment environment, String issue) {
-        if (issue != null) {
+        if (!isBlank(issue)) {
             String scrubbedIssue = issue.replace("\n", "<br/>");
             getIssues(environment).add(scrubbedIssue);
         }
@@ -104,7 +108,7 @@ public class TableMirror {
 
     public EnvironmentTable getEnvironmentTable(Environment environment) {
         EnvironmentTable et = getEnvironments().get(environment);
-        if (et == null) {
+        if (isNull(et)) {
             et = new EnvironmentTable(this);
             getEnvironments().put(environment, et);
         }
@@ -112,7 +116,7 @@ public class TableMirror {
     }
 
     public Map<Environment, EnvironmentTable> getEnvironments() {
-        if (environments == null) {
+        if (isNull(environments)) {
             environments = new TreeMap<Environment, EnvironmentTable>();
         }
         return environments;
@@ -263,7 +267,7 @@ public class TableMirror {
     public boolean schemasEqual(Environment one, Environment two) {
         List<String> schemaOne = getTableDefinition(one);
         List<String> schemaTwo = getTableDefinition(two);
-        if (schemaOne != null && schemaTwo != null) {
+        if (nonNull(schemaOne) && nonNull(schemaTwo)) {
             String fpOne = TableUtils.tableFieldsFingerPrint(schemaOne);
             String fpTwo = TableUtils.tableFieldsFingerPrint(schemaTwo);
             if (fpOne.equals(fpTwo)) {

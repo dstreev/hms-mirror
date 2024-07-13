@@ -48,6 +48,7 @@ import java.util.zip.ZipOutputStream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Slf4j
@@ -109,7 +110,7 @@ public class ExecuteSessionService {
     }
 
     public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
-        String sessionName = sessionId != null ? sessionId : DEFAULT;
+        String sessionName = !isBlank(sessionId) ? sessionId : DEFAULT;
 
         ExecuteSession session;
         if (sessions.containsKey(sessionName)) {
@@ -168,8 +169,8 @@ public class ExecuteSessionService {
     When not found, throw exception.
      */
     public ExecuteSession getSession(String sessionId) {
-        if (sessionId == null) {
-            if (loadedSession == null) {
+        if (isBlank(sessionId)) {
+            if (isNull(loadedSession)) {
                 throw new RuntimeException("No session loaded.");
             }
             return loadedSession;
@@ -194,12 +195,12 @@ public class ExecuteSessionService {
     public Boolean transitionLoadedSessionToActive(Integer concurrency, boolean connectionCheckOnly) throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
-        if (activeSession != null && activeSession.getRunning().get()) {
+        if (!isNull(activeSession) && activeSession.getRunning().get()) {
             throw new SessionException("Session is still running.  Cannot transition to active.");
         }
 
         // This should get the loaded session and clone it.
-        if (loadedSession == null) {
+        if (isNull(loadedSession)) {
             throw new SessionException("No session loaded.");
         }
 
@@ -211,7 +212,7 @@ public class ExecuteSessionService {
 
             // Setup connection concurrency
             // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
-            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(concurrency)) {
+            if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2()) && nonNull(concurrency)) {
                 Cluster cluster = config.getCluster(Environment.LEFT);
                 cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
                 cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
@@ -221,7 +222,7 @@ public class ExecuteSessionService {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
                 }
             }
-            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(concurrency)) {
+            if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2()) && nonNull(concurrency)) {
                 Cluster cluster = config.getCluster(Environment.RIGHT);
                 if (cluster.getHiveServer2() != null) {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));

@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Service
 @Slf4j
 @Getter
@@ -47,9 +49,9 @@ public class PasswordService {
     public String encryptPassword(String passwordKey, String password) throws EncryptionException {
         // Used to generate encrypted password.
         String epassword = null;
-        if (passwordKey != null) {
+        if (!isBlank(passwordKey)) {
             Protect protect = new Protect(passwordKey);
-            if (password != null) {
+            if (!isBlank(password)) {
                 epassword = null;
                 try {
                     epassword = protect.encrypt(password);

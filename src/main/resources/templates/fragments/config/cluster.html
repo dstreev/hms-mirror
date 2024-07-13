@@ -41,62 +41,62 @@
                                th:value="${CONFIG.clusters[__${env}__]?.environment}"/>
 
                         <div class="pure-control-group">
-                            <label for="leftNamespace" th:text="#{hcfs.namespace}"/>
-                            <input class="pure-input-2-3" id="leftNamespace" type="text"
+                            <label th:text="#{hcfs.namespace}"/>
+                            <input class="pure-input-2-3" type="text"
                                    th:field="*{clusters[__${env}__].hcfsNamespace}"
                                    placeholder="Set Namespace"/>
                         </div>
 
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION SCHEMA_ONLY HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
-                            <input type="checkbox" name="hs2legacy"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].legacyHive}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.legacyHive}"/>
-                            <label for="hs2legacy" th:text="#{hive.server2.legacy}"/>
+                            <label th:text="#{hive.server2.legacy}"/>
                         </div>
 
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="cine" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].createIfNotExists}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.createIfNotExists}"/>
-                            <label for="cine" th:text="#{cluster.cine}"/>
+                            <label th:text="#{cluster.cine}"/>
                         </div>
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="hdphive3" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].hdpHive3}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.hdpHive3}"/>
-                            <label for="hdphive3" th:text="#{cluster.hdp.hive3}"/>
+                            <label th:text="#{cluster.hdp.hive3}"/>
                         </div>
 
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="partauto" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].partitionDiscovery.auto}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.auto}"/>
-                            <label for="partauto" th:text="#{cluster.partition.auto}"/>
+                            <label th:text="#{cluster.partition.auto}"/>
                         </div>
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="partmsck" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].partitionDiscovery.initMSCK}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.partitionDiscovery.initMSCK}"/>
-                            <label for="partmsck" th:text="#{cluster.partition.msck}"/>
+                            <label th:text="#{cluster.partition.msck}"/>
                         </div>
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="tblstats" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].enableAutoTableStats}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.enableAutoTableStats}"/>
-                            <label for="tblstats" th:text="#{cluster.enable.table.stats}"/>
+                            <label th:text="#{cluster.enable.table.stats}"/>
                         </div>
                         <div class="pure-control-group"
                              th:if="${('STORAGE_MIGRATION HYBRID SQL STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
-                            <input id="colstats" type="checkbox"
+                            <input type="checkbox"
                                    th:field="*{clusters[__${env}__].enableAutoColumnStats}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.enableAutoColumnStats}"/>
-                            <label for="colstats" th:text="#{cluster.enable.colums.stats}"/>
+                            <label th:text="#{cluster.enable.colums.stats}"/>
                         </div>
                     </div>
             </div>

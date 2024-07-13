@@ -24,6 +24,9 @@ import lombok.Setter;
 
 import java.util.regex.Pattern;
 
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Getter
 @Setter
 public class Filter implements Cloneable {
@@ -60,21 +63,21 @@ public class Filter implements Cloneable {
 //    }
 
     public Pattern getDbFilterPattern() {
-        if (dbRegEx != null && dbFilterPattern == null) {
+        if (!isBlank(dbRegEx) && isNull(dbFilterPattern)) {
             dbFilterPattern = Pattern.compile(dbRegEx);
         }
         return dbFilterPattern;
     }
 
     public Pattern getTblFilterPattern() {
-        if (tblRegEx != null && tblFilterPattern == null) {
+        if (!isBlank(tblRegEx) && isNull(tblFilterPattern)) {
             tblFilterPattern = Pattern.compile(tblRegEx);
         }
         return tblFilterPattern;
     }
 
     public Pattern getTblExcludeFilterPattern() {
-        if (tblExcludeRegEx != null && tblExcludeFilterPattern == null) {
+        if (!isBlank(tblExcludeRegEx) && isNull(tblExcludeFilterPattern)) {
             tblExcludeFilterPattern = Pattern.compile(tblExcludeRegEx);
         }
         return tblExcludeFilterPattern;
@@ -82,7 +85,7 @@ public class Filter implements Cloneable {
 
     @JsonIgnore
     public boolean isTableFiltering() {
-        if (tblRegEx != null || tblExcludeRegEx != null) {
+        if (!isBlank(tblRegEx) || !isBlank(tblExcludeRegEx)) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;

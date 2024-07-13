@@ -25,6 +25,8 @@ import lombok.Setter;
 
 import java.util.*;
 
+import static java.util.Objects.nonNull;
+
 @Getter
 @Setter
 public class EnvironmentTable {
@@ -95,7 +97,7 @@ public class EnvironmentTable {
 
     @JsonIgnore
     public boolean isDefined() {
-        if (definition != null && !definition.isEmpty()) {
+        if (nonNull(definition) && !definition.isEmpty()) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;

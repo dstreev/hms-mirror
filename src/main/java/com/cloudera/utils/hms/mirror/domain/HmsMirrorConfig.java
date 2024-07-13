@@ -42,7 +42,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Slf4j
 @Getter
@@ -197,7 +199,7 @@ public class HmsMirrorConfig implements Cloneable {
 
     // Handle null databases from config load.
     public List<String> getDatabases() {
-        if (databases == null) {
+        if (isNull(databases)) {
             databases = new ArrayList<>();
         }
         return databases;
@@ -212,7 +214,7 @@ public class HmsMirrorConfig implements Cloneable {
 
             String configStr = mapper.writeValueAsString(config);
             File cfgFile = new File(configFilename);
-            if (cfgFile.exists() && (overwrite == null || !overwrite)) {
+            if (cfgFile.exists() && (isNull(overwrite) || !overwrite)) {
                 log.error("Config file already exists.  Use 'overwrite' to replace.");
                 throw new IOException("Config file already exists.  Use 'overwrite' to replace.");
 //                return rtn;
@@ -252,15 +254,15 @@ public class HmsMirrorConfig implements Cloneable {
     }
 
     @JsonIgnore
-    public Boolean isConnectionKerberized() {
+    public boolean isConnectionKerberized() {
         boolean rtn = Boolean.FALSE;
 
         Set<Environment> envs = getClusters().keySet();
         for (Environment env : envs) {
             Cluster cluster = getClusters().get(env);
-            if (cluster.getHiveServer2() != null &&
+            if (nonNull(cluster.getHiveServer2()) &&
                     cluster.getHiveServer2().isValidUri() &&
-                    cluster.getHiveServer2().getUri() != null &&
+                    !isBlank(cluster.getHiveServer2().getUri()) &&
                     cluster.getHiveServer2().getUri().contains("principal")) {
                 rtn = Boolean.TRUE;
             }
@@ -410,7 +412,7 @@ public class HmsMirrorConfig implements Cloneable {
 
     public Cluster initClusterFor(Environment environment) {
         Cluster cluster = getCluster(environment);
-        if (cluster == null) {
+        if (isNull(cluster)) {
             cluster = new Cluster();
             cluster.setEnvironment(environment);
             getClusters().put(environment, cluster);
@@ -456,25 +458,21 @@ public class HmsMirrorConfig implements Cloneable {
     }
 
     @JsonIgnore
-    public Boolean isFlip() {
+    public boolean isFlip() {
         return flip;
     }
 
     @JsonIgnore
-    public Boolean isLoadingTestData() {
-        if (loadTestDataFile != null) {
+    public boolean isLoadingTestData() {
+        if (!isBlank(loadTestDataFile)) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;
         }
     }
 
-    public Boolean isReplace() {
-        return replace;
-    }
-
     @JsonIgnore
-    public Boolean isTranslateLegacy() {
+    public boolean isTranslateLegacy() {
         Boolean rtn = Boolean.FALSE;
         if (!skipLegacyTranslation) {
             // contribs can be in legacy and non-legacy envs.
@@ -485,7 +483,7 @@ public class HmsMirrorConfig implements Cloneable {
 
     public void setDataStrategy(DataStrategyEnum dataStrategy) {
         this.dataStrategy = dataStrategy;
-        if (this.dataStrategy != null) {
+        if (nonNull(this.dataStrategy)) {
             if (this.dataStrategy == DataStrategyEnum.DUMP) {
                 this.getMigrateACID().setOn(Boolean.TRUE);
                 this.getMigrateVIEW().setOn(Boolean.TRUE);
@@ -575,7 +573,7 @@ public class HmsMirrorConfig implements Cloneable {
             if (!cfgFile.exists()) {
                 // Try loading from resource (classpath).  Mostly for testing.
                 cfgUrl = mapper.getClass().getResource(configFilename);
-                if (cfgUrl == null) {
+                if (isNull(cfgUrl)) {
                     throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
                 }
                 log.info("Using 'classpath' config: {}", configFilename);

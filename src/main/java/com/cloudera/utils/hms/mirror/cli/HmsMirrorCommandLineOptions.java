@@ -45,6 +45,7 @@ import java.util.*;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Configuration
 @Order(5)
@@ -136,10 +137,10 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configCineTrue(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
             log.info("create-if-not-exist: {}", Boolean.TRUE);
-            if (hmsMirrorConfig.getCluster(Environment.LEFT) != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.LEFT))) {
                 hmsMirrorConfig.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.TRUE);
             }
-            if (hmsMirrorConfig.getCluster(Environment.RIGHT) != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT))) {
                 hmsMirrorConfig.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.TRUE);
             }
         };
@@ -153,10 +154,10 @@ public class HmsMirrorCommandLineOptions {
     CommandLineRunner configCineFalse(HmsMirrorConfig hmsMirrorConfig) {
         return args -> {
             log.info("create-if-not-exist: {}", Boolean.FALSE);
-            if (hmsMirrorConfig.getCluster(Environment.LEFT) != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.LEFT))) {
                 hmsMirrorConfig.getCluster(Environment.LEFT).setCreateIfNotExists(Boolean.FALSE);
             }
-            if (hmsMirrorConfig.getCluster(Environment.RIGHT) != null) {
+            if (nonNull(hmsMirrorConfig.getCluster(Environment.RIGHT))) {
                 hmsMirrorConfig.getCluster(Environment.RIGHT).setCreateIfNotExists(Boolean.FALSE);
             }
         };
@@ -325,7 +326,7 @@ public class HmsMirrorCommandLineOptions {
                 hmsMirrorConfig.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
             } else {
                 String flowStr = value;
-                if (flowStr != null) {
+                if (!isBlank(flowStr)) {
                     try {
                         DistcpFlowEnum flow = DistcpFlowEnum.valueOf(flowStr.toUpperCase(Locale.ROOT));
                         hmsMirrorConfig.getTransfer().getStorageMigration().setDataFlow(flow);
@@ -535,7 +536,7 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("global-location-map: {}", value);
             String[] globalLocMap = value.split(",");
-            if (globalLocMap != null)
+            if (nonNull(globalLocMap))
                 hmsMirrorConfig.setGlobalLocationMapKV(globalLocMap);
         };
     }
@@ -559,7 +560,7 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("iceberg-table-property-overrides: {}", value);
             String[] overrides = value.split(",");
-            if (overrides != null)
+            if (nonNull(overrides))
                 hmsMirrorConfig.getIcebergConfig().setPropertyOverridesStr(overrides);
         };
     }
@@ -650,7 +651,7 @@ public class HmsMirrorCommandLineOptions {
                 hmsMirrorConfig.getMigrateACID().setOn(Boolean.TRUE);
                 hmsMirrorConfig.getMigrateACID().setOnly(Boolean.FALSE);
                 String bucketLimit = value;
-                if (bucketLimit != null) {
+                if (!isBlank(bucketLimit)) {
                     hmsMirrorConfig.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
                 }
             }
@@ -671,7 +672,7 @@ public class HmsMirrorCommandLineOptions {
                 hmsMirrorConfig.getMigrateACID().setOn(Boolean.TRUE);
                 hmsMirrorConfig.getMigrateACID().setOnly(Boolean.TRUE);
                 String bucketLimit = value;
-                if (bucketLimit != null) {
+                if (!isBlank(bucketLimit)) {
                     hmsMirrorConfig.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
                 }
             }
@@ -839,7 +840,7 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("property-overrides: {}", value);
             String[] overrides = value.split(",");
-            if (overrides != null)
+            if (nonNull(overrides))
                 hmsMirrorConfig.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.BOTH);
         };
     }
@@ -852,7 +853,7 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("property-overrides-left: {}", value);
             String[] overrides = value.split(",");
-            if (overrides != null)
+            if (nonNull(overrides))
                 hmsMirrorConfig.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.LEFT);
         };
     }
@@ -865,7 +866,7 @@ public class HmsMirrorCommandLineOptions {
         return args -> {
             log.info("property-overrides-right: {}", value);
             String[] overrides = value.split(",");
-            if (overrides != null)
+            if (nonNull(overrides))
                 hmsMirrorConfig.getOptimization().getOverrides().setPropertyOverridesStr(overrides, Overrides.Side.RIGHT);
         };
     }
@@ -1929,7 +1930,7 @@ public class HmsMirrorCommandLineOptions {
                 // Handle the config file differently
                 springOptions.add("--hms-mirror.config.filename" + "=\"" + String.join(",", values) + "\"");
             } else {
-                if (values != null && values.length > 0) {
+                if (nonNull(values) && values.length > 0) {
                     springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + String.join(",", values));
                 } else {
                     springOptions.add("--" + SPRING_CONFIG_PREFIX + "." + opt + "=" + "true");

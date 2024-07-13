@@ -19,6 +19,9 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import lombok.Getter;
 
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Getter
 public class WarehouseConfig implements Cloneable {
     private String managedDirectory = null;
@@ -36,7 +39,7 @@ public class WarehouseConfig implements Cloneable {
     }
 
     public void setExternalDirectory(String externalDirectory) {
-        if (externalDirectory != null) {
+        if (nonNull(externalDirectory)) {
             this.externalDirectory = externalDirectory.trim();
             if (!this.externalDirectory.startsWith("/")) {
                 this.externalDirectory = "/" + this.externalDirectory;
@@ -50,7 +53,7 @@ public class WarehouseConfig implements Cloneable {
     }
 
     public void setManagedDirectory(String managedDirectory) {
-        if (managedDirectory != null) {
+        if (!isBlank(managedDirectory)) {
             this.managedDirectory = managedDirectory.trim();
             if (!this.managedDirectory.startsWith("/")) {
                 this.managedDirectory = "/" + this.managedDirectory;

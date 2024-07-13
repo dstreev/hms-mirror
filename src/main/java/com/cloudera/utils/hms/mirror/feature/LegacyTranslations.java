@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import static com.cloudera.utils.hms.util.TableUtils.*;
+import static java.util.Objects.isNull;
 
 @Slf4j
 public class LegacyTranslations extends BaseFeature implements Feature, Cloneable {
@@ -96,7 +97,7 @@ public class LegacyTranslations extends BaseFeature implements Feature, Cloneabl
     }
 
     public Map<String, String> getRowSerde() {
-        if (rowSerde == null) {
+        if (isNull(rowSerde)) {
             rowSerde = new TreeMap<>();
             rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.RegexSerDe'", "'org.apache.hadoop.hive.serde2.RegexSerDe'");
             rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.MultiDelimitSerDe'", "'org.apache.hadoop.hive.serde2.MultiDelimitSerDe'");

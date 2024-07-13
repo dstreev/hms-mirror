@@ -36,6 +36,8 @@ import java.text.MessageFormat;
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.SessionVars.SET_TEZ_AS_EXECUTION_ENGINE;
 import static com.cloudera.utils.hms.mirror.SessionVars.TEZ_EXECUTION_DESC;
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Component
 @Slf4j
@@ -93,7 +95,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         } else if (TableUtils.isACID(let)) {
             // ACID
             if (hmsMirrorConfig.getMigrateACID().isDowngrade()) {
-                if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
+                if (isBlank(hmsMirrorConfig.getTransfer().getCommonStorage())) {
                     if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
                         rightSpec.setReplaceLocation(Boolean.TRUE);
                     } else {
@@ -122,7 +124,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
 
         // Build Transfer Spec.
         CopySpec transferSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.TRANSFER);
-        if (hmsMirrorConfig.getTransfer().getCommonStorage() == null) {
+        if (isBlank(hmsMirrorConfig.getTransfer().getCommonStorage())) {
             if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()
                     != hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
                 if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
@@ -196,7 +198,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
             if (!hmsMirrorConfig.getMigrateACID().isDowngrade() ||
                     // Is Downgrade but the downgraded location isn't available to the right.
                     (hmsMirrorConfig.getMigrateACID().isDowngrade()
-                            && hmsMirrorConfig.getTransfer().getCommonStorage() == null)) {
+                            && isNull(hmsMirrorConfig.getTransfer().getCommonStorage()))) {
                 if (!hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {
                     CopySpec shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
                     shadowSpec.setUpgrade(Boolean.TRUE);

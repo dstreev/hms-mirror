@@ -46,6 +46,9 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @Getter
@@ -159,7 +162,7 @@ public class HMSMirrorAppService {
             }
 //            String[] dbs = databases.toArray(new String[0]);
             config.setDatabases(databases);
-        } else if (config.getFilter().getDbRegEx() != null) {
+        } else if (!isBlank(config.getFilter().getDbRegEx())) {
             // Look for the dbRegEx.
             Connection conn = null;
             Statement stmt = null;
@@ -167,7 +170,7 @@ public class HMSMirrorAppService {
             try {
                 conn = connectionPoolService.getHS2EnvironmentConnection(Environment.LEFT);
                 //getConfig().getCluster(Environment.LEFT).getConnection();
-                if (conn != null) {
+                if (nonNull(conn)) {
                     log.info("Retrieved LEFT Cluster Connection");
                     stmt = conn.createStatement();
                     ResultSet rs = stmt.executeQuery(MirrorConf.SHOW_DATABASES);
@@ -189,7 +192,7 @@ public class HMSMirrorAppService {
                 reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
             } finally {
-                if (conn != null) {
+                if (nonNull(conn)) {
                     try {
                         conn.close();
                     } catch (SQLException e) {
@@ -214,7 +217,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
         }
 
-        if (config.getDatabases() == null || config.getDatabases().isEmpty()) {
+        if (isNull(config.getDatabases()) || config.getDatabases().isEmpty()) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             return new AsyncResult<>(Boolean.FALSE);

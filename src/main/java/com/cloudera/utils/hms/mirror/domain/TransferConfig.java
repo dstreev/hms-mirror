@@ -22,6 +22,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 //@Component("transfer")
 @Slf4j
 @Getter
@@ -43,10 +47,10 @@ public class TransferConfig implements Cloneable {
         try {
             TransferConfig clone = (TransferConfig) super.clone();
             // TODO: copy mutable state here, so the clone can't change the internals of the original
-            if (storageMigration != null) {
+            if (nonNull(storageMigration)) {
                 clone.storageMigration = storageMigration.clone();
             }
-            if (warehouse != null) {
+            if (nonNull(warehouse)) {
                 clone.warehouse = warehouse.clone();
             }
             return clone;
@@ -56,7 +60,7 @@ public class TransferConfig implements Cloneable {
     }
 
     public StorageMigration getStorageMigration() {
-        if (storageMigration == null)
+        if (isNull(storageMigration))
             storageMigration = new StorageMigration();
         return storageMigration;
     }
@@ -68,7 +72,7 @@ public class TransferConfig implements Cloneable {
 //    }
 
     public void setCommonStorage(String commonStorage) {
-        if (commonStorage != null) {
+        if (!isBlank(commonStorage)) {
             this.commonStorage = commonStorage.trim();
             if (this.commonStorage.endsWith("/")) {
                 // Remove trailing slash.

@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Service
 @Slf4j
 public class EnvironmentService {
@@ -40,7 +42,7 @@ public class EnvironmentService {
             String hadoopConfDirProp = System.getenv().getOrDefault(HADOOP_CONF_DIR, "/etc/hadoop/conf");
 
             // Set a default
-            if (hadoopConfDirProp == null)
+            if (isBlank(hadoopConfDirProp))
                 hadoopConfDirProp = "/etc/hadoop/conf";
 
             Configuration hadoopConfig = new Configuration(true);

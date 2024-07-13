@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import java.text.MessageFormat;
 
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.EXTERNAL_TABLE_PURGE;
+import static java.util.Objects.isNull;
 
 @Component
 @Slf4j
@@ -76,7 +77,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase implements DataS
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
         try {
             // If RIGHT doesn't exist, run SCHEMA_ONLY.
-            if (ret == null) {
+            if (isNull(ret)) {
                 tableMirror.addIssue(Environment.RIGHT, "Table doesn't exist.  To transfer, run 'SCHEMA_ONLY'");
             } else {
                 // Make sure table isn't an ACID table.

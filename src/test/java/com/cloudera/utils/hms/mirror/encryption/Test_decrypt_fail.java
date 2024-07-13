@@ -25,8 +25,7 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = PasswordApp.class,
@@ -55,12 +54,14 @@ import static org.junit.Assert.assertNull;
 public class Test_decrypt_fail extends PasswordTestBase {
 
     @Test
-    public void validatePassword() throws EncryptionException {
+    public void validatePassword() {
 
-        String value = doIt();
-
-        // The decrypt value should be null because the password is not encrypted correctly.
-        assertNull("Decrypt PasswordApp Failure",  value);
+        String value = null;
+        try {
+            value = doIt();
+        } catch (EncryptionException e) {
+            assertTrue("Decrypt PasswordApp Failure", e.getMessage().contains("Error decrypting encrypted password"));
+        }
 
     }
 

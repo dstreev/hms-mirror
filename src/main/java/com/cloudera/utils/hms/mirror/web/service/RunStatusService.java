@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Service
 public class RunStatusService {
 
@@ -39,7 +41,7 @@ public class RunStatusService {
 
     public RunStatus getRunStatus(String sessionId) {
         RunStatus runStatus = null;
-        if (sessionId == null) {
+        if (isBlank(sessionId)) {
             runStatus = executeSessionService.getSession().getRunStatus();
         } else {
             runStatus = executeSessionService.getSession(sessionId).getRunStatus();

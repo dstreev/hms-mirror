@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
@@ -61,15 +62,24 @@ public class MirrorExceptionHandler {
         return mv;
     }
 
-    @ExceptionHandler(value = EncryptionException.class)
-    public ModelAndView encryptionExceptionHandler(HttpServletRequest request, EncryptionException exception) {
-        ModelAndView mv = new ModelAndView();
+//    @ExceptionHandler(value = EncryptionException.class)
+//    public ModelAndView encryptionExceptionHandler(HttpServletRequest request, EncryptionException exception) {
+//        ModelAndView mv = new ModelAndView();
+//
+//        mv.getModel().put(ControllerReferences.TYPE, "Encryption/Decryption Issue");
+//        mv.getModel().put(ControllerReferences.MESSAGE, exception.getMessage());
+//        uiModelService.sessionToModel(mv.getModel(), 0, false);
+//        mv.setViewName("error");
+//        return mv;
+//    }
 
-        mv.getModel().put(ControllerReferences.TYPE, "Encryption/Decryption Issue");
-        mv.getModel().put(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(mv.getModel(), 0, false);
-        mv.setViewName("error");
-        return mv;
+    @ExceptionHandler(value = EncryptionException.class)
+    public String encryptionExceptionHandler(Model model, EncryptionException exception) {
+        model.addAttribute(ControllerReferences.TYPE, "Password Encryption/Decryption Issue");
+        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(model, 0, false);
+        return "error";
     }
+
 
 }

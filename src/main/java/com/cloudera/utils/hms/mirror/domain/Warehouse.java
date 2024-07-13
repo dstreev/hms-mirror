@@ -20,6 +20,8 @@ package com.cloudera.utils.hms.mirror.domain;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 /*
 The Warehouse Base is the location base for a databases external and managedDirectory locations. The locations
 should NOT include the database name.  The database name will be appended to the location when the process
@@ -43,7 +45,7 @@ public class Warehouse implements Cloneable {
     }
 
     public void setExternalDirectory(String externalDirectory) {
-        if (externalDirectory != null) {
+        if (!isBlank(externalDirectory)) {
             this.externalDirectory = externalDirectory.trim();
             if (!this.externalDirectory.startsWith("/")) {
                 this.externalDirectory = "/" + this.externalDirectory;
@@ -52,12 +54,12 @@ public class Warehouse implements Cloneable {
                 this.externalDirectory = this.externalDirectory.substring(0, this.externalDirectory.length() - 1);
             }
         } else {
-            this.externalDirectory = externalDirectory;
+            this.externalDirectory = null;
         }
     }
 
     public void setManagedDirectory(String managedDirectory) {
-        if (managedDirectory != null) {
+        if (!isBlank(managedDirectory)) {
             this.managedDirectory = managedDirectory.trim();
             if (!this.managedDirectory.startsWith("/")) {
                 this.managedDirectory = "/" + this.managedDirectory;
@@ -66,7 +68,7 @@ public class Warehouse implements Cloneable {
                 this.managedDirectory = this.managedDirectory.substring(0, this.managedDirectory.length() - 1);
             }
         } else {
-            this.managedDirectory = managedDirectory;
+            this.managedDirectory = null;
         }
     }
 
