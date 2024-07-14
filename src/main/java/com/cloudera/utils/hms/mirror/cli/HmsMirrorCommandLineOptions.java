@@ -1631,7 +1631,7 @@ public class HmsMirrorCommandLineOptions {
 
         Option mnnoOption = new Option("mnno", "migrate-non-native-only", false,
                 "Migrate Non-Native tables (if strategy allows). These include table definitions that rely on " +
-                        "external connection to systems like: HBase, Kafka, JDBC");
+                        "external connections to systems like: HBase, Kafka, JDBC");
         mnnoOption.setRequired(Boolean.FALSE);
         migrationOptionsGroup.addOption(mnnoOption);
 
@@ -1683,7 +1683,7 @@ public class HmsMirrorCommandLineOptions {
         // Non Native Migrations
         Option mnnOption = new Option("mnn", "migrate-non-native", false,
                 "Migrate Non-Native tables (if strategy allows). These include table definitions that rely on " +
-                        "external connection to systems like: HBase, Kafka, JDBC");
+                        "external connections to systems like: HBase, Kafka, JDBC");
 //        mnnOption.setArgs(1);
 //        mnnOption.setOptionalArg(Boolean.TRUE);
         mnnOption.setRequired(Boolean.FALSE);

@@ -310,15 +310,15 @@ public class DatabaseService {
                 } catch (SQLException se) {
                     // Issue
                     rtn = Boolean.FALSE;
-                    log.error("Issue getting database connection", se);
-                    executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue getting database connection");
+                    log.error("Issue getting database connections", se);
+                    executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue getting database connections");
                 } finally {
                     if (conn != null) {
                         try {
                             conn.close();
                         } catch (SQLException e) {
-                            log.error("Issue closing LEFT database connection", e);
-                            executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue closing database connection");
+                            log.error("Issue closing LEFT database connections", e);
+                            executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue closing database connections");
                         }
                     }
                 }
@@ -363,7 +363,7 @@ public class DatabaseService {
                 }
             }
         } catch (SQLException se) {
-            log.error("Issue getting database connection", se);
+            log.error("Issue getting database connections", se);
             throw new RuntimeException(se);
         } finally {
             try {
@@ -863,7 +863,7 @@ public class DatabaseService {
     }
 
     public Boolean runDatabaseSql(DBMirror dbMirror, Pair dbSqlPair, Environment environment) {
-        // Open the connection and ensure we are running this on the "RIGHT" cluster.
+        // Open the connections and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 

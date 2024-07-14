@@ -436,11 +436,11 @@ public class ConfigService {
 
         }
 
-
         if (config.isEvaluatePartitionLocation() && !config.isLoadingTestData()) {
             switch (config.getDataStrategy()) {
                 case SCHEMA_ONLY:
                 case DUMP:
+                case STORAGE_MIGRATION:
                     // Check the metastore_direct config on the LEFT.
                     if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
                         runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
@@ -448,16 +448,15 @@ public class ConfigService {
                     }
                     runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
                     break;
-                case STORAGE_MIGRATION:
-                    if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
-                        rtn = Boolean.FALSE;
-                    }
-                    if (!config.getTransfer().getStorageMigration().isDistcp()) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
-                        rtn = Boolean.FALSE;
-                    }
-                    break;
+//                    if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
+//                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
+//                        rtn = Boolean.FALSE;
+//                    }
+//                    if (!config.getTransfer().getStorageMigration().isDistcp()) {
+//                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
+//                        rtn = Boolean.FALSE;
+//                    }
+//                    break;
                 default:
                     runStatus.addError(EVALUATE_PARTITION_LOCATION_USE);
                     rtn = Boolean.FALSE;
@@ -571,6 +570,27 @@ public class ConfigService {
                     }
                 }
         }
+
+        if (config.isEvaluatePartitionLocation() && !config.isLoadingTestData()) {
+            switch (config.getDataStrategy()) {
+                case SCHEMA_ONLY:
+                case DUMP:
+                case STORAGE_MIGRATION:
+                    if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
+                        runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
+                        rtn = Boolean.FALSE;
+                    } else if (!config.getTransfer().getStorageMigration().isDistcp()) {
+                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
+                        rtn = Boolean.FALSE;
+                    }
+                    runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
+                    break;
+                default:
+                    runStatus.addError(EVALUATE_PARTITION_LOCATION_USE);
+                    rtn = Boolean.FALSE;
+            }
+        }
+
 
         if (config.getCluster(Environment.LEFT).isHdpHive3() &&
                 config.getCluster(Environment.LEFT).isLegacyHive()) {

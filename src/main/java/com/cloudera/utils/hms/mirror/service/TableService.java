@@ -763,7 +763,7 @@ public class TableService {
     }
 
     public void getTableDefinition(TableMirror tableMirror, Environment environment) throws SQLException {
-        // The connection should already be in the database;
+        // The connections should already be in the database;
         log.debug("Getting table definition for {}:{}.{}",
                 environment, tableMirror.getParent().getName(), tableMirror.getName());
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
@@ -810,7 +810,7 @@ public class TableService {
                 && !tableMirror.isRemove() && !hmsMirrorConfig.isLoadingTestData()) {
             /*
             If we are -epl, we need to load the partition metadata for the table. And we need to use the
-            metastore_direct connection to do so. Trying to load this through the standard Hive SQL process
+            metastore_direct connections to do so. Trying to load this through the standard Hive SQL process
             is 'extremely' slow.
              */
             if (hmsMirrorConfig.isEvaluatePartitionLocation() ||

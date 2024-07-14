@@ -68,7 +68,7 @@ public enum MessageCode {
     STORAGE_MIGRATION_DISTCP_ACID(25, "STORAGE_MIGRATION with 'distcp' can't support the direct transfer of ACID tables without -epl."),
     ACID_DOWNGRADE_SCHEMA_ONLY(26, "Use the 'SQL' data-strategy to 'downgrade' an ACID table with 'distcp'"),
     OPTIONAL_ARG_ISSUE(27, "Bad optional argument"),
-    CONNECTION_ISSUE(28, "JDBC connection issue.  Check environment, jdbc urls, libraries, etc."),
+    CONNECTION_ISSUE(28, "JDBC connections issue.  Check environment, jdbc urls, libraries, etc."),
     NON_LEGACY_TO_LEGACY(29, "`hms-mirror` does NOT support migrations from Hive 3 to Hive 1/2."),
     //    DISTCP_VALID_DISTCP_RESET_TO_DEFAULT_LOCATION(30, "You must specify `-wd` and `-ewd` when using `-rdl` with `--distcp`."),
     RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS(30, "When using `-rdl`, you will need specify the " +
@@ -147,7 +147,7 @@ public enum MessageCode {
             "flag for all other strategies."),
     EVALUATE_PARTITION_LOCATION_CONFIG(68, "The metastore_direct is not configured for the {0} cluster.  It is required when using " +
             "`-epl|--evaluate-partition-location`."),
-    EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION(69, "The `-epl|--evaluate-partition-location` flag is only valid when `-dc` option is" +
+    EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION(69, "The `-epl|--evaluate-partition-location` flag is only valid when `-dc` option is " +
             "specified for STORAGE_MIGRATION strategy."),
     HIVE3_ON_HDP_ACID_TRANSFERS(70, "Hive3 on HDP does NOT honor the 'database' LOCATION element for newly created MANAGED tables. " +
             "For STORAGE_MIGRATION in the same metastore/namespace, move the data with `distcp` and ALTER the table locations by adding " +

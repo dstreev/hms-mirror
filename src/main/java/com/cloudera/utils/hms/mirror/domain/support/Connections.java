@@ -23,8 +23,6 @@ import lombok.Setter;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static java.util.Objects.nonNull;
-
 @Getter
 @Setter
 public class Connections implements Cloneable {
@@ -41,6 +39,12 @@ public class Connections implements Cloneable {
         metastoreDirectConnections.put(Environment.RIGHT, new Connection());
         namespaces.put(Environment.LEFT, new Connection());
         namespaces.put(Environment.RIGHT, new Connection());
+    }
+
+    public void reset() {
+        hiveServer2Connections.values().forEach(Connection::reset);
+        metastoreDirectConnections.values().forEach(Connection::reset);
+        namespaces.values().forEach(Connection::reset);
     }
 
     public Connections clone() {

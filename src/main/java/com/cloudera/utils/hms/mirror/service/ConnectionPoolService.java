@@ -117,7 +117,7 @@ public class ConnectionPoolService implements ConnectionPools {
                             log.info("{}: Closing Connection", env);
                             conn.close();
                         } catch (Throwable throwables) {
-                            log.error("{}: Error closing connection.", env, throwables);
+                            log.error("{}: Error closing connections.", env, throwables);
                         }
                     }
                 }
@@ -150,7 +150,7 @@ public class ConnectionPoolService implements ConnectionPools {
             try {
                 connectionPools = getConnectionPoolsImpl();
             } catch (SQLException e) {
-                log.error("Error creating connection pools", e);
+                log.error("Error creating connections pools", e);
                 throw new RuntimeException(e);
             }
         }
@@ -207,7 +207,7 @@ public class ConnectionPoolService implements ConnectionPools {
                 rtn = new ConnectionPoolsHybridImpl(executeSession, passwordService);
                 break;
         }
-        // Initialize the connection pools
+        // Initialize the connections pools
 //        rtn.init();
         return rtn;
     }
@@ -236,7 +236,7 @@ public class ConnectionPoolService implements ConnectionPools {
         }
 
         // Make adjustments to the config clusters based on settings.
-        // Buildout the right connection pool details.
+        // Buildout the right connections pool details.
         Set<Environment> hs2Envs = new HashSet<Environment>();
         switch (getConfig().getDataStrategy()) {
             case DUMP:
@@ -299,7 +299,7 @@ public class ConnectionPoolService implements ConnectionPools {
                             runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
                         }
                     } else {
-                        // Exercise the connection.
+                        // Exercise the connections.
                         stmt = conn.createStatement();
                         stmt.execute("SELECT 1");
                     }
@@ -350,7 +350,7 @@ public class ConnectionPoolService implements ConnectionPools {
             }
             throw new RuntimeException("Check Hive Connections Failed.  Check Logs.");
         }
-        // Set state of connection.
+        // Set state of connections.
         connected = true;
         executeSession.setConnected(Boolean.TRUE);
     }

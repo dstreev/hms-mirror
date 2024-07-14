@@ -222,7 +222,7 @@ public class CliInit {
             executeSessionService.setLoadedSession(session);
 
             // Sync the concurrency for the connections.
-            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+            // We need to pass on a few scale parameters to the hs2 configs so the connections pools can handle the scale requested.
             if (nonNull(builtConfig.getCluster(Environment.LEFT)) && nonNull(builtConfig.getCluster(Environment.LEFT).getHiveServer2())) {
                 Cluster cluster = builtConfig.getCluster(Environment.LEFT);
                 cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(maxThreads / 2));

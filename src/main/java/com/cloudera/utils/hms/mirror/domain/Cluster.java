@@ -85,7 +85,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     private HiveServer2Config hiveServer2 = null;
     @JsonProperty(value = "metastore_direct")
     @JsonAlias("metastore_direct")
-    @Schema(description = "The direct connection to the Hive Metastore. Optimization used for extracting table and partition details that aren't efficient through the JDBC interface")
+    @Schema(description = "The direct connections to the Hive Metastore. Optimization used for extracting table and partition details that aren't efficient through the JDBC interface")
     private DBStore metastoreDirect = null;
     @Schema(description = "Methods used to find/discover partitions during initialization and on-going.")
     private PartitionDiscovery partitionDiscovery = new PartitionDiscovery();

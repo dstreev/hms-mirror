@@ -32,14 +32,14 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class HiveServer2Config implements Cloneable {
     @JsonIgnore
     public static final String APACHE_HIVE_DRIVER_CLASS_NAME = "org.apache.hive.jdbc.HiveDriver";
-    @Schema(description = "The JDBC URI for the HiveServer2 connection. EG: jdbc:hive2://<host>:<port>")
+    @Schema(description = "The JDBC URI for the HiveServer2 connections. EG: jdbc:hive2://<host>:<port>")
     private String uri = null;
     private boolean disconnected = Boolean.FALSE;
-    @Schema(description = "The connection properties for the HiveServer2 connection. EG: user, password, etc.")
+    @Schema(description = "The connections properties for the HiveServer2 connections. EG: user, password, etc.")
     private Properties connectionProperties = new Properties();
-    @Schema(description = "The driver class name for the HiveServer2 connection. Default is org.apache.hive.jdbc.HiveDriver. Specify this if you are using a different driver.")
+    @Schema(description = "The driver class name for the HiveServer2 connections. Default is org.apache.hive.jdbc.HiveDriver. Specify this if you are using a different driver.")
     private String driverClassName = APACHE_HIVE_DRIVER_CLASS_NAME; // default driver.
-    @Schema(description = "The path to the jar file for the HiveServer2 connection. Must be specified for non-kerberos connections.  Should be null for kerberos connections and driver should be in 'aux_libs'.")
+    @Schema(description = "The path to the jar file for the HiveServer2 connections. Must be specified for non-kerberos connections.  Should be null for kerberos connections and driver should be in 'aux_libs'.")
     private String jarFile = null;
 
     @Override

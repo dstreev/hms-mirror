@@ -29,6 +29,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.UnknownHostException;
 
 @ControllerAdvice
 public class MirrorExceptionHandler {
@@ -76,6 +78,22 @@ public class MirrorExceptionHandler {
     @ExceptionHandler(value = EncryptionException.class)
     public String encryptionExceptionHandler(Model model, EncryptionException exception) {
         model.addAttribute(ControllerReferences.TYPE, "Password Encryption/Decryption Issue");
+        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(model, 0, false);
+        return "error";
+    }
+
+    @ExceptionHandler(value = IOException.class)
+    public String ioExceptionHandler(Model model, IOException exception) {
+        model.addAttribute(ControllerReferences.TYPE, "IO Exception Issue");
+        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(model, 0, false);
+        return "error";
+    }
+
+    @ExceptionHandler(value = UnknownHostException.class)
+    public String unKnownHostHandler(Model model, UnknownHostException exception) {
+        model.addAttribute(ControllerReferences.TYPE, "Unknown Host Issue");
         model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
         uiModelService.sessionToModel(model, 0, false);
         return "error";

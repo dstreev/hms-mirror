@@ -108,15 +108,15 @@ public class HMSMirrorAppService {
         Conversion conversion = session.getConversion();
         OperationStatistics stats = runStatus.getOperationStatistics();
 
-        try {// Refresh the connection pool.
+        try {// Refresh the connections pool.
             connectionPoolService.init();
         } catch (SQLException e) {
-            log.error("Issue refreshing connection pool", e);
-            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
+            log.error("Issue refreshing connections pool", e);
+            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connections pool");
             return new AsyncResult<>(Boolean.FALSE);
         } catch (SessionException se) {
             log.error("Issue with Session", se);
-            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connection pool");
+            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connections pool");
             return new AsyncResult<>(Boolean.FALSE);
         } catch (EncryptionException e) {
             log.error("Issue with Decryption", e);
@@ -196,8 +196,8 @@ public class HMSMirrorAppService {
                     try {
                         conn.close();
                     } catch (SQLException e) {
-                        log.error("Issue closing connection for LEFT", e);
-                        executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue closing connection.");
+                        log.error("Issue closing connections for LEFT", e);
+                        executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue closing connections.");
                     }
                 }
             }

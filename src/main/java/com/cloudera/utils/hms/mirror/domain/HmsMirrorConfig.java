@@ -316,20 +316,20 @@ public class HmsMirrorConfig implements Cloneable {
 
                 // If Kerberized, notify to include hive jar in 'aux_libs'
                 if (!kerb && response.contains("principal")) {
-                    // appears the connection is kerberized.
+                    // appears the connections is kerberized.
                     System.out.println("----------------------------------------------------------------------------------------");
-                    System.out.println("The connection appears to be Kerberized.\n\t\tPlace the 'hive standalone' driver in '$HOME/.hms-mirror/aux_libs'");
+                    System.out.println("The connections appears to be Kerberized.\n\t\tPlace the 'hive standalone' driver in '$HOME/.hms-mirror/aux_libs'");
                     System.out.println("\tSPECIAL RUN INSTRUCTIONS for Legacy Kerberos Connections.");
                     System.out.println("\thttps://github.com/cloudera-labs/hms-mirror#running-against-a-legacy-non-cdp-kerberized-hiveServer2");
                     System.out.println("----------------------------------------------------------------------------------------");
                     kerb = Boolean.TRUE;
                 } else if (response.contains("principal")) {
                     System.out.println("----------------------------------------------------------------------------------------");
-                    System.out.println("The connection ALSO appears to be Kerberized.\n");
+                    System.out.println("The connections ALSO appears to be Kerberized.\n");
                     System.out.println(" >> Will your Kerberos Ticket be TRUSTED for BOTH JDBC Kerberos Connections? (Y/N)");
                     response = scanner.next();
                     if (!response.equalsIgnoreCase("y")) {
-                        throw new RuntimeException("Both JDBC connection must trust your kerberos ticket.");
+                        throw new RuntimeException("Both JDBC connections must trust your kerberos ticket.");
                     }
                     System.out.println(" >> Are both clusters running the same version of Hadoop/Hive? (Y/N)");
                     response = scanner.next();

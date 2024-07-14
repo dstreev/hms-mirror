@@ -27,6 +27,11 @@ public class Connection implements Cloneable {
     private ConnectionStatus status = ConnectionStatus.NOT_CONFIGURED;
     private String message;
 
+    public void reset() {
+        status = ConnectionStatus.NOT_CONFIGURED;
+        message = null;
+    }
+
     public Connection clone() {
         try {
             return (Connection) super.clone();

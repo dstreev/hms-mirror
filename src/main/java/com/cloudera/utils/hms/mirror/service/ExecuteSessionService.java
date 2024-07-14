@@ -138,7 +138,7 @@ public class ExecuteSessionService {
                 activeSession = null;
             }
             ;
-            // Close the connection pools, so they can be reset.
+            // Close the connections pools, so they can be reset.
             connectionPoolService.close();
         }
     }
@@ -210,8 +210,8 @@ public class ExecuteSessionService {
             log.debug("Configure and setup Session");
             HmsMirrorConfig config = loadedSession.getConfig();
 
-            // Setup connection concurrency
-            // We need to pass on a few scale parameters to the hs2 configs so the connection pools can handle the scale requested.
+            // Setup connections concurrency
+            // We need to pass on a few scale parameters to the hs2 configs so the connections pools can handle the scale requested.
             if (nonNull(config.getCluster(Environment.LEFT)) && nonNull(config.getCluster(Environment.LEFT).getHiveServer2()) && nonNull(concurrency)) {
                 Cluster cluster = config.getCluster(Environment.LEFT);
                 cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
@@ -251,8 +251,8 @@ public class ExecuteSessionService {
 //        try {
 //            connectionPoolService.init();
 //        } catch (Exception e) {
-//            log.error("Error initializing connection pool.", e);
-//            throw new RuntimeException("Error initializing connection pool.", e);
+//            log.error("Error initializing connections pool.", e);
+//            throw new RuntimeException("Error initializing connections pool.", e);
 //        }
 
             if (isNull(session.getSessionId())) {

@@ -24,6 +24,8 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionStatus;
 import com.cloudera.utils.hms.mirror.domain.support.Connections;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -84,21 +86,27 @@ public class ConnectionMVController {
     }
 
     @RequestMapping(value = "/doValidate", method = RequestMethod.POST)
-    public String doValidate(Model model) {
+    public String doValidate(Model model) throws SessionException, EncryptionException {
+
+        executeSessionService.clearActiveSession();
 
         ExecuteSession session = executeSessionService.getSession();
         Connections connections = session.getConnections();
 
         HmsMirrorConfig config = session.getConfig();
         boolean configErrors = !configService.validateForConnections(session);
-        if (configErrors) {
+        if (!configErrors) {
+            try {
+                connectionPoolService.init();
+            } catch (SQLException e) {
+                configErrors = Boolean.TRUE;
+            }
+        };
 
-        }
-        ;
-
+        boolean finalConfigErrors = configErrors;
         config.getClusters().forEach((k, v) -> {
             if (nonNull(v)) {
-                if (nonNull(v.getHiveServer2()) && !configErrors) {
+                if (nonNull(v.getHiveServer2()) && !finalConfigErrors) {
                     try {
                         Connection conn = connectionPoolService.getConnectionPools().getHS2EnvironmentConnection(k);
                         connections.getHiveServer2Connections().get(k).setStatus(ConnectionStatus.SUCCESS);
@@ -112,7 +120,7 @@ public class ConnectionMVController {
                     connections.getHiveServer2Connections().get(k).setStatus(ConnectionStatus.NOT_CONFIGURED);
                 }
 
-                if (nonNull(v.getMetastoreDirect()) && !configErrors) {
+                if (nonNull(v.getMetastoreDirect()) && !finalConfigErrors) {
                     try {
                         Connection conn = connectionPoolService.getConnectionPools().getMetastoreDirectEnvironmentConnection(k);
                         connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.SUCCESS);

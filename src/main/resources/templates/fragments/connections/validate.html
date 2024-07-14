@@ -30,6 +30,7 @@
 <body>
 
 <div th:fragment="view">
+
     <table class="pure-table-bordered pure-table-horizontal pure-table-striped">
         <tr>
             <th th:text="#{connection}"/>
@@ -43,6 +44,9 @@
                 <td th:text="${CONNECTIONS_STATUS.getNamespaces().get(key).message}"/>
             </tr>
         </th:block>
+        <tr>
+            <td colspan="3"/>
+        </tr>
         <th:block th:each="key: ${CONNECTIONS_STATUS.getHiveServer2Connections().keySet()}">
             <tr>
                 <td th:text="#{__${key}__.hs2}"/>
@@ -50,6 +54,9 @@
                 <td th:text="${CONNECTIONS_STATUS.getHiveServer2Connections().get(key).message}"/>
             </tr>
         </th:block>
+        <tr>
+            <td colspan="3"/>
+        </tr>
         <th:block th:each="key: ${CONNECTIONS_STATUS.getMetastoreDirectConnections().keySet()}">
             <tr>
                 <td th:text="#{__${key}__.metastore}"/>
@@ -59,8 +66,13 @@
         </th:block>
     </table>
     <form method="post" th:action="@{/connections/doValidate}">
-        <button class="pure-button pure-button-primary" type="submit" th:text="#{validate.connections}" />
+        <button id="modalBtn" class="pure-button pure-button-primary" type="submit" th:text="#{validate.connections}" />
     </form>
+
+    <div th:replace="fragments/modal::modal('Please wait.  Checking Connections.')">
+
+    </div>
+
 </div>
 </body>
 </html>

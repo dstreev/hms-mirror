@@ -145,7 +145,7 @@ public class StatsCalculatorService {
 
         // Small File Checks
         SerdeType serdeType = serdeFromStats(controlEnv.getStatistics());
-        // TODO: Trying to figure out if making this setting will bleed over to other sessions while reusing a connection.
+        // TODO: Trying to figure out if making this setting will bleed over to other sessions while reusing a connections.
         if (nonNull(controlEnv.getStatistics().get(MirrorConf.AVG_FILE_SIZE))) {
             Double avgFileSize = (Double) controlEnv.getStatistics().get(MirrorConf.AVG_FILE_SIZE);
             // If not 50% of target size.
