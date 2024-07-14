@@ -218,20 +218,24 @@ public class ExecuteSessionService {
                 cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
                 if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
+                    if (isNull(cluster.getHiveServer2().getConnectionProperties().getProperty("maxWaitMillis")) ||
+                            isBlank(cluster.getHiveServer2().getConnectionProperties().getProperty("maxWaitMillis"))) {
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "5000");
+                    }
                     cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
                 }
             }
             if (nonNull(config.getCluster(Environment.RIGHT)) && nonNull(config.getCluster(Environment.RIGHT).getHiveServer2()) && nonNull(concurrency)) {
                 Cluster cluster = config.getCluster(Environment.RIGHT);
-                if (cluster.getHiveServer2() != null) {
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
-                    cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
-                    if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "10000");
-                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("initialSize", Integer.toString(concurrency / 2));
+                cluster.getHiveServer2().getConnectionProperties().setProperty("minIdle", Integer.toString(concurrency / 2));
+                if (cluster.getHiveServer2().getDriverClassName().equals(HiveServer2Config.APACHE_HIVE_DRIVER_CLASS_NAME)) {
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxIdle", Integer.toString(concurrency));
+                    if (isNull(cluster.getHiveServer2().getConnectionProperties().getProperty("maxWaitMillis")) ||
+                            isBlank(cluster.getHiveServer2().getConnectionProperties().getProperty("maxWaitMillis"))) {
+                        cluster.getHiveServer2().getConnectionProperties().setProperty("maxWaitMillis", "5000");
                     }
+                    cluster.getHiveServer2().getConnectionProperties().setProperty("maxTotal", Integer.toString(concurrency));
                 }
             }
 

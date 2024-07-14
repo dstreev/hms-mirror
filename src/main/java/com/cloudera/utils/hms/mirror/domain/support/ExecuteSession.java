@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Getter
 @Setter
@@ -38,6 +39,7 @@ public class ExecuteSession implements Cloneable {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private boolean connected = Boolean.FALSE;
+    private Connections connections = new Connections();
     private RunStatus runStatus;
 //    private HmsMirrorConfig resolvedConfig;
     private HmsMirrorConfig config;
@@ -69,14 +71,21 @@ public class ExecuteSession implements Cloneable {
         }
     }
 
+    public void resetConnectionStatuses() {
+        this.connections = new Connections();
+    }
+
     @Override
     public ExecuteSession clone() {
         try {
             ExecuteSession clone = (ExecuteSession) super.clone();
             // TODO: copy mutable state here, so the clone can't change the internals of the original
-            if (config != null) {
+            if (nonNull(config)) {
                 clone.config = config.clone();
                 // resolvedConfig is a derived object, so we don't need to clone it.
+            }
+            if (nonNull(connections)) {
+                clone.connections = connections.clone();
             }
             clone.cliEnvironment = cliEnvironment; // This isn't a cloneable object. Just establish the reference.
             // Don't clone the other parts: runStatus, cliEnvironment, conversion, runResults
@@ -85,18 +94,5 @@ public class ExecuteSession implements Cloneable {
             throw new AssertionError();
         }
     }
-
-//    public void clearResolvedConfig() {
-//        resolvedConfig = null;
-//    }
-//
-//    public HmsMirrorConfig getConfig() {
-//        if (resolvedConfig == null) {
-//            // This deals with any transitions that may have occurred in the config.
-//            if (config != null)
-//                resolvedConfig = config.getResolvedConfig();
-//        }
-//        return null;
-//    }
 
 }

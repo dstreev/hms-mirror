@@ -47,9 +47,9 @@
                             th:selected="${cet.equals(CONFIG.clusters[__${env}__].hiveServer2.driverClassName)}"/>
                 </select>
             </div>
-            <input type="hidden"
-                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"
-                   th:value="${CONFIG.clusters[__${env}__].hiveServer2?.connectionProperties[maxWaitMillis]}"/>
+<!--            <input type="hidden"-->
+<!--                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxWaitMillis]}"-->
+<!--                   th:value="${CONFIG.clusters[__${env}__].hiveServer2?.connectionProperties[maxWaitMillis]}"/>-->
             <input type="hidden"
                    th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"
                    th:value="${CONFIG.clusters[__${env}__].hiveServer2?.connectionProperties[maxTotal]}"/>
@@ -93,9 +93,9 @@
             </div>
             <!--                                    <div class="pure-control-group">-->
             <!--                                        <label for="hs2maxTotal" th:text="#{hive.server2.max.total}"/>-->
-            <input class="pure-input-3-4" type="hidden"
-                   autocomplete="off"
-                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>
+<!--            <input class="pure-input-3-4" type="hidden"-->
+<!--                   autocomplete="off"-->
+<!--                   th:field="*{clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>-->
             <!--                                               th:value="${CONFIG.clusters[__${env}__].hiveServer2.connectionProperties[maxTotal]}"/>-->
             <!--                                    </div>-->
             <div class="pure-control-group">

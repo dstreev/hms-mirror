@@ -221,7 +221,7 @@ public enum MessageCode {
             "Please check the configuration and try again."),
     METASTORE_DIRECT_NOT_DEFINED_OR_CONFIGURED(106, "The {0} metastore_direct is NOT defined or configured in the runtime configuration.  " +
             "Please check the configuration and try again."),
-    MISSING_PROPERTY(107, "The property '{0}' is missing from the configuration {1} {2}.  Please add it and try again."),
+    MISSING_PROPERTY(107, "The property ''{0}'' is missing from the configuration {1} {2}.  Please add it and try again."),
     WAREHOUSE_DIRECTORIES_NOT_DEFINED(108, "The warehouse directories are NOT defined.  " +
             "Please add them and try again."),
     WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV(109, "The warehouse directories were retrieved from the Hive environment.  If these are not the intended " +

@@ -139,7 +139,7 @@
     </div>
     <!--    Show the Warehouse Plans for STORAGE_MIGRATION -->
     <div th:insert="fragments/config/warehousePlans::view"
-         th:if="${('STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+         th:if="${('SCHEMA_ONLY HYBRID SQL EXPORT_IMPORT COMMON STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
 
     </div>
 </div>

@@ -232,11 +232,15 @@ public class ConfigMVController implements ControllerReferences {
 
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
+
         executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
         if (passwordCheck.get()) {
             ExecuteSession session1 = executeSessionService.getSession();
             session1.getRunStatus().getErrors().set(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
         }
+
+        // After a 'save', the session connections statuses should be reset.
+        session.resetConnectionStatuses();
 
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 

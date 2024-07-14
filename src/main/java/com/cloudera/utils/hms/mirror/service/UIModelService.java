@@ -36,6 +36,7 @@ import org.springframework.web.servlet.ModelAndView;
 import java.util.Map;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Service
 @Getter
@@ -62,22 +63,20 @@ public class UIModelService implements ControllerReferences {
         boolean lclTesting = testing != null && testing;
 
         map.put(CONCURRENCY, concurrency);
-//        model.addAttribute(CONCURRENCY, concurrency);
 
         ExecuteSession session = executeSessionService.getSession();
 
         RunContainer runContainer = new RunContainer();
         map.put(RUN_CONTAINER, runContainer);
-//        model.addAttribute(RUN_CONTAINER, runContainer);
-        if (session != null) {
+
+        if (nonNull(session)) {
             runContainer.setSessionId(session.getSessionId());
             map.put(CONFIG, session.getConfig());
-//            model.addAttribute(CONFIG, session.getConfig());
+            map.put(CONNECTIONS_STATUS, session.getConnections());
 
             PersistContainer persistContainer = new PersistContainer();
             persistContainer.setSaveAs(session.getSessionId());
             map.put(PERSIST, persistContainer);
-//            model.addAttribute(PERSIST, persistContainer);
 
             // For testing only.
             if (lclTesting && isNull(session.getRunStatus())) {
@@ -86,21 +85,17 @@ public class UIModelService implements ControllerReferences {
                 runStatus.addError(MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                 runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
                 map.put(RUN_STATUS, runStatus);
-//                model.addAttribute(RUN_STATUS, runStatus);
             } else {
                 RunStatus runStatus = session.getRunStatus();
                 runStatus.setConcurrency(concurrency);
                 map.put(RUN_STATUS, runStatus);
-//                model.addAttribute(RUN_STATUS, runStatus);
             }
         }
 
         try {
             map.put(VERSION, Manifests.read("HMS-Mirror-Version"));
-//            model.addAttribute(VERSION, Manifests.read("HMS-Mirror-Version"));
         } catch (IllegalArgumentException iae) {
             map.put(VERSION, "Unknown");
-//            model.addAttribute(VERSION, "Unknown");
         }
 
         ModelUtils.allEnumsForMap(map);

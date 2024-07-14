@@ -48,6 +48,13 @@
                    th:href="@{/config/persist}"/>
             </li>
         </ul>
+        <span class="pure-menu-heading" th:text="#{connections}"/>
+        <ul class="pure-menu-list" th:if="${CONFIG != null}">
+            <li class="pure-menu-item">
+                <a class="pure-menu-link" th:text="#{validate}"
+                   th:href="@{/connections/validate}"/>
+            </li>
+        </ul>
         <span class="pure-menu-heading" th:text="#{runtime}"/>
         <ul class="pure-menu-list" th:if="${CONFIG != null}">
             <li class="pure-menu-item">

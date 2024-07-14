@@ -618,7 +618,8 @@ public class ConfigService {
                     } else {
                         // Are there any Warehouse Plans.
                         if (nonNull(config.getTranslator().getWarehouseMapBuilder())) {
-                            if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+                            if (isNull(config.getTranslator().getWarehouseMapBuilder().getWarehousePlans())
+                                    || config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
                                 runStatus.addError(RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS);
                                 rtn = Boolean.FALSE;
                             }

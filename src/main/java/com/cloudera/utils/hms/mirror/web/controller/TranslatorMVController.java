@@ -75,6 +75,18 @@ public class TranslatorMVController {
         this.uiModelService = uiModelService;
     }
 
+    @RequestMapping(value = "/globalLocationMap/add", method = RequestMethod.POST)
+    public String addGlobalLocationMap(@RequestParam(name = SOURCE, required = true) String source,
+                                       @RequestParam(name = TARGET, required = true) String target) throws SessionException {
+        log.info("Adding global location map for source: {} and target: {}", source, target);
+        // Don't reload if running.
+        executeSessionService.clearActiveSession();
+
+        translatorService.addGlobalLocationMap(source, target);
+
+        return "redirect:/config/view";
+    }
+
     @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
     public String removeGlobalLocationMap(Model model,
                                           @PathVariable @NotNull String source) throws SessionException {
@@ -107,8 +119,8 @@ public class TranslatorMVController {
             boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
 
 //            if (lclBuildSources) {
-                WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
-                model.addAttribute(SOURCES, wmb.getSources());
+            WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
+            model.addAttribute(SOURCES, wmb.getSources());
 //            }
 
             Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);

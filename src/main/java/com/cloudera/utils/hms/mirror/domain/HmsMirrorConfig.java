@@ -138,8 +138,9 @@ public class HmsMirrorConfig implements Cloneable {
     with a table by the same name but who's data lives in the common storage location.
      */
     private boolean replace = Boolean.FALSE;
-    @JsonIgnore
-    private boolean replay = Boolean.FALSE;
+    /*
+    When set, the RIGHT database will be DROPPED before being recreated.
+     */
     private boolean resetRight = Boolean.FALSE;
     private boolean resetToDefaultLocation = Boolean.FALSE;
     private boolean skipFeatures = Boolean.FALSE;

@@ -100,38 +100,10 @@ public class ConnectionPoolService implements ConnectionPools {
                 Connection conn = null;
                 try {
                     conn = getConnectionPools().getHS2EnvironmentConnection(env);
-                    //cluster.getConnection();
-                    // May not be set for DUMP strategy (RIGHT cluster)
                     log.debug("{}:: Checking Hive Connection", env);
                     if (nonNull(conn)) {
-//                        Statement stmt = null;
-//                        ResultSet resultSet = null;
-//                        try {
-//                            stmt = conn.createStatement();
-//                            resultSet = stmt.executeQuery("SHOW DATABASES");
-//                            resultSet = stmt.executeQuery("SELECT 'HIVE CONNECTION TEST PASSED' AS STATUS");
                         log.debug("{}:: Hive Connection Successful", env);
                         rtn = Boolean.TRUE;
-//                        } catch (SQLException sql) {
-                        // DB Doesn't Exists.
-//                            log.error(env + ": Hive Connection check failed.", sql);
-//                            rtn = Boolean.FALSE;
-//                        } finally {
-//                            if (resultSet != null) {
-//                                try {
-//                                    resultSet.close();
-//                                } catch (SQLException sqlException) {
-//                                     ignore
-//                                }
-//                            }
-//                            if (stmt != null) {
-//                                try {
-//                                    stmt.close();
-//                                } catch (SQLException sqlException) {
-                        // ignore
-//                                }
-//                            }
-//                        }
                     } else {
                         log.error("{}: Hive Connection check failed.  Connection is null.", env);
                         rtn = Boolean.FALSE;

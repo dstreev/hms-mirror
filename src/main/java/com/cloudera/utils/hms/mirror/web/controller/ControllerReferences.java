@@ -29,6 +29,7 @@ public interface ControllerReferences {
     String CONFIG = "CONFIG";
     String CLUSTER = "CLUSTER";
     String CURRENT_CONFIG = "CURRENT_CONFIG";
+    String CONNECTIONS_STATUS = "CONNECTIONS_STATUS";
     String CONCURRENCY = "CONCURRENCY";
     String AVAILABLE_DATABASES = "AVAILABLE_DATABASES";
     String CONFIG_LIST = "CONFIG_LIST";
@@ -62,4 +63,6 @@ public interface ControllerReferences {
     String TYPE = "TYPE";
     String MESSAGE = "MESSAGE";
     String DATABASES = "DATABASES";
+    String SOURCE = "SOURCE";
+    String TARGET = "TARGET";
 }

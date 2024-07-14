@@ -33,8 +33,8 @@
         <thead>
         <tr>
             <th th:if="${!dryrun}"></th>
-            <th>Source</th>
-            <th>Target</th>
+            <th th:text"#{glm.source}"/>
+            <th th:text"#{glm.target}"/>
         </tr>
         </thead>
         <tbody>
@@ -52,6 +52,15 @@
         </th:block>
         </tbody>
     </table>
+<!--    Add GLM Manually -->
+    <h4 th:text="#{glm.add}"/>
+    <form class="pure-form" method="post"
+          th:action="@{/translator/globalLocationMap/add}">
+        <fieldset>
+            <input type="text" name="SOURCE" placeholder="Source"/>
+            <input type="text" name="TARGET" placeholder="Target"/>
+            <button type="submit" class="pure-button pure-button-primary" th:text="#{button.add}"/>
+        </fieldset>
 </div>
 </body>
 </html>

@@ -42,6 +42,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
+import java.sql.Connection;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.MessageFormat;
@@ -511,12 +512,12 @@ public class TableService {
                             break;
                         case SHADOW:
                         case TRANSFER:
-                            if (copySpec.getLocation() != null) {
+                            if (nonNull(copySpec.getLocation())) {
                                 if (!TableUtils.updateTableLocation(target, copySpec.getLocation())) {
                                     rtn = Boolean.FALSE;
                                 }
                             } else if (copySpec.isReplaceLocation()) {
-                                if (config.getTransfer().getIntermediateStorage() != null) {
+                                if (nonNull(config.getTransfer().getIntermediateStorage())) {
                                     String isLoc = config.getTransfer().getIntermediateStorage();
                                     // Deal with extra '/'
                                     isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
@@ -528,7 +529,7 @@ public class TableService {
                                     if (!TableUtils.updateTableLocation(target, isLoc)) {
                                         rtn = Boolean.FALSE;
                                     }
-                                } else if (config.getTransfer().getCommonStorage() != null) {
+                                } else if (nonNull(config.getTransfer().getCommonStorage())) {
                                     String sourceLocation = TableUtils.getLocation(tableMirror.getName(), tableMirror.getTableDefinition(copySpec.getSource()));
                                     String targetLocation = getTranslatorService().
                                             translateTableLocation(tableMirror, sourceLocation, 1, null);
