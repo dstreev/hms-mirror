@@ -79,7 +79,7 @@ public class WarehouseMVController {
             model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
             uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
-            return "/warehouse/plan/add";
+            return "warehouse/plan/add";
         } else {
             uiModelService.sessionToModel(model, 1, Boolean.FALSE);
             model.addAttribute(TYPE, "Connections");
@@ -105,7 +105,7 @@ public class WarehouseMVController {
 //        model.addAttribute(READ_ONLY, Boolean.TRUE);
 //        sessionToModel(model, Boolean.FALSE);
 
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
 

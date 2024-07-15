@@ -136,7 +136,7 @@ public class ConfigMVController implements ControllerReferences {
 
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
-        return "/config/init";
+        return "config/init";
     }
 
     @RequestMapping(value = "/doCreate", method = RequestMethod.POST)
@@ -157,7 +157,7 @@ public class ConfigMVController implements ControllerReferences {
 
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
-        return "/config/view";
+        return "config/view";
     }
 
 
@@ -168,7 +168,7 @@ public class ConfigMVController implements ControllerReferences {
 //        model.addAttribute(ACTION, "edit");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
-        return "/config/view";
+        return "config/view";
     }
 
     @RequestMapping(value = "/doSave", method = RequestMethod.POST)
@@ -252,7 +252,7 @@ public class ConfigMVController implements ControllerReferences {
             return "error";
         }
 
-        return "/config/view";
+        return "config/view";
     }
 
 
@@ -262,7 +262,7 @@ public class ConfigMVController implements ControllerReferences {
 
         uiModelService.sessionToModel(model, maxThreads, false);
 
-        return "/config/persist";
+        return "config/persist";
     }
 
     @RequestMapping(value = "/doPersist", method = RequestMethod.POST)
@@ -308,7 +308,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
         ModelUtils.allEnumsForMap(model.asMap());
-        return "/config/view";
+        return "config/view";
     }
 
     @RequestMapping(value = "/doReload", method = RequestMethod.POST)
@@ -337,7 +337,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
         ModelUtils.allEnumsForMap(model.asMap());
-        return "/config/view";
+        return "config/view";
     }
 
     @RequestMapping(value = "/doClone", method = RequestMethod.POST)
@@ -379,7 +379,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
         ModelUtils.allEnumsForMap(model.asMap());
-        return "/config/view";
+        return "config/view";
     }
 
 
@@ -389,7 +389,7 @@ public class ConfigMVController implements ControllerReferences {
 //        model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
-        return "/config/view";
+        return "config/view";
     }
 
     @RequestMapping(value = "/doEncryptPasswords", method = RequestMethod.GET)
@@ -433,7 +433,7 @@ public class ConfigMVController implements ControllerReferences {
         } else {
             throw new SessionException("Inconsistent state: Encrypted, Password Key, etc. . Can't encrypt.");
         }
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
     @RequestMapping(value = "/doDecryptPasswords", method = RequestMethod.GET)
@@ -478,7 +478,7 @@ public class ConfigMVController implements ControllerReferences {
             throw new SessionException("Inconsistent state. Encrypted, PasswordKey, etc. . Can't decrypt.");
         }
 
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
 }

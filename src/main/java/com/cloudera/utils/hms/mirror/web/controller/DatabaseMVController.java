@@ -64,7 +64,7 @@ public class DatabaseMVController implements ControllerReferences {
             config.getDatabases().add(db);
         }
 
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
     @RequestMapping(value = "/{database}/delete", method = RequestMethod.GET)
@@ -77,7 +77,7 @@ public class DatabaseMVController implements ControllerReferences {
 
         config.getDatabases().remove(database);
 
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
 
@@ -89,7 +89,7 @@ public class DatabaseMVController implements ControllerReferences {
 
         databaseService.removeWarehousePlan(database);
 
-        return "redirect:/config/view";
+        return "redirect:config/view";
     }
 
 

@@ -8,6 +8,8 @@ springdoc:
 spring:
   main:
     banner-mode: "off"
+  thymeleaf:
+    prefix: classpath:/templates/
 hadoop:
   cli:
     api: "true"

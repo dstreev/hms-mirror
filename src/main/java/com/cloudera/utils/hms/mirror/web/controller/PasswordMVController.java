@@ -84,7 +84,7 @@ public class PasswordMVController {
         }
         model.addAttribute(PASSWORDS, passwordContainer);
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
-        return "/password/view";
+        return "password/view";
     }
 
     @RequestMapping(value = "/decrypt", method = RequestMethod.POST)
@@ -116,7 +116,7 @@ public class PasswordMVController {
                     passwordContainer.getPasswordKey(), passwordContainer.getTestPassword()));
         }
         model.addAttribute(PASSWORDS, newPasswordContainer);
-        return "/password/view";
+        return "password/view";
     }
 
     @RequestMapping(value = "/encrypt", method = RequestMethod.POST)
@@ -148,7 +148,7 @@ public class PasswordMVController {
                     passwordContainer.getPasswordKey(), passwordContainer.getTestPassword()));
         }
         model.addAttribute(PASSWORDS, newPasswordContainer);
-        return "/password/view";
+        return "password/view";
     }
 
 }

@@ -65,7 +65,7 @@ public class ReportsMVController implements ControllerReferences {
         // Get list of Reports
         model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
 
-        return "/reports/list";
+        return "reports/list";
     }
 
 
@@ -73,7 +73,7 @@ public class ReportsMVController implements ControllerReferences {
     public String viewReport(@RequestParam(value = REPORT_ID, required = true) String report_id) {
         log.info("Viewing report: {}", report_id);
 
-        return "/reports/view";
+        return "reports/view";
     }
 
     @RequestMapping(value = "/doDownload", method = RequestMethod.POST)
