@@ -427,6 +427,10 @@ public class HMSMirrorAppService {
             }
         }
 
+        log.info("Setting 'running' to FALSE");
+        session.getRunning().set(Boolean.FALSE);
+
+
         reportWriterService.wrapup();
 
         return new AsyncResult<>(rtn);

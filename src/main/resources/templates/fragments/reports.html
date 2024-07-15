@@ -27,7 +27,7 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="reports">
+<div th:fragment="view">
     <fieldset>
         <legend th:text="#{reports}"/>
         <form class="pure-form pure-form-aligned" method="get">
@@ -47,10 +47,10 @@
                     <div class="pure-button-group">
                         <button class="pure-button pure-button-primary"
                                 type="submit" th:text="#{button.download}"
-                                th:formaction="@{/report/download}" th:method="get"/>
-                        <button class="pure-button"
-                                type="submit" th:text="#{button.view}"
-                                th:formaction="@{/report/view}" th:method="get"/>
+                                th:formaction="@{/report/doDownload}" th:method="get"/>
+<!--                        <button class="pure-button"-->
+<!--                                type="submit" th:text="#{button.view}"-->
+<!--                                th:formaction="@{/report/view}" th:method="get"/>-->
                     </div>
                 </div>
             </div>

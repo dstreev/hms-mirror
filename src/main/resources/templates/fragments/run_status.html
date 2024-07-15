@@ -26,7 +26,7 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="run_status">
+<div th:fragment="view">
     <fieldset th:if="${RUN_STATUS != null}">
         <legend th:text="#{run.status}"/>
         <div th:insert="fragments/messages::view">

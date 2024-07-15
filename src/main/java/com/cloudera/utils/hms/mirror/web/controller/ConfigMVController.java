@@ -183,6 +183,9 @@ public class ConfigMVController implements ControllerReferences {
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig currentConfig = session.getConfig();
 
+        // Reload Databases
+        config.getDatabases().addAll(currentConfig.getDatabases());
+
         // Merge Passwords
         config.getClusters().forEach((env, cluster) -> {
             // HS2

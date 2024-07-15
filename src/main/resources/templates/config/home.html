@@ -34,10 +34,12 @@
     <div class="pure-u-1-6" th:insert="fragments/nav::left_nav">
     </div>
     <div class="pure-u-5-6">
-            <div class="pure-u-1" th:insert="fragments/session::session">
+<!--            <div class="pure-u-1" th:insert="fragments/session::view">-->
+<!--            </div>-->
+            <div class="pure-u-1" th:insert="fragments/run_status :: view">
             </div>
-            <div class="pure-u-1" th:insert="fragments/run_status :: run_status">
-            </div>
+        <div class="pure-u-1" th:insert="fragments/reports :: view">
+        </div>
     </div>
     <div class="pure-u-1" th:insert="fragments/footer::footer">
     </div>
