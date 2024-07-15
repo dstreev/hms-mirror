@@ -77,6 +77,7 @@ public class WarehouseMVController {
 
             List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
             model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
             return "/warehouse/plan/add";
         } else {

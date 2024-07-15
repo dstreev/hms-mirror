@@ -40,7 +40,8 @@
             </div>
         </div>
         <div class="pure-u-1">
-            <div th:insert="fragments/config/glmSources::view">
+            <div th:insert="fragments/config/glmSources::view"
+            th:if="${CONFIG.translator.warehouseMapBuilder != null && CONFIG.translator.warehouseMapBuilder.sources.size() >0 }">
 
             </div>
         </div>

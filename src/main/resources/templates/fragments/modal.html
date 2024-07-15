@@ -30,10 +30,10 @@
 </head>
 <body>
 
-<div th:fragment="modal(message)">
+<div th:fragment="modal1(modalId, btnId, message)">
 
     <!-- The Modal -->
-    <div id="myModal" class="modal">
+    <div th:id="${modalId}" class="modal">
 
         <!-- Modal content -->
         <div class="modal-content">
@@ -43,32 +43,123 @@
 
     </div>
 
-    <script>
+    <script th:inline="javascript">
+        /*<!{CDATA[*/
         // Get the modal
-        var modal = document.getElementById("myModal");
+        var modal1 = document.getElementById([[${modalId}]]);
 
         // Get the button that opens the modal
-        var btn = document.getElementById("modalBtn");
+        var btn1 = document.getElementById([[${btnId}]]);
 
         // Get the <span> element that closes the modal
         var span = document.getElementsByClassName("close")[0];
 
         // When the user clicks the button, open the modal
-        btn.onclick = function() {
-            modal.style.display = "block";
+        btn1.onclick = function() {
+            modal1.style.display = "block";
         }
 
         // When the user clicks on <span> (x), close the modal
         span.onclick = function() {
-            modal.style.display = "none";
+            modal1.style.display = "none";
         }
 
         // When the user clicks anywhere outside of the modal, close it
         window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
+            if (event.target == modal1) {
+                modal1.style.display = "none";
             }
         }
+
+        /*]]>*/
+    </script>
+</div>
+<div th:fragment="modal2(modalId, btnId, message)">
+
+    <!-- The Modal -->
+    <div th:id="${modalId}" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p th:text="${message}"/>
+        </div>
+
+    </div>
+
+    <script th:inline="javascript">
+        /*<!{CDATA[*/
+        // Get the modal
+        var modal2 = document.getElementById([[${modalId}]]);
+
+        // Get the button that opens the modal
+        var btn2 = document.getElementById([[${btnId}]]);
+
+        // Get the <span> element that closes the modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks the button, open the modal
+        btn2.onclick = function() {
+            modal2.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
+            modal2.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal2) {
+                modal2.style.display = "none";
+            }
+        }
+
+        /*]]>*/
+    </script>
+</div>
+<div th:fragment="modal3(modalId, btnId, message)">
+
+    <!-- The Modal -->
+    <div th:id="${modalId}" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p th:text="${message}"/>
+        </div>
+
+    </div>
+
+    <script th:inline="javascript">
+        /*<!{CDATA[*/
+        // Get the modal
+        var modal3 = document.getElementById([[${modalId}]]);
+
+        // Get the button that opens the modal
+        var btn3 = document.getElementById([[${btnId}]]);
+
+        // Get the <span> element that closes the modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks the button, open the modal
+        btn3.onclick = function() {
+            modal3.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
+            modal3.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal3) {
+                modal3.style.display = "none";
+            }
+        }
+
+        /*]]>*/
     </script>
 </div>
 

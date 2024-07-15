@@ -192,6 +192,8 @@ public class ConfigMVController implements ControllerReferences {
                 if (newPassword != null && !newPassword.isEmpty()) {
                     // Set new Password, IF the current passwords aren't ENCRYPTED...  set warning if they attempted.
                     if (config.isEncryptedPasswords()) {
+                        // Restore original password
+                        cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
                         passwordCheck.set(Boolean.TRUE);
                     } else {
                         cluster.getHiveServer2().getConnectionProperties().put("password", newPassword);
@@ -211,11 +213,13 @@ public class ConfigMVController implements ControllerReferences {
                 if (newPassword != null && !newPassword.isEmpty()) {
                     // Set new password
                     if (config.isEncryptedPasswords()) {
+                        // Restore original password
+                        cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
                         passwordCheck.set(Boolean.TRUE);
                     } else {
                         cluster.getMetastoreDirect().getConnectionProperties().put("password", newPassword);
                     }
-                } else if (currentPassword != null){
+                } else if (currentPassword != null) {
                     // Restore Original password
                     cluster.getMetastoreDirect().getConnectionProperties().put("password", currentPassword);
                 } else {
@@ -234,15 +238,16 @@ public class ConfigMVController implements ControllerReferences {
 
 
         executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
-        if (passwordCheck.get()) {
-            ExecuteSession session1 = executeSessionService.getSession();
-            session1.getRunStatus().getErrors().set(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
-        }
-
         // After a 'save', the session connections statuses should be reset.
         session.resetConnectionStatuses();
 
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
+
+        if (passwordCheck.get()) {
+            ExecuteSession session1 = executeSessionService.getSession();
+            session1.getRunStatus().addError(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
+            return "error";
+        }
 
         return "/config/view";
     }
@@ -331,6 +336,49 @@ public class ConfigMVController implements ControllerReferences {
         ModelUtils.allEnumsForMap(model.asMap());
         return "/config/view";
     }
+
+    @RequestMapping(value = "/doClone", method = RequestMethod.POST)
+    public String doClone(Model model,
+                          @RequestParam(value = SESSION_ID_CLONE, required = true) String sessionId,
+                          @RequestParam(value = DATA_STRATEGY_CLONE, required = true) String dataStrategy,
+                          @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws SessionException {
+        // Don't reload if running.
+        executeSessionService.clearLoadedSession();
+
+        log.info("Clone Config: {} with Data Strategy: {}", sessionId, dataStrategy);
+        HmsMirrorConfig config = configService.loadConfig(sessionId);
+
+        HmsMirrorConfig newConfig = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
+
+        if (nonNull(newConfig.getCluster(Environment.LEFT))) {
+            newConfig.getClusters().put(Environment.LEFT, config.getCluster(Environment.LEFT));
+        }
+        if (nonNull(newConfig.getCluster(Environment.RIGHT))) {
+            newConfig.getClusters().put(Environment.RIGHT, config.getCluster(Environment.RIGHT));
+        }
+        newConfig.setEncryptedPasswords(config.isEncryptedPasswords());
+
+        // Remove the old session
+        executeSessionService.getSessions().remove(sessionId);
+
+        // Create a new session
+        ExecuteSession session = executeSessionService.createSession(sessionId, newConfig);
+        executeSessionService.setLoadedSession(session);
+
+        // Set to null, so it will reset.
+        session.setSessionId(null);
+
+        executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.FALSE);
+
+        // Set it as the current session.
+        uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
+        model.addAttribute(ACTION, "view");
+        model.addAttribute(READ_ONLY, Boolean.FALSE);
+
+        ModelUtils.allEnumsForMap(model.asMap());
+        return "/config/view";
+    }
+
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)
     public String view(Model model,

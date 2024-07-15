@@ -72,7 +72,7 @@ public class ExecuteSession implements Cloneable {
     }
 
     public void resetConnectionStatuses() {
-        this.connections = new Connections();
+        this.connections.reset();
     }
 
     @Override

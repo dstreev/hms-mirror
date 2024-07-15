@@ -66,10 +66,10 @@
         </th:block>
     </table>
     <form method="post" th:action="@{/connections/doValidate}">
-        <button id="modalBtn" class="pure-button pure-button-primary" type="submit" th:text="#{validate.connections}" />
+        <button id="connModalBtn" class="pure-button pure-button-primary" type="submit" th:text="#{validate.connections}" />
     </form>
 
-    <div th:replace="fragments/modal::modal('Please wait.  Checking Connections.')">
+    <div th:replace="fragments/modal::modal1('connModal', 'connModalBtn', 'Please wait.  Checking Connections.')">
 
     </div>
 

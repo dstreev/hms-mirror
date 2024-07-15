@@ -28,31 +28,35 @@
 </head>
 <body>
 <div th:fragment="view(dryrun)">
-    <h4 th:text="#{global.location.maps}"/>
-    <table class="pure-table">
-        <thead>
-        <tr>
-            <th th:if="${!dryrun}"></th>
-            <th th:text"#{glm.source}"/>
-            <th th:text"#{glm.target}"/>
-        </tr>
-        </thead>
-        <tbody>
-        <th:block
-                th:each="glm: ${CONFIG.translator.globalLocationMap}">
+    <th:block th:if="${CONFIG.translator.globalLocationMap != null && CONFIG.translator.globalLocationMap.size() > 0}">
+        <h4 th:text="#{global.location.maps}"/>
+        <table class="pure-table">
+            <thead>
             <tr>
-                <td th:if="${!dryrun}">
-                    <a class="pure-button"
-                       th:href="@{/WEB-INF/templates/translator/globalLocationMap/delete?source=__${glm.key}__}"
-                       th:text="#{delete}"/>
-                </td>
-                <td><label th:text="${glm.key}"/></td>
-                <td><label th:text="${glm.value}"/></td>
+                <th th:if="${!dryrun}"></th>
+                <th th:text
+                "#{glm.source}"/>
+                <th th:text
+                "#{glm.target}"/>
             </tr>
-        </th:block>
-        </tbody>
-    </table>
-<!--    Add GLM Manually -->
+            </thead>
+            <tbody>
+            <th:block
+                    th:each="glm: ${CONFIG.translator.globalLocationMap}">
+                <tr>
+                    <td th:if="${!dryrun}">
+                        <a class="pure-button"
+                           th:href="@{/WEB-INF/templates/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                           th:text="#{delete}"/>
+                    </td>
+                    <td><label th:text="${glm.key}"/></td>
+                    <td><label th:text="${glm.value}"/></td>
+                </tr>
+            </th:block>
+            </tbody>
+        </table>
+    </th:block>
+    <!--    Add GLM Manually -->
     <h4 th:text="#{glm.add}"/>
     <form class="pure-form" method="post"
           th:action="@{/translator/globalLocationMap/add}">
