@@ -46,7 +46,7 @@
                 <tr>
                     <td th:if="${!dryrun}">
                         <a class="pure-button"
-                           th:href="@{/WEB-INF/templates/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                           th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
                            th:text="#{delete}"/>
                     </td>
                     <td><label th:text="${glm.key}"/></td>

@@ -44,7 +44,7 @@
                                    type="text"
                                    th:field="*{databases[__${itemStat.index}__]}"/>
                             <a class="pure-button"
-                               th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}"
+                               th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}"
                                th:href="@{/database/__${database}__/delete}">
                                 <img th:src="@{/images/linea--arrows-minus.png}"></a>
                         </div>

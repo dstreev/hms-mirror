@@ -56,14 +56,20 @@
             </li>
         </ul>
         <span class="pure-menu-heading" th:text="#{runtime}"/>
-        <ul class="pure-menu-list" th:if="${CONFIG != null}">
+        <ul class="pure-menu-list">
             <li class="pure-menu-item">
                 <a class="pure-menu-link" th:text="#{execute}"
+                   th:if="${CONFIG != null}"
                    th:href="@{/runtime/start}"/>
             </li>
             <li class="pure-menu-item">
                 <a class="pure-menu-link" th:text="#{status}"
-                   th:href="@{/config/home}"/>
+                   th:if="${CONFIG != null}"
+                   th:href="@{/runtime/status}"/>
+            </li>
+            <li class="pure-menu-item">
+                <a class="pure-menu-link" th:text="#{reports}"
+                   th:href="@{/reports/list}"/>
             </li>
         </ul>
     </div>

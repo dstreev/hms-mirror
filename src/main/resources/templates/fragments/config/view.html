@@ -32,6 +32,8 @@
 
 <div th:fragment="main">
     <form id="config_action" th:object="${CONFIG}">
+<!--        Use to control input tags use -->
+        <fieldset th:disabled="${READ_ONLY}" style="border: none">
 
         <!--    <div class="pure-u-1">-->
         <!--        Password Management-->
@@ -104,6 +106,7 @@
         <div id="right_cluster" class="tabcontent" th:if="${CONFIG.getCluster('RIGHT') != null}">
             <div th:insert="fragments/config/cluster::main('RIGHT')"></div>
         </div>
+        </fieldset>
     </form>
 
     <div id="translator" class="tabcontent">

@@ -38,6 +38,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Controller
 @RequestMapping(path = "/translator")
@@ -76,13 +77,18 @@ public class TranslatorMVController {
     }
 
     @RequestMapping(value = "/globalLocationMap/add", method = RequestMethod.POST)
-    public String addGlobalLocationMap(@RequestParam(name = SOURCE, required = true) String source,
-                                       @RequestParam(name = TARGET, required = true) String target) throws SessionException {
+    public String addGlobalLocationMap(Model model,
+                                       @RequestParam(name = SOURCE, required = true) String source,
+                                       @RequestParam(name = TARGET, required = true) String target) throws SessionException, RequiredConfigurationException {
         log.info("Adding global location map for source: {} and target: {}", source, target);
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
+        if (isBlank(source) || isBlank(target)) {
+            throw new RequiredConfigurationException("Source and Target are required (and can't be blank) when adding a global location map.");
+        }
         translatorService.addGlobalLocationMap(source, target);
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
         return "redirect:/config/view";
     }

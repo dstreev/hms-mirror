@@ -112,7 +112,7 @@ public class ConfigMVController implements ControllerReferences {
         // Get list of Reports
         model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
 
-        return "config/home";
+        return "home";
     }
 
     @RequestMapping(value = "/init", method = RequestMethod.GET)
@@ -136,7 +136,7 @@ public class ConfigMVController implements ControllerReferences {
 
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
 
-        return "config/init";
+        return "/config/init";
     }
 
     @RequestMapping(value = "/doCreate", method = RequestMethod.POST)
@@ -262,7 +262,7 @@ public class ConfigMVController implements ControllerReferences {
 
         uiModelService.sessionToModel(model, maxThreads, false);
 
-        return "config/persist";
+        return "/config/persist";
     }
 
     @RequestMapping(value = "/doPersist", method = RequestMethod.POST)

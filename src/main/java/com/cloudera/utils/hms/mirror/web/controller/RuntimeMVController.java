@@ -61,6 +61,21 @@ public class RuntimeMVController {
         return "runtime/index";
     }
 
+    @RequestMapping(value = "/status", method = RequestMethod.GET)
+    public String status(Model model,
+                        @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+        uiModelService.sessionToModel(model, maxThreads, false);
+        return "runstatus/view";
+    }
+
+    @RequestMapping(value = "/reports", method = RequestMethod.GET)
+    public String reports(Model model,
+                         @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+        uiModelService.sessionToModel(model, maxThreads, false);
+        return "runtime/reports";
+    }
+
+
     @RequestMapping(method = RequestMethod.POST, value = "/doStart")
     public String doStart(Model model,
             @ModelAttribute(RUN_CONTAINER) RunContainer runContainer,

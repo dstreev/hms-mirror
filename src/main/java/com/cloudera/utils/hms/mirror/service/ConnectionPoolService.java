@@ -142,6 +142,8 @@ public class ConnectionPoolService implements ConnectionPools {
             // Set State of Connection.
             connected = false;
             getConnectionPools().close();
+            // Set to null to allow for reset.
+            connectionPools = null;
         }
     }
 

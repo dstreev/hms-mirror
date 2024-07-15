@@ -31,7 +31,7 @@
 <div th:fragment="view">
     <h4 th:text="#{warehouse.plans}"/>
     <div class="pure-g">
-        <div class="pure-u-1-5">
+        <div class="pure-u-1-5" th:unless="${READ_ONLY}">
             <div class="pure-control-group">
                 <button id="whModalBtn" class="pure-button pure-button-primary"
                         th:formaction="@{/warehouse/plan/add}"

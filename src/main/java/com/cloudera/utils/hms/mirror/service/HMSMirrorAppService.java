@@ -152,7 +152,7 @@ public class HMSMirrorAppService {
         session.getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
-        log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",",config.getDatabases()));
+        log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",", config.getDatabases()));
 
         if (config.isLoadingTestData()) {
             List<String> databases = new ArrayList<>();
@@ -427,6 +427,22 @@ public class HMSMirrorAppService {
             }
         }
 
+        switch (config.getDataStrategy()) {
+            case STORAGE_MIGRATION:
+            case DUMP:
+                // Clean up RIGHT cluster definition.
+                if (nonNull(config.getCluster(Environment.RIGHT))) {
+                    config.getClusters().remove(Environment.RIGHT);
+                }
+            default:
+                if (nonNull(config.getCluster(Environment.SHADOW))) {
+                    config.getClusters().remove(Environment.SHADOW);
+                }
+                if (nonNull(config.getCluster(Environment.TRANSFER))) {
+                    config.getClusters().remove(Environment.TRANSFER);
+                }
+                break;
+        }
         log.info("Setting 'running' to FALSE");
         session.getRunning().set(Boolean.FALSE);
 

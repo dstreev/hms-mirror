@@ -28,8 +28,9 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="footer" style="float: right;">
-    &copy; 2024 Cloudera
+<div th:fragment="footer" style="float: right; margin-right: 30px;">
+    <pre th:text="#{version(${VERSION})}"/>
+    <pre th:text="#{copyright}"/>
 </div>
 </body>
 </html>

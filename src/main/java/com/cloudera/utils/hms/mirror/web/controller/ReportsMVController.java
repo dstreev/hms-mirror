@@ -18,10 +18,13 @@
 package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.UIModelService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,24 +35,48 @@ import java.io.InputStream;
 import java.util.Objects;
 
 @Controller
-@RequestMapping(path = "/report")
+@RequestMapping(path = "/reports")
 @Slf4j
-public class ReportMVController implements ControllerReferences {
+public class ReportsMVController implements ControllerReferences {
 
-    private final ExecuteSessionService executeSessionService;
+    private UIModelService uiModelService;
+    private ExecuteSessionService executeSessionService;
 
-    public ReportMVController(ExecuteSessionService executeSessionService) {
+    @Autowired
+    public void setUiModelService(UIModelService uiModelService) {
+        this.uiModelService = uiModelService;
+    }
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
+
+//    public ReportsMVController(ExecuteSessionService executeSessionService) {
+//        this.executeSessionService = executeSessionService;
+//    }
+
+    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    public String listReports(Model model) {
+        log.info("Listing reports");
+
+        // Populate model
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+        // Get list of Reports
+        model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
+
+        return "/reports/list";
+    }
+
 
     @RequestMapping(value = "/view", method = RequestMethod.GET)
     public String viewReport(@RequestParam(value = REPORT_ID, required = true) String report_id) {
         log.info("Viewing report: {}", report_id);
 
-        return "/report/view";
+        return "/reports/view";
     }
 
-    @RequestMapping(value = "/doDownload", method = RequestMethod.GET)
+    @RequestMapping(value = "/doDownload", method = RequestMethod.POST)
     public void doDownloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
                 HttpServletResponse response) {
         try {

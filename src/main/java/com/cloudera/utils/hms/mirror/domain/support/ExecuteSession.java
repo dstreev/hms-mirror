@@ -41,7 +41,7 @@ public class ExecuteSession implements Cloneable {
     private boolean connected = Boolean.FALSE;
     private Connections connections = new Connections();
     private RunStatus runStatus;
-//    private HmsMirrorConfig resolvedConfig;
+    //    private HmsMirrorConfig resolvedConfig;
     private HmsMirrorConfig config;
     private CliEnvironment cliEnvironment;
     private Conversion conversion;
@@ -65,10 +65,9 @@ public class ExecuteSession implements Cloneable {
 
     public RunStatus getRunStatus() {
         if (isNull(runStatus)) {
-            return new RunStatus();
-        } else {
-            return runStatus;
+            this.runStatus = new RunStatus();
         }
+        return runStatus;
     }
 
     public void resetConnectionStatuses() {

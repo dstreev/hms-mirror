@@ -51,9 +51,12 @@
 
     </div>
     <div class="pure-u-5-6">
-        <p th:text="#{intro}"/>
-        <br/>
-        <p th:text="#{intro.guide}"/>
+        <fieldset style="width: 80%;">
+            <legend th:text="#{intro}"/>
+
+            <p th:text="#{intro.guide}"/>
+
+        </fieldset>
     </div>
     <div class="pure-u-1" th:insert="fragments/footer::footer">
 
