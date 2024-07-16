@@ -49,7 +49,7 @@
         </div>
         <!--                        shadowPrefix: "hms_mirror_shadow_"-->
         <div class="pure-control-group"
-             th:if="${('HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY DUMP STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+             th:if="${('HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY DUMP').contains(CONFIG.dataStrategy.toString())}">
 <!--            <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>-->
             <label for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>
             <input id="shadowPrefix" type="text"

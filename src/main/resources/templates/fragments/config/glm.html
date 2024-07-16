@@ -30,27 +30,28 @@
 <div th:fragment="view(dryrun)">
     <th:block th:if="${CONFIG.translator.globalLocationMap != null && CONFIG.translator.globalLocationMap.size() > 0}">
         <h4 th:text="#{global.location.maps}"/>
-        <table class="pure-table">
+        <table class="pure-table" style="width: 100%;">
             <thead>
             <tr>
                 <th th:if="${!dryrun}"></th>
-                <th th:text
-                "#{glm.source}"/>
-                <th th:text
-                "#{glm.target}"/>
+                <th th:text="#{glm.source}"/>
+                <th th:text="#{glm.target}"/>
             </tr>
             </thead>
             <tbody>
             <th:block
                     th:each="glm: ${CONFIG.translator.globalLocationMap}">
                 <tr>
+                    <form>
                     <td th:if="${!dryrun}">
-                        <a class="pure-button"
-                           th:href="@{/translator/globalLocationMap/delete?source=__${glm.key}__}"
+                        <button class="pure-button"
+                           th:formaction="@{/translator/globalLocationMap/delete}"
+                           th:formmethod="post"
                            th:text="#{delete}"/>
                     </td>
-                    <td><label th:text="${glm.key}"/></td>
-                    <td><label th:text="${glm.value}"/></td>
+                        <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;" readonly/></td>
+                        <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;" readonly/></td>
+                    </form>
                 </tr>
             </th:block>
             </tbody>

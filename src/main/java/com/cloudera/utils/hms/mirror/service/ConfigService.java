@@ -579,9 +579,9 @@ public class ConfigService {
                     if (isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
                         runStatus.addError(EVALUATE_PARTITION_LOCATION_CONFIG, "LEFT");
                         rtn = Boolean.FALSE;
-                    } else if (!config.getTransfer().getStorageMigration().isDistcp()) {
-                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
-                        rtn = Boolean.FALSE;
+//                    } else if (!config.getTransfer().getStorageMigration().isDistcp()) {
+//                        runStatus.addError(EVALUATE_PARTITION_LOCATION_STORAGE_MIGRATION, "LEFT");
+//                        rtn = Boolean.FALSE;
                     }
                     runStatus.addWarning(EVALUATE_PARTITION_LOCATION);
                     break;

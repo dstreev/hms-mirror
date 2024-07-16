@@ -30,6 +30,11 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScans;
 import org.springframework.scheduling.annotation.EnableAsync;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+
 @SpringBootApplication
 @ComponentScans({
         // For the Hadoop CLI Interface
@@ -45,6 +50,29 @@ public class Mirror {
 
     public static void main(String[] args) {
         log.info("hms-mirror web service Starting...");
+
+        String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+        long PID = Long.parseLong(jvmName.split("@")[0]);
+        // Write Pid to app home directory.
+        File pidFile = new File(System.getProperty("user.home") + File.separator + ".hms-mirror/hms-mirror.pid");
+        // Write PID to pidFile.
+        // 1. Create parent directories if they don't exist.
+        if (!pidFile.getParentFile().exists()) {
+            pidFile.getParentFile().mkdirs();
+        }
+
+        // 2. Write PID to pidFile.
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(pidFile);
+            fileWriter.write(String.valueOf(PID));
+            fileWriter.close();
+        } catch (IOException e) {
+            System.err.println("Failed to write PID to file: " + pidFile.getAbsolutePath());
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("PID: " + PID);
 
         ConfigurableApplicationContext applicationContext = SpringApplication.run(Mirror.class, args);
 

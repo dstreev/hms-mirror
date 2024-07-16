@@ -83,7 +83,7 @@ public class ModelUtils implements ControllerReferences {
     public static void configSupportDataMovementStrategyForModel(DataStrategyEnum dataStrategy, Map<String, Object> map) {
         switch (dataStrategy) {
             case STORAGE_MIGRATION:
-                map.put("datamovementstrategyenums", Collections.singletonList(DataMovementStrategyEnum.DISTCP));
+                map.put("datamovementstrategyenums", Arrays.asList(DataMovementStrategyEnum.DISTCP, DataMovementStrategyEnum.SQL ));
                 break;
             default:
                 enumForMap(DataMovementStrategyEnum.class, map);

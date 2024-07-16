@@ -93,14 +93,16 @@ public class TranslatorMVController {
         return "redirect:/config/view";
     }
 
-    @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
+    @RequestMapping(value = "/globalLocationMap/delete", method = RequestMethod.POST)
     public String removeGlobalLocationMap(Model model,
-                                          @PathVariable @NotNull String source) throws SessionException {
+                                          @RequestParam String source) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
         log.info("Removing global location map for source: {}", source);
         translatorService.removeGlobalLocationMap(source);
+
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
         return "redirect:/config/view";
     }

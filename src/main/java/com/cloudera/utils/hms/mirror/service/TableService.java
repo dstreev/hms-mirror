@@ -474,8 +474,8 @@ public class TableService {
                                     rtn = Boolean.FALSE;
                                 }
                                 // Check if the locations align.  If not, warn.
-                                if (config.getTransfer().getWarehouse().getExternalDirectory() != null &&
-                                        config.getTransfer().getWarehouse().getManagedDirectory() != null) {
+//                                if (config.getTransfer().getWarehouse().getExternalDirectory() != null &&
+//                                        config.getTransfer().getWarehouse().getManagedDirectory() != null) {
                                     if (TableUtils.isExternal(target)) {
                                         // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
                                         if (!targetLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
@@ -497,7 +497,7 @@ public class TableService {
                                         }
 
                                     }
-                                }
+//                                }
 
                             }
 

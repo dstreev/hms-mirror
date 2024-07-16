@@ -209,13 +209,8 @@ if [[ "${SERVICE_MODE}x" == "truex" ]]; then
       exit 1
     fi
   fi
-  echo "Running in Service Mode"
-  nohup `${CLI_CMD}` 2>&1 &
-  # Get the PID of the last command
-  PID=$!
-  echo "PID: ${PID}"
-  # Create a pid file to track this
-  echo ${PID} > ${APP_PID_FILE}
+  echo "Running in Service Mode from: `pwd`"
+  nohup `${CLI_CMD}` > hms-mirror-nohup.out 2>&1 &
 
 else
   eval "${CLI_CMD}"
