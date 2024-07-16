@@ -88,21 +88,21 @@ public class DatabaseService {
 //    }
 
     public Warehouse addWarehousePlan(String database, String external, String managed) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         hmsMirrorConfig.getDatabases().add(database);
         return warehouseMapBuilder.addWarehousePlan(database, external, managed);
     }
 
     public Warehouse removeWarehousePlan(String database) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         hmsMirrorConfig.getDatabases().remove(database);
         return warehouseMapBuilder.removeWarehousePlan(database);
     }
 
     public Warehouse getWarehousePlan(String database) throws MissingDataPointException {
-        HmsMirrorConfig config = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
         // Find it by a Warehouse Plan
         Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(database);
@@ -157,13 +157,13 @@ public class DatabaseService {
     }
 
     public Map<String, Warehouse> getWarehousePlans() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         return warehouseMapBuilder.getWarehousePlans();
     }
 
     public void clearWarehousePlan() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         warehouseMapBuilder.clearWarehousePlan();
     }
@@ -179,7 +179,7 @@ public class DatabaseService {
             }
         }
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
 
         // Check to see if there are any warehouse plans defined.  If not, skip this process.
@@ -204,7 +204,7 @@ public class DatabaseService {
     }
 
     public Map<String, SourceLocationMap> getDatabaseSources() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
         return warehouseMapBuilder.getSources();
     }
@@ -222,7 +222,7 @@ public class DatabaseService {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 //        String database = tableMirror.getParent().getName();
 //        EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
@@ -240,11 +240,12 @@ public class DatabaseService {
                     String location = resultSet.getString(3);
                     // Filter out some table types. Don't transfer previously moved tables or
                     // interim tables created by hms-mirror.
-                    if (!(table.startsWith(hmsMirrorConfig.getTransfer().getTransferPrefix())
-                            || table.endsWith("storage_migration"))) {
+                    if (table.startsWith(hmsMirrorConfig.getTransfer().getTransferPrefix())
+                            || table.endsWith("storage_migration")) {
                         log.warn("Database: {} Table: {} was NOT added to list.  The name matches the transfer prefix " +
                                 "and is most likely a remnant of a previous event. If this is a mistake, change the " +
                                 "'transferPrefix' to something more unique.", database, table);
+                    } else {
                         hmsMirrorConfig.getTranslator().addTableSource(database, table, tableType, location, consolidationLevelBase,
                                 partitionLevelMismatch);
                     }
@@ -763,19 +764,19 @@ public class DatabaseService {
             if (rtn) {
                 if (!runDatabaseSql(dbMirror, Environment.LEFT)) {
                     rtn = false;
-                    stats.getFailures().incrementDatabases();
+//                    stats.getFailures().incrementDatabases();
                 } else {
-                    stats.getSuccesses().incrementDatabases();
+//                    stats.getSuccesses().incrementDatabases();
                 }
                 if (!runDatabaseSql(dbMirror, Environment.RIGHT)) {
                     rtn = false;
-                    stats.getFailures().incrementDatabases();
+//                    stats.getFailures().incrementDatabases();
                 } else {
                     // TODO: Will this double up the success counts?  I think it will..  Will Observed..
-                    stats.getSuccesses().incrementDatabases();
+//                    stats.getSuccesses().incrementDatabases();
                 }
             } else {
-                stats.getFailures().incrementDatabases();
+//                stats.getFailures().incrementDatabases();
             }
         }
         return rtn;

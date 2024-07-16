@@ -288,9 +288,11 @@ public class CliInit {
                             if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
                                 log.info("Database: {} Table: {} was NOT added to list.  The name matches the transfer prefix and is most likely a remnant of a previous event. If this is a mistake, change the 'transferPrefix' to something more unique.", database, tableName);
                                 tableMirror.setRemove(true);
-                            } else if (tableName.endsWith("storage_migration")) {
+                                tableMirror.setRemoveReason("Table name starts with transfer prefix.");
+                            } else if (tableName.endsWith(config.getTransfer().getStorageMigrationPostfix())) {
                                 log.info("Database: {} Table: {} was NOT added to list.  The name is the result of a previous STORAGE_MIGRATION attempt that has not been cleaned up.", database, tableName);
                                 tableMirror.setRemove(true);
+                                tableMirror.setRemoveReason("Table name ends with storage migration postfix.");
                             } else {
                                 if (config.getFilter().getTblRegEx() != null) {
                                     // Filter Tables

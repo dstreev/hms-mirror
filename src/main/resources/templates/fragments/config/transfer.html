@@ -32,7 +32,15 @@
     <div class="pure-form pure-form-aligned">
         <h4 th:text="#{transfer.details}"/>
         <div class="pure-control-group"
-             th:if="${('COMMON HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+             th:if="${('STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
+            <label for="storageMigrationPostfix" th:text="#{config.transfer.storageMigration.postfix}"></label>
+            <input id="storageMigrationPostfix" type="text"
+                   style="width: 90%;"
+                   th:field="*{transfer.storageMigrationPostfix}"
+                   placeholder="Set Transfer Prefix"/>
+        </div>
+        <div class="pure-control-group"
+             th:if="${('COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY DUMP STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
             <label for="transferPrefix" th:text="#{config.transfer.transferPrefix}"></label>
             <input id="transferPrefix" type="text"
                    style="width: 90%;"
@@ -41,7 +49,7 @@
         </div>
         <!--                        shadowPrefix: "hms_mirror_shadow_"-->
         <div class="pure-control-group"
-             th:if="${('HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+             th:if="${('HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY DUMP STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}">
 <!--            <span class="tooltiptext" th:text="#{config.transfer.shadowPrefix.tooltip}"></span>-->
             <label for="shadowPrefix" th:text="#{config.transfer.shadowPrefix}"></label>
             <input id="shadowPrefix" type="text"

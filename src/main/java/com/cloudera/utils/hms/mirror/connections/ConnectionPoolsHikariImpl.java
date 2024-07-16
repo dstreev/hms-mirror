@@ -41,18 +41,14 @@ import java.util.*;
 import static java.util.Objects.nonNull;
 
 @Slf4j
-public class ConnectionPoolsHikariImpl implements ConnectionPools {
+public class ConnectionPoolsHikariImpl extends ConnectionPoolsBase implements ConnectionPools {
 
     private final Map<Environment, HikariDataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
     private final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
-    @Getter
-    @Setter
-    private ExecuteSession executeSession;
 
-    private PasswordService passwordService;
 
     public ConnectionPoolsHikariImpl(ExecuteSession executeSession, PasswordService passwordService) {
         this.executeSession = executeSession;
@@ -119,17 +115,6 @@ public class ConnectionPoolsHikariImpl implements ConnectionPools {
 
     protected DataSource getMetastoreDirectEnvironmentDataSource(Environment environment) {
         return metastoreDirectDataSources.get(environment);
-    }
-
-    public void init() throws SQLException, SessionException, EncryptionException {
-        if (!executeSession.getConfig().isLoadingTestData()) {
-            initHS2Drivers();
-            initHS2PooledDataSources();
-            // Only init if we are going to use it. (`-epl`).
-//            if (configService.loadPartitionMetadata()) {
-            initMetastoreDataSources();
-//            }
-        }
     }
 
     protected void initHS2Drivers() throws SQLException {

@@ -42,18 +42,18 @@ import java.util.*;
 import static java.util.Objects.nonNull;
 
 @Slf4j
-public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
+public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements ConnectionPools {
 
     private final Map<Environment, PoolingDataSource<PoolableConnection>> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
     private final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, PoolingDataSource<PoolableConnection>> metastoreDirectDataSources = new TreeMap<>();
-    @Getter
-    @Setter
-    private ExecuteSession executeSession;
-
-    private PasswordService passwordService;
+//    @Getter
+//    @Setter
+//    private ExecuteSession executeSession;
+//
+//    private PasswordService passwordService;
 
     public ConnectionPoolsDBCP2Impl(ExecuteSession executeSession, PasswordService passwordService) {
         this.executeSession = executeSession;
@@ -134,17 +134,17 @@ public class ConnectionPoolsDBCP2Impl implements ConnectionPools {
         return metastoreDirectDataSources.get(environment);
     }
 
-    public void init() throws SQLException, SessionException, EncryptionException {
-        if (!executeSession.getConfig().isLoadingTestData()) {
-            initHS2Drivers();
-            initHS2PooledDataSources();
-            // Only init if we are going to use it. (`-epl`).
-//            if (configService.loadPartitionMetadata()) {
-            initMetastoreDataSources();
-//            }
-        }
-
-    }
+//    public void init() throws SQLException, SessionException, EncryptionException {
+//        if (!executeSession.getConfig().isLoadingTestData()) {
+//            initHS2Drivers();
+//            initHS2PooledDataSources();
+//            // Only init if we are going to use it. (`-epl`).
+////            if (configService.loadPartitionMetadata()) {
+//            initMetastoreDataSources();
+////            }
+//        }
+//
+//    }
 
     protected void initHS2Drivers() throws SQLException {
         Set<Environment> environments = new HashSet<>();

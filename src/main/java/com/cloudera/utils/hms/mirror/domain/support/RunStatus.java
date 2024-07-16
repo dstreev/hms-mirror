@@ -70,6 +70,8 @@ public class RunStatus implements Comparable<RunStatus> {
      */
     private OperationStatistics operationStatistics = new OperationStatistics();
 
+    private String reportName;
+
     @Override
     public int compareTo(RunStatus o) {
         return runDate.compareTo(o.runDate);

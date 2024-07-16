@@ -44,7 +44,7 @@ import java.util.*;
 public class Conversion {
 
     @JsonIgnore
-    private final Date start = new Date();
+    private Date start = new Date();
 
     private Map<String, DBMirror> databases = new TreeMap<>();
 

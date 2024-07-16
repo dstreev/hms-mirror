@@ -44,7 +44,7 @@ import java.util.*;
 import static java.util.Objects.nonNull;
 
 @Slf4j
-public class ConnectionPoolsHybridImpl implements ConnectionPools {
+public class ConnectionPoolsHybridImpl extends ConnectionPoolsBase implements ConnectionPools {
 
     private final Map<Environment, DataSource> hs2DataSources = new TreeMap<>();
     private final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
@@ -52,11 +52,11 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
     private final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     private final Map<Environment, HikariDataSource> metastoreDirectDataSources = new TreeMap<>();
 
-    private PasswordService passwordService;
-
-    @Getter
-    @Setter
-    private ExecuteSession executeSession;
+//    private PasswordService passwordService;
+//
+//    @Getter
+//    @Setter
+//    private ExecuteSession executeSession;
 
     public ConnectionPoolsHybridImpl(ExecuteSession executeSession, PasswordService passwordService) {
         this.executeSession = executeSession;
@@ -139,16 +139,16 @@ public class ConnectionPoolsHybridImpl implements ConnectionPools {
         return metastoreDirectDataSources.get(environment);
     }
 
-    public void init() throws SQLException, SessionException, EncryptionException {
-        if (!executeSession.getConfig().isLoadingTestData()) {
-            initHS2Drivers();
-            initHS2PooledDataSources();
-            // Only init if we are going to use it. (`-epl`).
-//            if (configService.loadPartitionMetadata()) {
-            initMetastoreDataSources();
-//            }
-        }
-    }
+//    public void init() throws SQLException, SessionException, EncryptionException {
+//        if (!executeSession.getConfig().isLoadingTestData()) {
+//            initHS2Drivers();
+//            initHS2PooledDataSources();
+//            // Only init if we are going to use it. (`-epl`).
+////            if (configService.loadPartitionMetadata()) {
+//            initMetastoreDataSources();
+////            }
+//        }
+//    }
 
     protected void initHS2Drivers() throws SQLException {
         Set<Environment> environments = new HashSet<>();

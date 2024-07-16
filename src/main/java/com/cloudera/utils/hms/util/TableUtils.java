@@ -1016,7 +1016,7 @@ public class TableUtils {
 
     public static String getDirectoryFromPartitionSpec(String partitionSpec) {
         String rtn = null;
-        String[] parts = partitionSpec.split("/");
+        String[] parts = partitionSpec.split(",");
         StringBuilder sb = new StringBuilder();
         List<String> partList = new ArrayList<>();
         for (String part: parts) {

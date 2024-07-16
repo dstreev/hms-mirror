@@ -20,6 +20,7 @@
 <head>
     <title>Home Config</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta th:unless="${RUN_STATUS.progress.toString() == 'COMPLETED'}" http-equiv="refresh" content="3">
     <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">

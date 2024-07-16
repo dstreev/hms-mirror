@@ -106,6 +106,8 @@ public class HMSMirrorAppService {
         HmsMirrorConfig config = session.getConfig();
         RunStatus runStatus = session.getRunStatus();
         Conversion conversion = session.getConversion();
+        // Reset Start time to the actual 'execution' start time.
+        conversion.setStart(new Date());
         OperationStatistics stats = runStatus.getOperationStatistics();
 
         try {// Refresh the connections pool.
@@ -237,7 +239,7 @@ public class HMSMirrorAppService {
 
                     if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) { //getConfig().getCluster(Environment.LEFT).getDatabase(config, dbMirror)) {
                         getDatabaseService().getDatabase(dbMirror, Environment.RIGHT);
-                        runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
+//                        runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
                         //getConfig().getCluster(Environment.RIGHT).getDatabase(config, dbMirror);
                     } else {
                         // LEFT DB doesn't exists.
@@ -301,9 +303,13 @@ public class HMSMirrorAppService {
         if (!getDatabaseService().createDatabases()) {
             runStatus.addError(MessageCode.DATABASE_CREATION);
             runStatus.setStage(StageEnum.CREATE_DATABASES, CollectionEnum.ERRORED);
+            runStatus.getOperationStatistics().getFailures().incrementDatabases();
             reportWriterService.wrapup();
             return new AsyncResult<>(Boolean.FALSE);
+        } else {
+            runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
         }
+
         runStatus.setStage(StageEnum.CREATE_DATABASES, CollectionEnum.COMPLETED);
 
         // Shortcut.  Only DB's.
@@ -343,17 +349,31 @@ public class HMSMirrorAppService {
                         if (sf.isDone() && sf.get() != null) {
                             switch (sf.get().getStatus()) {
                                 case SUCCESS:
+                                    runStatus.getOperationStatistics().getCounts().incrementTables();
                                     // Trigger next step and set status.
                                     // TODO: Next Step
                                     sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
                                     // Launch the next step, which is the transfer.
+                                    runStatus.getOperationStatistics().getSuccesses().incrementTables();
                                     migrationFuture.add(getTransferService().transfer(sf.get().getTableMirror()));
                                     break;
                                 case ERROR:
+                                    runStatus.getOperationStatistics().getCounts().incrementTables();
+                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                    break;
                                 case FATAL:
+                                    runStatus.getOperationStatistics().getCounts().incrementTables();
+                                    runStatus.getOperationStatistics().getFailures().incrementTables();
                                     rtn = Boolean.FALSE;
+                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
                                     throw new RuntimeException(sf.get().getException());
                                 case NEXTSTEP:
+                                    break;
+                                case SKIP:
+                                    runStatus.getOperationStatistics().getCounts().incrementTables();
+                                    // Set for tables that are being removed.
+                                    runStatus.getOperationStatistics().getSkipped().incrementTables();
+                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
                                     break;
                             }
                         }
@@ -381,12 +401,14 @@ public class HMSMirrorAppService {
                     TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
                     if (tableMirror.isRemove()) {
                         // Setup the filtered out tables so they can be reported w/ reason.
-                        stats.getSkipped().incrementTables();
+//                        stats.getSkipped().incrementTables();
                         log.info("Table: {}.{} is being removed from further processing. Reason: {}", dbMirror.getName(), table, tableMirror.getRemoveReason());
                         dbMirror.getFilteredOut().put(table, tableMirror.getRemoveReason());
                     }
                 }
+                log.info("Removing tables marked for removal from further processing.");
                 dbMirror.getTableMirrors().values().removeIf(TableMirror::isRemove);
+                log.info("Tables marked for removal have been removed from further processing.");
             }
 
             if (!rtn) {

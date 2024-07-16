@@ -31,9 +31,9 @@
     <div th:insert="fragments/messages::view">
 
     </div>
-    <h5 th:text="#{progress}"/>
+<!--    <h5 th:text="#{progress}"/>-->
     <div class="pure-g">
-        <div class="pure-u-1">
+        <div class="pure-u-1 pure-form pure-form-aligned">
             <div class="pure-control-group">
                 <label for="progress" th:text="#{progress}"/>
                 <input id="progress" type="text" th:value="${RUN_STATUS.progress}" readonly/>
@@ -45,6 +45,17 @@
                         th:text="${table}"/>
                 </ul>
             </div>
+            <div class="pure-control-group">
+                <form>
+                    <label th:text="#{report.name}"/>
+                    <input type="text" name="REPORT_ID" th:value="${RUN_STATUS.reportName}" readonly/>
+                    <button class="pure-button pure-button-primary"
+                            type="submit" th:text="#{button.download}"
+                            th:if="${RUN_STATUS.progress.toString() == 'COMPLETED'}"
+                            th:formaction="@{/reports/doDownload}" th:formmethod="POST"/>
+                </form>
+            </div>
+
         </div>
         <div class="pure-u-1-2 pure-control-group">
             <!--                                            <label th:text="#{stages}"/>-->

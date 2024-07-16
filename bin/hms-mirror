@@ -75,6 +75,8 @@ SERVICE_MODE=false
 APP_MAIN_CLASS="com.cloudera.utils.hms.mirror.cli.Mirror"
 
 APP_OUTPUT_DIR=${HOME}/.hms-mirror/reports
+APP_PID_FILE=${HOME}/.hms-mirror/hms-mirror.pid
+
 DIR_OVERRIDE=
 
 while [[ $# -gt 0 ]]; do
@@ -145,9 +147,9 @@ export APP_OUTPUT_PATH
 
 if [[ "${SERVICE_MODE}x" == "truex" ]]; then
   # Removing the logging dir setting for service mode.
-  APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dlogging.threshold=${LOGGING_THRESHOLD} -Dlogging.filename-prefix=\"$LOGGING_FILE_PREFIX\""
+  APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dlogging.threshold=${LOGGING_THRESHOLD} -Dlogging.filename-prefix=${LOGGING_FILE_PREFIX}"
 else
-  APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dlogging.dir='${APP_OUTPUT_PATH}' -Dlogging.threshold=${LOGGING_THRESHOLD} -Dlogging.filename-prefix=\"$LOGGING_FILE_PREFIX\""
+  APP_JAVA_OPTS="${APP_JAVA_OPTS} -Dlogging.dir='${APP_OUTPUT_PATH}' -Dlogging.threshold=${LOGGING_THRESHOLD} -Dlogging.filename-prefix=${LOGGING_FILE_PREFIX}"
 fi
 
 if [[ ! -d ${AUX_LIBS_DIR} ]]; then
@@ -156,11 +158,16 @@ fi
 
 # Add aux_libs to classpath
 #EXEC_JAR=$(ls ${APP_DIR}/../lib/*-exec.jar)
-CMD_CP="\${AUX_LIBS_DIR}/*"
+CMD_CP="${AUX_LIBS_DIR}"
 
 if [[ "${HADOOP_CLASSPATH}x" == "truex" ]]; then
   echo "Picking up local Hadoop Classpath Libs."
-  CMD_CP=${CMD_CP}:$(hadoop classpath)
+#  HADOOP_CLASSPATH_LIBS=$(hadoop classpath)
+  # Remove '*' from hadoop classpath
+  # TODO: User needs to have Hadoop installed on the host and in the following path.
+  HADOOP_CLASSPATH_LIBS=${HOME}/.hms-mirror/aux_libs/hadoop-classpath
+
+  CMD_CP=${CMD_CP}:${HADOOP_CLASSPATH_LIBS}
 fi
 
 # Replace colon with comma in $CMD_CP
@@ -185,11 +192,32 @@ $(${JAVA} -version)
 echo ""
 
 if [[ "${HADOOP_CLASSPATH}x" == "truex" ]]; then
-  CLI_CMD="${JAVA} -Dloader.path=${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=${APP_MAIN_CLASS} -Dloader.args=\"${PRG_ARGS}\" -jar ${APP_DIR}/../lib/*-thin.jar"
+  CLI_CMD="${JAVA} -Dloader.path=\"${CMD_CP}\" ${APP_JAVA_OPTS} -Dloader.main=${APP_MAIN_CLASS} -Dloader.args=\"${PRG_ARGS}\" -jar ${APP_DIR}/../lib/*-thin.jar"
 else
-  CLI_CMD="${JAVA} -Dloader.path=${CMD_CP} ${APP_JAVA_OPTS} -Dloader.main=${APP_MAIN_CLASS} -Dloader.args=\"${PRG_ARGS}\" -jar ${APP_DIR}/../lib/*-standalone.jar"
+  CLI_CMD="${JAVA} -Dloader.path=\"${CMD_CP}\" ${APP_JAVA_OPTS} -Dloader.main=${APP_MAIN_CLASS} -Dloader.args=\"${PRG_ARGS}\" -jar ${APP_DIR}/../lib/*-standalone.jar"
 fi
 
 echo "CLI_CMD: ${CLI_CMD}"
 
-eval "${CLI_CMD}"
+if [[ "${SERVICE_MODE}x" == "truex" ]]; then
+  # Run CLI_CMD in the background
+  # Check the PID file to see if process is running.
+  if [ -f ${APP_PID_FILE} ]; then
+    PID=$(cat ${APP_PID_FILE})
+    if ps -p ${PID} > /dev/null; then
+      echo "Process is already running with PID: ${PID}"
+      exit 1
+    fi
+  fi
+  echo "Running in Service Mode"
+  nohup `${CLI_CMD}` 2>&1 &
+  # Get the PID of the last command
+  PID=$!
+  echo "PID: ${PID}"
+  # Create a pid file to track this
+  echo ${PID} > ${APP_PID_FILE}
+
+else
+  eval "${CLI_CMD}"
+fi
+

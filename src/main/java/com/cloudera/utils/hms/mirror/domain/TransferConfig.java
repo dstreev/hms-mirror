@@ -35,6 +35,7 @@ public class TransferConfig implements Cloneable {
     private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";
     private String shadowPrefix = "hms_mirror_shadow_";
+    private String storageMigrationPostfix = "_storage_migration";
     private String exportBaseDirPrefix = "/apps/hive/warehouse/export_";
     private String remoteWorkingDirectory = "hms_mirror_working";
     private String intermediateStorage = null;

@@ -175,7 +175,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     public Boolean buildOutSql(TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         String useDb = null;
         String database = null;
@@ -197,14 +197,14 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
             let.addSql(MirrorConf.REMOVE_TABLE_PROP_DESC, unSetSql);
         }
         // Set unique name for old target to rename.
-        let.setName(let.getName() + "_" + tableMirror.getUnique() + "_storage_migration");
+        let.setName(let.getName() + "_" + tableMirror.getUnique() + config.getTransfer().getStorageMigrationPostfix());
         String origAlterRename = MessageFormat.format(MirrorConf.RENAME_TABLE, ret.getName(), let.getName());
         let.addSql(MirrorConf.RENAME_TABLE_DESC, origAlterRename);
 
         // Create table with New Location
         String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
         let.addSql(TableUtils.CREATE_DESC, createStmt2);
-        if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() && hmsMirrorConfig.isTransferOwnership() && let.getOwner() != null) {
+        if (!config.getCluster(Environment.LEFT).isLegacyHive() && config.isTransferOwnership() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_OWNER_DESC, ownerSql);
         }

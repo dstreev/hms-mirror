@@ -842,21 +842,27 @@ public class TableService {
 
         try {
             getTableDefinition(tableMirror, Environment.LEFT);
-            switch (hmsMirrorConfig.getDataStrategy()) {
-                case DUMP:
-                case STORAGE_MIGRATION:
-                    rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
-                    break;
-                default:
-                    getTableDefinition(tableMirror, Environment.RIGHT);
-                    rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
+            if (tableMirror.isRemove()) {
+                rtn.setStatus(ReturnStatus.Status.SKIP);
+//                runStatus.getOperationStatistics().getSkipped().incrementTables();
+                return new AsyncResult<>(rtn);
+            } else {
+                switch (hmsMirrorConfig.getDataStrategy()) {
+                    case DUMP:
+                    case STORAGE_MIGRATION:
+                        rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
+                        break;
+                    default:
+                        getTableDefinition(tableMirror, Environment.RIGHT);
+                        rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
+                }
+//                runStatus.getOperationStatistics().getSuccesses().incrementTables();
             }
-            runStatus.getOperationStatistics().getSuccesses().incrementTables();
         } catch (SQLException throwables) {
             log.error(throwables.getMessage(), throwables);
             rtn.setStatus(ReturnStatus.Status.ERROR);
             rtn.setException(throwables);
-            runStatus.getOperationStatistics().getFailures().incrementTables();
+//            runStatus.getOperationStatistics().getFailures().incrementTables();
         }
         return new AsyncResult<>(rtn);
     }
@@ -927,44 +933,54 @@ public class TableService {
                         while (resultSet.next()) {
                             String tableName = resultSet.getString(1);
                             if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
+                                TableMirror tableMirror = dbMirror.addTable(tableName);
+                                tableMirror.setRemove(Boolean.TRUE);
+                                tableMirror.setRemoveReason("Table name matches the transfer prefix.  " +
+                                        "This is most likely a remnant of a previous event.  If this is a mistake, " +
+                                        "change the 'transferPrefix' to something more unique.");
                                 log.info("{}.{} was NOT added to list.  " +
                                         "The name matches the transfer prefix and is most likely a remnant of a previous " +
                                         "event. If this is a mistake, change the 'transferPrefix' to something more unique.", database, tableName);
                             } else if (tableName.endsWith("storage_migration")) {
+                                TableMirror tableMirror = dbMirror.addTable(tableName);
+                                tableMirror.setRemove(Boolean.TRUE);
+                                tableMirror.setRemoveReason("Table name matches the storage_migration suffix.  " +
+                                        "This is most likely a remnant of a previous event.  If this is a mistake, " +
+                                        "change the 'transferPrefix' to something more unique.");
                                 log.info("{}.{} was NOT added to list.  " +
                                         "The name is the result of a previous STORAGE_MIGRATION attempt that has not been " +
                                         "cleaned up.", database, tableName);
                             } else {
                                 if (isBlank(config.getFilter().getTblRegEx()) && isBlank(config.getFilter().getTblExcludeRegEx())) {
                                     TableMirror tableMirror = dbMirror.addTable(tableName);
-                                    stats.getCounts().incrementTables();
+//                                    stats.getCounts().incrementTables();
                                     tableMirror.setUnique(df.format(config.getInitDate()));
                                     tableMirror.setMigrationStageMessage("Added to evaluation inventory");
-                                    runStatus.getOperationStatistics().getCounts().incrementTables();
+//                                    runStatus.getOperationStatistics().getCounts().incrementTables();
                                 } else if (!isBlank(config.getFilter().getTblRegEx())) {
                                     // Filter Tables
                                     assert (config.getFilter().getTblFilterPattern() != null);
                                     Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
-                                    stats.getCounts().incrementTables();
+//                                    stats.getCounts().incrementTables();
                                     if (matcher.matches()) {
                                         TableMirror tableMirror = dbMirror.addTable(tableName);
                                         tableMirror.setUnique(df.format(config.getInitDate()));
                                         tableMirror.setMigrationStageMessage("Added to evaluation inventory");
                                     } else {
-                                        stats.getSkipped().incrementTables();
+//                                        stats.getSkipped().incrementTables();
                                         log.info("{}.{} didn't match table regex filter and " +
                                                 "will NOT be added to processing list.", database, tableName);
                                     }
                                 } else if (config.getFilter().getTblExcludeRegEx() != null) {
                                     assert (config.getFilter().getTblExcludeFilterPattern() != null);
                                     Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
-                                    stats.getCounts().incrementTables();
+//                                    stats.getCounts().incrementTables();
                                     if (!matcher.matches()) { // ANTI-MATCH
                                         TableMirror tableMirror = dbMirror.addTable(tableName);
                                         tableMirror.setUnique(df.format(config.getInitDate()));
                                         tableMirror.setMigrationStageMessage("Added to evaluation inventory");
                                     } else {
-                                        stats.getSkipped().incrementTables();
+//                                        stats.getSkipped().incrementTables();
                                         log.info("{}.{} matched exclude table regex filter and " +
                                                 "will NOT be added to processing list.", database, tableName);
                                     }

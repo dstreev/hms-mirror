@@ -99,6 +99,8 @@ public class ReportWriterService {
     public void writeReport() {
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
+        RunStatus runStatus = session.getRunStatus();
+        runStatus.setReportName(session.getSessionId());
         log.info("Writing CLI report and artifacts to directory: {}", config.getOutputDirectory());
 //        if (!setupError) {
         Conversion conversion = session.getConversion();
@@ -111,9 +113,24 @@ public class ReportWriterService {
         mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+        // Check for existing directory. If it exists, increment and check again.
+        // We don't want to overwrite existing data.
         File outputDir = new File(config.getOutputDirectory());
         if (!outputDir.exists()) {
             outputDir.mkdirs();
+        } else {
+            int i = 1;
+            String origOutputDir = config.getOutputDirectory();
+            while (true) {
+                File newOutputDir = new File(origOutputDir + "_" + i);
+                if (!newOutputDir.exists()) {
+                    runStatus.setReportName(session.getSessionId() + "_" + i);
+                    config.setOutputDirectory(newOutputDir.getPath());
+                    outputDir = newOutputDir;
+                    newOutputDir.mkdirs();
+                    break;
+                }
+            }
         }
 
         // Write out the config used to run this session.

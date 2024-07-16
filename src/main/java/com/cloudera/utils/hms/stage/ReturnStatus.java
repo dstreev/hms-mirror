@@ -37,7 +37,8 @@ public class ReturnStatus {
          */
         NEXTSTEP,
         ERROR,
-        FATAL
+        FATAL,
+        SKIP;
     }
 
 }

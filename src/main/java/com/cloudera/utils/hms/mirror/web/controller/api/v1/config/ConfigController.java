@@ -225,7 +225,7 @@ public class ConfigController {
     @RequestMapping(method = RequestMethod.GET, value = "/clusters")
     public Map<Environment, Cluster> getClusters(@RequestParam(name = "sessionId", required = false) String sessionId) {
         log.info("{}: Getting Clusters for current Config", sessionId);
-        return executeSessionService.getLoadedSession().getConfig().getClusters();
+        return executeSessionService.getSession().getConfig().getClusters();
     }
 
     @Operation(summary = "Get the LEFT|RIGHT cluster config")
@@ -244,7 +244,7 @@ public class ConfigController {
         log.info("{}: Getting {} Cluster current Config", sessionId, side);
         String sideStr = side.toUpperCase();
         Environment env = Environment.valueOf(sideStr);
-        return executeSessionService.getLoadedSession().getConfig().getClusters().get(env);
+        return executeSessionService.getSession().getConfig().getClusters().get(env);
     }
 
     @Operation(summary = "Set Config Properties")
@@ -282,7 +282,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getLoadedSession().getConfig();
+        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         if (copyAvroSchemaUrls != null) {
             log.info("{}: Setting Copy Avro Schema Urls to: {}", sessionId, copyAvroSchemaUrls);
@@ -377,7 +377,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        Filter filter = executeSessionService.getLoadedSession().getConfig().getFilter();
+        Filter filter = executeSessionService.getSession().getConfig().getFilter();
 
         if (excludeRegEx != null) {
             log.info("{}: Setting Table Exclude RegEx to: {}", sessionId, excludeRegEx);
@@ -421,7 +421,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        MigrateACID migrateACID = executeSessionService.getLoadedSession().getConfig().getMigrateACID();
+        MigrateACID migrateACID = executeSessionService.getSession().getConfig().getMigrateACID();
 
         if (acid != null) {
             log.info("{}: Setting Migrate ACID 'on' to: {}", sessionId, acid);
@@ -478,7 +478,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        TransferConfig transferConfig = executeSessionService.getLoadedSession().getConfig().getTransfer();
+        TransferConfig transferConfig = executeSessionService.getSession().getConfig().getTransfer();
 
         if (transferPrefix != null) {
             log.info("{}: Setting Transfer 'transferPrefix' to: {}", sessionId, transferPrefix);
@@ -522,7 +522,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        Warehouse warehouseConfig = executeSessionService.getLoadedSession().getConfig().getTransfer().getWarehouse();
+        Warehouse warehouseConfig = executeSessionService.getSession().getConfig().getTransfer().getWarehouse();
 
         if (managedDirectory != null) {
             log.info("{}: Setting Warehouse 'managedDirectory' to: {}", sessionId, managedDirectory);
@@ -552,7 +552,7 @@ public class ConfigController {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        StorageMigration storageMigration = executeSessionService.getLoadedSession().getConfig().getTransfer().getStorageMigration();
+        StorageMigration storageMigration = executeSessionService.getSession().getConfig().getTransfer().getStorageMigration();
 
         if (dataMovementStrategy != null) {
             log.info("{}: Setting Storage Migration 'dataMovementStrategy' to: {}", sessionId, dataMovementStrategy);
