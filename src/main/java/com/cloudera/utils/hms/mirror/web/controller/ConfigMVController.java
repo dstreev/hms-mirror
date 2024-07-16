@@ -40,6 +40,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -307,7 +309,8 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.TRUE);
 
-        ModelUtils.allEnumsForMap(model.asMap());
+        ModelUtils.allEnumsForMap(currentConfig.getDataStrategy(), model.asMap());
+
         return "config/view";
     }
 
@@ -336,7 +339,8 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
-        ModelUtils.allEnumsForMap(model.asMap());
+        ModelUtils.allEnumsForMap(session.getConfig().getDataStrategy(), model.asMap());
+
         return "config/view";
     }
 
@@ -353,12 +357,18 @@ public class ConfigMVController implements ControllerReferences {
 
         HmsMirrorConfig newConfig = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
 
-        if (nonNull(newConfig.getCluster(Environment.LEFT))) {
-            newConfig.getClusters().put(Environment.LEFT, config.getCluster(Environment.LEFT));
+        List<Environment> envs = Arrays.asList(Environment.LEFT, Environment.RIGHT);
+        for (Environment env : envs) {
+            if (nonNull(newConfig.getCluster(env))) {
+                if (nonNull(newConfig.getCluster(env).getHiveServer2()) && nonNull(config.getCluster(env).getHiveServer2())) {
+                    newConfig.getClusters().put(env, config.getCluster(env));
+                }
+                if (nonNull(newConfig.getCluster(env).getMetastoreDirect()) && nonNull(config.getCluster(env).getMetastoreDirect())) {
+                    newConfig.getClusters().put(env, config.getCluster(env));
+                }
+            }
         }
-        if (nonNull(newConfig.getCluster(Environment.RIGHT))) {
-            newConfig.getClusters().put(Environment.RIGHT, config.getCluster(Environment.RIGHT));
-        }
+
         newConfig.setEncryptedPasswords(config.isEncryptedPasswords());
 
         // Remove the old session
@@ -378,7 +388,7 @@ public class ConfigMVController implements ControllerReferences {
         model.addAttribute(ACTION, "view");
         model.addAttribute(READ_ONLY, Boolean.FALSE);
 
-        ModelUtils.allEnumsForMap(model.asMap());
+        ModelUtils.allEnumsForMap(session.getConfig().getDataStrategy(), model.asMap());
         return "config/view";
     }
 
@@ -433,7 +443,7 @@ public class ConfigMVController implements ControllerReferences {
         } else {
             throw new SessionException("Inconsistent state: Encrypted, Password Key, etc. . Can't encrypt.");
         }
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
     @RequestMapping(value = "/doDecryptPasswords", method = RequestMethod.GET)
@@ -478,7 +488,7 @@ public class ConfigMVController implements ControllerReferences {
             throw new SessionException("Inconsistent state. Encrypted, PasswordKey, etc. . Can't decrypt.");
         }
 
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
 }

@@ -18,10 +18,7 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.PersistContainer;
-import com.cloudera.utils.hms.mirror.domain.support.RunContainer;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.util.ModelUtils;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import com.jcabi.manifests.Manifests;
@@ -98,7 +95,9 @@ public class UIModelService implements ControllerReferences {
             map.put(VERSION, "Unknown");
         }
 
-        ModelUtils.allEnumsForMap(map);
+        DataStrategyEnum dataStrategy = session == null ? DataStrategyEnum.SCHEMA_ONLY : session.getConfig().getDataStrategy();
+
+        ModelUtils.allEnumsForMap(dataStrategy, map);
     }
 
 }

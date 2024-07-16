@@ -90,7 +90,7 @@ public class TranslatorMVController {
         translatorService.addGlobalLocationMap(source, target);
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
     @RequestMapping(value = "/globalLocationMap/{source}/delete", method = RequestMethod.GET)
@@ -102,7 +102,7 @@ public class TranslatorMVController {
         log.info("Removing global location map for source: {}", source);
         translatorService.removeGlobalLocationMap(source);
 
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
@@ -143,7 +143,7 @@ public class TranslatorMVController {
                 config.getTranslator().setWarehouseMapBuilder(wmb);
                 config.getTranslator().setGlobalLocationMap(globalLocationMap);
                 configService.validate(executeSessionService.getSession(), null, Boolean.FALSE);
-                return "redirect:config/view";
+                return "redirect:/config/view";
             }
         } else {
             uiModelService.sessionToModel(model, 1, Boolean.FALSE);

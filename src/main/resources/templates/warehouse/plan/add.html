@@ -41,7 +41,12 @@
                     <input class="pure-input-4-5" id="MANAGED_DIRECTORY" name="MANAGED_DIRECTORY" type="text"/>
                 </div>
                 <div class="pure-control-group">
-                    <button class="pure-button pure-button-primary" type="submit" th:text="#{button.add}"/>
+                    <button class="pure-button pure-button-primary" type="submit"
+                            th:formaction="@{/warehouse/plan/save}"
+                            th:text="#{button.add}"/>
+                    <button class="pure-button pure-button-primary" type="submit"
+                            th:formaction="@{/warehouse/plan/saveAdd}"
+                            th:text="#{button.add.again}"/>
                 </div>
             </form>
 <!--            <div th:replace="fragments/modal::modal('whAddModal', 'whAddBtn', 'Please wait.  Adding Warehouse.')">-->

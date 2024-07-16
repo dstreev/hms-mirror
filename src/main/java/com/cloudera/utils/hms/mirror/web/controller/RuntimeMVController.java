@@ -87,7 +87,7 @@ public class RuntimeMVController {
         runStatus.setConcurrency(maxThreads);
         // Not necessary..  will be fetched in config/home
 //        model.addAttribute(RUN_STATUS, runStatus);
-        return "redirect:config/home";
+        return "redirect:/config/home";
     }
 
 

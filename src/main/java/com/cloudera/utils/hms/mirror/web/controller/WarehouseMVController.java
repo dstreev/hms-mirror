@@ -28,10 +28,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.validation.constraints.NotNull;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -73,7 +75,7 @@ public class WarehouseMVController {
             if (!connectionPoolService.isConnected()) {
                 connectionPoolService.init();
             }
-            model.addAttribute(ACTION, "add");
+//            model.addAttribute(ACTION, "add");
 
             List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
             model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
@@ -105,8 +107,42 @@ public class WarehouseMVController {
 //        model.addAttribute(READ_ONLY, Boolean.TRUE);
 //        sessionToModel(model, Boolean.FALSE);
 
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
+
+    @RequestMapping(value = "/plan/saveAdd", method = RequestMethod.POST)
+    public String addDatabaseAgain(Model model,
+                              @RequestParam(value = DATABASE, required = true) String database,
+                              @RequestParam(value = EXTERNAL_DIRECTORY, required = true) String externalDirectory,
+                              @RequestParam(value = MANAGED_DIRECTORY, required = true) String managedDirectory
+    ) throws SessionException {
+        // Don't reload if running.
+//        executeSessionService.clearActiveSession();
+
+        log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
+
+        databaseService.addWarehousePlan(database, externalDirectory, managedDirectory);
+
+        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
+        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+
+        return "warehouse/plan/add";
+//        return "redirect:/config/view";
+    }
+
+
+    @RequestMapping(value = "/plan/{database}/delete", method = RequestMethod.GET)
+    public String deleteWarehousePlan(Model model,
+                                      @PathVariable @NotNull String database) throws SessionException {
+        executeSessionService.clearActiveSession();
+
+        databaseService.removeWarehousePlan(database);
+
+        return "redirect:/config/view";
+    }
+
 
 
 }

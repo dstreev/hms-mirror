@@ -64,7 +64,7 @@ public class DatabaseMVController implements ControllerReferences {
             config.getDatabases().add(db);
         }
 
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
     @RequestMapping(value = "/{database}/delete", method = RequestMethod.GET)
@@ -77,19 +77,7 @@ public class DatabaseMVController implements ControllerReferences {
 
         config.getDatabases().remove(database);
 
-        return "redirect:config/view";
-    }
-
-
-
-    @RequestMapping(value = "/{database}/warehousePlan", method = RequestMethod.DELETE)
-    public String deleteWarehousePlan(Model model,
-                         @PathVariable @NotNull String database) throws SessionException {
-        executeSessionService.clearActiveSession();
-
-        databaseService.removeWarehousePlan(database);
-
-        return "redirect:config/view";
+        return "redirect:/config/view";
     }
 
 

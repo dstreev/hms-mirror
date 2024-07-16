@@ -18,28 +18,29 @@
 package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hive.config.DBStore;
+import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
+import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ModelUtils implements ControllerReferences {
 
-    public static void allEnumsForMap(Map<String, Object> map) {
+    public static void allEnumsForMap(DataStrategyEnum dataStrategy, Map<String, Object> map) {
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.SerdeType.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.TableType.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.StageEnum.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, map);
-        enumForMap(com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum.class, map);
         enumForMap(DBStore.DB_TYPE.class, map);
-        configEnvironmentForModel(map);
+        configSupportDataMovementStrategyForModel(dataStrategy, map);
+        configEnvironmentForModel(dataStrategy, map);
         configSupportDataStrategyForModel(map);
         configSupportedHiveDriverClassesForModel(map);
         enumForMap(ConnectionPoolType.class, map);
@@ -49,32 +50,17 @@ public class ModelUtils implements ControllerReferences {
 
     }
 
-//    public static void allEnumsForModel(Model model) {
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.SerdeType.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.TableType.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.StageEnum.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum.class, model);
-//        enumForModel(com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum.class, model);
-//        enumForModel(DBStore.DB_TYPE.class, model);
-//        configEnvironmentForModel(model);
-//        configSupportDataStrategyForModel(model);
-//        configSupportedHiveDriverClassesForModel(model);
-//        enumForModel(ConnectionPoolType.class, model);
-//        model.addAttribute("FALSE", "false");
-//        model.addAttribute("TRUE", "true");
-//        booleanForModel(model);
-//    }
-//
-//    public static void configEnvironmentForModel(Model model) {
-//        // Add LEFT and RIGHT to the model
-//        model.addAttribute(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
-//    }
-
-    public static void configEnvironmentForModel(Map<String, Object> map) {
+    public static void configEnvironmentForModel(DataStrategyEnum dataStrategy, Map<String, Object> map) {
         // Add LEFT and RIGHT to the model
-        map.put(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
+        switch (dataStrategy) {
+            case STORAGE_MIGRATION:
+            case DUMP:
+                map.put(ENVIRONMENTS, Arrays.asList("LEFT"));
+                break;
+            default:
+                map.put(ENVIRONMENTS, new String[]{"LEFT", "RIGHT"});
+                break;
+        }
     }
 
     public static List<DataStrategyEnum> getSupportedDataStrategies() {
@@ -90,44 +76,27 @@ public class ModelUtils implements ControllerReferences {
         return supportedDataStrategies;
     }
 
-//    public static void configSupportDataStrategyForModel(Model model) {
-//        model.addAttribute(SUPPORTED_DATA_STRATEGIES, getSupportedDataStrategies().toArray(new DataStrategyEnum[0]));
-//    }
-//
     public static void configSupportDataStrategyForModel(Map<String, Object> map) {
         map.put(SUPPORTED_DATA_STRATEGIES, getSupportedDataStrategies().toArray(new DataStrategyEnum[0]));
     }
 
-//    public static void configSupportedHiveDriverClassesForModel(Model model) {
-//        // Add SUPPORTED and UNSUPPORTED to the model
-//        model.addAttribute(SUPPORTED_HIVE_DRIVER_CLASSES,
-//                new String[]{"org.apache.hive.jdbc.HiveDriver", "com.cloudera.hive.jdbc.HS2Driver"});
-//    }
-//
+    public static void configSupportDataMovementStrategyForModel(DataStrategyEnum dataStrategy, Map<String, Object> map) {
+        switch (dataStrategy) {
+            case STORAGE_MIGRATION:
+                map.put("datamovementstrategyenums", Collections.singletonList(DataMovementStrategyEnum.DISTCP));
+                break;
+            default:
+                enumForMap(DataMovementStrategyEnum.class, map);
+                break;
+        }
+    }
+
     public static void configSupportedHiveDriverClassesForModel(Map<String, Object> map) {
         // Add SUPPORTED and UNSUPPORTED to the model
         map.put(SUPPORTED_HIVE_DRIVER_CLASSES,
                 new String[]{"org.apache.hive.jdbc.HiveDriver", "com.cloudera.hive.jdbc.HS2Driver"});
     }
 
-//    public static void enumForModel(Class clazz, Model model) {
-//        if (clazz.isEnum()) {
-//            Method method = null;
-//            try {
-//                method = clazz.getMethod("values");
-//                Enum<?>[] enums = (Enum<?>[]) method.invoke(null);
-//                String[] enumNames = new String[enums.length];
-//                for (int i = 0; i < enums.length; i++) {
-//                    enumNames[i] = enums[i].name();
-//                }
-//                model.addAttribute(clazz.getSimpleName().toLowerCase() + "s", enumNames);
-//            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//        }
-//    }
-//
     public static void enumForMap(Class clazz, Map<String, Object> map) {
         if (clazz.isEnum()) {
             Method method = null;
@@ -142,17 +111,9 @@ public class ModelUtils implements ControllerReferences {
             } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
-
         }
     }
 
-//    public static void booleanForModel(Model model) {
-//        String[] bools = new String[2];
-//        bools[0] = "false";
-//        bools[1] = "true";
-//        model.addAttribute(BOOLEANS, bools);
-//    }
-//
     public static void booleanForModel(Map<String, Object> map) {
         String[] bools = new String[2];
         bools[0] = "false";
