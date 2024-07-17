@@ -21,5 +21,6 @@ public enum DataMovementStrategyEnum {
     SQL,
     EXPORT_IMPORT,
     HYBRID,
-    DISTCP;
+    DISTCP,
+    MANUAL;
 }

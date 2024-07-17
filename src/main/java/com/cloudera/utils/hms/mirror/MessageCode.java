@@ -229,7 +229,9 @@ public enum MessageCode {
     STORAGE_MIGRATION_GLMS_NOT_BUILT(110, "The global location maps (GLMs) have not been built yet.  We found warehouse definitions but no GLM's.  " +
             "Please build or create GLM's and try again."),
     ENCRYPTED_PASSWORD_CHANGE_ATTEMPT(111, "Password can NOT be changed while ENCRYPTED.  Decrypt them first to change/add a password then Re-encrytped them before saving."),
-    PASSWORDS_ENCRYPTED(112,"Passwords are encrypted.  Too change/add a password, you must decrypt them first.");
+    PASSWORDS_ENCRYPTED(112,"Passwords are encrypted.  Too change/add a password, you must decrypt them first."),
+    LEFT_NAMESPACE_NOT_DEFINED(113, "The namespace for the LEFT cluster is NOT defined.  Please config it and try again."),
+    RIGHT_NAMESPACE_NOT_DEFINED(114, "The namespace for the RIGHT cluster is NOT defined.  Please config it and try again.");
 
 
     private int code = 0;

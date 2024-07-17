@@ -75,6 +75,11 @@ public class UIModelService implements ControllerReferences {
             persistContainer.setSaveAs(session.getSessionId());
             map.put(PERSIST, persistContainer);
 
+            // Set the flag to autoGLM if the GLM is empty. Which means they need to be built.
+            if (session.getConfig().getTranslator().getGlobalLocationMap().isEmpty()) {
+                runContainer.setAutoGLM(Boolean.TRUE);
+            }
+
             // For testing only.
             if (lclTesting && isNull(session.getRunStatus())) {
                 RunStatus runStatus = new RunStatus();

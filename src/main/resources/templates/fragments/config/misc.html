@@ -94,12 +94,13 @@
                th:checked="${CONFIG.skipLegacyTranslation}"/>
         <label for="skipLegacyTranslation" th:text="#{config.skipLegacyTranslation}"></label>
     </div>
-    <div class="pure-control-group">
-        <input type="checkbox" name="sqlOutput"
-               th:field="*{sqlOutput}"
-               th:checked="${CONFIG.sqlOutput}"/>
-        <label for="sqlOutput" th:text="#{config.sqlOutput}"></label>
-    </div>
+<!--     Deprecated -->
+<!--    <div class="pure-control-group">-->
+<!--        <input type="checkbox" name="sqlOutput"-->
+<!--               th:field="*{sqlOutput}"-->
+<!--               th:checked="${CONFIG.sqlOutput}"/>-->
+<!--        <label for="sqlOutput" th:text="#{config.sqlOutput}"></label>-->
+<!--    </div>-->
     <div class="pure-control-group">
         <input type="checkbox" name="sync"
                th:field="*{sync}"

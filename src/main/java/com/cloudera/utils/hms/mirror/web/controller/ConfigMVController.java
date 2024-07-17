@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
+import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
@@ -46,6 +47,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENCRYPTED_PASSWORD_CHANGE_ATTEMPT;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Controller
@@ -236,6 +238,9 @@ public class ConfigMVController implements ControllerReferences {
         // Merge Translator
         config.setTranslator(currentConfig.getTranslator());
 
+        // Apply rules for the DataStrategy that are not in the config.
+        configService.fixConfigSettings(config);
+
         // Reset to the merged config.
         session.setConfig(config);
 
@@ -357,19 +362,17 @@ public class ConfigMVController implements ControllerReferences {
 
         HmsMirrorConfig newConfig = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
 
+        configService.overlayConfig(newConfig, config);
+
         List<Environment> envs = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         for (Environment env : envs) {
             if (nonNull(newConfig.getCluster(env))) {
-                if (nonNull(newConfig.getCluster(env).getHiveServer2()) && nonNull(config.getCluster(env).getHiveServer2())) {
-                    newConfig.getClusters().put(env, config.getCluster(env));
-                }
-                if (nonNull(newConfig.getCluster(env).getMetastoreDirect()) && nonNull(config.getCluster(env).getMetastoreDirect())) {
-                    newConfig.getClusters().put(env, config.getCluster(env));
+                if (nonNull(config.getCluster(env))) {
+                    newConfig.getClusters().put(Environment.LEFT, config.getCluster(Environment.LEFT));
                 }
             }
         }
 
-        newConfig.setEncryptedPasswords(config.isEncryptedPasswords());
 
         // Remove the old session
         executeSessionService.getSessions().remove(sessionId);

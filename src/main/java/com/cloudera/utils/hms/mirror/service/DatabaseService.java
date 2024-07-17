@@ -101,6 +101,13 @@ public class DatabaseService {
         return warehouseMapBuilder.removeWarehousePlan(database);
     }
 
+    /*
+    Look at the Warehouse Plans for a matching Database and pull that.  If that doesn't exist, then
+    pull the general warehouse locations if they are defined.  If those aren't, try and pull the locations
+    from the Hive Environment Variables
+
+    A null returns means a warehouse couldn't be determined and the db location settings should be skipped.
+     */
     public Warehouse getWarehousePlan(String database) throws MissingDataPointException {
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
@@ -110,6 +117,11 @@ public class DatabaseService {
             ExecuteSession session = executeSessionService.getSession();
             // Get the default Warehouse defined for the config.
             warehouse = session.getConfig().getTransfer().getWarehouse();
+            // Check for false positives and
+            if (isBlank(warehouse.getExternalDirectory()) || isBlank(warehouse.getManagedDirectory())) {
+                warehouse = null;
+            }
+
             if (isNull(warehouse)) {
                 // Look for Location in the right DB Definition for Migration Strategies.
                 switch (config.getDataStrategy()) {
@@ -126,30 +138,14 @@ public class DatabaseService {
                                 warehouse = new Warehouse(extDir, manDir);
                                 session.addWarning(WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV);
                             } else {
-                                session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
-                                throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
-                                        ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
-                                        "set the global warehouse locations.");
+                                session.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
                             }
                         } else {
-                            session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
-                            throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
-                                    ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
-                                    "set the global warehouse locations.");
+                            session.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
                         }
                         break;
                     default: // STORAGE_MIGRATION should set these manually.
-                        session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
-                        throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
-                                ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
-                                "set the global warehouse locations.");
-                }
-                if (isNull(warehouse)) {
-                    session.addError(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
-                    throw new MissingDataPointException("Couldn't find a Warehouse Plan for database: " + database +
-                            ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
-                            "set the global warehouse locations.");
-
+                        session.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
                 }
             }
         }
@@ -442,17 +438,17 @@ public class DatabaseService {
                             Warehouse dbWarehouse = null;
 //                        try {
                             dbWarehouse = getWarehousePlan(dbMirror.getName());
-                            // Shouldn't be null
-                            assert dbWarehouse != null;
+                            // A null warehouse means we should use the relative directories.
+//                            assert dbWarehouse != null;
 //                        } catch (MissingDataPointException e) {
 //                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
 //                            return Boolean.FALSE;
 //                        }
-                            if (isBlank(config.getTransfer().getCommonStorage())) {
+                            if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
                                 location = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
-                            } else {
+                            } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
                                 location = config.getTransfer().getCommonStorage()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
@@ -462,28 +458,32 @@ public class DatabaseService {
                                 // Check for Managed Location.
                                 managedLocation = dbDefLeft.get(DB_MANAGED_LOCATION);
                             }
+
                             if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                                if (isBlank(config.getTransfer().getCommonStorage())) {
+                                if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
                                     managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
                                             + dbWarehouse.getManagedDirectory()
                                             + "/" + dbMirror.getName() + ".db";
-                                } else {
+                                } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)){
                                     managedLocation = config.getTransfer().getCommonStorage()
                                             + dbWarehouse.getManagedDirectory()
                                             + "/" + dbMirror.getName() + ".db";
                                 }
-                                // Check is the Managed Location matches the system default.  If it does,
-                                //  then we don't need to set it.
-                                String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
-                                String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
-                                String defaultManagedLocation = envDefaultFS + envWarehouseDir;
-                                log.info("Comparing Managed Location: {} to default: {}", managedLocation, defaultManagedLocation);
-                                if (managedLocation.startsWith(defaultManagedLocation)) {
-                                    managedLocation = null;
-                                    log.info("The location for the DB '{}' is the same as the default FS + warehouse dir.  The database location will NOT be set and will depend on the system default.", database);
-                                    dbMirror.addIssue(Environment.RIGHT, "The location for the DB '" + database
-                                            + "' is the same as the default FS + warehouse dir. The database " +
-                                            "location will NOT be set and will depend on the system default.");
+                                // If we've set the managedLocation, check to see if it's the same as the default
+                                if (nonNull(managedLocation)) {
+                                    // Check is the Managed Location matches the system default.  If it does,
+                                    //  then we don't need to set it.
+                                    String envDefaultFS = config.getCluster(Environment.RIGHT).getEnvVars().get(DEFAULT_FS);
+                                    String envWarehouseDir = config.getCluster(Environment.RIGHT).getEnvVars().get(MNGD_DB_LOCATION_PROP);
+                                    String defaultManagedLocation = envDefaultFS + envWarehouseDir;
+                                    log.info("Comparing Managed Location: {} to default: {}", managedLocation, defaultManagedLocation);
+                                    if (managedLocation.startsWith(defaultManagedLocation)) {
+                                        managedLocation = null;
+                                        log.info("The location for the DB '{}' is the same as the default FS + warehouse dir.  The database location will NOT be set and will depend on the system default.", database);
+                                        dbMirror.addIssue(Environment.RIGHT, "The location for the DB '" + database
+                                                + "' is the same as the default FS + warehouse dir. The database " +
+                                                "location will NOT be set and will depend on the system default.");
+                                    }
                                 }
                             }
 
@@ -493,8 +493,9 @@ public class DatabaseService {
                                 case SCHEMA_ONLY:
                                 case SQL:
                                 case LINKED:
-                                    if (location != null) {
-                                        location = location.replace(leftNamespace, rightNamespace);
+                                    if (nonNull(location)) {
+
+//                                        location = location.replace(leftNamespace, rightNamespace);
                                         // https://github.com/cloudera-labs/hms-mirror/issues/13
                                         // LOCATION to MANAGED LOCATION silent translation for HDP 3 migrations.
                                         if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
@@ -514,9 +515,9 @@ public class DatabaseService {
                                         }
 
                                     }
-                                    if (managedLocation != null) {
-                                        managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
-                                    }
+//                                    if (managedLocation != null) {
+//                                        managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
+//                                    }
                                     if (config.getDbPrefix() != null || config.getDbRename() != null) {
                                         // adjust locations.
                                         if (location != null) {
@@ -534,7 +535,7 @@ public class DatabaseService {
 
                                         // Check that location exists.
                                         String dbLocation = null;
-                                        if (location != null) {
+                                        if (nonNull(location)) {
                                             dbLocation = location;
                                         } else {
                                             // Get location for DB. If it's not there than:
@@ -594,7 +595,7 @@ public class DatabaseService {
                                                 }
                                             }
                                         }
-                                        if (dbLocation != null) {
+                                        if (nonNull(dbLocation)) {
                                             try {
 //                                            CommandReturn cr = cli.processInput("connect");
                                                 CommandReturn testCr = cli.processInput("test -d " + dbLocation);
@@ -632,12 +633,12 @@ public class DatabaseService {
                                     // TODO: DB Properties.
                                     dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
 
-                                    if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
+                                    if (nonNull(location) && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                         String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                                         dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
                                         dbDefRight.put(DB_LOCATION, location);
                                     }
-                                    if (managedLocation != null) {
+                                    if (nonNull(managedLocation)) {
                                         if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                             String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                             dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));

@@ -208,6 +208,130 @@ public class ConfigService {
         return HmsMirrorConfig.save(config, configFileName, overwrite);
     }
 
+    public void overlayConfig(HmsMirrorConfig config, HmsMirrorConfig overlay) {
+//        config.overlay(overlay);
+        List<Environment> envs = Arrays.asList(Environment.LEFT, Environment.RIGHT);
+        for (Environment env : envs) {
+            if (nonNull(config.getCluster(env))) {
+                if (nonNull(overlay.getCluster(env))) {
+                    if (nonNull(config.getCluster(env).getHiveServer2())) {
+                        if (nonNull(overlay.getCluster(env).getHiveServer2())) {
+                            config.getCluster(env).setHiveServer2(overlay.getCluster(env).getHiveServer2());
+                        }
+                    }
+                    if (nonNull(config.getCluster(env).getMetastoreDirect())) {
+                        if (nonNull(overlay.getCluster(env).getMetastoreDirect())) {
+                            config.getCluster(env).setMetastoreDirect(overlay.getCluster(env).getMetastoreDirect());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Set Encrypted Status of Passwords.
+        config.setEncryptedPasswords(overlay.isEncryptedPasswords());
+
+        setDefaultsForDataStrategy(config);
+    }
+
+    /*
+    Apply a set of rules based on a hierarchy of settings and make adjustments to other configuration elements.
+     */
+    public void fixConfigSettings(HmsMirrorConfig config) {
+        // Making sure the Metastore Direct is available under certain conditions.
+        if (config.isEvaluatePartitionLocation()
+                || config.getTransfer().getStorageMigration().isDistcp()) {
+            // Ensure the LEFT Metastore exists.
+            if (nonNull(config.getCluster(Environment.LEFT)) && isNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
+                config.getCluster(Environment.LEFT).setMetastoreDirect(new DBStore());
+            }
+        }
+
+        // If the RIGHT Metastore Direct is set, remove it.  Not needed by any process.
+        if (nonNull(config.getCluster(Environment.RIGHT)) &&
+                nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
+            config.getCluster(Environment.RIGHT).setMetastoreDirect(null);
+        }
+
+        switch (config.getDataStrategy()) {
+            case DUMP:
+                break;
+            case STORAGE_MIGRATION:
+                break;
+            case SCHEMA_ONLY:
+                // Sync process is read-only and no-purge to ensure data is not deleted.
+                // Because we'll assume that the data is being copied through other processes.
+                if (config.isSync()) {
+                    config.setReadOnly(Boolean.TRUE);
+                    config.setNoPurge(Boolean.TRUE);
+                }
+                break;
+            case SQL:
+                break;
+            case EXPORT_IMPORT:
+                break;
+            case HYBRID:
+                break;
+            case COMMON:
+                break;
+            case LINKED:
+                // Sync process is read-only and no-purge to ensure data is not deleted.
+                // Because we'll assume that the data is being copied through other processes.
+                if (config.isSync()) {
+                    config.setReadOnly(Boolean.TRUE);
+                    config.setNoPurge(Boolean.TRUE);
+                }
+                break;
+            default:
+                break;
+
+        }
+    }
+
+    public void setDefaultsForDataStrategy(HmsMirrorConfig config) {
+        // Set Attribute for the config.
+        switch (config.getDataStrategy()) {
+            case DUMP:
+                config.setEvaluatePartitionLocation(Boolean.FALSE);
+                break;
+            case STORAGE_MIGRATION:
+                config.setEvaluatePartitionLocation(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
+                break;
+            case SCHEMA_ONLY:
+                config.setEvaluatePartitionLocation(Boolean.FALSE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.MANUAL);
+                break;
+            case SQL:
+                config.setEvaluatePartitionLocation(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
+                break;
+            case EXPORT_IMPORT:
+                config.setEvaluatePartitionLocation(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.EXPORT_IMPORT);
+                break;
+            case HYBRID:
+                config.setEvaluatePartitionLocation(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.HYBRID);
+                break;
+            case COMMON:
+                config.setEvaluatePartitionLocation(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
+                break;
+            case LINKED:
+                config.setEvaluatePartitionLocation(Boolean.FALSE);
+                // Set to ensure 'dr' doesn't delete LINKED tables.
+                config.setNoPurge(Boolean.TRUE);
+                config.setReadOnly(Boolean.TRUE);
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.MANUAL);
+                config.getMigrateACID().setOn(Boolean.FALSE);
+                break;
+            default:
+                break;
+        }
+
+    }
+
     public HmsMirrorConfig createForDataStrategy(DataStrategyEnum dataStrategy) {
         HmsMirrorConfig rtn = new HmsMirrorConfig();
         rtn.setDataStrategy(dataStrategy);
@@ -216,6 +340,7 @@ public class ConfigService {
             case DUMP:
                 rtn.getMigrateACID().setOn(Boolean.TRUE);
                 Cluster leftDump = new Cluster();
+                leftDump.setEnvironment(Environment.LEFT);
                 leftDump.setHiveServer2(new HiveServer2Config());
                 leftDump.setMetastoreDirect(new DBStore());
                 leftDump.setLegacyHive(Boolean.FALSE);
@@ -224,12 +349,12 @@ public class ConfigService {
             case STORAGE_MIGRATION:
                 rtn.getMigrateACID().setOn(Boolean.TRUE);
                 Cluster leftSM = new Cluster();
+                leftSM.setEnvironment(Environment.LEFT);
                 leftSM.setLegacyHive(Boolean.FALSE);
                 rtn.getClusters().put(Environment.LEFT, leftSM);
                 leftSM.setMetastoreDirect(new DBStore());
                 leftSM.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
                 rtn.getTransfer().setCommonStorage("ofs://NEED_TO_SET_THIS");
-                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.DISTCP);
                 leftSM.setHiveServer2(new HiveServer2Config());
                 break;
             case SCHEMA_ONLY:
@@ -237,28 +362,29 @@ public class ConfigService {
             case EXPORT_IMPORT:
             case HYBRID:
                 Cluster leftT = new Cluster();
+                leftT.setEnvironment(Environment.LEFT);
                 leftT.setLegacyHive(Boolean.TRUE);
                 rtn.getClusters().put(Environment.LEFT, leftT);
                 leftT.setMetastoreDirect(new DBStore());
                 leftT.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
-                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
                 leftT.setHiveServer2(new HiveServer2Config());
                 Cluster rightT = new Cluster();
+                rightT.setEnvironment(Environment.RIGHT);
                 rightT.setHiveServer2(new HiveServer2Config());
                 rightT.setLegacyHive(Boolean.FALSE);
                 rtn.getClusters().put(Environment.RIGHT, rightT);
                 break;
             case COMMON:
                 Cluster leftC = new Cluster();
+                leftC.setEnvironment(Environment.LEFT);
                 leftC.setLegacyHive(Boolean.TRUE);
-//                leftC.setHiveServer2(new HiveServer2Config());
                 rtn.getClusters().put(Environment.LEFT, leftC);
                 leftC.setMetastoreDirect(new DBStore());
                 leftC.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
                 rtn.getTransfer().setCommonStorage("hdfs|s3a|ofs://NEED_TO_SET_THIS");
-                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.SQL);
                 leftC.setHiveServer2(new HiveServer2Config());
                 Cluster rightC = new Cluster();
+                rightC.setEnvironment(Environment.RIGHT);
                 rightC.setLegacyHive(Boolean.FALSE);
                 rtn.getClusters().put(Environment.RIGHT, rightC);
                 break;
@@ -267,8 +393,11 @@ public class ConfigService {
             default:
                 break;
         }
+
+        setDefaultsForDataStrategy(rtn);
         return rtn;
     }
+
 //    public void setupGSS() {
 //        try {
 //            String CURRENT_USER_PROP = "current.user";
@@ -678,6 +807,12 @@ public class ConfigService {
             }
         }
 
+        if (nonNull(config.getCluster(Environment.LEFT)) &&
+                isNull(config.getCluster(Environment.LEFT).getHcfsNamespace())) {
+            runStatus.addError(LEFT_NAMESPACE_NOT_DEFINED);
+            rtn = Boolean.FALSE;
+        }
+
         // When RIGHT is defined
         switch (config.getDataStrategy()) {
             case SQL:
@@ -688,18 +823,29 @@ public class ConfigService {
             case CONVERT_LINKED:
                 // When the storage on LEFT and RIGHT match, we need to specify both rdl (resetDefaultLocation)
                 //   and use -dbp (db prefix) to identify a new db name (hence a location).
-                if (config.getCluster(Environment.RIGHT) != null &&
-                        (config.getCluster(Environment.LEFT).getHcfsNamespace()
+                try {
+                    if (nonNull(config.getCluster(Environment.RIGHT)) &&
+                            isNull(config.getCluster(Environment.RIGHT).getHcfsNamespace())) {
+                        runStatus.addError(RIGHT_NAMESPACE_NOT_DEFINED);
+                        rtn = Boolean.FALSE;
+                    } else {
+                        if (nonNull(config.getCluster(Environment.RIGHT))
+                                && nonNull(config.getCluster(Environment.LEFT).getHcfsNamespace())
+                                && (config.getCluster(Environment.LEFT).getHcfsNamespace()
                                 .equalsIgnoreCase(config.getCluster(Environment.RIGHT).getHcfsNamespace()))) {
-                    if (!config.isResetToDefaultLocation()) {
-                        runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_RDL);
-                        rtn = Boolean.FALSE;
+                            if (!config.isResetToDefaultLocation()) {
+                                runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_RDL);
+                                rtn = Boolean.FALSE;
+                            }
+                            if (isBlank(config.getDbPrefix()) &&
+                                    isBlank(config.getDbRename())) {
+                                runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_DBPR);
+                                rtn = Boolean.FALSE;
+                            }
+                        }
                     }
-                    if (isBlank(config.getDbPrefix()) &&
-                            isBlank(config.getDbRename())) {
-                        runStatus.addError(SAME_CLUSTER_COPY_WITHOUT_DBPR);
-                        rtn = Boolean.FALSE;
-                    }
+                } catch (NullPointerException npe) {
+                    // Ignore and continue.  NPE causing fields would be caught elsewhere
                 }
         }
 

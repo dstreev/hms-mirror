@@ -18,16 +18,17 @@
 package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.DataMovementStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 public class ModelUtils implements ControllerReferences {
 
@@ -38,7 +39,8 @@ public class ModelUtils implements ControllerReferences {
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.CollectionEnum.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.class, map);
         enumForMap(com.cloudera.utils.hms.mirror.domain.support.DistcpFlowEnum.class, map);
-        enumForMap(DBStore.DB_TYPE.class, map);
+//        enumForMap(DBStore.DB_TYPE.class, map);
+        configSupportedDBType(map);
         configSupportDataMovementStrategyForModel(dataStrategy, map);
         configEnvironmentForModel(dataStrategy, map);
         configSupportDataStrategyForModel(map);
@@ -48,6 +50,10 @@ public class ModelUtils implements ControllerReferences {
         map.put("TRUE", "true");
         booleanForModel(map);
 
+    }
+
+    public static void configSupportedDBType(Map<String, Object> map) {
+        map.put("db_types", Arrays.asList(DBStore.DB_TYPE.MYSQL, DBStore.DB_TYPE.POSTGRES));
     }
 
     public static void configEnvironmentForModel(DataStrategyEnum dataStrategy, Map<String, Object> map) {
@@ -72,6 +78,7 @@ public class ModelUtils implements ControllerReferences {
         supportedDataStrategies.add(DataStrategyEnum.EXPORT_IMPORT);
         supportedDataStrategies.add(DataStrategyEnum.HYBRID);
         supportedDataStrategies.add(DataStrategyEnum.COMMON);
+        supportedDataStrategies.add(DataStrategyEnum.LINKED);
 
         return supportedDataStrategies;
     }
@@ -83,7 +90,10 @@ public class ModelUtils implements ControllerReferences {
     public static void configSupportDataMovementStrategyForModel(DataStrategyEnum dataStrategy, Map<String, Object> map) {
         switch (dataStrategy) {
             case STORAGE_MIGRATION:
-                map.put("datamovementstrategyenums", Arrays.asList(DataMovementStrategyEnum.DISTCP, DataMovementStrategyEnum.SQL ));
+                map.put("datamovementstrategyenums", Arrays.asList(DataMovementStrategyEnum.DISTCP, DataMovementStrategyEnum.SQL));
+                break;
+            case SCHEMA_ONLY:
+                map.put("datamovementstrategyenums", Arrays.asList(DataMovementStrategyEnum.DISTCP, DataMovementStrategyEnum.MANUAL));
                 break;
             default:
                 enumForMap(DataMovementStrategyEnum.class, map);

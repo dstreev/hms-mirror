@@ -36,7 +36,8 @@ public class PasswordService {
         Protect protect = new Protect(passwordKey);
         String password = null;
         try {
-            password = protect.decrypt(decryptPassword);
+            if (!isBlank(decryptPassword))
+                password = protect.decrypt(decryptPassword);
         } catch (RuntimeException rte) {
             String message = MessageFormat.format("Error decrypting encrypted password: {0} with key: {1}", decryptPassword, passwordKey);
             log.error(message);
@@ -52,7 +53,6 @@ public class PasswordService {
         if (!isBlank(passwordKey)) {
             Protect protect = new Protect(passwordKey);
             if (!isBlank(password)) {
-                epassword = null;
                 try {
                     epassword = protect.encrypt(password);
                 } catch (RuntimeException rte) {

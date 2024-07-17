@@ -30,11 +30,11 @@
 
 <div th:fragment="view">
     <div class="pure-form pure-form-aligned"
-         th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+         th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION SCHEMA_ONLY LINKED').contains(CONFIG.dataStrategy.toString())}">
         <div class="pure-g">
             <div class="pure-u-1-2">
                 <div class="pure-control-group"
-                     th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                     th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION SCHEMA_ONLY LINKED').contains(CONFIG.dataStrategy.toString())}">
 
                     <h4 th:text="#{config.databases}"/>
                     <!--                    <label th:text="#{config.databases.control}"/>-->
@@ -51,7 +51,7 @@
                     </th:block>
                     <div class="pure-control-group tooltip"
                          th:unless="${READ_ONLY}"
-                         th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                         th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY LINKED').contains(CONFIG.dataStrategy.toString())}">
                         <span class="tooltiptext" th:text="#{comma.separated.tooltip}"></span>
                         <input class="pure-input-3-4" type="text" id="databases" name="DATABASES"/>
                         <button type="submit" th:formmethod="post" th:formaction="@{/database/add}"
@@ -60,7 +60,7 @@
                 </div>
 
                 <th:block
-                        th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
+                        th:if="${('DUMP COMMON HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY LINKED').contains(CONFIG.dataStrategy.toString())}">
                     <h4 th:text="#{config.filter.regexs}"/>
                     <div class="pure-control-group">
                         <label for="dbRegEx" th:text="#{config.filter.dbRegEx}"></label>
