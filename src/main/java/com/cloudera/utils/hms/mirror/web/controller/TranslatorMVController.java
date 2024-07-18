@@ -131,7 +131,15 @@ public class TranslatorMVController {
             model.addAttribute(SOURCES, wmb.getSources());
 //            }
 
-            Map<String, String> globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
+            Map<String, String> globalLocationMap = null;
+            try {
+                globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
+            } catch (MismatchException e) {
+                uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+                model.addAttribute(TYPE, "Mismatch");
+                model.addAttribute(MESSAGE, e.getMessage());
+                return "error";
+            }
 
             if (lclDryrun) {
 //                model.addAttribute(ACTION, "view.dryrun");

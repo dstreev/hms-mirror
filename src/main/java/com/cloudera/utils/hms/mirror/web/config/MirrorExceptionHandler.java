@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.config;
 
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
@@ -82,6 +83,15 @@ public class MirrorExceptionHandler {
         uiModelService.sessionToModel(model, 0, false);
         return "error";
     }
+
+    @ExceptionHandler(value = MismatchException.class)
+    public String misMatchExceptionHandler(Model model, MismatchException exception) {
+        model.addAttribute(ControllerReferences.TYPE, "Mismatch Issue");
+        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
+        uiModelService.sessionToModel(model, 0, false);
+        return "error";
+    }
+
 
     @ExceptionHandler(value = IOException.class)
     public String ioExceptionHandler(Model model, IOException exception) {
