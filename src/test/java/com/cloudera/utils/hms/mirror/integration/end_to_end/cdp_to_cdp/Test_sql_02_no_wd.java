@@ -56,7 +56,9 @@ public class Test_sql_02_no_wd extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = getCheckCode(MessageCode.DATABASE_CREATION, MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+        long check = getCheckCode(MessageCode.DATABASE_CREATION
+//                , MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED
+        );
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 }

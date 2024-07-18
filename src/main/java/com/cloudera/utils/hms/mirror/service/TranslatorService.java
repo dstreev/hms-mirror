@@ -349,11 +349,11 @@ public class TranslatorService {
         // Feature Off.  Basic translation which includes any GlobalLocationMaps.
         String newLocation = null;
         StringBuilder sbDir = new StringBuilder();
-        if (config.getTransfer().getCommonStorage() != null) {
-            sbDir.append(config.getTransfer().getCommonStorage());
-        } else {
+//        if (config.getTransfer().getCommonStorage() != null) {
+//            sbDir.append(config.getTransfer().getCommonStorage());
+//        } else {
             sbDir.append(rightNS);
-        }
+//        }
         if (reMapped) {
             sbDir.append(mappedDir);
             newLocation = sbDir.toString();
@@ -373,7 +373,7 @@ public class TranslatorService {
             // Using the RIGHT to determine the table type.  This will account for a table
             //   definition that's been converted already and ensure the correct location is used.
             EnvironmentTable checkEnvTbl = tableMirror.getEnvironmentTable(Environment.RIGHT);
-            if (isNull(checkEnvTbl)) {
+            if (isNull(checkEnvTbl) || checkEnvTbl.getDefinition().isEmpty()) {
                 checkEnvTbl = tableMirror.getEnvironmentTable(Environment.LEFT);
             }
             if (TableUtils.isManaged(checkEnvTbl)) {

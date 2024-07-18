@@ -55,7 +55,9 @@ public class Test_sql_bad_hcfsns_02 extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 3L;
+
+        // TODO: After the changes to the Namespace handling, there is no longer a need to align the HCFS and Left Locations.
+        long check = 0L;
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 

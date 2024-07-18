@@ -117,9 +117,11 @@ public class DatabaseService {
         if (isNull(warehouse)) {
             ExecuteSession session = executeSessionService.getSession();
             // Get the default Warehouse defined for the config.
-            warehouse = session.getConfig().getTransfer().getWarehouse();
-            // Check for false positives and
-            if (isBlank(warehouse.getExternalDirectory()) || isBlank(warehouse.getManagedDirectory())) {
+            if (nonNull(session.getConfig().getTransfer().getWarehouse())) {
+                warehouse = session.getConfig().getTransfer().getWarehouse();
+            }
+
+            if (nonNull(warehouse) && (isBlank(warehouse.getExternalDirectory()) || isBlank(warehouse.getManagedDirectory()))) {
                 warehouse = null;
             }
 

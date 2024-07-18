@@ -70,8 +70,7 @@ public class Test_so_rdl_dc_legacy_mngd_parts extends E2EBaseTest {
         long actual = getReturnCode();
         // Verify the return code.
         long expected = getCheckCode(
-                MessageCode.DATABASE_CREATION,
-                MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                MessageCode.DATABASE_CREATION);
 
         assertEquals("Return Code Failure: ", expected, actual);
 

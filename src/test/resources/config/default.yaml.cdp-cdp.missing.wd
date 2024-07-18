@@ -5,6 +5,9 @@ hybrid:
   sqlSizeLimit: 1073741824
 transfer:
   concurrency: 2
+  warehouse:
+    managedDirectory: null
+    externalDirectory: null
 clusters:
   LEFT:
     legacyHive: "false"

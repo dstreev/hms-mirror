@@ -70,7 +70,7 @@ public class Test_sql_rdl_dc extends E2EBaseTest {
         // Get Runtime Return Code.
         long actual = getReturnCode();
         // Verify the return code.
-        long expected = getCheckCode(MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED,
+        long expected = getCheckCode(
                 MessageCode.DATABASE_CREATION);
 
         assertEquals("Return Code Failure: ", expected, actual);
@@ -83,12 +83,13 @@ public class Test_sql_rdl_dc extends E2EBaseTest {
         long actual = getWarningCode();
         // Verify the return code.
         long expected = getCheckCode(
+                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
                 MessageCode.DISTCP_REQUIRES_EPL,
                 MessageCode.LINK_TEST_SKIPPED_WITH_IS,
-                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
                 MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
-                MessageCode.DISTCP_WO_TABLE_FILTERS
-        );
+                MessageCode.DISTCP_WO_TABLE_FILTERS,
+                MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED
+                );
 
         assertEquals("Warning Code Failure: ", expected, actual);
 

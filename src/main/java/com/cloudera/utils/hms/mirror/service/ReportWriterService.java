@@ -101,7 +101,6 @@ public class ReportWriterService {
         HmsMirrorConfig config = session.getConfig();
         RunStatus runStatus = session.getRunStatus();
         runStatus.setReportName(session.getSessionId());
-        log.info("Writing CLI report and artifacts to directory: {}", config.getOutputDirectory());
 //        if (!setupError) {
         Conversion conversion = session.getConversion();
 
@@ -122,7 +121,7 @@ public class ReportWriterService {
             int i = 1;
             String origOutputDir = config.getOutputDirectory();
             while (true) {
-                File newOutputDir = new File(origOutputDir + "_" + i);
+                File newOutputDir = new File(origOutputDir + "_" + i++);
                 if (!newOutputDir.exists()) {
                     runStatus.setReportName(session.getSessionId() + "_" + i);
                     config.setOutputDirectory(newOutputDir.getPath());
@@ -132,6 +131,8 @@ public class ReportWriterService {
                 }
             }
         }
+
+        log.info("Writing CLI report and artifacts to directory: {}", config.getOutputDirectory());
 
         // Write out the config used to run this session.
         HmsMirrorConfig resolvedConfig = executeSessionService.getSession().getConfig();

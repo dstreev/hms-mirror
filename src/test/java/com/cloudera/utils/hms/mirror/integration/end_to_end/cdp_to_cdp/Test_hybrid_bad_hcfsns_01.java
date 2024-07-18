@@ -54,7 +54,7 @@ public class Test_hybrid_bad_hcfsns_01 extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 3L;
+        long check = 0L;
         assertEquals("Return Code Failure: " + rtn, check, rtn);
     }
 

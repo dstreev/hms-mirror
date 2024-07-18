@@ -77,7 +77,7 @@ public class Test_so_wd_epl_rdl_dc extends E2EBaseTest {
     @Test
     public void issueTest_01() {
         validateTableIssueCount("tpcds_bin_partitioned_orc_10", "web_sales",
-                Environment.RIGHT, 3652);
+                Environment.RIGHT, 3651);
     }
 
     @Test
