@@ -131,13 +131,20 @@ public class ExecuteSessionService {
     }
 
     public void clearActiveSession() throws SessionException {
-        if (activeSession != null) {
-            if (activeSession.getRunning().get()) {
-                throw new SessionException("Session is still running.  You can't change the session while it is running.");
-            } else {
-                activeSession = null;
+        if (nonNull(activeSession)) {
+            RunStatus runStatus = activeSession.getRunStatus();
+            switch (runStatus.getProgress()) {
+                case IN_PROGRESS:
+                    throw new SessionException("Session is still running.  You can't change the session while it is running.");
+                case CANCEL_FAILED:
+                    throw new SessionException("Session has failed to cancel.  You can't change the session after it has failed to cancel.");
+                case CANCELLED:
+                case COMPLETED:
+                case FAILED:
+                default:
+                    break;
             }
-            ;
+            activeSession = null;
             // Close the connections pools, so they can be reset.
             connectionPoolService.close();
         }
@@ -195,7 +202,7 @@ public class ExecuteSessionService {
     public Boolean transitionLoadedSessionToActive(Integer concurrency, boolean connectionCheckOnly) throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
-        if (!isNull(activeSession) && activeSession.getRunning().get()) {
+        if (!isNull(activeSession) && activeSession.isRunning()) {
             throw new SessionException("Session is still running.  Cannot transition to active.");
         }
 

@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
 import com.cloudera.utils.hms.mirror.service.TranslatorService;
@@ -69,7 +70,7 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -121,7 +122,14 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
 
         rtn = buildOutDefinition(tableMirror);
         if (rtn) {
-            rtn = buildOutSql(tableMirror);
+            try {
+                rtn = buildOutSql(tableMirror);
+            } catch (MissingDataPointException e) {
+                EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+                log.error("Table: {} Missing Data Point: {}", let.getName(), e.getMessage());
+                let.addIssue("Failed to build out SQL: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
         }
         return rtn;
     }

@@ -25,6 +25,8 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -59,7 +61,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
@@ -135,7 +137,7 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
@@ -225,11 +227,21 @@ public class CommonDataStrategy extends DataStrategyBase implements DataStrategy
             tableMirror.addIssue(Environment.RIGHT,
                     "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
         } else {
-            rtn = buildOutDefinition(tableMirror);
+            try {
+                rtn = buildOutDefinition(tableMirror);
+            } catch (RequiredConfigurationException e) {
+                let.addIssue("Failed to build out definition: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
         }
 
         if (rtn) {
-            rtn = buildOutSql(tableMirror);
+            try {
+                rtn = buildOutSql(tableMirror);
+            } catch (MissingDataPointException e) {
+                let.addIssue("Failed to build out SQL: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
         }
         // Execute the RIGHT sql if config.execute.
         if (rtn) {

@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -210,8 +211,10 @@ public class TranslatorService {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
-        Map<String, String> dbRef = tblMirror.getParent().getDBDefinition(Environment.RIGHT);
-        Boolean chkLocation = config.getTransfer().getWarehouse().getManagedDirectory() != null && config.getTransfer().getWarehouse().getExternalDirectory() != null;
+//        Warehouse warehouse = databaseService.getWarehousePlan(tblMirror.getParent().getName());
+
+//        Map<String, String> dbRef = tblMirror.getParent().getDBDefinition(Environment.RIGHT);
+//        Boolean chkLocation = config.getTransfer().getWarehouse().getManagedDirectory() != null && config.getTransfer().getWarehouse().getExternalDirectory() != null;
         if (config.isEvaluatePartitionLocation()
                 && tblMirror.getEnvironmentTable(Environment.LEFT).getPartitioned()
                 && (tblMirror.getStrategy() == DataStrategyEnum.SCHEMA_ONLY)) {
@@ -261,8 +264,8 @@ public class TranslatorService {
                             newPartitionLocation, ++level);
 
                     // Check and warn against warehouse locations if specified.
-                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null &&
-                            config.getTransfer().getWarehouse().getManagedDirectory() != null) {
+//                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null &&
+//                            config.getTransfer().getWarehouse().getManagedDirectory() != null) {
                         if (TableUtils.isExternal(tblMirror.getEnvironmentTable(Environment.LEFT))) {
                             // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
                             if (!newPartitionLocation.startsWith(tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
@@ -283,7 +286,7 @@ public class TranslatorService {
                                 tblMirror.addIssue(Environment.RIGHT, msg);
                             }
                         }
-                    }
+//                    }
 
                 }
             }
@@ -292,7 +295,9 @@ public class TranslatorService {
         return rtn;
     }
 
-    public String translateTableLocation(TableMirror tableMirror, String originalLocation, int level, String partitionSpec) throws MismatchException, MissingDataPointException {
+    public String translateTableLocation(TableMirror tableMirror, String originalLocation,
+                                         int level, String partitionSpec)
+            throws MismatchException, MissingDataPointException, RequiredConfigurationException {
         String rtn = originalLocation;
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
@@ -300,10 +305,11 @@ public class TranslatorService {
 
         String dbName = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
 
-        String leftNS = config.getCluster(Environment.LEFT).getHcfsNamespace();
+//        String leftNS = config.getCluster(Environment.LEFT).getHcfsNamespace();
         // Set base on rightNS or Common Storage, if specified
-        String rightNS = isBlank(config.getTransfer().getCommonStorage()) ?
-                config.getCluster(Environment.RIGHT).getHcfsNamespace() : config.getTransfer().getCommonStorage();
+        String rightNS = config.getTargetNamespace();
+//                isBlank(config.getTransfer().getCommonStorage()) ?
+//                config.getCluster(Environment.RIGHT).getHcfsNamespace() : config.getTransfer().getCommonStorage();
 
         // Get the relative dir.
         // MissingDataPointException below is throw when we can't find a warehouse plan for the table
@@ -336,7 +342,7 @@ public class TranslatorService {
 //                tableMirror.addIssue(Environment.LEFT, "Location Mapping can't be determined.  No matching `glm` entry to make translation." +
 //                        "Original Location: " + originalLocation);
                 tableMirror.setPhaseState(PhaseState.ERROR);
-                throw new RuntimeException("Location Mapping can't be determined.  No matching `glm` entry to make translation." +
+                throw new MissingDataPointException("Location Mapping can't be determined.  No matching `glm` entry to make translation." +
                         "Original Location: " + originalLocation);
             }
         }
@@ -358,19 +364,25 @@ public class TranslatorService {
             // TODO: This can be null so we need to throw an error when it is.
             //       This means that a warehouse wasn't configured for the database (globally or etc.)
             //  MAYBE raise MissingDataPointException here.  Need to follow upward path to see if it's handled.
-            if (isNull(warehouse)) {
-                throw new MissingDataPointException("GLM not found for relative directory of table and couldn't find a Warehouse Plan for database: " + dbName +
-                        "table: " + tableName + ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
-                        "set the global warehouse locations.");
+//            if (isNull(warehouse)) {
+//                throw new MissingDataPointException("GLM not found for relative directory of table and couldn't find a Warehouse Plan for database: " + dbName +
+//                        "table: " + tableName + ". The global warehouse locations aren't defined either.  Please define a warehouse plan or " +
+//                        "set the global warehouse locations.");
+//            }
+//            assert warehouse != null;
+            // Using the RIGHT to determine the table type.  This will account for a table
+            //   definition that's been converted already and ensure the correct location is used.
+            EnvironmentTable checkEnvTbl = tableMirror.getEnvironmentTable(Environment.RIGHT);
+            if (isNull(checkEnvTbl)) {
+                checkEnvTbl = tableMirror.getEnvironmentTable(Environment.LEFT);
             }
-            assert warehouse != null;
-            if (TableUtils.isManaged(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+            if (TableUtils.isManaged(checkEnvTbl)) {
                 sbDir.append(warehouse.getManagedDirectory()).append("/");
                 sbDir.append(dbName).append(".db").append("/").append(tableName);
                 if (partitionSpec != null)
                     sbDir.append("/").append(partitionSpec);
                 newLocation = sbDir.toString();
-            } else if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+            } else if (TableUtils.isExternal(checkEnvTbl)) {
                 sbDir.append(warehouse.getExternalDirectory()).append("/");
                 sbDir.append(dbName).append(".db").append("/").append(tableName);
                 if (partitionSpec != null)
@@ -388,7 +400,7 @@ public class TranslatorService {
                 case DUMP:
                 case STORAGE_MIGRATION:
                 case CONVERT_LINKED:
-                    newLocation = originalLocation.replace(leftNS, rightNS);
+                    newLocation = NamespaceUtils.replaceNamespace(originalLocation, rightNS);
                     break;
                 case LINKED:
                 case COMMON:

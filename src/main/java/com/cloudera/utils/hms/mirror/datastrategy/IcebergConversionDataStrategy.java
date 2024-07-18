@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.feature.IcebergState;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -93,7 +94,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         log.debug("Table: {} buildout Iceberg Conversion SQL", tableMirror.getName());
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -137,7 +138,13 @@ public class IcebergConversionDataStrategy extends DataStrategyBase implements D
 
         rtn = buildOutDefinition(tableMirror);
         if (rtn) {
-            rtn = buildOutSql(tableMirror);
+            try {
+                rtn = buildOutSql(tableMirror);
+            } catch (MissingDataPointException e) {
+                EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+                let.addIssue("Failed to build out SQL: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
         }
         if (rtn) {
             rtn = getTableService().runTableSql(tableMirror, Environment.LEFT);

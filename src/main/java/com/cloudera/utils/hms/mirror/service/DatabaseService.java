@@ -33,6 +33,7 @@ import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -149,6 +150,11 @@ public class DatabaseService {
                 }
             }
         }
+
+        if (isNull(warehouse)) {
+            throw new MissingDataPointException("Warehouse Plan for Database: " + database + " not found and couldn't be built from (Warehouse Plans, General Warehouse Configs or Hive ENV.");
+        }
+
         return warehouse;
     }
 
@@ -397,8 +403,10 @@ public class DatabaseService {
             String database = null;
             String location = null;
             String managedLocation = null;
-            String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
-            String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
+//            String leftNamespace = config.getCluster(Environment.LEFT).getHcfsNamespace();
+//            String rightNamespace = config.getCluster(Environment.RIGHT).getHcfsNamespace();
+            String rightNamespace = config.getTargetNamespace();
+            Warehouse dbWarehouse = getWarehousePlan(dbMirror.getName());
 
             if (!config.isResetRight()) {
                 // Don't buildout RIGHT side with inplace downgrade of ACID tables.
@@ -411,13 +419,13 @@ public class DatabaseService {
                             managedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
 
                             if (location != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                                location = location.replace(leftNamespace, rightNamespace);
+                                location = NamespaceUtils.replaceNamespace(location, rightNamespace);
                                 String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                                 dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
                                 dbDefRight.put(DB_LOCATION, location);
                             }
                             if (managedLocation != null) {
-                                managedLocation = managedLocation.replace(leftNamespace, rightNamespace);
+                                managedLocation = NamespaceUtils.replaceNamespace(managedLocation, rightNamespace);
                                 if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
                                     String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, managedLocation);
                                     dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDBMngdLocationSql));
@@ -435,24 +443,24 @@ public class DatabaseService {
                             dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
                             database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
                             location = dbDefLeft.get(DB_LOCATION);
-                            Warehouse dbWarehouse = null;
+//                            Warehouse dbWarehouse = null;
 //                        try {
-                            dbWarehouse = getWarehousePlan(dbMirror.getName());
+//                            dbWarehouse = getWarehousePlan(dbMirror.getName());
                             // A null warehouse means we should use the relative directories.
 //                            assert dbWarehouse != null;
 //                        } catch (MissingDataPointException e) {
 //                            dbMirror.addIssue(Environment.LEFT, "TODO: Missing Warehouse details...");
 //                            return Boolean.FALSE;
 //                        }
-                            if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
-                                location = config.getCluster(Environment.RIGHT).getHcfsNamespace()
+//                            if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
+                                location = config.getTargetNamespace()
                                         + dbWarehouse.getExternalDirectory()
                                         + "/" + dbMirror.getName() + ".db";
-                            } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
-                                location = config.getTransfer().getCommonStorage()
-                                        + dbWarehouse.getExternalDirectory()
-                                        + "/" + dbMirror.getName() + ".db";
-                            }
+//                            } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
+//                                location = config.getTransfer().getCommonStorage()
+//                                        + dbWarehouse.getExternalDirectory()
+//                                        + "/" + dbMirror.getName() + ".db";
+//                            }
 
                             if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
                                 // Check for Managed Location.
@@ -460,15 +468,15 @@ public class DatabaseService {
                             }
 
                             if (!config.getCluster(Environment.RIGHT).isLegacyHive()) {
-                                if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
-                                    managedLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
+//                                if (isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)) {
+                                    managedLocation = config.getTargetNamespace() //getCluster(Environment.RIGHT).getHcfsNamespace()
                                             + dbWarehouse.getManagedDirectory()
                                             + "/" + dbMirror.getName() + ".db";
-                                } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)){
-                                    managedLocation = config.getTransfer().getCommonStorage()
-                                            + dbWarehouse.getManagedDirectory()
-                                            + "/" + dbMirror.getName() + ".db";
-                                }
+//                                } else if (!isBlank(config.getTransfer().getCommonStorage()) && nonNull(dbWarehouse)){
+//                                    managedLocation = config.getTransfer().getCommonStorage()
+//                                            + dbWarehouse.getManagedDirectory()
+//                                            + "/" + dbMirror.getName() + ".db";
+//                                }
                                 // If we've set the managedLocation, check to see if it's the same as the default
                                 if (nonNull(managedLocation)) {
                                     // Check is the Managed Location matches the system default.  If it does,
@@ -725,15 +733,15 @@ public class DatabaseService {
                     }
                 } else {
                     // Downgrade in place.
-                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+//                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
                         // Set the location to the external directory for the database.
                         database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-                        location = config.getCluster(Environment.LEFT).getHcfsNamespace() + config.getTransfer().getWarehouse().getExternalDirectory() +
+                        location = config.getCluster(Environment.LEFT).getHcfsNamespace() + dbWarehouse.getExternalDirectory() +
                                 "/" + database + ".db";
                         String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, location);
                         dbMirror.getSql(Environment.LEFT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
                         dbDefLeft.put(DB_LOCATION, location);
-                    }
+//                    }
                 }
             } else {
                 // Reset Right DB.
@@ -746,6 +754,11 @@ public class DatabaseService {
             log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
             // TODO: Do we need to use the LEFT here when it's STORAGE_MIGRATION?
             dbMirror.addIssue(Environment.RIGHT, MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
+        } catch (RequiredConfigurationException e) {
+            rtn = Boolean.FALSE;
+            log.error("Required Configuration", e);
+            // TODO: Do we need to use the LEFT here when it's STORAGE_MIGRATION?
+            dbMirror.addIssue(Environment.RIGHT, "Required Configuration: " + e.getMessage());
         }
 
         return rtn;

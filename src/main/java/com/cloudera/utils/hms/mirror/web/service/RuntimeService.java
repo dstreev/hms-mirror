@@ -95,7 +95,7 @@ public class RuntimeService {
 //            }
 
             if (runStatus.reset()) {
-                runStatus.setProgress(ProgressEnum.STARTED);
+//                runStatus.setProgress(ProgressEnum.STARTED);
                 // Set the dryrun flag.
                 executeSessionService.getSession().getConfig().setExecute(!dryrun);
 
@@ -103,7 +103,7 @@ public class RuntimeService {
                 Future<Boolean> runningTask = hmsMirrorAppService.run();
 
                 // Set state to in progress.
-                runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+//                runStatus.setProgress(ProgressEnum.IN_PROGRESS);
 
                 // Set the running task reference in the RunStatus.
                 runStatus.setRunningTask(runningTask);

@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.domain;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -196,6 +197,24 @@ public class HmsMirrorConfig implements Cloneable {
         } else {
             return Boolean.FALSE;
         }
+    }
+
+    @JsonIgnore
+    /*
+    Target Namespace is a hierarchy check of the 'common' storage location, the RIGHT cluster's namespace.
+     */
+    public String getTargetNamespace() throws RequiredConfigurationException {
+        String rtn = null;
+        if (nonNull(getTransfer()) && nonNull(getTransfer().getCommonStorage())) {
+            rtn = getTransfer().getCommonStorage();
+        } else if (nonNull(getCluster(Environment.RIGHT))
+        && nonNull(getCluster(Environment.RIGHT).getHcfsNamespace())) {
+            rtn = getCluster(Environment.RIGHT).getHcfsNamespace();
+        } else {
+            // Throw Exception that we couldn't determine the target Namespace.
+            throw new RequiredConfigurationException("Target Namespace is required. Could determine from configuration. Please set 'commonStorage' or 'hcfsNamespace' in the RIGHT cluster.");
+        }
+       return rtn;
     }
 
     // Handle null databases from config load.

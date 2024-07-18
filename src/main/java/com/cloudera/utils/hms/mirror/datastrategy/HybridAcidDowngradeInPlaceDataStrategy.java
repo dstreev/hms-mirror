@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,7 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase imp
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 

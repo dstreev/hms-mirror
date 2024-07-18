@@ -29,6 +29,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class NamespaceUtils {
 
     public static final Pattern protocolNSPattern = Pattern.compile("(^.*://)(\\w*(?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
+    public static final Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
 
     public static String getNamespace(String locationWithNamespace) {
         String rtn = null;
@@ -67,7 +68,7 @@ public class NamespaceUtils {
 
     public static String stripNamespace(String locationWithNamespace) {
         String namespace = getNamespace(locationWithNamespace);
-        return nonNull(namespace)? locationWithNamespace.replace(namespace, ""): locationWithNamespace;
+        return nonNull(namespace) ? locationWithNamespace.replace(namespace, "") : locationWithNamespace;
     }
 
     public static String replaceNamespace(String locationWithNamespace, String newNamespace) {
@@ -80,6 +81,24 @@ public class NamespaceUtils {
         if (newNamespace.endsWith("/")) {
             newNamespace = newNamespace.substring(0, newNamespace.length() - 1);
         }
-        return !isBlank(newNamespace)? newNamespace + relativePath: relativePath;
+        return !isBlank(newNamespace) ? newNamespace + relativePath : relativePath;
+    }
+
+    public static String getLastDirectory(String location) {
+        Matcher matcher = lastDirPattern.matcher(location);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    public static String getParentDirectory(String location) {
+        // Ensure the path for the right exists.
+        String lastDirectory = getLastDirectory(location.trim());
+        String parentDirectory = null;
+        int extra = 1;
+        if (location.trim().endsWith("/")) {
+            extra += 1;
+        }
+        parentDirectory = location.trim().substring(0, location.trim().length() - (lastDirectory.length() + extra));
+
+        return parentDirectory;// != null? location.substring(0, location.length() - (lastDirectory.length() + 1)): null;
     }
 }

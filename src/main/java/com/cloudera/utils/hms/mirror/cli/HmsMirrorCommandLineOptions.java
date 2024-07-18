@@ -461,20 +461,20 @@ public class HmsMirrorCommandLineOptions {
     @Order(1)
     @ConditionalOnProperty(
             name = "hms-mirror.config.external-warehouse-directory")
-    CommandLineRunner configExternalWarehouseDirectory(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
+    CommandLineRunner configExternalWarehouseDirectory(HmsMirrorConfig config, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
         return args -> {
             log.info("external-warehouse-directory: {}", value);
-            if (isNull(hmsMirrorConfig.getTransfer().getWarehouse()))
-                hmsMirrorConfig.getTransfer().setWarehouse(new Warehouse());
+            if (isNull(config.getTransfer().getWarehouse()))
+                config.getTransfer().setWarehouse(new Warehouse());
             String ewdStr = value;
             // Remove/prevent duplicate namespace config.
-            if (nonNull(hmsMirrorConfig.getTransfer().getCommonStorage())) {
-                if (ewdStr.startsWith(hmsMirrorConfig.getTransfer().getCommonStorage())) {
-                    ewdStr = ewdStr.substring(hmsMirrorConfig.getTransfer().getCommonStorage().length());
+            if (nonNull(config.getTransfer().getCommonStorage())) {
+                if (ewdStr.startsWith(config.getTransfer().getCommonStorage())) {
+                    ewdStr = ewdStr.substring(config.getTransfer().getCommonStorage().length());
                     log.warn("External Warehouse Location Modified (stripped duplicate namespace): {}", ewdStr);
                 }
             }
-            hmsMirrorConfig.getTransfer().getWarehouse().setExternalDirectory(ewdStr);
+            config.getTransfer().getWarehouse().setExternalDirectory(ewdStr);
 
         };
     }
@@ -484,10 +484,10 @@ public class HmsMirrorCommandLineOptions {
     @ConditionalOnProperty(
             name = "hms-mirror.config.flip",
             havingValue = "true")
-    CommandLineRunner configFlipTrue(HmsMirrorConfig hmsMirrorConfig) {
+    CommandLineRunner configFlipTrue(HmsMirrorConfig config) {
         return args -> {
             log.info("flip: {}", Boolean.TRUE);
-            configService.flipConfig(hmsMirrorConfig);
+            configService.flipConfig(config);
 //            hmsMirrorConfig.setFlip(Boolean.TRUE);
         };
     }
@@ -497,7 +497,7 @@ public class HmsMirrorCommandLineOptions {
     @ConditionalOnProperty(
             name = "hms-mirror.config.flip",
             havingValue = "false")
-    CommandLineRunner configFlipFalse(HmsMirrorConfig hmsMirrorConfig) {
+    CommandLineRunner configFlipFalse(HmsMirrorConfig config) {
         return args -> {
             log.info("flip: {}", Boolean.FALSE);
 //            hmsMirrorConfig.setFlip(Boolean.FALSE);
@@ -509,10 +509,10 @@ public class HmsMirrorCommandLineOptions {
     @ConditionalOnProperty(
             name = "hms-mirror.config.force-external-location",
             havingValue = "true")
-    CommandLineRunner configForceExternalLocationTrue(HmsMirrorConfig hmsMirrorConfig) {
+    CommandLineRunner configForceExternalLocationTrue(HmsMirrorConfig config) {
         return args -> {
             log.info("force-external-location: {}", Boolean.TRUE);
-            hmsMirrorConfig.getTranslator().setForceExternalLocation(Boolean.TRUE);
+            config.getTranslator().setForceExternalLocation(Boolean.TRUE);
         };
     }
 
@@ -521,10 +521,10 @@ public class HmsMirrorCommandLineOptions {
     @ConditionalOnProperty(
             name = "hms-mirror.config.force-external-location",
             havingValue = "false")
-    CommandLineRunner configForceExternalLocationFalse(HmsMirrorConfig hmsMirrorConfig) {
+    CommandLineRunner configForceExternalLocationFalse(HmsMirrorConfig config) {
         return args -> {
             log.info("force-external-location: {}", Boolean.FALSE);
-            hmsMirrorConfig.getTranslator().setForceExternalLocation(Boolean.FALSE);
+            config.getTranslator().setForceExternalLocation(Boolean.FALSE);
         };
     }
 
@@ -532,12 +532,12 @@ public class HmsMirrorCommandLineOptions {
     @Order(1)
     @ConditionalOnProperty(
             name = "hms-mirror.config.global-location-map")
-    CommandLineRunner configGlobalLocationMap(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.global-location-map}") String value) {
+    CommandLineRunner configGlobalLocationMap(HmsMirrorConfig config, @Value("${hms-mirror.config.global-location-map}") String value) {
         return args -> {
             log.info("global-location-map: {}", value);
             String[] globalLocMap = value.split(",");
             if (nonNull(globalLocMap))
-                hmsMirrorConfig.setGlobalLocationMapKV(globalLocMap);
+                config.setGlobalLocationMapKV(globalLocMap);
         };
     }
 
@@ -556,12 +556,12 @@ public class HmsMirrorCommandLineOptions {
     @Order(1)
     @ConditionalOnProperty(
             name = "hms-mirror.config.iceberg-table-property-overrides")
-    CommandLineRunner configIcebergTablePropertyOverrides(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.iceberg-table-property-overrides}") String value) {
+    CommandLineRunner configIcebergTablePropertyOverrides(HmsMirrorConfig config, @Value("${hms-mirror.config.iceberg-table-property-overrides}") String value) {
         return args -> {
             log.info("iceberg-table-property-overrides: {}", value);
             String[] overrides = value.split(",");
             if (nonNull(overrides))
-                hmsMirrorConfig.getIcebergConfig().setPropertyOverridesStr(overrides);
+                config.getIcebergConfig().setPropertyOverridesStr(overrides);
         };
     }
 
@@ -1346,20 +1346,20 @@ public class HmsMirrorCommandLineOptions {
     @Order(1)
     @ConditionalOnProperty(
             name = "hms-mirror.config.warehouse-directory")
-    CommandLineRunner configWarehouseDirectory(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.warehouse-directory}") String value) {
+    CommandLineRunner configWarehouseDirectory(HmsMirrorConfig config, @Value("${hms-mirror.config.warehouse-directory}") String value) {
         return args -> {
             log.info("warehouse-directory: {}", value);
-            if (isNull(hmsMirrorConfig.getTransfer().getWarehouse()))
-                hmsMirrorConfig.getTransfer().setWarehouse(new Warehouse());
+            if (isNull(config.getTransfer().getWarehouse()))
+                config.getTransfer().setWarehouse(new Warehouse());
             String wdStr = value;
             // Remove/prevent duplicate namespace config.
-            if (nonNull(hmsMirrorConfig.getTransfer().getCommonStorage())) {
-                if (wdStr.startsWith(hmsMirrorConfig.getTransfer().getCommonStorage())) {
-                    wdStr = wdStr.substring(hmsMirrorConfig.getTransfer().getCommonStorage().length());
+            if (nonNull(config.getTransfer().getCommonStorage())) {
+                if (wdStr.startsWith(config.getTransfer().getCommonStorage())) {
+                    wdStr = wdStr.substring(config.getTransfer().getCommonStorage().length());
                     log.warn("Managed Warehouse Location Modified (stripped duplicate namespace): {}", wdStr);
                 }
             }
-            hmsMirrorConfig.getTransfer().getWarehouse().setManagedDirectory(wdStr);
+            config.getTransfer().getWarehouse().setManagedDirectory(wdStr);
         };
     }
 

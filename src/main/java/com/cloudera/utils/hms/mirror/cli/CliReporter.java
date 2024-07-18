@@ -285,7 +285,7 @@ public class CliReporter {
             fetchReportTemplates();
             log.info("Starting Reporting Thread");
             // Wait for the main thread to start.
-            while (!session.getRunning().get()) {
+            while (!session.isRunning()) {
                 try {
                     Thread.sleep(sleepInterval);
                 } catch (InterruptedException e) {
@@ -293,7 +293,7 @@ public class CliReporter {
                 }
             }
 //            getHmsMirrorCfgService().getRunning().set(true);
-            while (session.getRunning().get()) {
+            while (session.isRunning()) {
                 refresh(Boolean.FALSE);
                 try {
                     Thread.sleep(sleepInterval);

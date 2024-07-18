@@ -24,6 +24,8 @@ import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -52,7 +54,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -107,7 +109,7 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -181,6 +183,9 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
+        // Build cleanup Queries (drop archive table)
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+
         /*
         In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
         the RIGHT cluster is configured the same as the LEFT.
@@ -193,11 +198,14 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
         from original_archive insert overwrite table new external (deal with partitions).
         write cleanup sql to drop original_archive.
          */
-        rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+        try {
+            rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+        } catch (RequiredConfigurationException e) {
+            let.addIssue("Failed to build out definition: " + e.getMessage());
+            rtn = Boolean.FALSE;
+        }
 
         if (rtn) {
-            // Build cleanup Queries (drop archive table)
-            EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
             String cleanUpArchive = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 
@@ -212,7 +220,12 @@ public class SQLAcidDowngradeInPlaceDataStrategy extends DataStrategyBase implem
 
         if (rtn) {
             // Build Transfer SQL
-            rtn = buildOutSql(tableMirror);
+            try {
+                rtn = buildOutSql(tableMirror);
+            } catch (MissingDataPointException e) {
+                let.addIssue("Failed to build out SQL: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
         }
 
         // run queries.

@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.ExportCircularResolveService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -52,7 +53,7 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
@@ -67,11 +68,17 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         import as external to original tablename
         write cleanup sql to drop original_archive.
          */
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+
         // Check Partition Limits before proceeding.
-        rtn = getExportCircularResolveService().buildOutExportImportSql(tableMirror);
+        try {
+            rtn = getExportCircularResolveService().buildOutExportImportSql(tableMirror);
+        } catch (MissingDataPointException e) {
+            let.addIssue("Failed to build out SQL: " + e.getMessage());
+            rtn = Boolean.FALSE;
+        }
         if (rtn) {
             // Build cleanup Queries (drop archive table)
-            EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             String cleanUpArchive = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 

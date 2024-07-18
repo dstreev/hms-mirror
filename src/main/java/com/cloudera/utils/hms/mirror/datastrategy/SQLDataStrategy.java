@@ -27,6 +27,8 @@ import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -63,7 +65,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -147,7 +149,7 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -248,13 +250,24 @@ public class SQLDataStrategy extends DataStrategyBase implements DataStrategy {
             EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
 
             // We should not get ACID tables in this routine.
-            rtn = buildOutDefinition(tableMirror);
+            try {
+                rtn = buildOutDefinition(tableMirror);
+            } catch (RequiredConfigurationException e) {
+                let.addIssue("Failed to build out definition: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
 
             if (rtn)
                 rtn = AVROCheck(tableMirror);
 
-            if (rtn)
-                rtn = buildOutSql(tableMirror);
+            if (rtn) {
+                try {
+                    rtn = buildOutSql(tableMirror);
+                } catch (MissingDataPointException e) {
+                    let.addIssue("Failed to build out SQL: " + e.getMessage());
+                    rtn = Boolean.FALSE;
+                }
+            }
 
             // Construct Transfer SQL
             if (rtn) {

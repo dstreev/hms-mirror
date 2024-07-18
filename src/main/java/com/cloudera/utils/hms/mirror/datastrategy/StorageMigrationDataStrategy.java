@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -39,13 +40,11 @@ import java.util.Date;
 import java.util.Map;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
-import static com.cloudera.utils.hms.mirror.MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 import static com.cloudera.utils.hms.mirror.SessionVars.*;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
-import static java.util.Objects.nonNull;
 
 @Component
 @Slf4j
@@ -67,7 +66,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
@@ -172,7 +171,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -247,44 +246,44 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                     Pair alterTablePair = new Pair(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterTable);
                     let.addSql(alterTablePair);
                     // Get the Warehouse from the Database Service.
-                    Warehouse warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
-                    if (nonNull(warehouse)) {
-                        if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
-                            // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                            if (!newLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
-                                // Set warning that even though you've specified to warehouse directories, the current configuration
-                                // will NOT place it in that directory.
-                                String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "table",
-                                        tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
-                                        newLocation);
-                                tableMirror.addIssue(Environment.LEFT, msg);
-                                noIssues = Boolean.FALSE;
-                            }
-                        } else {
-                            String location = null;
-                            // Need to make adjustments for hdp3 hive 3.
-                            if (hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
-                                location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION);
-                            } else {
-                                location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION);
-                            }
-                            if (!newLocation.startsWith(location)) {
-                                // Set warning that even though you've specified to warehouse directories, the current configuration
-                                // will NOT place it in that directory.
-                                String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "table",
-                                        tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
-                                        newLocation);
-                                tableMirror.addIssue(Environment.LEFT, msg);
-                                noIssues = Boolean.FALSE;
-                            }
-
+//                    Warehouse warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
+//                    if (nonNull(warehouse)) {
+                    if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+                        // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
+                        if (!newLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
+                            // Set warning that even though you've specified to warehouse directories, the current configuration
+                            // will NOT place it in that directory.
+                            String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "table",
+                                    tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
+                                    newLocation);
+                            tableMirror.addIssue(Environment.LEFT, msg);
+                            noIssues = Boolean.FALSE;
                         }
                     } else {
-                        // Warehouse should NOT be null.  Issue with the Warehouse Plan.
-                        tableMirror.addIssue(Environment.LEFT, WAREHOUSE_DIRECTORIES_NOT_DEFINED.getDesc());
-                        noIssues = Boolean.FALSE;
+                        String location = null;
+                        // Need to make adjustments for hdp3 hive 3.
+                        if (hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                            location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION);
+                        } else {
+                            location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION);
+                        }
+                        if (!newLocation.startsWith(location)) {
+                            // Set warning that even though you've specified to warehouse directories, the current configuration
+                            // will NOT place it in that directory.
+                            String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "table",
+                                    tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
+                                    newLocation);
+                            tableMirror.addIssue(Environment.LEFT, msg);
+                            noIssues = Boolean.FALSE;
+                        }
+
                     }
-                } catch (MismatchException rte) {
+//                    } else {
+//                        // Warehouse should NOT be null.  Issue with the Warehouse Plan.
+//                        tableMirror.addIssue(Environment.LEFT, WAREHOUSE_DIRECTORIES_NOT_DEFINED.getDesc());
+//                        noIssues = Boolean.FALSE;
+//                    }
+                } catch (MismatchException | RequiredConfigurationException | MissingDataPointException rte) {
                     noIssues = Boolean.FALSE;
                     tableMirror.addIssue(Environment.LEFT, rte.getMessage());
                     log.error(rte.getMessage(), rte);
@@ -336,38 +335,38 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                             // Getting an NPE here when using GLM's.
 //                            if (hmsMirrorConfig.getTransfer().getWarehouse().getExternalDirectory() != null &&
 //                                    hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
-                                if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
-                                    // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                                    if (!newPartLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
-                                        // Set warning that even though you've specified to warehouse directories, the current configuration
-                                        // will NOT place it in that directory.
-                                        String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
-                                                tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
-                                                newPartLocation);
-                                        tableMirror.addIssue(Environment.LEFT, msg);
-                                        noIssues = Boolean.FALSE;
-                                    }
-                                } else {
-                                    String location = null;
-                                    // Need to make adjustments for hdp3 hive 3.
-                                    if (hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
-                                        location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION);
-                                    } else {
-                                        location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION);
-                                    }
-                                    if (!newPartLocation.startsWith(location)) {
-                                        // Set warning that even though you've specified to warehouse directories, the current configuration
-                                        // will NOT place it in that directory.
-                                        String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
-                                                tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
-                                                newPartLocation);
-                                        tableMirror.addIssue(Environment.LEFT, msg);
-                                        noIssues = Boolean.FALSE;
-                                    }
-
+                            if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+                                // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
+                                if (!newPartLocation.startsWith(tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
+                                    // Set warning that even though you've specified to warehouse directories, the current configuration
+                                    // will NOT place it in that directory.
+                                    String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
+                                            tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
+                                            newPartLocation);
+                                    tableMirror.addIssue(Environment.LEFT, msg);
+                                    noIssues = Boolean.FALSE;
                                 }
+                            } else {
+                                String location = null;
+                                // Need to make adjustments for hdp3 hive 3.
+                                if (hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                                    location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION);
+                                } else {
+                                    location = tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION);
+                                }
+                                if (!newPartLocation.startsWith(location)) {
+                                    // Set warning that even though you've specified to warehouse directories, the current configuration
+                                    // will NOT place it in that directory.
+                                    String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
+                                            tableMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
+                                            newPartLocation);
+                                    tableMirror.addIssue(Environment.LEFT, msg);
+                                    noIssues = Boolean.FALSE;
+                                }
+
+                            }
 //                            }
-                        } catch (MismatchException rte) {
+                        } catch (MismatchException | RequiredConfigurationException rte) {
                             noIssues = Boolean.FALSE;
                             tableMirror.addIssue(Environment.LEFT, rte.getMessage());
                         }
@@ -475,7 +474,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase implements Da
                 // Run the Transfer Scripts
                 rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
             }
-        } catch (MissingDataPointException e) {
+        } catch (MissingDataPointException | RequiredConfigurationException e) {
             log.error(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc(), e);
             let.addIssue(MessageCode.STORAGE_MIGRATION_REQUIRED_WAREHOUSE_OPTIONS.getDesc());
             rtn = Boolean.FALSE;

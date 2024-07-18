@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Slf4j
 @Getter
@@ -44,7 +45,8 @@ public class RunStatus implements Comparable<RunStatus> {
     private final Messages errors = new Messages(150);
     @JsonIgnore
     private final Messages warnings = new Messages(150);
-    @JsonIgnore Integer concurrency;
+    @JsonIgnore
+    Integer concurrency;
     @JsonIgnore
     Future<Boolean> runningTask = null;
 
@@ -56,7 +58,7 @@ public class RunStatus implements Comparable<RunStatus> {
     /*
     Keep track of the current running state.
      */
-    private ProgressEnum progress = ProgressEnum.INITIALIZED;
+//    private ProgressEnum progress = ProgressEnum.INITIALIZED;
 
     /*
     Track the current progress across the various stages of the operation.
@@ -77,46 +79,31 @@ public class RunStatus implements Comparable<RunStatus> {
         return runDate.compareTo(o.runDate);
     }
 
-    public boolean isRunning() {
-        boolean rtn = Boolean.FALSE;
-        switch (progress) {
-            case IN_PROGRESS:
-            case STARTED:
-            case CANCEL_FAILED:
-                rtn = Boolean.TRUE;
-                break;
-            case CANCELLED:
-            case COMPLETED:
-            case FAILED:
-            case INITIALIZED:
-                rtn = Boolean.FALSE;
-                break;
-        }
-        return rtn;
-    }
-
     public ProgressEnum getProgress() {
         // If the task is still running, then the progress is still in progress.
-        if (runningTask != null) {
+        ProgressEnum rtn = ProgressEnum.INITIALIZED;
+        if (nonNull(runningTask)) {
             if (runningTask.isCancelled()) {
-                progress = ProgressEnum.CANCELLED;
+                rtn = ProgressEnum.CANCELLED;
             } else if (!runningTask.isDone()) {
-                progress = ProgressEnum.IN_PROGRESS;
+                rtn = ProgressEnum.IN_PROGRESS;
             } else if (runningTask.isDone()) {
                 // Don't attempt to get the result until the task is done.
                 //     or else it will block.
                 try {
                     if (runningTask.get()) {
-                        progress = ProgressEnum.COMPLETED;
+                        rtn = ProgressEnum.COMPLETED;
                     } else {
-                        progress = ProgressEnum.FAILED;
+                        rtn = ProgressEnum.FAILED;
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     //throw new RuntimeException(e);
                 }
             }
+        } else {
+            rtn = ProgressEnum.INITIALIZED;
         }
-        return progress;
+        return rtn;
     }
 
     public RunStatus() {
@@ -133,7 +120,7 @@ public class RunStatus implements Comparable<RunStatus> {
         if (cancel()) {
             errors.clear();
             warnings.clear();
-            progress = ProgressEnum.INITIALIZED;
+//            progress = ProgressEnum.INITIALIZED;
             configValidated = false;
             stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
             operationStatistics.reset();
@@ -145,13 +132,13 @@ public class RunStatus implements Comparable<RunStatus> {
 
     public boolean cancel() {
         boolean rtn = Boolean.TRUE;
-        if (runningTask != null && !runningTask.isDone()) {
+        if (nonNull(runningTask) && !runningTask.isDone()) {
             if (runningTask.cancel(true)) {
                 log.info("Task cancelled.");
-                this.progress = ProgressEnum.CANCELLED;
+//                this.progress = ProgressEnum.CANCELLED;
             } else {
                 log.error("Task could not be cancelled.");
-                this.progress = ProgressEnum.CANCEL_FAILED;
+//                this.progress = ProgressEnum.CANCEL_FAILED;
                 rtn = Boolean.FALSE;
             }
         }

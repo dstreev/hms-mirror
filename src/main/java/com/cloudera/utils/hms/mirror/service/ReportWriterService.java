@@ -77,7 +77,7 @@ public class ReportWriterService {
         Conversion conversion = executeSessionService.getSession().getConversion();
         log.info("Wrapping up the Application Workflow");
         log.info("Setting 'running' to FALSE");
-        executeSessionService.getSession().getRunning().set(Boolean.FALSE);
+//        executeSessionService.getSession().getRunning().set(Boolean.FALSE);
 
         // Give the underlying threads a chance to finish.
         try {

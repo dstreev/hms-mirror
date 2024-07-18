@@ -22,6 +22,8 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.TableService;
@@ -58,7 +60,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -216,7 +218,7 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -312,14 +314,27 @@ public class IntermediateDataStrategy extends DataStrategyBase implements DataSt
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
-        rtn = buildOutDefinition(tableMirror);
-        if (rtn)
-            rtn = buildOutSql(tableMirror);
-
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
-        EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
-        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
-        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+
+        try {
+            rtn = buildOutDefinition(tableMirror);
+        } catch (RequiredConfigurationException e) {
+            let.addIssue("Failed to build out definition: " + e.getMessage());
+            rtn = Boolean.FALSE;
+        }
+
+        if (rtn) {
+            try {
+                rtn = buildOutSql(tableMirror);
+            } catch (MissingDataPointException e) {
+                let.addIssue("Failed to build out SQL: " + e.getMessage());
+                rtn = Boolean.FALSE;
+            }
+        }
+
+//        EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
+//        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
+//        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         if (rtn) {
             // Construct Transfer SQL

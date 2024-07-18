@@ -24,8 +24,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -37,7 +35,7 @@ public class ExecuteSession implements Cloneable {
     private String sessionId;
 //    private String passwordKey;
 
-    private final AtomicBoolean running = new AtomicBoolean(false);
+    //    private final AtomicBoolean running = new AtomicBoolean(false);
     private boolean connected = Boolean.FALSE;
     private Connections connections = new Connections();
     private RunStatus runStatus;
@@ -62,6 +60,26 @@ public class ExecuteSession implements Cloneable {
         getRunStatus().addWarning(code, args);
     }
 
+    public boolean isRunning() {
+        boolean running = Boolean.FALSE;
+        if (nonNull(runStatus)) {
+            switch (runStatus.getProgress()) {
+                case STARTED:
+                case IN_PROGRESS:
+                    running = Boolean.TRUE;
+                case INITIALIZED:
+                case COMPLETED:
+                case FAILED:
+                case CANCELLED:
+                case CANCEL_FAILED:
+                default:
+                    running = Boolean.FALSE;
+            }
+        } else {
+            running = Boolean.FALSE;
+        }
+        return running;
+    }
 
     public RunStatus getRunStatus() {
         if (isNull(runStatus)) {

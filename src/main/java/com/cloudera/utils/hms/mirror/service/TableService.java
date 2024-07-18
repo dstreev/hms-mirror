@@ -30,6 +30,7 @@ import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.Feature;
 import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
 import com.cloudera.utils.hms.stage.ReturnStatus;
@@ -267,7 +268,7 @@ public class TableService {
         return rtn;
     }
 
-    public Boolean buildTableSchema(CopySpec copySpec) {
+    public Boolean buildTableSchema(CopySpec copySpec) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         TableMirror tableMirror = copySpec.getTableMirror();

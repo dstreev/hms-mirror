@@ -20,11 +20,15 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -43,6 +47,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
     private TranslatorService translatorService;
     private ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy;
     private ConfigService configService;
+    private DatabaseService databaseService;
     private TableService tableService;
 
     @Autowired
@@ -50,12 +55,17 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
         this.configService = configService;
     }
 
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+    }
+
     public ExportImportDataStrategy(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -111,11 +121,13 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
+
+        Warehouse dbWarehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
 
         String database = null;
         database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
@@ -177,6 +189,7 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                     || config.getTransfer().getCommonStorage() != null) {
                 importLoc = exportLoc;
             } else {
+                // checked
                 importLoc = config.getCluster(Environment.LEFT).getHcfsNamespace() + exportLoc;
             }
 
@@ -195,17 +208,17 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                 }
             } else {
                 if (config.isResetToDefaultLocation()) {
-                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null) {
+//                    if (dbWarehouse.getExternalDirectory() != null) {
                         // Build default location, because in some cases when location isn't specified, it will use the "FROM"
                         // location in the IMPORT statement.
-                        targetLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
-                                + config.getTransfer().getWarehouse().getExternalDirectory() +
+                        targetLocation = config.getTargetNamespace()
+                                + dbWarehouse.getExternalDirectory() +
                                 "/" + HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db/"
                                 + tableMirror.getName();
                         importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
-                    } else {
-                        importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE, let.getName(), importLoc);
-                    }
+//                    } else {
+//                        importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE, let.getName(), importLoc);
+//                    }
                 } else {
                     importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 }
@@ -276,11 +289,21 @@ public class ExportImportDataStrategy extends DataStrategyBase implements DataSt
                     rtn = Boolean.FALSE;
                     tableMirror.addIssue(Environment.LEFT, "ACID table EXPORTs are NOT compatible for IMPORT to clusters on a different major version of Hive.");
                 } else {
-                    rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                    try {
+                        rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                    } catch (MissingDataPointException e) {
+                        let.addIssue("Failed to build out SQL: " + e.getMessage());
+                        rtn = Boolean.FALSE;
+                    }
                 }
 
             } else {
-                rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                try {
+                    rtn = buildOutSql(tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                } catch (MissingDataPointException e) {
+                    let.addIssue("Failed to build out SQL: " + e.getMessage());
+                    rtn = Boolean.FALSE;
+                }
 
                 if (rtn)
                     rtn = AVROCheck(tableMirror);

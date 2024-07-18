@@ -22,8 +22,10 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyBase;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -44,12 +46,18 @@ public class ExportCircularResolveService extends DataStrategyBase {
     private ConfigService configService;
 
     private final ExecuteSessionService executeSessionService;
+    private DatabaseService databaseService;
     private TableService tableService;
     private TranslatorService translatorService;
 
     @Autowired
     public void setConfigService(ConfigService configService) {
         this.configService = configService;
+    }
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
     }
 
     public ExportCircularResolveService(ExecuteSessionService executeSessionService) {
@@ -61,7 +69,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
         return null;
     }
 
-    public Boolean buildOutExportImportSql(TableMirror tableMirror) {
+    public Boolean buildOutExportImportSql(TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -72,6 +80,9 @@ public class ExportCircularResolveService extends DataStrategyBase {
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+
+        Warehouse warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
+
         try {
             // LEFT Export to directory
             String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
@@ -129,6 +140,9 @@ public class ExportCircularResolveService extends DataStrategyBase {
                     || !isBlank(config.getTransfer().getCommonStorage())) {
                 importLoc = exportLoc;
             } else {
+                // We'll use the LEFT Namespace for the EXPORT location to ensure consistency with the EXPORT's
+                //   regardless of the original locations namespace.  This is important for the IMPORT.
+                // checked..
                 importLoc = config.getCluster(Environment.LEFT).getHcfsNamespace() + exportLoc;
             }
 
@@ -147,17 +161,18 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 }
             } else {
                 if (config.isResetToDefaultLocation()) {
-                    if (!isBlank(config.getTransfer().getWarehouse().getExternalDirectory())) {
-                        // Build default location, because in some cases when location isn't specified, it will use the "FROM"
-                        // location in the IMPORT statement.
-                        targetLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
-                                + config.getTransfer().getWarehouse().getExternalDirectory() +
-                                "/" + HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db/"
-                                + tableMirror.getName();
-                        importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
-                    } else {
-                        importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE, let.getName(), importLoc);
-                    }
+//                    if (!isBlank(config.getTransfer().getWarehouse().getExternalDirectory())) {
+                    // Build default location, because in some cases when location isn't specified, it will use the "FROM"
+                    // location in the IMPORT statement.
+//                        targetLocation = config.getCluster(Environment.RIGHT).getHcfsNamespace()
+                    targetLocation = config.getTargetNamespace()
+                            + warehouse.getExternalDirectory() +
+                            "/" + HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db/"
+                            + tableMirror.getName();
+                    importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
+//                    } else {
+//                        importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE, let.getName(), importLoc);
+//                    }
                 } else {
                     importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 }
@@ -208,7 +223,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) {
+    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 

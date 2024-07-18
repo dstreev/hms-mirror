@@ -150,8 +150,8 @@ public class HMSMirrorAppService {
             return new AsyncResult<>(Boolean.FALSE);
         }
 
-        log.info("Setting 'running' to TRUE");
-        session.getRunning().set(Boolean.TRUE);
+//        log.info("Setting 'running' to TRUE");
+//        session.getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
         log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",", config.getDatabases()));
@@ -465,8 +465,8 @@ public class HMSMirrorAppService {
                 }
                 break;
         }
-        log.info("Setting 'running' to FALSE");
-        session.getRunning().set(Boolean.FALSE);
+//        log.info("Setting 'running' to FALSE");
+//        session.getRunning().set(Boolean.FALSE);
 
 
         reportWriterService.wrapup();

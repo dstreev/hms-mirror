@@ -80,6 +80,7 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     @Schema(description = "HDP Hive 3 and Manage table creation and location methods weren't mature and had a lot of bugs/incomplete features. Set this to 'true' when using HDP Hive 3.")
     private boolean hdpHive3 = Boolean.FALSE;
     @Schema(description = "The namespace for the HCFS system.  This is used to pattern match the table locations so translations can be made.  The value should include the protocol as well.")
+    @Deprecated
     private String hcfsNamespace = null;
     @Schema(description = "The HiveServer2 configuration for the cluster.")
     private HiveServer2Config hiveServer2 = null;

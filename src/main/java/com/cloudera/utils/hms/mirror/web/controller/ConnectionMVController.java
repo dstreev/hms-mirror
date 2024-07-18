@@ -134,7 +134,7 @@ public class ConnectionMVController {
                 } else {
                     connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.NOT_CONFIGURED);
                 }
-
+                // checked..
                 if (!isBlank(v.getHcfsNamespace())) {
                     try {
                         CommandReturn cr = cliEnvironment.processInput("ls /");

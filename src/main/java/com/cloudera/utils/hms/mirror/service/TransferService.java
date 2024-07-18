@@ -25,10 +25,13 @@ import com.cloudera.utils.hms.mirror.datastrategy.HybridAcidDowngradeInPlaceData
 import com.cloudera.utils.hms.mirror.datastrategy.HybridDataStrategy;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -109,6 +112,7 @@ public class TransferService {
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
 
+        Warehouse warehouse = null;
         try {
             Date start = new Date();
             log.info("Migrating {}.{}", tableMirror.getParent().getName(), tableMirror.getName());
@@ -117,6 +121,8 @@ public class TransferService {
             EnvironmentTable tet = tableMirror.getEnvironmentTable(Environment.TRANSFER);
             EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
             EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+
+            warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
 
             // Set Database to Transfer DB.
             tableMirror.setPhaseState(PhaseState.STARTED);
@@ -180,12 +186,13 @@ public class TransferService {
                             fnlLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(fnlLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (!isBlank(config.getTransfer().getCommonStorage())) {
-                                    sbDir.append(config.getTransfer().getCommonStorage());
-                                } else {
-                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
-                                }
-                                sbDir.append(config.getTransfer().getWarehouse().getExternalDirectory()).append("/");
+                                sbDir.append(config.getTargetNamespace());
+//                                if (!isBlank(config.getTransfer().getCommonStorage())) {
+//                                    sbDir.append(config.getTransfer().getCommonStorage());
+//                                } else {
+//                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
+//                                }
+                                sbDir.append(warehouse.getExternalDirectory()).append("/");
                                 sbDir.append(HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config)).append(".db").append("/").append(tableMirror.getName());
                                 fnlLoc = sbDir.toString();
                             }
@@ -211,7 +218,7 @@ public class TransferService {
                         }
                         if (isBlank(newLoc) && config.isResetToDefaultLocation()) {
                             String sbDir = config.getTransfer().getCommonStorage() +
-                                    config.getTransfer().getWarehouse().getExternalDirectory() + "/" +
+                                    warehouse.getExternalDirectory() + "/" +
                                     HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;
                         }
@@ -228,12 +235,13 @@ public class TransferService {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(rLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (!isBlank(config.getTransfer().getCommonStorage())) {
-                                    sbDir.append(config.getTransfer().getCommonStorage());
-                                } else {
-                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
-                                }
-                                sbDir.append(config.getTransfer().getWarehouse().getExternalDirectory()).append("/");
+                                sbDir.append(config.getTargetNamespace());
+//                                if (!isBlank(config.getTransfer().getCommonStorage())) {
+//                                    sbDir.append(config.getTransfer().getCommonStorage());
+//                                } else {
+//                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
+//                                }
+                                sbDir.append(warehouse.getExternalDirectory()).append("/");
                                 sbDir.append(HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config)).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
@@ -244,12 +252,13 @@ public class TransferService {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(rLoc) && config.isResetToDefaultLocation()) {
                                 StringBuilder sbDir = new StringBuilder();
-                                if (!isBlank(config.getTransfer().getCommonStorage())) {
-                                    sbDir.append(config.getTransfer().getCommonStorage());
-                                } else {
-                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
-                                }
-                                sbDir.append(config.getTransfer().getWarehouse().getExternalDirectory()).append("/");
+                                sbDir.append(config.getTargetNamespace());
+//                                if (!isBlank(config.getTransfer().getCommonStorage())) {
+//                                    sbDir.append(config.getTransfer().getCommonStorage());
+//                                } else {
+//                                    sbDir.append(config.getCluster(Environment.RIGHT).getHcfsNamespace());
+//                                }
+                                sbDir.append(warehouse.getExternalDirectory()).append("/");
                                 sbDir.append(HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config)).append(".db").append("/").append(tableMirror.getName());
                                 rLoc = sbDir.toString();
                             }
@@ -280,9 +289,9 @@ public class TransferService {
             Long diff = end.getTime() - start.getTime();
             tableMirror.setStageDuration(diff);
             log.info("Migration complete for {}.{} in {}ms", tableMirror.getParent().getName(), tableMirror.getName(), diff);
-        } catch (Throwable t) {
+        } catch (MissingDataPointException | RequiredConfigurationException mde) {
             rtn.setStatus(ReturnStatus.Status.FATAL);
-            rtn.setException(t);
+            rtn.setException(mde);
         }
         return new AsyncResult<>(rtn);
     }

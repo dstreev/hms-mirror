@@ -166,4 +166,100 @@ public class NamespaceUtilsTest {
 
     }
 
+    @Test
+    public void testLastDirectory() {
+        // Test with namespace
+        String locationWithNamespace = "hdfs://nameservice1/user/hive/warehouse";
+        String lastDir = NamespaceUtils.getLastDirectory(locationWithNamespace);
+        assertEquals("warehouse", lastDir);
+
+        // Test with namespace
+        String locationWithNamespace1 = "hdfs://nameservice1:8020/user/hive/warehouse";
+        String lastDir1 = NamespaceUtils.getLastDirectory(locationWithNamespace1);
+        assertEquals("warehouse", lastDir1);
+
+        // Test with namespace
+        String locationWithNamespace2 = "hdfs://CAPSNAMESPACE/user/hive/warehouse";
+        String lastDir2 = NamespaceUtils.getLastDirectory(locationWithNamespace2);
+        assertEquals("warehouse", lastDir2);
+
+        // Test with namespace
+        String locationWithNamespace3 = "hdfs://CAPS_NAMESPACE/user/hive/warehouse";
+        String lastDir3 = NamespaceUtils.getLastDirectory(locationWithNamespace3);
+        assertEquals("warehouse", lastDir3);
+
+        // Test with namespace
+        String locationWithNamespace4 = "hdfs://nameservice1:8020/user/hive/warehouse/";
+        String lastDir4 = NamespaceUtils.getLastDirectory(locationWithNamespace4);
+        assertEquals("warehouse", lastDir4);
+
+        // Test with namespace
+        String locationWithNamespace5 = "hdfs://nameservice1/user/hive/warehouse/";
+        String lastDir5 = NamespaceUtils.getLastDirectory(locationWithNamespace5);
+        assertEquals("warehouse", lastDir5);
+
+        // Test with namespace
+        String locationWithNamespace6 = "hdfs://nameservice1/user/hive/warehouse/table";
+        String lastDir6 = NamespaceUtils.getLastDirectory(locationWithNamespace6);
+        assertEquals("table", lastDir6);
+
+        // Test with namespace
+        String locationWithNamespace7 = "hdfs://nameservice1/user/hive/warehouse/table/";
+        String lastDir7 = NamespaceUtils.getLastDirectory(locationWithNamespace7);
+        assertEquals("table", lastDir7);
+
+        // Test with namespace
+        String locationWithNamespace8 = "hdfs://nameservice1/user/hive/warehouse/table/partition";
+        String lastDir8 = NamespaceUtils.getLastDirectory(locationWithNamespace8);
+        assertEquals("partition", lastDir8);
+
+    }
+
+    @Test
+    public void testParentDirectory() {
+        // Test with namespace
+        String locationWithNamespace = "hdfs://nameservice1/user/hive/warehouse";
+        String parentDir = NamespaceUtils.getParentDirectory(locationWithNamespace);
+        assertEquals("hdfs://nameservice1/user/hive", parentDir);
+
+        // Test with namespace
+        String locationWithNamespace1 = "hdfs://nameservice1:8020/user/hive/warehouse";
+        String parentDir1 = NamespaceUtils.getParentDirectory(locationWithNamespace1);
+        assertEquals("hdfs://nameservice1:8020/user/hive", parentDir1);
+
+        // Test with namespace
+        String locationWithNamespace2 = "hdfs://CAPSNAMESPACE/user/hive/warehouse";
+        String parentDir2 = NamespaceUtils.getParentDirectory(locationWithNamespace2);
+        assertEquals("hdfs://CAPSNAMESPACE/user/hive", parentDir2);
+
+        // Test with namespace
+        String locationWithNamespace3 = "hdfs://CAPS_NAMESPACE/user/hive/warehouse";
+        String parentDir3 = NamespaceUtils.getParentDirectory(locationWithNamespace3);
+        assertEquals("hdfs://CAPS_NAMESPACE/user/hive", parentDir3);
+
+        // Test with namespace
+        String locationWithNamespace4 = "hdfs://nameservice1:8020/user/hive/warehouse/";
+        String parentDir4 = NamespaceUtils.getParentDirectory(locationWithNamespace4);
+        assertEquals("hdfs://nameservice1:8020/user/hive", parentDir4);
+
+        // Test with namespace
+        String locationWithNamespace5 = "hdfs://nameservice1/user/hive/warehouse/";
+        String parentDir5 = NamespaceUtils.getParentDirectory(locationWithNamespace5);
+        assertEquals("hdfs://nameservice1/user/hive", parentDir5);
+
+        // Test with namespace
+        String locationWithNamespace6 = "hdfs://nameservice1/user/hive/warehouse/table";
+        String parentDir6 = NamespaceUtils.getParentDirectory(locationWithNamespace6);
+        assertEquals("hdfs://nameservice1/user/hive/warehouse", parentDir6);
+
+        // Test with namespace
+        String locationWithNamespace7 = "hdfs://nameservice1/user/hive/warehouse/table/";
+        String parentDir7 = NamespaceUtils.getParentDirectory(locationWithNamespace7);
+        assertEquals("hdfs://nameservice1/user/hive/warehouse", parentDir7);
+
+        // Test with namespace
+        String locationWithNamespace8 = "hdfs://nameservice1/user/hive/warehouse/table/partition";
+        String parentDir8 = NamespaceUtils.getParentDirectory(locationWithNamespace8);
+        assertEquals("hdfs://nameservice1/user/hive/warehouse/table", parentDir8);
+    }
 }
