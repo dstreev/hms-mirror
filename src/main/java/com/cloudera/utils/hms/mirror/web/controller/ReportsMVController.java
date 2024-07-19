@@ -17,7 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.ReportService;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Objects;
 
 @Controller
@@ -39,12 +44,18 @@ import java.util.Objects;
 @Slf4j
 public class ReportsMVController implements ControllerReferences {
 
+    private ReportService reportService;
     private UIModelService uiModelService;
     private ExecuteSessionService executeSessionService;
 
     @Autowired
     public void setUiModelService(UIModelService uiModelService) {
         this.uiModelService = uiModelService;
+    }
+
+    @Autowired
+    public void setReportService(ReportService reportService) {
+        this.reportService = reportService;
     }
 
     @Autowired
@@ -56,23 +67,45 @@ public class ReportsMVController implements ControllerReferences {
 //        this.executeSessionService = executeSessionService;
 //    }
 
-    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    @RequestMapping(value = "/select", method = RequestMethod.GET)
     public String listReports(Model model) {
         log.info("Listing reports");
 
         // Populate model
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
         // Get list of Reports
-        model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
+        model.addAttribute(REPORT_LIST, reportService.getAvailableReports());
+        model.addAttribute(ACTION, "select"); // Supports which form fragment is loaded.
+        return "reports/view";
+    }
 
-        return "reports/list";
+    @RequestMapping(value = "/dbdetail", method = RequestMethod.GET)
+    public String viewReport(Model model,
+                             @RequestParam(value = REPORT_ID, required = true) String report_id,
+                             @RequestParam(value = DATABASE, required = true) String database) {
+        DBMirror dbMirror = reportService.getDBMirror(report_id, database);
+        model.addAttribute(DB_MIRROR, dbMirror);
+        HmsMirrorConfig config = reportService.getConfig(report_id);
+        model.addAttribute(CONFIG, config);
+        RunStatus runStatus = reportService.getRunStatus(report_id);
+        model.addAttribute(RUN_STATUS, runStatus);
+        return "reports/dbdetail";
     }
 
 
-    @RequestMapping(value = "/view", method = RequestMethod.GET)
-    public String viewReport(@RequestParam(value = REPORT_ID, required = true) String report_id) {
+    @RequestMapping(value = "/detail", method = RequestMethod.GET)
+    public String viewReport(Model model,
+                             @RequestParam(value = REPORT_ID, required = true) String report_id) {
         log.info("Viewing report: {}", report_id);
+        // Populate model
+        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+        // Get list of Reports
+        List<String> databases = reportService.databasesInReport(report_id);
+        model.addAttribute(DATABASES, databases);
+        model.addAttribute(SESSION_ID, report_id);
+//        model.addAttribute(REPORT_LIST, reportService.getAvailableReports());
 
+        model.addAttribute(ACTION, "detail"); // Supports which form fragment is loaded.
         return "reports/view";
     }
 
@@ -80,7 +113,7 @@ public class ReportsMVController implements ControllerReferences {
     public void doDownloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
                 HttpServletResponse response) {
         try {
-            HttpEntity<ByteArrayResource> entity = executeSessionService.getZippedReport(report_id);
+            HttpEntity<ByteArrayResource> entity = reportService.getZippedReport(report_id);
             response.setContentType("application/zip");
             // Translate headers
             entity.getHeaders().forEach((k, v) -> response.setHeader(k, v.get(0)));

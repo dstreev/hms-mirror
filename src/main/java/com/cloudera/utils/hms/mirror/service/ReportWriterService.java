@@ -138,10 +138,32 @@ public class ReportWriterService {
         HmsMirrorConfig resolvedConfig = executeSessionService.getSession().getConfig();
         String configOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
         try {
-            mapper.writeValue(new File(configOutputFile), resolvedConfig);
+            // We need to mask usernames and passwords.
+            String yamlStr = mapper.writeValueAsString(resolvedConfig);
+            // Mask User/Passwords in Control File
+            yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
+            yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");
+            FileWriter configFW = new FileWriter(configOutputFile);
+            configFW.write(yamlStr);
+            configFW.close();
+//            mapper.writeValue(new File(configOutputFile), resolvedConfig);
             log.info("Resolved Config 'saved' to: {}", configOutputFile);
         } catch (IOException ioe) {
             log.error("Problem 'writing' resolved config", ioe);
+        }
+
+        String runStatusOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "run-status.yaml";
+        try {
+            // We need to mask usernames and passwords.
+            String yamlStr = mapper.writeValueAsString(runStatus);
+
+            FileWriter configFW = new FileWriter(runStatusOutputFile);
+            configFW.write(yamlStr);
+            configFW.close();
+//            mapper.writeValue(new File(configOutputFile), resolvedConfig);
+            log.info("Run Status 'saved' to: {}", runStatusOutputFile);
+        } catch (IOException ioe) {
+            log.error("Problem 'writing' run status", ioe);
         }
 
         for (Map.Entry<String, DBMirror> dbEntry: conversion.getDatabases().entrySet()) {

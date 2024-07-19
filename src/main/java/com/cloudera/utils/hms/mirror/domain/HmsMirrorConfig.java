@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.DatabaseFilterType;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
@@ -114,7 +115,7 @@ public class HmsMirrorConfig implements Cloneable {
     private Optimization optimization = new Optimization();
     private String outputDirectory = System.getProperty("user.home") + System.getProperty("file.separator")
             + ".hms-mirror/reports/";
-//    @JsonIgnore
+    //    @JsonIgnore
 //    private String password;
     private boolean encryptedPasswords = Boolean.FALSE;
 
@@ -172,7 +173,7 @@ public class HmsMirrorConfig implements Cloneable {
     private TransferConfig transfer = new TransferConfig();
 
     private boolean transferOwnership = Boolean.FALSE;
-//    @JsonIgnore
+    //    @JsonIgnore
 //    private ScheduledExecutorService transferThreadPool;
 //    @JsonIgnore
 //    private ScheduledExecutorService metadataThreadPool;
@@ -180,6 +181,23 @@ public class HmsMirrorConfig implements Cloneable {
     private Translator translator = new Translator();
     @JsonIgnore
     private boolean validated = Boolean.FALSE;
+
+    /*
+    Depending on which way we've added databases to be processed, use this to determine the 'type' of filter.
+     */
+    @JsonIgnore
+    public DatabaseFilterType getDatabaseFilterType() {
+        if (nonNull(filter) && !isBlank(filter.getDbRegEx())) {
+            return DatabaseFilterType.REGEX;
+        } else if (nonNull(translator.getWarehouseMapBuilder()) && nonNull(translator.getWarehouseMapBuilder().getWarehousePlans())
+                && !translator.getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+            return DatabaseFilterType.WAREHOUSE_PLANS;
+        } else if (nonNull(databases) && !databases.isEmpty()) {
+            return DatabaseFilterType.MANUAL;
+        } else {
+            return DatabaseFilterType.UNDETERMINED;
+        }
+    }
 
     @JsonIgnore
     public boolean canDecryptPasswords() {
@@ -208,13 +226,13 @@ public class HmsMirrorConfig implements Cloneable {
         if (nonNull(getTransfer()) && nonNull(getTransfer().getCommonStorage())) {
             rtn = getTransfer().getCommonStorage();
         } else if (nonNull(getCluster(Environment.RIGHT))
-        && nonNull(getCluster(Environment.RIGHT).getHcfsNamespace())) {
+                && nonNull(getCluster(Environment.RIGHT).getHcfsNamespace())) {
             rtn = getCluster(Environment.RIGHT).getHcfsNamespace();
         } else {
             // Throw Exception that we couldn't determine the target Namespace.
             throw new RequiredConfigurationException("Target Namespace is required. Could determine from configuration. Please set 'commonStorage' or 'hcfsNamespace' in the RIGHT cluster.");
         }
-       return rtn;
+        return rtn;
     }
 
     // Handle null databases from config load.

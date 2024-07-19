@@ -146,14 +146,14 @@ public class CliReporter {
         StringBuilder report = new StringBuilder();
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
 
-        if (runStatus.getErrorMessages().length > 0) {
+        if (runStatus.hasErrors()) {
             report.append("\n=== Errors ===\n");
             for (String message : runStatus.getErrorMessages()) {
                 report.append("\t").append(message).append("\n");
             }
         }
 
-        if (runStatus.getWarningMessages().length > 0) {
+        if (runStatus.hasWarnings()) {
             report.append("\n=== Warnings ===\n");
             for (String message : runStatus.getWarningMessages()) {
                 report.append("\t").append(message).append("\n");

@@ -39,7 +39,7 @@ public class EnvironmentTable {
     private List<String> definition = new ArrayList<>();
     private String owner = null;
     private Map<String, String> partitions = new HashMap<>();
-    private List<String> actions = new ArrayList<>();
+//    private List<String> actions = new ArrayList<>();
     private Map<String, String> addProperties = new TreeMap<>();
     private Map<String, Object> statistics = new HashMap<>();
     private List<String> issues = new ArrayList<>();
@@ -53,9 +53,9 @@ public class EnvironmentTable {
         this.parent = parent;
     }
 
-    public void addAction(String action) {
-        getActions().add(action);
-    }
+//    public void addAction(String action) {
+//        getActions().add(action);
+//    }
 
     public void addCleanUpSql(Pair sqlPair) {
         getCleanUpSql().add(sqlPair);

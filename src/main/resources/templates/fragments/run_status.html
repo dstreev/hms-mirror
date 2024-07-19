@@ -53,6 +53,10 @@
                             type="submit" th:text="#{button.download}"
                             th:if="${RUN_STATUS.progress.toString() == 'COMPLETED'}"
                             th:formaction="@{/reports/doDownload}" th:formmethod="POST"/>
+                    <button class="pure-button pure-button-primary"
+                            type="submit" th:text="#{button.details}"
+                            th:formaction="@{/reports/detail}" th:formmethod="GET"/>
+
                 </form>
             </div>
 

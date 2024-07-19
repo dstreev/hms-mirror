@@ -107,7 +107,7 @@ public class HMSMirrorAppService {
         RunStatus runStatus = session.getRunStatus();
         Conversion conversion = session.getConversion();
         // Reset Start time to the actual 'execution' start time.
-        conversion.setStart(new Date());
+        runStatus.setStart(new Date());
         OperationStatistics stats = runStatus.getOperationStatistics();
 
         try {// Refresh the connections pool.
@@ -468,7 +468,8 @@ public class HMSMirrorAppService {
 //        log.info("Setting 'running' to FALSE");
 //        session.getRunning().set(Boolean.FALSE);
 
-
+        // Set RunStatus End Date.
+        runStatus.setEnd(new Date());
         reportWriterService.wrapup();
 
         return new AsyncResult<>(rtn);

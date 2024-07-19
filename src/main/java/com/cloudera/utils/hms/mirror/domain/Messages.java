@@ -19,16 +19,24 @@ package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.text.MessageFormat;
 import java.util.*;
 
+@Getter
+@Setter
 public class Messages {
 
-    @JsonIgnore
-    private final BitSet bitSet;
-    @JsonIgnore
-    private final Map<Integer, Object[]> argMap = new TreeMap<Integer, Object[]>();
+//    @JsonIgnore
+    private BitSet bitSet;
+//    @JsonIgnore
+    private Map<Integer, Object[]> argMap = new TreeMap<Integer, Object[]>();
+
+    public Messages() {
+        bitSet = new BitSet(150);
+    }
 
     public Messages(int size) {
         bitSet = new BitSet(size);
@@ -39,6 +47,7 @@ public class Messages {
         argMap.clear();
     }
 
+    @JsonIgnore
     public String getMessage(int bit) {
         String rtn = null;
         for (MessageCode messageCode : MessageCode.values()) {
@@ -55,7 +64,8 @@ public class Messages {
         return rtn;
     }
 
-    public String[] getMessages() {
+    @JsonIgnore
+    public List<String> getMessages() {
         List<String> messageList = new ArrayList<String>();
         for (MessageCode messageCode : MessageCode.getCodes(bitSet)) {
             if (!argMap.containsKey(messageCode.getCode())) {
@@ -66,11 +76,12 @@ public class Messages {
                 messageList.add(messageCode.getCode() + ":" + m);
             }
         }
-        String[] rtn = messageList.toArray(new String[0]);
+//        String[] rtn = messageList.toArray(new String[0]);
 
-        return rtn;
+        return messageList;
     }
 
+    @JsonIgnore
     public long getReturnCode() {
         long rtn = 0;
         long[] messageSet = bitSet.toLongArray();

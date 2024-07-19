@@ -53,7 +53,7 @@
                 </li>
 
                 <li class="pure-menu-item">
-                    <a th:text="#{messages(${RUN_STATUS.getErrors().getMessages().length})}" href="#"
+                    <a th:text="#{messages(${RUN_STATUS.getErrorMessages().size()})}" href="#"
                        class="pure-menu-link" onclick="openSection(event, 'messages')"/>
                 </li>
                 <li class="pure-menu-item">

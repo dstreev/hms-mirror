@@ -30,7 +30,7 @@
 
 <div th:fragment="execute">
     <div th:if="${RUN_STATUS != null}">
-        <th:block th:unless="${RUN_STATUS.errors.getMessages().length == 0}">
+        <th:block th:unless="${RUN_STATUS.getErrorMessages().size() == 0}">
             <p th:text="#{session.errors}"/>
             <div th:insert="fragments/messages::view"></div>
         </th:block>

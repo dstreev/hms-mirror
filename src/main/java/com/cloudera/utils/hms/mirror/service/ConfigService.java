@@ -361,6 +361,7 @@ public class ConfigService {
             case SQL:
             case EXPORT_IMPORT:
             case HYBRID:
+            case LINKED:
                 Cluster leftT = new Cluster();
                 leftT.setEnvironment(Environment.LEFT);
                 leftT.setLegacyHive(Boolean.TRUE);
@@ -662,7 +663,7 @@ public class ConfigService {
         }
 
         // Reset the config validated flag.
-        runStatus.setConfigValidated(Boolean.FALSE);
+//        runStatus.setConfigValidated(Boolean.FALSE);
 
         // Set distcp options.
         canDeriveDistcpPlan(session);
@@ -1163,11 +1164,11 @@ public class ConfigService {
 
         if (rtn) {
             // Last check for errors.
-            if (runStatus.getErrors().getReturnCode() != 0) {
+            if (runStatus.hasErrors()) {
                 rtn = Boolean.FALSE;
             }
         }
-        runStatus.setConfigValidated(rtn);
+//        runStatus.setConfigValidated(rtn);
         return rtn;
     }
 

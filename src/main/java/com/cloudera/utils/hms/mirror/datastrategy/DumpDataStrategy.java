@@ -35,6 +35,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 @Component
 @Slf4j
 @Getter
@@ -99,8 +101,11 @@ public class DumpDataStrategy extends DataStrategyBase implements DataStrategy {
         if (let.getPartitioned() && !TableUtils.isACID(let)) {
             if (hmsMirrorConfig.isEvaluatePartitionLocation()) {
                 String tableParts = getTranslatorService().buildPartitionAddStatement(let);
-                String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
-                let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
+                // This will be empty when there's no data and we need to handle that.
+                if (!isBlank(tableParts)) {
+                    String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
+                    let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
+                }
             } else if (hmsMirrorConfig.getCluster(Environment.LEFT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, let.getName());
                 if (hmsMirrorConfig.getTransfer().getStorageMigration().isDistcp()) {

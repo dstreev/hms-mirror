@@ -58,6 +58,7 @@ public class ConfigMVController implements ControllerReferences {
     private ConfigService configService;
     private ExecuteSessionService executeSessionService;
     private PasswordService passwordService;
+    private ReportService reportService;
     private WebConfigService webConfigService;
     private DatabaseService databaseService;
     private UIModelService uiModelService;
@@ -80,6 +81,11 @@ public class ConfigMVController implements ControllerReferences {
     @Autowired
     public void setPasswordService(PasswordService passwordService) {
         this.passwordService = passwordService;
+    }
+
+    @Autowired
+    public void setReportService(ReportService reportService) {
+        this.reportService = reportService;
     }
 
     @Autowired
@@ -114,7 +120,7 @@ public class ConfigMVController implements ControllerReferences {
         uiModelService.sessionToModel(model, maxThreads, testing);
 
         // Get list of Reports
-        model.addAttribute(REPORT_LIST, executeSessionService.getAvailableReports());
+        model.addAttribute(REPORT_LIST, reportService.getAvailableReports());
 
         return "home";
     }

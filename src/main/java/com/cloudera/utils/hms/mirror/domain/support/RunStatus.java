@@ -21,11 +21,20 @@ import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.Messages;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -37,24 +46,28 @@ import static java.util.Objects.nonNull;
 @Getter
 @Setter
 public class RunStatus implements Comparable<RunStatus> {
-    private Date runDate = new Date();
+    private Date start = null;
+    private Date end = null;
 
     @Schema(description = "This identifies the sessionId that is running/ran for this status.")
     private String sessionId;
-    @JsonIgnore
-    private final Messages errors = new Messages(150);
-    @JsonIgnore
-    private final Messages warnings = new Messages(150);
-    @JsonIgnore
+        @JsonIgnore
+    private Messages errors;
+        @JsonIgnore
+    private Messages warnings;
+    //    @JsonIgnore
     Integer concurrency;
     @JsonIgnore
     Future<Boolean> runningTask = null;
+
+    List<String> errorMessages = new ArrayList<>();
+    List<String> warningMessages = new ArrayList<>();
 
     /*
     Flag to indicate if the configuration has been validated.
     This should be reset before each run to ensure the configuration is validated.
      */
-    private boolean configValidated = false;
+//    private boolean configValidated = false;
     /*
     Keep track of the current running state.
      */
@@ -74,11 +87,22 @@ public class RunStatus implements Comparable<RunStatus> {
 
     private String reportName;
 
-    @Override
-    public int compareTo(RunStatus o) {
-        return runDate.compareTo(o.runDate);
+
+    @JsonIgnore
+    public long getDuration() {
+        long rtn = 0;
+        if (nonNull(start) && nonNull(end)) {
+            rtn = end.getTime() - start.getTime();
+        }
+        return rtn;
     }
 
+    @Override
+    public int compareTo(RunStatus o) {
+        return 0;
+    }
+
+    @JsonIgnore
     public ProgressEnum getProgress() {
         // If the task is still running, then the progress is still in progress.
         ProgressEnum rtn = ProgressEnum.INITIALIZED;
@@ -118,10 +142,14 @@ public class RunStatus implements Comparable<RunStatus> {
     public boolean reset() {
         boolean rtn = Boolean.TRUE;
         if (cancel()) {
-            errors.clear();
-            warnings.clear();
-//            progress = ProgressEnum.INITIALIZED;
-            configValidated = false;
+            if (nonNull(errors)) {
+                errors.clear();
+            }
+            if (nonNull(warnings)) {
+                warnings.clear();
+            }
+            errorMessages.clear();
+            warningMessages.clear();
             stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
             operationStatistics.reset();
         } else {
@@ -150,18 +178,30 @@ public class RunStatus implements Comparable<RunStatus> {
     }
 
     public void addError(MessageCode code) {
+        if (getErrors() == null) {
+            errors = new Messages();
+        }
         errors.set(code);
     }
 
     public void addError(MessageCode code, Object... messages) {
+        if (getErrors() == null) {
+            errors = new Messages();
+        }
         errors.set(code, messages);
     }
 
     public void addWarning(MessageCode code) {
+        if (getWarnings() == null) {
+            warnings = new Messages();
+        }
         warnings.set(code);
     }
 
     public void addWarning(MessageCode code, Object... message) {
+        if (getWarnings() == null) {
+            warnings = new Messages();
+        }
         warnings.set(code, message);
     }
 
@@ -174,27 +214,33 @@ public class RunStatus implements Comparable<RunStatus> {
     }
 
     public Boolean hasErrors() {
-        if (errors.getReturnCode() != 0) {
+        if (nonNull(errors) && errors.getReturnCode() != 0) {
             return Boolean.TRUE;
         } else {
-            return Boolean.FALSE;
+            return errorMessages.isEmpty()? Boolean.FALSE: Boolean.TRUE;
         }
     }
 
     public Boolean hasWarnings() {
-        if (warnings.getReturnCode() != 0) {
+        if (nonNull(warnings) && warnings.getReturnCode() != 0) {
             return Boolean.TRUE;
         } else {
-            return Boolean.FALSE;
+            return warningMessages.isEmpty()? Boolean.FALSE: Boolean.TRUE;
         }
     }
 
-    public String[] getErrorMessages() {
-        return errors.getMessages();
+    public List<String> getErrorMessages() {
+        if (errors != null) {
+            return errors.getMessages();
+        }
+        return errorMessages;
     }
 
-    public String[] getWarningMessages() {
-        return warnings.getMessages();
+    public List<String> getWarningMessages() {
+        if (warnings != null) {
+            return warnings.getMessages();
+        }
+        return warningMessages;
     }
 
     @Override
@@ -203,11 +249,64 @@ public class RunStatus implements Comparable<RunStatus> {
         if (isNull(o) || getClass() != o.getClass()) return false;
 
         RunStatus runStatus = (RunStatus) o;
-        return Objects.equals(runDate, runStatus.runDate);
+        return Objects.equals(start, runStatus.start);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(runDate);
+        return Objects.hashCode(start);
     }
+
+    public static RunStatus loadConfig(String configFilename) {
+        RunStatus status;
+        log.info("Initializing Status.");
+        // Check if absolute path.
+        if (!configFilename.startsWith("/")) {
+            // If filename contain a file.separator, assume the location is
+            // relative to the working directory.
+            if ((configFilename.contains(File.separator))) {
+                // Load relative to the working directory.
+                File workingDir = new File(".");
+                configFilename = workingDir.getAbsolutePath() + File.separator + configFilename;
+            } else {
+                // Assume it's in the default config directory.
+                configFilename = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg"
+                        + File.separator + configFilename;
+            }
+        }
+        log.info("Loading Status: {}", configFilename);
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        URL cfgUrl = null;
+        try {
+            // Load file from classpath and convert to string
+            File cfgFile = new File(configFilename);
+            if (!cfgFile.exists()) {
+                // Try loading from resource (classpath).  Mostly for testing.
+                cfgUrl = mapper.getClass().getResource(configFilename);
+                if (isNull(cfgUrl)) {
+                    throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
+                }
+                log.info("Using 'classpath' config: {}", configFilename);
+            } else {
+                log.info("Using filesystem config: {}", configFilename);
+                try {
+                    cfgUrl = cfgFile.toURI().toURL();
+                } catch (MalformedURLException mfu) {
+                    throw new RuntimeException("Couldn't locate configuration file: "
+                            + configFilename, mfu);
+                }
+            }
+
+            String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
+            status = mapper.readerFor(RunStatus.class).readValue(yamlCfgFile);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("Status loaded.");
+        return status;
+
+    }
+
 }

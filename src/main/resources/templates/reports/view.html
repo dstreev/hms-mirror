@@ -12,44 +12,35 @@
   ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~  See the License for the specific language governing permissions and
   ~  limitations under the License.
-  ~  
+  ~
   -->
 
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 <head>
-    <title>Reports</title>
+    <title>Home Config</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <link rel="stylesheet" type="text/css" th:href="@{/css/pure.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/grids-responsive.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/base.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/tree.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/modal.css}">
 </head>
 <body>
-<div th:fragment="list">
-    <h4 th:text="#{reports}"/>
-    <form class="pure-form pure-form-aligned">
-        <div class="pure-g">
-            <div class="pure-u-1">
-                <div class="pure-control-group tooltip">
-                    <span class="tooltiptext" th:text="#{reports.tooltip}"></span>
-                    <label for="report_id" th:text="#{reports.available}"/>
-                    <select name="REPORT_ID">
-                        <option th:each="id: ${REPORT_LIST}"
-                                th:value="${id}"
-                                th:text="${id}"/>
-                    </select>
-                    <button class="pure-button pure-button-primary"
-                            type="submit" th:text="#{button.download}"
-                            th:formaction="@{/reports/doDownload}" th:formmethod="POST"/>
-                    <!--                        <button class="pure-button"-->
-                    <!--                                type="submit" th:text="#{button.view}"-->
-                    <!--                                th:formaction="@{/report/view}" th:method="get"/>-->
-                </div>
-            </div>
+<div class="pure-g">
+    <div class="pure-u-1" th:insert="fragments/header::header">
+    </div>
+    <div class="pure-u-1-6" th:insert="fragments/nav::left_nav">
+    </div>
+    <div class="pure-u-5-6">
+        <div class="pure-u-1" th:insert="${ACTION == 'select'} ?
+            ~{fragments/reports/reports :: select} :
+            ~{fragments/reports/reports :: details}">
         </div>
-    </form>
+    </div>
+    <div class="pure-u-1" th:insert="fragments/footer::footer">
+    </div>
 </div>
 </body>
 </html>

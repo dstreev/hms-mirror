@@ -46,6 +46,7 @@ public interface ControllerReferences {
     String STRIP_MAPPINGS = "STRIP_MAPPINGS";
     String FLIP_CONFIG = "FLIP_CONFIG";
     String DATABASE = "DATABASE";
+    String DB_MIRROR = "DB_MIRROR";
     String EXTERNAL_DIRECTORY = "EXTERNAL_DIRECTORY";
     String MANAGED_DIRECTORY = "MANAGED_DIRECTORY";
     String VERSION = "VERSION";

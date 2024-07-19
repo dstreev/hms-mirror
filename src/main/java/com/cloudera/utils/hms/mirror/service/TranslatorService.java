@@ -452,8 +452,8 @@ public class TranslatorService {
         // Don't reload if running.
 //        executeSessionService.clearActiveSession();
 
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        Translator translator = hmsMirrorConfig.getTranslator();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        Translator translator = config.getTranslator();
         Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
 
         WarehouseMapBuilder warehouseMapBuilder = translator.getWarehouseMapBuilder();
@@ -501,15 +501,15 @@ public class TranslatorService {
                     for (Map.Entry<String, Set<String>> locationSet : locationEntry.getValue().entrySet()) {
                         String location = new String(locationSet.getKey());
                         // String the namespace from the location.
-                        location = location.replace(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace(), "");
-                        if (!location.startsWith("/") || (location.length() == locationSet.getKey().length())) {
+                        location = NamespaceUtils.stripNamespace(location); //.replace(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace(), "");
+                        if (config.getTransfer().getStorageMigration().isStrict() && (!location.startsWith("/") || (location.length() == locationSet.getKey().length()))) {
                             // Issue with reducing the location.
                             // This happens when the table(s) location doesn't match the source namespace.
                             throw new MismatchException("Location doesn't start with the configured namespace.  This is a problem"
                                     + " and doesn't allow for the location to be converted to the new namespace."
                                     + " Location: " + locationSet.getKey() + " Database: " + database + " Type: " + locationEntry.getKey()
                                     + " containing tables: " + String.join(",",locationSet.getValue())
-                                    + " HCFS Namespace: " + hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace());
+                                    + " HCFS Namespace: " + config.getCluster(Environment.LEFT).getHcfsNamespace());
                         }
                         // TODO: Review Consolidation Level for this.
 //                        String reducedLocation = UrlUtils.reduceUrlBy(location, consolidationLevel);

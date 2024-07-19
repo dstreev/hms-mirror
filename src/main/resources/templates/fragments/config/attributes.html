@@ -37,9 +37,9 @@
                 <td class="pure-form-stacked">
                     <!--                    <div class="pure-u-1-2">-->
                     <div class="pure-control-group"
-                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION COMMON').contains(CONFIG.dataStrategy.toString())}">
+                         th:if="${('HYBRID SQL EXPORT_IMPORT STORAGE_MIGRATION COMMON SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
                         <label for="commonStorage" th:text="#{config.transfer.commonStorage}"
-                               th:if="${('HYBRID SQL EXPORT_IMPORT COMMON').contains(CONFIG.dataStrategy.toString())}"/>
+                               th:if="${('HYBRID SQL EXPORT_IMPORT COMMON SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}"/>
                         <label for="commonStorage" th:text="#{config.transfer.sm.commonStorage}"
                                th:if="${('STORAGE_MIGRATION').contains(CONFIG.dataStrategy.toString())}"/>
                         <input style="width: 90%;" id="commonStorage" type="text"

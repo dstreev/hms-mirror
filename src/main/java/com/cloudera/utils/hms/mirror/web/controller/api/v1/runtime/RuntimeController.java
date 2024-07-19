@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.ReportService;
 import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -47,11 +48,17 @@ import java.util.Set;
 public class RuntimeController {
 
     private ExecuteSessionService executeSessionService;
+    private ReportService reportService;
     private RuntimeService runtimeService;
 
     @Autowired
     public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
+    }
+
+    @Autowired
+    public void setReportService(ReportService reportService) {
+        this.reportService = reportService;
     }
 
     @Autowired
@@ -112,11 +119,11 @@ public class RuntimeController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/reports/latest/download")
     public HttpEntity<ByteArrayResource> downloadLatestSessionReport() throws IOException {
-        Set<String> availableReports = executeSessionService.getAvailableReports();
+        Set<String> availableReports = reportService.getAvailableReports();
         if (availableReports.isEmpty()) {
             throw new IOException("No reports available");
         } else {
-            return executeSessionService.getZippedReport(availableReports.iterator().next());
+            return reportService.getZippedReport(availableReports.iterator().next());
         }
     }
 
@@ -133,7 +140,7 @@ public class RuntimeController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/reports/{id}/download")
     public HttpEntity<ByteArrayResource> downloadSessionReport(@PathVariable @NotNull String id) throws IOException {
-        return executeSessionService.getZippedReport(id);
+        return reportService.getZippedReport(id);
     }
 
 
@@ -150,7 +157,7 @@ public class RuntimeController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/reports/list")
     public Set<String> availableReports() {
-        return executeSessionService.getAvailableReports();
+        return reportService.getAvailableReports();
     }
 
 }

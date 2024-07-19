@@ -41,6 +41,7 @@ import java.text.MessageFormat;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
 import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_SYNC_PARTS;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Component
 @Slf4j
@@ -244,8 +245,11 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 // TODO: Write out the SQL to build the partitions.  NOTE: We need to get the partition locations and modify them
                 //       to the new namespace.
                 String tableParts = getTranslatorService().buildPartitionAddStatement(ret);
-                String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
-                ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
+                // This will be empty when there's no data and we need to handle that.
+                if (!isBlank(tableParts)) {
+                    String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, ret.getName(), tableParts);
+                    ret.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
+                }
             } else if (config.getCluster(Environment.RIGHT).getPartitionDiscovery().isInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                 // Add the MSCK repair to both initial and cleanup.

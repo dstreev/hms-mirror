@@ -33,6 +33,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -43,8 +44,9 @@ import java.util.*;
 @Slf4j
 public class Conversion {
 
-    @JsonIgnore
-    private Date start = new Date();
+//    @JsonIgnore
+//    private Date start = new Date();
+//    private Date end = null;
 
     private Map<String, DBMirror> databases = new TreeMap<>();
 
@@ -60,26 +62,26 @@ public class Conversion {
         return count;
     }
 
-    public String actionsSql(Environment env, String database) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");
-        sb.append("-- HELPER Script to assist with MANUAL updates.\n");
-        sb.append("-- RUN AT OWN RISK  !!!\n");
-        sb.append("-- REVIEW and UNDERSTAND the adjustments below before running.\n\n");
-        DBMirror dbMirror = databases.get(database);
-        sb.append("-- DATABASE: ").append(database).append("\n");
-        Set<String> tables = dbMirror.getTableMirrors().keySet();
-        for (String table : tables) {
-            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-            sb.append("--    Table: ").append(table).append("\n");
-            // LEFT Table Actions
-            for (String item : tblMirror.getTableActions(env)) {
-                sb.append(item).append(";\n");
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
-    }
+//    public String actionsSql(Environment env, String database) {
+//        StringBuilder sb = new StringBuilder();
+//        sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");
+//        sb.append("-- HELPER Script to assist with MANUAL updates.\n");
+//        sb.append("-- RUN AT OWN RISK  !!!\n");
+//        sb.append("-- REVIEW and UNDERSTAND the adjustments below before running.\n\n");
+//        DBMirror dbMirror = databases.get(database);
+//        sb.append("-- DATABASE: ").append(database).append("\n");
+//        Set<String> tables = dbMirror.getTableMirrors().keySet();
+//        for (String table : tables) {
+//            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
+//            sb.append("--    Table: ").append(table).append("\n");
+//            // LEFT Table Actions
+//            for (String item : tblMirror.getTableActions(env)) {
+//                sb.append(item).append(";\n");
+//            }
+//            sb.append("\n");
+//        }
+//        return sb.toString();
+//    }
 
     public DBMirror addDatabase(String database) {
         if (databases.containsKey(database)) {
@@ -178,7 +180,8 @@ public class Conversion {
         sb.append("| Date | Elapsed Time |\n");
         sb.append("|:---|:---|\n");
         Date current = new Date();
-        BigDecimal elsecs = new BigDecimal(current.getTime() - start.getTime()).divide(new BigDecimal(1000));
+        BigDecimal elsecs = new BigDecimal(runStatus.getDuration())
+                .divide(new BigDecimal(1000), 2, RoundingMode.HALF_UP);
         DecimalFormat eldecf = new DecimalFormat("#,###.00");
         DecimalFormat lngdecf = new DecimalFormat("#,###");
         String elsecStr = eldecf.format(elsecs);
@@ -197,14 +200,14 @@ public class Conversion {
         sb.append(yamlStr).append("\n");
         sb.append("```\n\n");
 
-        if (runStatus.getErrorMessages().length > 0) {
+        if (runStatus.hasErrors()) {
             sb.append("### Config Errors:\n");
             for (String message : runStatus.getErrorMessages()) {
                 sb.append("- ").append(message).append("\n");
             }
             sb.append("\n");
         }
-        if (runStatus.getWarningMessages().length > 0) {
+        if (runStatus.hasWarnings()) {
             sb.append("### Config Warnings:\n");
             for (String message : runStatus.getWarningMessages()) {
                 sb.append("- ").append(message).append("\n");
@@ -265,9 +268,9 @@ public class Conversion {
         sb.append("<th style=\"test-align:right\">Duration</th>").append("\n");
 //        sb.append("<th style=\"test-align:right\">Partition<br/>Count</th>").append("\n");
         sb.append("<th style=\"test-align:left\">Steps</th>").append("\n");
-        if (dbMirror.hasActions()) {
-            sb.append("<th style=\"test-align:left\">Actions</th>").append("\n");
-        }
+//        if (dbMirror.hasActions()) {
+//            sb.append("<th style=\"test-align:left\">Actions</th>").append("\n");
+//        }
         if (dbMirror.hasAddedProperties()) {
             sb.append("<th style=\"test-align:left\">Added<br/>Properties</th>").append("\n");
         }
@@ -335,33 +338,33 @@ public class Conversion {
             sb.append("</td>\n");
 
             // Actions
-            if (dbMirror.hasActions()) {
-                // LEFT Table Actions
-                Iterator<String> a1Iter = tblMirror.getTableActions(Environment.LEFT).iterator();
-                sb.append("<td>").append("\n");
-                sb.append("<table>");
-                while (a1Iter.hasNext()) {
-                    sb.append("<tr>");
-                    String item = a1Iter.next();
-                    sb.append("<td style=\"text-align:left\">").append(item).append(";</td>");
-                    sb.append("</tr>");
-                }
-                sb.append("</table>");
-                sb.append("</td>").append("\n");
-
-                // RIGHT Table Actions
-                Iterator<String> a2Iter = tblMirror.getTableActions(Environment.RIGHT).iterator();
-                sb.append("<td>").append("\n");
-                sb.append("<table>");
-                while (a2Iter.hasNext()) {
-                    sb.append("<tr>");
-                    String item = a2Iter.next();
-                    sb.append("<td style=\"text-align:left\">").append(item).append(";</td>");
-                    sb.append("</tr>");
-                }
-                sb.append("</table>");
-                sb.append("</td>").append("\n");
-            }
+//            if (dbMirror.hasActions()) {
+//                // LEFT Table Actions
+//                Iterator<String> a1Iter = tblMirror.getTableActions(Environment.LEFT).iterator();
+//                sb.append("<td>").append("\n");
+//                sb.append("<table>");
+//                while (a1Iter.hasNext()) {
+//                    sb.append("<tr>");
+//                    String item = a1Iter.next();
+//                    sb.append("<td style=\"text-align:left\">").append(item).append(";</td>");
+//                    sb.append("</tr>");
+//                }
+//                sb.append("</table>");
+//                sb.append("</td>").append("\n");
+//
+//                // RIGHT Table Actions
+//                Iterator<String> a2Iter = tblMirror.getTableActions(Environment.RIGHT).iterator();
+//                sb.append("<td>").append("\n");
+//                sb.append("<table>");
+//                while (a2Iter.hasNext()) {
+//                    sb.append("<tr>");
+//                    String item = a2Iter.next();
+//                    sb.append("<td style=\"text-align:left\">").append(item).append(";</td>");
+//                    sb.append("</tr>");
+//                }
+//                sb.append("</table>");
+//                sb.append("</td>").append("\n");
+//            }
 
             // Properties
             if (dbMirror.hasAddedProperties()) {

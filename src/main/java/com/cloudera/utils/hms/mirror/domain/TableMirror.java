@@ -70,7 +70,6 @@ public class TableMirror {
 
     private PhaseState phaseState = PhaseState.INIT;
 
-    @JsonIgnore
     private Long stageDuration = 0L;
 
     private Map<Environment, EnvironmentTable> environments = null;
@@ -78,6 +77,21 @@ public class TableMirror {
     public TableMirror() {
         addStep("init", null);
     }
+
+    @JsonIgnore
+    public boolean isSourceManaged() {
+        boolean rtn = Boolean.FALSE;
+        rtn = TableUtils.isManaged(getEnvironmentTable(Environment.LEFT));
+        return rtn;
+    }
+
+    @JsonIgnore
+    public boolean isSourceACID() {
+        boolean rtn = Boolean.FALSE;
+        rtn = TableUtils.isACID(getEnvironmentTable(Environment.LEFT));
+        return rtn;
+    }
+
 
     public void addIssue(Environment environment, String issue) {
         if (!isBlank(issue)) {
@@ -96,10 +110,10 @@ public class TableMirror {
         steps.add(new Marker(secStr, key, value));
     }
 
-    public void addTableAction(Environment environment, String action) {
-        List<String> tableActions = getTableActions(environment);
-        tableActions.add(action);
-    }
+//    public void addTableAction(Environment environment, String action) {
+//        List<String> tableActions = getTableActions(environment);
+//        tableActions.add(action);
+//    }
 
     public List<Pair> getCleanUpSql(Environment environment) {
         EnvironmentTable et = getEnvironmentTable(environment);
@@ -167,26 +181,26 @@ public class TableMirror {
         return et.getSql();
     }
 
-    public List<String> getTableActions(Environment environment) {
-        EnvironmentTable et = getEnvironmentTable(environment);
-        return et.getActions();
-    }
+//    public List<String> getTableActions(Environment environment) {
+//        EnvironmentTable et = getEnvironmentTable(environment);
+//        return et.getActions();
+//    }
 
     public List<String> getTableDefinition(Environment environment) {
         EnvironmentTable et = getEnvironmentTable(environment);
         return et.getDefinition();
     }
 
-    public boolean hasActions() {
-        boolean rtn = Boolean.FALSE;
-        for (Map.Entry<Environment, EnvironmentTable> entry : getEnvironments().entrySet()) {
-            if (!entry.getValue().getActions().isEmpty()) {
-                rtn = Boolean.TRUE;
-                break;
-            }
-        }
-        return rtn;
-    }
+//    public boolean hasActions() {
+//        boolean rtn = Boolean.FALSE;
+//        for (Map.Entry<Environment, EnvironmentTable> entry : getEnvironments().entrySet()) {
+//            if (!entry.getValue().getActions().isEmpty()) {
+//                rtn = Boolean.TRUE;
+//                break;
+//            }
+//        }
+//        return rtn;
+//    }
 
     public boolean hasAddedProperties() {
         boolean rtn = Boolean.FALSE;

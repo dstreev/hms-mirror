@@ -42,19 +42,40 @@ import static java.util.Objects.nonNull;
 @Slf4j
 public class DBMirror {
 
-    @JsonIgnore
     private final Map<Environment, List<String>> issues = new TreeMap<>();
     /*
     table - reason
      */
     private final Map<String, String> filteredOut = new TreeMap<>();
-    @JsonIgnore
+//    @JsonIgnore
     private final Map<Environment, List<Pair>> sql = new TreeMap<>();
     private String name;
     @JsonIgnore
     private String resolvedName;
     private Map<Environment, Map<String, String>> dbDefinitions = new TreeMap<>();
     private Map<String, TableMirror> tableMirrors = null;
+
+    @JsonIgnore
+    public List<PhaseState> getPhasesFromAvailableTables() {
+        List<PhaseState> rtn = new ArrayList<>();
+        for (TableMirror tableMirror : getTableMirrors().values()) {
+            if (!rtn.contains(tableMirror.getPhaseState())) {
+                rtn.add(tableMirror.getPhaseState());
+            }
+        }
+        return rtn;
+    }
+
+    @JsonIgnore
+    public Map<String, TableMirror> getTablesByPhase(PhaseState phaseState) {
+        Map<String, TableMirror> rtn = new TreeMap<>();
+        for (TableMirror tableMirror : getTableMirrors().values()) {
+            if (tableMirror.getPhaseState().equals(phaseState)) {
+                rtn.put(tableMirror.getName(), tableMirror);
+            }
+        }
+        return rtn;
+    }
 
     /*
     Load a DBMirror instance from a yaml file using the Jackson YAML parser.
@@ -179,14 +200,14 @@ public class DBMirror {
         }
     }
 
-    public boolean hasActions() {
-        boolean rtn = Boolean.FALSE;
-        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-            if (entry.getValue().hasActions())
-                rtn = Boolean.TRUE;
-        }
-        return rtn;
-    }
+//    public boolean hasActions() {
+//        boolean rtn = Boolean.FALSE;
+//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
+//            if (entry.getValue().hasActions())
+//                rtn = Boolean.TRUE;
+//        }
+//        return rtn;
+//    }
 
     public boolean hasAddedProperties() {
         boolean rtn = Boolean.FALSE;
