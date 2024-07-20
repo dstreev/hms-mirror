@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,6 +30,7 @@ import static java.util.Objects.nonNull;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EnvironmentTable {
 
     private final List<Pair> sql = new ArrayList<>();

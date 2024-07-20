@@ -53,9 +53,15 @@ import static java.util.Objects.nonNull;
 @Setter
 public class ReportWriterService {
 
+    private ObjectMapper yamlMapper;
     private ConfigService configService;
     private ExecuteSessionService executeSessionService;
     private TranslatorService translatorService;
+
+    @Autowired
+    public void setYamlMapper(ObjectMapper yamlMapper) {
+        this.yamlMapper = yamlMapper;
+    }
 
     @Autowired
     public void setConfigService(ConfigService configService) {
@@ -108,9 +114,9 @@ public class ReportWriterService {
         config.getClusters().remove(Environment.TRANSFER);
         config.getClusters().remove(Environment.SHADOW);
 
-        ObjectMapper mapper;
-        mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//        ObjectMapper yamlMapper;
+//        yamlMapper = new ObjectMapper(new YAMLFactory());
+//        yamlMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         // Check for existing directory. If it exists, increment and check again.
         // We don't want to overwrite existing data.
@@ -139,14 +145,13 @@ public class ReportWriterService {
         String configOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "session-config.yaml";
         try {
             // We need to mask usernames and passwords.
-            String yamlStr = mapper.writeValueAsString(resolvedConfig);
+            String yamlStr = yamlMapper.writeValueAsString(resolvedConfig);
             // Mask User/Passwords in Control File
             yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
             yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");
             FileWriter configFW = new FileWriter(configOutputFile);
             configFW.write(yamlStr);
             configFW.close();
-//            mapper.writeValue(new File(configOutputFile), resolvedConfig);
             log.info("Resolved Config 'saved' to: {}", configOutputFile);
         } catch (IOException ioe) {
             log.error("Problem 'writing' resolved config", ioe);
@@ -155,12 +160,12 @@ public class ReportWriterService {
         String runStatusOutputFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "run-status.yaml";
         try {
             // We need to mask usernames and passwords.
-            String yamlStr = mapper.writeValueAsString(runStatus);
+            String yamlStr = yamlMapper.writeValueAsString(runStatus);
 
             FileWriter configFW = new FileWriter(runStatusOutputFile);
             configFW.write(yamlStr);
             configFW.close();
-//            mapper.writeValue(new File(configOutputFile), resolvedConfig);
+            log.info("Run Status 'saved' to: {}", runStatusOutputFile);
             log.info("Run Status 'saved' to: {}", runStatusOutputFile);
         } catch (IOException ioe) {
             log.error("Problem 'writing' run status", ioe);
@@ -371,7 +376,7 @@ public class ReportWriterService {
 //                    rtn += errCount;
                 }
 
-                String dbYamlStr = mapper.writeValueAsString(yamlDb);
+                String dbYamlStr = yamlMapper.writeValueAsString(yamlDb);
                 try {
                     dbYamlFileWriter.write(dbYamlStr);
                     log.info("Database ({}) yaml 'saved' to: {}", database, dbYamlFile.getPath());

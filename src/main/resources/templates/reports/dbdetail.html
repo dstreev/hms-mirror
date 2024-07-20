@@ -156,7 +156,7 @@
 <!--                                <p th:if="${table.value.isSourceACID()}" th:text="#{table.source.acid}"/>-->
                                     <div class="pure-control-group">
                                         <label th:text="#{table.stage.duration}"/>
-                                        <input type="text" th:value="#{table.stage.duration(${table.value.stageDuration/1000})}" readonly/>
+                                        <input type="text" th:value="${table.value.stageDuration/1000}" readonly/>
                                     </div>
 <!--                                <p th:text="#{table.stage.duration(${table.value.stageDuration/1000})}"/>-->
                                 </div>

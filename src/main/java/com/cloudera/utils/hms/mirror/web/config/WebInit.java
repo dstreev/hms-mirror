@@ -18,7 +18,11 @@
 package com.cloudera.utils.hms.mirror.web.config;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.yaml.snakeyaml.LoaderOptions;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,7 +42,13 @@ import java.nio.file.FileSystems;
 @Slf4j
 public class WebInit {
 
+    private DomainService domainService;
     private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
+    }
 
     @Autowired
     public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
@@ -56,7 +67,7 @@ public class WebInit {
             HmsMirrorConfig hmsMirrorConfig;
             if (cfg.exists()) {
                 log.info("Loading config from: {}", configFullFilename);
-                hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFullFilename);
+                hmsMirrorConfig = domainService.deserializeConfig(configFullFilename);
             } else {
                 // Return empty config.  This will require the user to setup the config.
                 log.warn("Default config not found.");

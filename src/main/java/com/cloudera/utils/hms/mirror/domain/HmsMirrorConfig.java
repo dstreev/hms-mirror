@@ -584,58 +584,58 @@ public class HmsMirrorConfig implements Cloneable {
         }
     }
 
-    public static HmsMirrorConfig loadConfig(String configFilename) {
-        HmsMirrorConfig hmsMirrorConfig;
-        log.info("Initializing Config.");
-        // Check if absolute path.
-        if (!configFilename.startsWith("/")) {
-            // If filename contain a file.separator, assume the location is
-            // relative to the working directory.
-            if ((configFilename.contains(File.separator))) {
-                // Load relative to the working directory.
-                File workingDir = new File(".");
-                configFilename = workingDir.getAbsolutePath() + File.separator + configFilename;
-            } else {
-                // Assume it's in the default config directory.
-                configFilename = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg"
-                        + File.separator + configFilename;
-            }
-        }
-        log.info("Loading config: {}", configFilename);
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        URL cfgUrl = null;
-        try {
-            // Load file from classpath and convert to string
-            File cfgFile = new File(configFilename);
-            if (!cfgFile.exists()) {
-                // Try loading from resource (classpath).  Mostly for testing.
-                cfgUrl = mapper.getClass().getResource(configFilename);
-                if (isNull(cfgUrl)) {
-                    throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
-                }
-                log.info("Using 'classpath' config: {}", configFilename);
-            } else {
-                log.info("Using filesystem config: {}", configFilename);
-                try {
-                    cfgUrl = cfgFile.toURI().toURL();
-                } catch (MalformedURLException mfu) {
-                    throw new RuntimeException("Couldn't locate configuration file: "
-                            + configFilename, mfu);
-                }
-            }
-
-            String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
-            hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
-
-            hmsMirrorConfig.setConfigFilename(configFilename);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        log.info("Config loaded.");
-//        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
-        return hmsMirrorConfig;
-
-    }
+//    public static HmsMirrorConfig loadConfig(String configFilename) {
+//        HmsMirrorConfig hmsMirrorConfig;
+//        log.info("Initializing Config.");
+//        // Check if absolute path.
+//        if (!configFilename.startsWith("/")) {
+//            // If filename contain a file.separator, assume the location is
+//            // relative to the working directory.
+//            if ((configFilename.contains(File.separator))) {
+//                // Load relative to the working directory.
+//                File workingDir = new File(".");
+//                configFilename = workingDir.getAbsolutePath() + File.separator + configFilename;
+//            } else {
+//                // Assume it's in the default config directory.
+//                configFilename = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg"
+//                        + File.separator + configFilename;
+//            }
+//        }
+//        log.info("Loading config: {}", configFilename);
+//        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+//        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        URL cfgUrl = null;
+//        try {
+//            // Load file from classpath and convert to string
+//            File cfgFile = new File(configFilename);
+//            if (!cfgFile.exists()) {
+//                // Try loading from resource (classpath).  Mostly for testing.
+//                cfgUrl = mapper.getClass().getResource(configFilename);
+//                if (isNull(cfgUrl)) {
+//                    throw new RuntimeException("Couldn't locate configuration file: " + configFilename);
+//                }
+//                log.info("Using 'classpath' config: {}", configFilename);
+//            } else {
+//                log.info("Using filesystem config: {}", configFilename);
+//                try {
+//                    cfgUrl = cfgFile.toURI().toURL();
+//                } catch (MalformedURLException mfu) {
+//                    throw new RuntimeException("Couldn't locate configuration file: "
+//                            + configFilename, mfu);
+//                }
+//            }
+//
+//            String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
+//            hmsMirrorConfig = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
+//
+//            hmsMirrorConfig.setConfigFilename(configFilename);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        log.info("Config loaded.");
+////        log.info("Transfer Concurrency: {}", hmsMirrorConfig.getTransfer().getConcurrency());
+//        return hmsMirrorConfig;
+//
+//    }
 
 }

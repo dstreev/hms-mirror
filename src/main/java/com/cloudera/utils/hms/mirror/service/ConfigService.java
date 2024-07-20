@@ -47,17 +47,17 @@ public class ConfigService {
 
     private org.springframework.core.env.Environment springEnv;
 
-//    private ExecuteSessionService executeSessionService;
+    private DomainService domainService;
+
+    @Autowired
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
+    }
 
     @Autowired
     public void setSpringEnv(org.springframework.core.env.Environment springEnv) {
         this.springEnv = springEnv;
     }
-
-//    @Autowired
-//    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
-//        this.executeSessionService = executeSessionService;
-//    }
 
     public boolean doWareHousePlansExist(ExecuteSession session) {
         HmsMirrorConfig config = session.getConfig();
@@ -200,7 +200,7 @@ public class ConfigService {
     TODO: Need to return an error that can be shown via the REST API.
      */
     public HmsMirrorConfig loadConfig(String configFileName) {
-        HmsMirrorConfig rtn = HmsMirrorConfig.loadConfig(configFileName);
+        HmsMirrorConfig rtn = domainService.deserializeConfig(configFileName);
         return rtn;
     }
 

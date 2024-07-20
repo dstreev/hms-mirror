@@ -26,6 +26,7 @@ public interface ControllerReferences {
     String DEFAULT_CONFIG = "default.yaml";
     String NEW_CONFIG = "CHANGE_ME.yaml";
     String SESSION_ID = "SESSION_ID";
+    String CONTENT = "CONTENT";
     String SESSION_ID_CLONE = "SESSION_ID_CLONE";
     String CONFIG = "CONFIG";
     String CLUSTER = "CLUSTER";
@@ -41,6 +42,7 @@ public interface ControllerReferences {
     String SUPPORTED_HIVE_DRIVER_CLASSES = "SUPPORTED_HIVE_DRIVER_CLASSES";
     String REPORT_LIST = "REPORT_LIST";
     String REPORT_ID = "REPORT_ID";
+    String FILE = "FILE";
     String RUN_STATUS = "RUN_STATUS";
     String SAVE_AS_DEFAULT = "SAVE_AS_DEFAULT";
     String STRIP_MAPPINGS = "STRIP_MAPPINGS";
@@ -65,7 +67,11 @@ public interface ControllerReferences {
     String PASSWORD_KEY = "PASSWORD_KEY";
     String TYPE = "TYPE";
     String MESSAGE = "MESSAGE";
+    String ARTIFACTS = "ARTIFACTS";
     String DATABASES = "DATABASES";
+    String OTHERS = "OTHERS";
+    String DISTCP = "DISTCP";
+    String SQL = "SQL";
     String SOURCE = "SOURCE";
     String TARGET = "TARGET";
 }

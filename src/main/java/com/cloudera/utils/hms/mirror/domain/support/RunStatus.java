@@ -52,9 +52,9 @@ public class RunStatus implements Comparable<RunStatus> {
     @Schema(description = "This identifies the sessionId that is running/ran for this status.")
     private String sessionId;
         @JsonIgnore
-    private Messages errors;
+    private Messages errors = new Messages(150);
         @JsonIgnore
-    private Messages warnings;
+    private Messages warnings = new Messages(150);
     //    @JsonIgnore
     Integer concurrency;
     @JsonIgnore

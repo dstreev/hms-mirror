@@ -20,13 +20,9 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -35,9 +31,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -45,6 +38,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
+import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.DATABASES;
+import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.OTHERS;
 import static java.util.Objects.isNull;
 
 @Component
@@ -53,7 +48,13 @@ import static java.util.Objects.isNull;
 @Setter
 public class ReportService {
 
+    private DomainService domainService;
     private ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
+    }
 
     @Autowired
     private void setExecuteSessionService(ExecuteSessionService executeSessionService) {
@@ -98,8 +99,8 @@ public class ReportService {
         fos.close();
     }
 
-    public List<String> databasesInReport(String id) {
-        List<String> databases = new ArrayList<>();
+    public Map<String, List<String>> reportArtifacts(String id) {
+        Map<String, List<String>> artifacts = new TreeMap<>();
 
         // Using the 'id', get the reports for the session.
         String reportDirectory = executeSessionService.getReportOutputDirectory();
@@ -111,18 +112,34 @@ public class ReportService {
 
         for (String srcFile : files) {
             if (srcFile.endsWith("_hms-mirror.yaml")) {
-//                String absolutePath = sessionDirectoryName + File.separator + srcFile;
                 String databaseName = srcFile.substring(0, srcFile.indexOf("_hms-mirror.yaml"));
 
+                List<String> databases = artifacts.get(DATABASES);//.add(databaseName);
+                if (isNull(databases)) {
+                    databases = new ArrayList<>();
+                    artifacts.put(DATABASES, databases);
+                }
                 databases.add(databaseName);
+            } else {
+                List<String> others = artifacts.get(OTHERS);
+                if (isNull(others)) {
+                    others = new ArrayList<>();
+                    artifacts.put(OTHERS, others);
+                }
+                others.add(srcFile);
             }
         }
-        return databases;
+        return artifacts;
     }
 
     public String getDatabaseFile(String sessionId, String database) {
         String reportDirectory = executeSessionService.getReportOutputDirectory();
         return reportDirectory + File.separator + sessionId + File.separator + database + "_hms-mirror.yaml";
+    }
+
+    public String getReportFile(String sessionId, String reportFile) {
+        String reportDirectory = executeSessionService.getReportOutputDirectory();
+        return reportDirectory + File.separator + sessionId + File.separator + reportFile;
     }
 
     public String getSessionConfigFile(String sessionId) {
@@ -138,7 +155,7 @@ public class ReportService {
     public HmsMirrorConfig getConfig(String sessionId) {
         String configFile = getSessionConfigFile(sessionId);
         log.info("Loading Config File: {}", configFile);
-        HmsMirrorConfig config = HmsMirrorConfig.loadConfig(configFile);
+        HmsMirrorConfig config = domainService.deserializeConfig(configFile);
         return config;
     }
 
@@ -152,42 +169,15 @@ public class ReportService {
 
     public DBMirror getDBMirror(String sessionId, String database) {
         String databaseFile = getDatabaseFile(sessionId, database);
-
-        DBMirror dbMirror = null;
-        log.info("Loading Report File: {}", databaseFile);
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        URL cfgUrl = null;
-        try {
-            // Load file from classpath and convert to string
-            File cfgFile = new File(databaseFile);
-            if (!cfgFile.exists()) {
-                // Try loading from resource (classpath).  Mostly for testing.
-                cfgUrl = mapper.getClass().getResource(databaseFile);
-                if (isNull(cfgUrl)) {
-                    throw new RuntimeException("Couldn't locate configuration file: " + databaseFile);
-                }
-                log.info("Using 'classpath' config: {}", databaseFile);
-            } else {
-                log.info("Using filesystem config: {}", databaseFile);
-                try {
-                    cfgUrl = cfgFile.toURI().toURL();
-                } catch (MalformedURLException mfu) {
-                    throw new RuntimeException("Couldn't locate configuration file: "
-                            + databaseFile, mfu);
-                }
-            }
-
-            String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
-            dbMirror = mapper.readerFor(DBMirror.class).readValue(yamlCfgFile);
-
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        DBMirror dbMirror = domainService.deserializeDBMirror(databaseFile);
         log.info("Report loaded.");
         return dbMirror;
+    }
 
+    public String getReportFileString(String sessionId, String file) {
+        String reportFile = getReportFile(sessionId, file);
+        String asString = domainService.fileToString(reportFile);
+        return asString;
     }
 
     public HttpEntity<ByteArrayResource> getZippedReport(String id) throws IOException {

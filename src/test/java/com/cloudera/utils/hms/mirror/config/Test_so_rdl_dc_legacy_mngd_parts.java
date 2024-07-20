@@ -82,10 +82,10 @@ public class Test_so_rdl_dc_legacy_mngd_parts extends E2EBaseTest {
         long actual = getWarningCode();
         // Verify the return code.
         long expected = getCheckCode(
-                MessageCode.DISTCP_WO_TABLE_FILTERS,
-                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
+                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS,
                 MessageCode.DISTCP_REQUIRES_EPL,
-                MessageCode.RESET_TO_DEFAULT_LOCATION_WITHOUT_WAREHOUSE_DIRS
+                MessageCode.DISTCP_WO_TABLE_FILTERS,
+                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT
         );
 
         assertEquals("Warning Code Failure: ", expected, actual);

@@ -80,25 +80,25 @@ public class DBMirror {
     /*
     Load a DBMirror instance from a yaml file using the Jackson YAML parser.
      */
-    public static DBMirror load(String fileName) {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        File dbMirrorFile = new File(fileName);
-        DBMirror dbMirror = null;
-        String yamlDBMirrorFile = null;
-        try {
-            yamlDBMirrorFile = IOUtils.toString(dbMirrorFile.toURI(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            dbMirror = mapper.readerFor(DBMirror.class).readValue(yamlDBMirrorFile);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        return dbMirror;
-    }
-
+//    public static DBMirror load(String fileName) {
+//        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+//        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//        File dbMirrorFile = new File(fileName);
+//        DBMirror dbMirror = null;
+//        String yamlDBMirrorFile = null;
+//        try {
+//            yamlDBMirrorFile = IOUtils.toString(dbMirrorFile.toURI(), StandardCharsets.UTF_8);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        try {
+//            dbMirror = mapper.readerFor(DBMirror.class).readValue(yamlDBMirrorFile);
+//        } catch (JsonProcessingException e) {
+//            throw new RuntimeException(e);
+//        }
+//        return dbMirror;
+//    }
+//
     public void addIssue(Environment environment, String issue) {
         String scrubbedIssue = issue.replace("\n", "<br/>");
         List<String> issuesList = issues.get(environment);

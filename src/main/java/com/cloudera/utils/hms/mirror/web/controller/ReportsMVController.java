@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Controller
@@ -92,6 +93,17 @@ public class ReportsMVController implements ControllerReferences {
         return "reports/dbdetail";
     }
 
+    // viewReportFile?REPORT_ID=__${SESSION_ID}__&FILE=__${file}__}"
+    @RequestMapping(value = "/viewReportFile", method = RequestMethod.GET)
+    public String viewReportFile(Model model,
+                                 @RequestParam(value = REPORT_ID, required = true) String report_id,
+                                 @RequestParam(value = FILE, required = true) String file) {
+        String reportFileString = reportService.getReportFileString(report_id, file);
+        model.addAttribute(FILE, file);
+        model.addAttribute(SESSION_ID, report_id);
+        model.addAttribute(CONTENT, reportFileString);
+        return "reports/fileview";
+    }
 
     @RequestMapping(value = "/detail", method = RequestMethod.GET)
     public String viewReport(Model model,
@@ -100,8 +112,8 @@ public class ReportsMVController implements ControllerReferences {
         // Populate model
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
         // Get list of Reports
-        List<String> databases = reportService.databasesInReport(report_id);
-        model.addAttribute(DATABASES, databases);
+        Map<String, List<String>> artifacts = reportService.reportArtifacts(report_id);
+        model.addAttribute(ARTIFACTS, artifacts);
         model.addAttribute(SESSION_ID, report_id);
 //        model.addAttribute(REPORT_LIST, reportService.getAvailableReports());
 
@@ -111,7 +123,7 @@ public class ReportsMVController implements ControllerReferences {
 
     @RequestMapping(value = "/doDownload", method = RequestMethod.POST)
     public void doDownloadReport(@RequestParam(value = REPORT_ID, required = true) String report_id,
-                HttpServletResponse response) {
+                                 HttpServletResponse response) {
         try {
             HttpEntity<ByteArrayResource> entity = reportService.getZippedReport(report_id);
             response.setContentType("application/zip");

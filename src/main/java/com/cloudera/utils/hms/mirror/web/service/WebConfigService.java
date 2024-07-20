@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.service;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,7 @@ import static com.cloudera.utils.hms.mirror.util.ModelUtils.getSupportedDataStra
 @Slf4j
 public class WebConfigService {
 
+    private DomainService domainService;
     private String configPath = System.getProperty("user.home") + File.separator + ".hms-mirror/cfg";
 
     private ExecuteSessionService executeSessionService;
@@ -57,7 +59,12 @@ public class WebConfigService {
     }
 
     @Autowired
-    public void setHmsMirrorCfgService(ExecuteSessionService executeSessionService) {
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
+    }
+
+    @Autowired
+    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
     }
 
@@ -85,7 +92,7 @@ public class WebConfigService {
                 // Attempt to load and check that it is one of the supported config.
                 log.info("Checking config file: " + file.getName());
                 try {
-                    HmsMirrorConfig lclConfig = HmsMirrorConfig.loadConfig(file.getName());
+                    HmsMirrorConfig lclConfig = domainService.deserializeConfig(file.getName());
                     if (lclConfig != null && getSupportedDataStrategies().contains(lclConfig.getDataStrategy())) {
                         configList.add(file.getName());
                     } else {

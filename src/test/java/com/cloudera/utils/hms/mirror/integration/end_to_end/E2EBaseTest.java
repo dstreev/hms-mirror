@@ -17,14 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end;
 
-import com.cloudera.utils.hms.mirror.*;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.Pair;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
+import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import com.cloudera.utils.hms.util.TableUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -37,7 +40,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -45,7 +47,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
-import static java.util.Objects.isNull;
 import static org.junit.Assert.*;
 
 @Slf4j
@@ -53,6 +54,7 @@ import static org.junit.Assert.*;
 @ActiveProfiles("no-cli")
 public class E2EBaseTest {
 
+    protected DomainService domainService;
     protected HMSMirrorAppService hmsMirrorAppService;
     protected ExecuteSessionService executeSessionService;
     //HMSMirrorAppService;
@@ -71,37 +73,11 @@ public class E2EBaseTest {
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {
         System.out.println("Test data file: " + testDataSet);
-
-        URL configURL = this.getClass().getResource(testDataSet);
-        if (isNull(configURL)) {
-
-            File conversionFile = new File(testDataSet);
-            if (!conversionFile.exists())
-                throw new RuntimeException("Couldn't locate test data file: " + testDataSet);
-            try {
-                configURL = conversionFile.toURI().toURL();
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        String yamlCfgFile = null;
-        try {
-            yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        Conversion conversion = null;
+        Conversion conversion = domainService.deserializeConversion(testDataSet);
         String[] databases = null;
-        try {
-            conversion = mapper.readerFor(Conversion.class).readValue(yamlCfgFile);
-            databases = conversion.getDatabases().keySet().toArray(new String[0]);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        // Set Config Databases;
+
+        databases = conversion.getDatabases().keySet().toArray(new String[0]);
+
         return databases;
     }
 
@@ -189,6 +165,11 @@ public class E2EBaseTest {
 
     protected Long getWarningCode() {
         return hmsMirrorAppService.getWarningCode();
+    }
+
+    @Autowired
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
     }
 
     @Autowired
