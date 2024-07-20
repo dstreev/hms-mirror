@@ -38,12 +38,10 @@ import org.springframework.stereotype.Service;
 import java.text.MessageFormat;
 import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
+import static com.cloudera.utils.hms.mirror.MessageCode.RDL_W_EPL_NO_MAPPING;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hms.mirror.SessionVars.EXT_DB_LOCATION_PROP;
-import static com.cloudera.utils.hms.mirror.SessionVars.MNGD_DB_LOCATION_PROP;
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service

@@ -84,6 +84,8 @@ public class ReportsMVController implements ControllerReferences {
     public String viewReport(Model model,
                              @RequestParam(value = REPORT_ID, required = true) String report_id,
                              @RequestParam(value = DATABASE, required = true) String database) {
+        model.addAttribute(REPORT_ID, report_id);
+        model.addAttribute(DATABASE, database);
         DBMirror dbMirror = reportService.getDBMirror(report_id, database);
         model.addAttribute(DB_MIRROR, dbMirror);
         HmsMirrorConfig config = reportService.getConfig(report_id);

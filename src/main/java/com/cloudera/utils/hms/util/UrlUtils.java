@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.util;
 
-import com.cloudera.utils.hms.mirror.service.TransferService;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

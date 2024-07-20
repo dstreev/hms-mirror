@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
@@ -47,7 +46,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENCRYPTED_PASSWORD_CHANGE_ATTEMPT;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Controller
