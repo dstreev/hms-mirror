@@ -81,10 +81,12 @@ public class RuntimeController {
     public RunStatus start(
 //            @RequestParam(name = "sessionId", required = false) String sessionId,
                            @RequestParam(name = "dryrun") Boolean dryrun,
-                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM,
+//                           @RequestParam(name = "autoGLM", required = false) Boolean autoGLM,
                            @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) throws MismatchException, RequiredConfigurationException, SessionException, EncryptionException {
-        boolean lclAutoGLM = autoGLM != null && autoGLM;
-        return runtimeService.start(dryrun, lclAutoGLM, maxThreads);
+//        boolean lclAutoGLM = autoGLM != null && autoGLM;
+        return runtimeService.start(dryrun,
+//                lclAutoGLM,
+                maxThreads);
     }
 
 

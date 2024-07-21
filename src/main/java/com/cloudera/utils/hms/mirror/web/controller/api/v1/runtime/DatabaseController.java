@@ -154,24 +154,25 @@ public class DatabaseController {
 //        return true;
 //    }
 //
-    @Operation(summary = "Build out the 'sources' for all databases")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Build sources successful",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = WarehouseMapBuilder.class))})}) //,
-//            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
-//                    content = @Content),
-//            @ApiResponse(responseCode = "404", description = "Cluster not found",
-//                    content = @Content)})
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.POST, value = "/sources/build")
-    public WarehouseMapBuilder buildAllDatabaseSources(@RequestParam(name = "consolidationLevelbase", required = false) Integer consolidationLevelBase,
-                                           @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch) throws RequiredConfigurationException, EncryptionException, SessionException {
 
-        int consolidationBase = isNull(consolidationLevelBase) ? 1 : consolidationLevelBase;
-        boolean partitionMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
-        return databaseService.buildDatabaseSources(consolidationBase, partitionMismatch);
-    }
+//    @Operation(summary = "Build out the 'sources' for all databases")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Build sources successful",
+//                    content = {@Content(mediaType = "application/json",
+//                            schema = @Schema(implementation = WarehouseMapBuilder.class))})}) //,
+////            @ApiResponse(responseCode = "400", description = "Invalid environment supplied",
+////                    content = @Content),
+////            @ApiResponse(responseCode = "404", description = "Cluster not found",
+////                    content = @Content)})
+//    @ResponseBody
+//    @RequestMapping(method = RequestMethod.POST, value = "/sources/build")
+//    public WarehouseMapBuilder buildAllDatabaseSources(@RequestParam(name = "consolidationLevelbase", required = false) Integer consolidationLevelBase,
+//                                           @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch) throws RequiredConfigurationException, EncryptionException, SessionException {
+//
+//        int consolidationBase = isNull(consolidationLevelBase) ? 1 : consolidationLevelBase;
+//        boolean partitionMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
+//        return databaseService.buildDatabaseSources(consolidationBase, partitionMismatch);
+//    }
 
     @Operation(summary = "List 'sources' for all databases")
     @ApiResponses(value = {

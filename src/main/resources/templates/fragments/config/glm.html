@@ -28,44 +28,123 @@
 </head>
 <body>
 <div th:fragment="view(dryrun)">
-    <th:block th:if="${CONFIG.translator.globalLocationMap != null && CONFIG.translator.globalLocationMap.size() > 0}">
-        <h4 th:text="#{global.location.maps}"/>
-        <table class="pure-table" style="width: 100%;">
-            <thead>
-            <tr>
-                <th th:if="${!dryrun}"></th>
-                <th th:text="#{glm.source}"/>
-                <th th:text="#{glm.target}"/>
-            </tr>
-            </thead>
-            <tbody>
+    <div class="pure-g">
+        <div class="pure-u-1">
             <th:block
-                    th:each="glm: ${CONFIG.translator.globalLocationMap}">
-                <tr>
-                    <form>
-                    <td th:if="${!dryrun}">
-                        <button class="pure-button"
-                           th:formaction="@{/translator/globalLocationMap/delete}"
-                           th:formmethod="post"
-                           th:text="#{delete}"/>
-                    </td>
-                        <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;" readonly/></td>
-                        <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;" readonly/></td>
-                    </form>
-                </tr>
+                    th:if="${CONFIG.translator.userGlobalLocationMap != null && CONFIG.translator.userGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.user}"/>
+                <hr>
+                <table class="pure-table" style="width: 100%;">
+                    <thead>
+                    <tr>
+                        <th th:if="${!dryrun}"></th>
+                        <th th:text="#{glm.source}"/>
+                        <th th:text="#{glm.target}"/>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th:block
+                            th:each="glm: ${CONFIG.translator.userGlobalLocationMap}">
+                        <tr>
+                            <form>
+                                <td th:if="${!dryrun}">
+                                    <button class="pure-button"
+                                            th:formaction="@{/translator/globalLocationMap/delete}"
+                                            th:formmethod="post"
+                                            th:text="#{delete}"/>
+                                </td>
+                                <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
+                                           readonly/></td>
+                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
+                                           readonly/></td>
+                            </form>
+                        </tr>
+                    </th:block>
+                    </tbody>
+                </table>
             </th:block>
-            </tbody>
-        </table>
-    </th:block>
-    <!--    Add GLM Manually -->
-    <h4 th:text="#{glm.add}"/>
-    <form class="pure-form" method="post"
-          th:action="@{/translator/globalLocationMap/add}">
-        <fieldset>
-            <input type="text" name="SOURCE" placeholder="Source"/>
-            <input type="text" name="TARGET" placeholder="Target"/>
-            <button type="submit" class="pure-button pure-button-primary" th:text="#{button.add}"/>
-        </fieldset>
+            <th:block
+                    th:unless="${CONFIG.translator.userGlobalLocationMap != null && CONFIG.translator.userGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.user.empty}"/>
+            </th:block>
+            <!--    Add GLM Manually -->
+            <h4 th:text="#{glm.add}"/>
+            <form class="pure-form" method="post"
+                  th:action="@{/translator/globalLocationMap/add}">
+                <fieldset>
+                    <input type="text" name="SOURCE" placeholder="Source"/>
+                    <input type="text" name="TARGET" placeholder="Target"/>
+                    <button type="submit" class="pure-button pure-button-primary" th:text="#{button.add}"/>
+                </fieldset>
+            </form>
+        </div>
+        <div class="pure-u-1">
+            <!--Auto GLM's-->
+            <th:block
+                    th:if="${CONFIG.translator.autoGlobalLocationMap != null && CONFIG.translator.autoGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.auto}"/>
+                <hr>
+                <table class="pure-table" style="width: 100%;">
+                    <thead>
+                    <tr>
+                        <th th:text="#{glm.source}"/>
+                        <th th:text="#{glm.target}"/>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th:block
+                            th:each="glm: ${CONFIG.translator.autoGlobalLocationMap}">
+                        <tr>
+                            <form>
+                                <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
+                                           readonly/></td>
+                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
+                                           readonly/></td>
+                            </form>
+                        </tr>
+                    </th:block>
+                    </tbody>
+                </table>
+            </th:block>
+            <th:block
+                    th:unless="${CONFIG.translator.autoGlobalLocationMap != null && CONFIG.translator.autoGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.auto.empty}"/>
+            </th:block>
+        </div>
+        <div class="pure-u-1">
+            <!--Ordered GLM's-->
+            <th:block
+                    th:if="${CONFIG.translator.orderedGlobalLocationMap != null && CONFIG.translator.orderedGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.ordered}"/>
+                <hr>
+                <table class="pure-table" style="width: 100%;">
+                    <thead>
+                    <tr>
+                        <th th:text="#{glm.source}"/>
+                        <th th:text="#{glm.target}"/>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <th:block
+                            th:each="glm: ${CONFIG.translator.orderedGlobalLocationMap}">
+                        <tr>
+                            <form>
+                                <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
+                                           readonly/></td>
+                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
+                                           readonly/></td>
+                            </form>
+                        </tr>
+                    </th:block>
+                    </tbody>
+                </table>
+            </th:block>
+            <th:block
+                    th:unless="${CONFIG.translator.orderedGlobalLocationMap != null && CONFIG.translator.orderedGlobalLocationMap.size() > 0}">
+                <h4 th:text="#{global.location.maps.ordered.empty}"/>
+            </th:block>
+        </div>
+    </div>
 </div>
 </body>
 </html>

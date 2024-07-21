@@ -284,11 +284,11 @@ public class ExecuteSessionService {
             }
             activeSession = session;
 
+            // Moving these to the runtime start.
             // Validate the session.
-            rtn = configService.validate(activeSession, getCliEnvironment(), connectionCheckOnly);
-
-            // Set whether the config has been validated.
-            activeSession.getConfig().setValidated(rtn);
+//            rtn = configService.validate(activeSession, getCliEnvironment(), connectionCheckOnly);
+//            // Set whether the config has been validated.
+//            activeSession.getConfig().setValidated(rtn);
 
             executeSessionMap.put(session.getSessionId(), session);
             // Set connected flag.

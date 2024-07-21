@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.utils;
 
 import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.util.TableUtils;
 import org.junit.Before;
 import org.junit.Test;

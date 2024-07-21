@@ -44,7 +44,7 @@
                     <!--                    <label th:text="#{config.databases.control}"/>-->
                     <th:block th:each="database, itemStat: *{databases}">
                         <div class="pure-control-group">
-                            <input disabled="disabled" class="pure-input-1-4"
+                            <input disabled="disabled" class="pure-input-3-4"
                                    type="text"
                                    th:field="*{databases[__${itemStat.index}__]}"/>
                             <a class="pure-button"

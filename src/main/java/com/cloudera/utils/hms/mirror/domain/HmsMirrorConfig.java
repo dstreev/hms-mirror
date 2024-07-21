@@ -175,8 +175,8 @@ public class HmsMirrorConfig implements Cloneable {
 //    private ScheduledExecutorService metadataThreadPool;
     //    @JsonIgnore
     private Translator translator = new Translator();
-    @JsonIgnore
-    private boolean validated = Boolean.FALSE;
+//    @JsonIgnore
+//    private boolean validated = Boolean.FALSE;
 
     /*
     Depending on which way we've added databases to be processed, use this to determine the 'type' of filter.
@@ -571,7 +571,7 @@ public class HmsMirrorConfig implements Cloneable {
                 try {
                     String[] keyValue = property.split("=");
                     if (keyValue.length == 2) {
-                        getTranslator().addGlobalLocationMap(keyValue[0], keyValue[1]);
+                        getTranslator().addUserGlobalLocationMap(keyValue[0], keyValue[1]);
                     }
                 } catch (Throwable t) {
                     set = Boolean.FALSE;

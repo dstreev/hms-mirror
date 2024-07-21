@@ -83,8 +83,10 @@ public class RuntimeMVController {
 //        boolean lclAutoGLM = runContainer.isAutoGLM() != null && runContainer.getAutoGLM();
 //        boolean lclDryRun = runContainer.isDryrun() != null && runContainer.getDryrun();
 
-        RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(), runContainer.isAutoGLM(), maxThreads);
-        runStatus.setConcurrency(maxThreads);
+        RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(),
+//                runContainer.isAutoGLM(),
+                maxThreads);
+//        runStatus.setConcurrency(maxThreads);
         // Not necessary..  will be fetched in config/home
 //        model.addAttribute(RUN_STATUS, runStatus);
         return "redirect:/runtime/status";

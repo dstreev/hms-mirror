@@ -17,16 +17,19 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.DBMirror;
-import com.cloudera.utils.hms.mirror.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -61,6 +64,7 @@ public class HMSMirrorAppService {
     private final ExecuteSessionService executeSessionService;
     private final ReportWriterService reportWriterService;
     private final TableService tableService;
+    private final TranslatorService translatorService;
     private final TransferService transferService;
 
     public HMSMirrorAppService(ExecuteSessionService executeSessionService,
@@ -68,6 +72,7 @@ public class HMSMirrorAppService {
                                DatabaseService databaseService,
                                ReportWriterService reportWriterService,
                                TableService tableService,
+                               TranslatorService translatorService,
                                TransferService transferService,
                                ConfigService configService) {
         this.executeSessionService = executeSessionService;
@@ -75,6 +80,7 @@ public class HMSMirrorAppService {
         this.databaseService = databaseService;
         this.reportWriterService = reportWriterService;
         this.tableService = tableService;
+        this.translatorService = translatorService;
         this.transferService = transferService;
         this.configService = configService;
     }
@@ -111,18 +117,33 @@ public class HMSMirrorAppService {
         OperationStatistics stats = runStatus.getOperationStatistics();
 
         try {// Refresh the connections pool.
+            configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.TRUE);
             connectionPoolService.init();
-        } catch (SQLException e) {
-            log.error("Issue refreshing connections pool", e);
-            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connections pool");
+        } catch (SQLException sqle) {
+            log.error("Issue refreshing connections pool", sqle);
+            runStatus.addError(CONNECTION_ISSUE, sqle.getMessage());
             return new AsyncResult<>(Boolean.FALSE);
         } catch (SessionException se) {
             log.error("Issue with Session", se);
-            runStatus.addError(CONNECTION_ISSUE, "Issue refreshing connections pool");
+            runStatus.addError(SESSION_ISSUE, se.getMessage());
             return new AsyncResult<>(Boolean.FALSE);
-        } catch (EncryptionException e) {
-            log.error("Issue with Decryption", e);
-            runStatus.addError(DECRYPTING_PASSWORD_ISSUE);
+        } catch (EncryptionException ee) {
+            log.error("Issue with Decryption", ee);
+            runStatus.addError(ENCRYPTION_ISSUE, ee.getMessage());
+            return new AsyncResult<>(Boolean.FALSE);
+        }
+
+        try {
+            int defaultConsolidationLevel = 1;
+            databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
+            translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
+            configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.FALSE);
+//            session.getConfig().setValidated(Boolean.TRUE);
+        } catch (EncryptionException | SessionException | RequiredConfigurationException | MismatchException e) {
+            log.error("Issue validating configuration", e);
+            runStatus.addError(RUNTIME_EXCEPTION, e.getMessage());
+            log.error("Configuration is not valid.  Exiting.");
+            reportWriterService.wrapup();
             return new AsyncResult<>(Boolean.FALSE);
         }
 
@@ -144,11 +165,11 @@ public class HMSMirrorAppService {
         log.info("Starting Application Workflow");
 
         // Don't continue if config hasn't been validated.
-        if (!config.isValidated()) {
-            log.error("Configuration is not valid.  Exiting.");
-            reportWriterService.wrapup();
-            return new AsyncResult<>(Boolean.FALSE);
-        }
+//        if (!config.isValidated()) {
+//            log.error("Configuration is not valid.  Exiting.");
+//            reportWriterService.wrapup();
+//            return new AsyncResult<>(Boolean.FALSE);
+//        }
 
 //        log.info("Setting 'running' to TRUE");
 //        session.getRunning().set(Boolean.TRUE);

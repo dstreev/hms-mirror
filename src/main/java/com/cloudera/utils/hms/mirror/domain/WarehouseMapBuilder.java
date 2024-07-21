@@ -42,6 +42,9 @@ public class WarehouseMapBuilder implements Cloneable {
      */
     private Map<String, SourceLocationMap> sources = new HashMap<>();
 
+    // Flag to track whether the sources have been reconciled and match the warehousePlans.
+    private boolean inSync = Boolean.FALSE;
+
 //    private Map<String, Map<String, String>> reconciledLocations = new HashMap<>();
 
     /*
@@ -89,10 +92,12 @@ public class WarehouseMapBuilder implements Cloneable {
         /*
         Add the database and the desired warehousebase to the map.
          */
+        inSync = Boolean.FALSE;
         return warehousePlans.put(database, warehouseBase);
     }
 
     public Warehouse removeWarehousePlan(String database) {
+        inSync = Boolean.FALSE;
         return warehousePlans.remove(database);
     }
 

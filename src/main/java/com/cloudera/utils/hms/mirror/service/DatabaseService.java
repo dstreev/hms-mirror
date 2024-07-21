@@ -23,7 +23,7 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
-import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
@@ -167,44 +167,46 @@ public class DatabaseService {
     }
 
     public void clearWarehousePlan() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
         warehouseMapBuilder.clearWarehousePlan();
     }
 
     // Look at the Warehouse Plans and pull the database/table/partition locations the metastoreDirect.
-    public WarehouseMapBuilder buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch) throws RequiredConfigurationException, EncryptionException, SessionException {
-        Boolean rtn = Boolean.TRUE;
-        if (!connectionPoolService.isConnected()) {
-            try {
-                connectionPoolService.init();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+    public void buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch)
+            throws RequiredConfigurationException, EncryptionException, SessionException {
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
+
+        if (!warehouseMapBuilder.isInSync()) {
+            if (!connectionPoolService.isConnected()) {
+                try {
+                    connectionPoolService.init();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             }
+
+
+            // Check to see if there are any warehouse plans defined.  If not, skip this process.
+            if (warehouseMapBuilder.getWarehousePlans().isEmpty()) {
+                log.warn("No Warehouse Plans defined.  Skipping building out the database sources.");
+                throw new RequiredConfigurationException("No Warehouse Plans defined.  Skipping building out the database sources.");
+            }
+
+            // Need to have this set to ensure we're picking everything up.
+            if (!config.isEvaluatePartitionLocation()) {
+                throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
+            }
+
+            for (String database : warehouseMapBuilder.getWarehousePlans().keySet()) {
+                // Reset the database in the translation map.
+                config.getTranslator().removeDatabaseFromTranslationMap(database);
+                // Load the database locations.
+                loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
+            }
+            warehouseMapBuilder.setInSync(Boolean.TRUE);
         }
-
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-
-        // Check to see if there are any warehouse plans defined.  If not, skip this process.
-        if (warehouseMapBuilder.getWarehousePlans().isEmpty()) {
-            log.warn("No Warehouse Plans defined.  Skipping building out the database sources.");
-            throw new RequiredConfigurationException("No Warehouse Plans defined.  Skipping building out the database sources.");
-        }
-
-        // Need to have this set to ensure we're picking everything up.
-        if (!hmsMirrorConfig.isEvaluatePartitionLocation()) {
-            throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
-        }
-
-        for (String database : warehouseMapBuilder.getWarehousePlans().keySet()) {
-            // Reset the database in the translation map.
-            hmsMirrorConfig.getTranslator().removeDatabaseFromTranslationMap(database);
-            // Load the database locations.
-            loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
-        }
-
-        return warehouseMapBuilder;
     }
 
     public Map<String, SourceLocationMap> getDatabaseSources() {

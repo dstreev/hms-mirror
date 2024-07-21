@@ -23,10 +23,7 @@ import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.DatabaseService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -41,10 +38,17 @@ import java.util.concurrent.Future;
 @Slf4j
 public class RuntimeService {
 
+    private ConfigService configService;
     private DatabaseService databaseService;
     private ExecuteSessionService executeSessionService;
     private HMSMirrorAppService hmsMirrorAppService;
     private TranslatorService translatorService;
+
+
+    @Autowired
+    public void setConfigService(ConfigService configService) {
+        this.configService = configService;
+    }
 
     @Autowired
     public void setDatabaseService(DatabaseService databaseService) {
@@ -66,43 +70,24 @@ public class RuntimeService {
         this.translatorService = translatorService;
     }
 
-    public RunStatus start(boolean dryrun, boolean autoGLM,
+    public RunStatus start(boolean dryrun, //boolean autoGLM,
                            Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
-
-        // This is the fastest way to build the database source and the glm from those.  It does require that the
-        //   user has already defined Warehouse Plans for the databases they are interested in.
-        if (autoGLM) {
-            // Default Consolidation Level is 1;
-            int defaultConsolidationLevel = 1;
-            databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
-            translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
-        }
-
         RunStatus runStatus = null;
         ExecuteSession session = null;
-
         if (executeSessionService.transitionLoadedSessionToActive(concurrency, Boolean.FALSE)) {
 
             session = executeSessionService.getSession();
-
             runStatus = session.getRunStatus();
-//            if (runStatus.getProgress() == ProgressEnum.IN_PROGRESS
-//                    || runStatus.getProgress() == ProgressEnum.STARTED
-//                    || runStatus.getProgress() == ProgressEnum.CANCEL_FAILED) {
-//                log.error("The session is currently running. Cannot start until operation has completed.");
-//                throw new RuntimeException("Session already running.");
-//            }
+
+//            rtn = configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.FALSE);
+//             Set whether the config has been validated.
+//            session.getConfig().setValidated(rtn);
 
             if (runStatus.reset()) {
-//                runStatus.setProgress(ProgressEnum.STARTED);
-                // Set the dryrun flag.
                 executeSessionService.getSession().getConfig().setExecute(!dryrun);
 
                 // Start job in a separate thread.
                 Future<Boolean> runningTask = hmsMirrorAppService.run();
-
-                // Set state to in progress.
-//                runStatus.setProgress(ProgressEnum.IN_PROGRESS);
 
                 // Set the running task reference in the RunStatus.
                 runStatus.setRunningTask(runningTask);

@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.cli.config;
 
-import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.domain.Cluster;
 import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
@@ -225,6 +225,7 @@ public class CliInit {
     public CommandLineRunner conversionPostProcessing(HmsMirrorConfig builtConfig,
                                                       @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
         return args -> {
+            // TODO: Need to review this process for redundancy.
             ExecuteSession session = executeSessionService.createSession(null, builtConfig);
             executeSessionService.setLoadedSession(session);
 
@@ -261,8 +262,8 @@ public class CliInit {
                 throw new RuntimeException(e);
             }
 
-            log.info("Session transitioned to active.");
-            builtConfig.setValidated(Boolean.TRUE);
+//            log.info("Session transitioned to active.");
+//            builtConfig.setValidated(Boolean.TRUE);
 
             session = executeSessionService.getSession();
 

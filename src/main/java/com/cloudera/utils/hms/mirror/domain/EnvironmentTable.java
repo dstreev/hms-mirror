@@ -15,9 +15,10 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror;
+package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.CreateStrategy;
+import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

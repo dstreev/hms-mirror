@@ -231,7 +231,10 @@ public enum MessageCode {
     ENCRYPTED_PASSWORD_CHANGE_ATTEMPT(111, "Password can NOT be changed while ENCRYPTED.  Decrypt them first to change/add a password then Re-encrytped them before saving."),
     PASSWORDS_ENCRYPTED(112,"Passwords are encrypted.  Too change/add a password, you must decrypt them first."),
     LEFT_NAMESPACE_NOT_DEFINED(113, "The namespace for the LEFT cluster is NOT defined.  Please config it and try again."),
-    RIGHT_NAMESPACE_NOT_DEFINED(114, "The namespace for the RIGHT cluster is NOT defined.  Please config it and try again.");
+    RIGHT_NAMESPACE_NOT_DEFINED(114, "The namespace for the RIGHT cluster is NOT defined.  Please config it and try again."),
+    RUNTIME_EXCEPTION(115, "A runtime exception occurred. ''{0}'' Check the logs for details."),
+    SESSION_ISSUE(116, "There was an issue with the session. ''{0}'' Check the logs for details."),
+    ENCRYPTION_ISSUE(117, "There was an issue with the encryption. ''{0}'' Check the logs for details.");
 
 
     private int code = 0;

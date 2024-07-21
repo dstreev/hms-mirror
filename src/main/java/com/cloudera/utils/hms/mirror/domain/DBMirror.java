@@ -15,9 +15,10 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror;
+package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.Pair;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;

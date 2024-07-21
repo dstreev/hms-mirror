@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end;
 
-import com.cloudera.utils.hms.mirror.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.PhaseState;

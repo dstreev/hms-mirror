@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -120,14 +121,14 @@ public class TranslatorMVController {
         executeSessionService.clearActiveSession();
         if (executeSessionService.transitionLoadedSessionToActive(maxThreads, Boolean.TRUE)) {
 
-//            boolean lclBuildSources = buildSources != null ? buildSources : false;
+            ExecuteSession session = executeSessionService.getSession();
+            HmsMirrorConfig config = session.getConfig();
+
             int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
             boolean lclPartitionLevelMismatch = partitionLevelMisMatch != null && partitionLevelMisMatch;
 
-//            if (lclBuildSources) {
-            WarehouseMapBuilder wmb = databaseService.buildDatabaseSources(lclConsolidationLevel, false);
-            model.addAttribute(SOURCES, wmb.getSources());
-//            }
+            databaseService.buildDatabaseSources(lclConsolidationLevel, lclPartitionLevelMismatch);
+            model.addAttribute(SOURCES, config.getTranslator().getWarehouseMapBuilder().getSources());
 
             Map<String, String> globalLocationMap = null;
             try {
@@ -140,16 +141,12 @@ public class TranslatorMVController {
             }
 
             if (lclDryrun) {
-//                model.addAttribute(ACTION, "view.dryrun");
                 HmsMirrorConfig lclConfig = new HmsMirrorConfig();
-                lclConfig.getTranslator().setOrderedGlobalLocationMap(globalLocationMap);
-                lclConfig.getTranslator().setWarehouseMapBuilder(wmb);
+                lclConfig.getTranslator().setAutoGlobalLocationMap(globalLocationMap);
+                lclConfig.getTranslator().setWarehouseMapBuilder(config.getTranslator().getWarehouseMapBuilder());
                 model.addAttribute(CONFIG, lclConfig);
                 return "translator/globalLocationMap/view";
             } else {
-                HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-                config.getTranslator().setWarehouseMapBuilder(wmb);
-                config.getTranslator().setGlobalLocationMap(globalLocationMap);
                 configService.validate(executeSessionService.getSession(), null, Boolean.FALSE);
                 return "redirect:/config/view";
             }

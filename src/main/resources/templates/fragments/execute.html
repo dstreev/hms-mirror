@@ -41,11 +41,11 @@
                 <input id="dryrun" type="checkbox" th:field="*{dryrun}"/>
                 <label for="dryrun" th:text="#{dry.run}"/>
             </div>
-            <div class="pure-control-group">
-                <!-- Auto GLM -->
-                <input id="autoglm" type="checkbox" th:field="*{autoGLM}"/>
-                <label for="autoglm" th:text="#{auto.glm}"/>
-            </div>
+<!--            <div class="pure-control-group">-->
+<!--                &lt;!&ndash; Auto GLM &ndash;&gt;-->
+<!--                <input id="autoglm" type="checkbox" th:field="*{autoGLM}"/>-->
+<!--                <label for="autoglm" th:text="#{auto.glm}"/>-->
+<!--            </div>-->
             <div class="pure-button-group">
                 <button id="execModalBtn" class="pure-button pure-button-primary"
                         th:formaction="@{/runtime/doStart}"

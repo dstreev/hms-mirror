@@ -35,7 +35,7 @@ import static java.util.Objects.nonNull;
 @Slf4j
 @Getter
 @Setter
-@JsonIgnoreProperties({"dbLocationMap"})
+@JsonIgnoreProperties(value = {"dbLocationMap"}, ignoreUnknown = true)
 public class Translator implements Cloneable {
 //    private int consolidationLevelBase = 1;
 //    @Schema(description = "If the Partition Spec doesn't match the partition hierarchy, then set this to true.")
@@ -49,32 +49,43 @@ public class Translator implements Cloneable {
     not rely on the database 'location' element.
      */
     private boolean forceExternalLocation = Boolean.FALSE;
-    private Map<String, String> globalLocationMap = null;
+    /*
+    GLM Built by the system from the Warehouse Plans.
+     */
+    private Map<String, String> autoGlobalLocationMap = null;
+    /*
+    GLM's that are manually added by the user.
+     */
+    private Map<String, String> userGlobalLocationMap = null;
 
     @JsonIgnore
     private Map<String, String> orderedGlobalLocationMap = null;
 
-    private WarehouseMapBuilder warehouseMapBuilder = null;
+    private WarehouseMapBuilder warehouseMapBuilder = new WarehouseMapBuilder();
 
-    public void addGlobalLocationMap(String from, String to) {
+    public void addUserGlobalLocationMap(String from, String to) {
+        if (isNull(userGlobalLocationMap))
+            userGlobalLocationMap = new HashMap<>();
+        userGlobalLocationMap.put(from, to);
+//        rebuildOrderedGlobalLocationMap();
         getOrderedGlobalLocationMap().put(from, to);
     }
 
     // Needed to handle npe when loaded from json
-    public WarehouseMapBuilder getWarehouseMapBuilder() {
-        if (isNull(warehouseMapBuilder))
-            warehouseMapBuilder = new WarehouseMapBuilder();
-        return warehouseMapBuilder;
-    }
+//    public WarehouseMapBuilder getWarehouseMapBuilder() {
+//        if (isNull(warehouseMapBuilder))
+//            warehouseMapBuilder = new WarehouseMapBuilder();
+//        return warehouseMapBuilder;
+//    }
 
     @Override
     public Translator clone() {
         try {
             Translator clone = (Translator) super.clone();
-            if (nonNull(globalLocationMap))
-                clone.globalLocationMap = new HashMap<>(globalLocationMap);
-            if (nonNull(orderedGlobalLocationMap))
-                clone.orderedGlobalLocationMap = new TreeMap<>(orderedGlobalLocationMap);
+            if (nonNull(userGlobalLocationMap))
+                clone.userGlobalLocationMap = new HashMap<>(userGlobalLocationMap);
+            if (nonNull(autoGlobalLocationMap))
+                clone.autoGlobalLocationMap = new TreeMap<>(autoGlobalLocationMap);
             if (nonNull(warehouseMapBuilder))
                 clone.warehouseMapBuilder = (WarehouseMapBuilder)warehouseMapBuilder.clone();
             return clone;
@@ -83,15 +94,26 @@ public class Translator implements Cloneable {
         }
     }
 
-    public String removeGlobalLocationMap(String from) {
+    public String removeUserGlobalLocationMap(String from) {
+        userGlobalLocationMap.remove(from);
         return getOrderedGlobalLocationMap().remove(from);
     }
 
-    public List<String> removeGlobalLocationMap(List<String> fromList) {
+    public List<String> removeUserGlobalLocationMap(List<String> fromList) {
         List<String> rtn = new ArrayList<>();
-        for (String from : fromList)
+        for (String from : fromList) {
+            rtn.add(userGlobalLocationMap.remove(from));
             rtn.add(getOrderedGlobalLocationMap().remove(from));
+        }
         return rtn;
+    }
+
+    public void rebuildOrderedGlobalLocationMap() {
+        orderedGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
+        if (nonNull(userGlobalLocationMap))
+            orderedGlobalLocationMap.putAll(userGlobalLocationMap);
+        if (nonNull(autoGlobalLocationMap))
+            orderedGlobalLocationMap.putAll(autoGlobalLocationMap);
     }
 
     public void addTableSource(String database, String table, String tableType, String source, int consolidationLevelBase,
@@ -133,19 +155,24 @@ public class Translator implements Cloneable {
     }
 
     // Needed to ensure the return is the ordered map.
-    public Map<String, String> getGlobalLocationMap() {
-        return getOrderedGlobalLocationMap();
-    }
+//    public Map<String, String> getGlobalLocationMap() {
+//        return getOrderedGlobalLocationMap();
+//    }
 
     @JsonIgnore
     // This set is ordered by the length of the key in descending order
     // to ensure that the longest path is replaced first.
     public Map<String, String> getOrderedGlobalLocationMap() {
-        if (isNull(orderedGlobalLocationMap)) {
+        if (isNull(orderedGlobalLocationMap) ||
+                (orderedGlobalLocationMap.isEmpty()
+                        && (nonNull(userGlobalLocationMap) || nonNull(autoGlobalLocationMap)))) {
             orderedGlobalLocationMap = new TreeMap<String, String>(new StringLengthComparator());
             // Add the global location map to the ordered map.
-            if (nonNull(globalLocationMap))
-                orderedGlobalLocationMap.putAll(globalLocationMap);
+            if (nonNull(userGlobalLocationMap))
+                orderedGlobalLocationMap.putAll(userGlobalLocationMap);
+            if (nonNull(autoGlobalLocationMap))
+                orderedGlobalLocationMap.putAll(autoGlobalLocationMap);
+
         }
         return orderedGlobalLocationMap;
     }
