@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 public enum CollectionEnum {
-    EMPTY,
+    WAITING,
     IN_PROGRESS,
     COMPLETED,
     ERRORED;

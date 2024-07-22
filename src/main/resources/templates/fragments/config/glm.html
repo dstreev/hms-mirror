@@ -53,10 +53,21 @@
                                             th:formmethod="post"
                                             th:text="#{delete}"/>
                                 </td>
-                                <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
-                                           readonly/></td>
-                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
-                                           readonly/></td>
+                                <td>
+                                    <input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
+                                           readonly/>
+                                </td>
+                                <td>
+                                    <th:block th:each="target: ${glm.value}">
+                                        <div class="pure-control-group">
+                                            <input type="hidden" name="tableType" th:value="${target.key}"/>
+                                            <label th:text="${target.key}"/>
+                                            <input type="text" name="target" th:value="${target.value}"
+                                                   style="width: 100%;"
+                                                   readonly/>
+                                        </div>
+                                    </th:block>
+                                </td>
                             </form>
                         </tr>
                     </th:block>
@@ -68,15 +79,22 @@
                 <h4 th:text="#{global.location.maps.user.empty}"/>
             </th:block>
             <!--    Add GLM Manually -->
-            <h4 th:text="#{glm.add}"/>
-            <form class="pure-form" method="post"
-                  th:action="@{/translator/globalLocationMap/add}">
-                <fieldset>
-                    <input type="text" name="SOURCE" placeholder="Source"/>
-                    <input type="text" name="TARGET" placeholder="Target"/>
-                    <button type="submit" class="pure-button pure-button-primary" th:text="#{button.add}"/>
-                </fieldset>
-            </form>
+            <th:block th:if="${!dryrun}">
+                <h4 th:text="#{glm.add}"/>
+                <form class="pure-form" method="post"
+                      th:action="@{/translator/globalLocationMap/add}">
+                    <fieldset>
+                        <select id="tableType" name="TABLE_TYPE">
+                            <option th:each="type: ${tabletypes}"
+                                    th:value="${type}"
+                                    th:text="${type}"/>
+                        </select>
+                        <input type="text" name="SOURCE" placeholder="Source"/>
+                        <input type="text" name="TARGET" placeholder="Target"/>
+                        <button type="submit" class="pure-button pure-button-primary" th:text="#{button.add}"/>
+                    </fieldset>
+                </form>
+            </th:block>
         </div>
         <div class="pure-u-1">
             <!--Auto GLM's-->
@@ -95,11 +113,19 @@
                     <th:block
                             th:each="glm: ${CONFIG.translator.autoGlobalLocationMap}">
                         <tr>
-                            <form>
-                                <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
-                                           readonly/></td>
-                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
-                                           readonly/></td>
+                            <form class="pure-form pure-form-aligned">
+                                <td>
+                                    <input type="text" name="source" th:value="${glm.key}" style="width: 100%;" readonly/>
+                                </td>
+                                <td>
+                                    <th:block th:each="target: ${glm.value}">
+                                        <div class="pure-control-group">
+                                            <label th:text="${target.key}"/>
+                                            <input type="text" name="target" th:value="${target.value}"
+                                                   style="width: 100%;" readonly/>
+                                        </div>
+                                    </th:block>
+                                </td>
                             </form>
                         </tr>
                     </th:block>
@@ -131,8 +157,17 @@
                             <form>
                                 <td><input type="text" name="source" th:value="${glm.key}" style="width: 100%;"
                                            readonly/></td>
-                                <td><input type="text" name="target" th:value="${glm.value}" style="width: 100%;"
-                                           readonly/></td>
+                                <td>
+                                    <th:block th:each="target: ${glm.value}">
+                                        <div class="pure-control-group">
+                                            <label th:text="${target.key}"/>
+                                            <input type="text" name="target" th:value="${target.value}"
+                                                   style="width: 100%;"
+                                                   readonly/>
+                                        </div>
+                                    </th:block>
+                                </td>
+
                             </form>
                         </tr>
                     </th:block>

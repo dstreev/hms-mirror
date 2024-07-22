@@ -52,23 +52,27 @@ public class Translator implements Cloneable {
     /*
     GLM Built by the system from the Warehouse Plans.
      */
-    private Map<String, String> autoGlobalLocationMap = null;
+    private Map<String, Map<TableType, String>> autoGlobalLocationMap = null;
     /*
     GLM's that are manually added by the user.
      */
-    private Map<String, String> userGlobalLocationMap = null;
+    private Map<String,  Map<TableType, String>> userGlobalLocationMap = null;
 
     @JsonIgnore
-    private Map<String, String> orderedGlobalLocationMap = null;
+    private Map<String,  Map<TableType, String>> orderedGlobalLocationMap = null;
 
     private WarehouseMapBuilder warehouseMapBuilder = new WarehouseMapBuilder();
 
-    public void addUserGlobalLocationMap(String from, String to) {
+    public void addUserGlobalLocationMap(TableType tableType, String from, String to) {
         if (isNull(userGlobalLocationMap))
             userGlobalLocationMap = new HashMap<>();
-        userGlobalLocationMap.put(from, to);
+        Map<TableType, String> target = userGlobalLocationMap.get(from);
+        if (isNull(target))
+            target = new HashMap<TableType, String>();
+        target.put(tableType, to);
+        userGlobalLocationMap.put(from, target);
 //        rebuildOrderedGlobalLocationMap();
-        getOrderedGlobalLocationMap().put(from, to);
+        getOrderedGlobalLocationMap().put(from, target);
     }
 
     // Needed to handle npe when loaded from json
@@ -94,26 +98,36 @@ public class Translator implements Cloneable {
         }
     }
 
-    public String removeUserGlobalLocationMap(String from) {
-        userGlobalLocationMap.remove(from);
-        return getOrderedGlobalLocationMap().remove(from);
+    /*
+    Remove the entry or sub entry if 'tableType' is not null.
+     */
+    public void removeUserGlobalLocationMap(String from, TableType tableType) {
+        if (isNull(tableType))
+            userGlobalLocationMap.remove(from);
+        else {
+            Map<TableType, String> target = userGlobalLocationMap.get(from);
+            if (nonNull(target))
+                target.remove(tableType);
+        }
+//        return getOrderedGlobalLocationMap().remove(from);
     }
 
-    public List<String> removeUserGlobalLocationMap(List<String> fromList) {
-        List<String> rtn = new ArrayList<>();
-        for (String from : fromList) {
-            rtn.add(userGlobalLocationMap.remove(from));
-            rtn.add(getOrderedGlobalLocationMap().remove(from));
-        }
-        return rtn;
-    }
+//    public List<String> removeUserGlobalLocationMap(List<String> fromList) {
+//        List<String> rtn = new ArrayList<>();
+//        for (String from : fromList) {
+//            rtn.add(userGlobalLocationMap.remove(from));
+//            rtn.add(getOrderedGlobalLocationMap().remove(from));
+//        }
+//        return rtn;
+//    }
 
     public void rebuildOrderedGlobalLocationMap() {
         orderedGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
-        if (nonNull(userGlobalLocationMap))
-            orderedGlobalLocationMap.putAll(userGlobalLocationMap);
         if (nonNull(autoGlobalLocationMap))
             orderedGlobalLocationMap.putAll(autoGlobalLocationMap);
+        // User list goes last to ensure precedence.
+        if (nonNull(userGlobalLocationMap))
+            orderedGlobalLocationMap.putAll(userGlobalLocationMap);
     }
 
     public void addTableSource(String database, String table, String tableType, String source, int consolidationLevelBase,
@@ -162,11 +176,11 @@ public class Translator implements Cloneable {
     @JsonIgnore
     // This set is ordered by the length of the key in descending order
     // to ensure that the longest path is replaced first.
-    public Map<String, String> getOrderedGlobalLocationMap() {
+    public Map<String, Map<TableType, String>> getOrderedGlobalLocationMap() {
         if (isNull(orderedGlobalLocationMap) ||
                 (orderedGlobalLocationMap.isEmpty()
                         && (nonNull(userGlobalLocationMap) || nonNull(autoGlobalLocationMap)))) {
-            orderedGlobalLocationMap = new TreeMap<String, String>(new StringLengthComparator());
+            orderedGlobalLocationMap = new TreeMap<String, Map<TableType, String>>(new StringLengthComparator());
             // Add the global location map to the ordered map.
             if (nonNull(userGlobalLocationMap))
                 orderedGlobalLocationMap.putAll(userGlobalLocationMap);

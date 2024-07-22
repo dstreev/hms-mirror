@@ -69,7 +69,7 @@
                     <th>Status</th>
                 </tr>
                 <tr th:each="stage: ${RUN_STATUS.getStages()}">
-                    <td th:text="${stage.key}"/>
+                    <td th:text="${stage.key.getStage()}"/>
                     <td th:text="${stage.value}"/>
                 </tr>
             </table>

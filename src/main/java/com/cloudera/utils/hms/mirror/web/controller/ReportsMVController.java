@@ -90,7 +90,13 @@ public class ReportsMVController implements ControllerReferences {
         model.addAttribute(DB_MIRROR, dbMirror);
         HmsMirrorConfig config = reportService.getConfig(report_id);
         model.addAttribute(CONFIG, config);
-        RunStatus runStatus = reportService.getRunStatus(report_id);
+        RunStatus runStatus = null;
+        try {
+            runStatus = reportService.getRunStatus(report_id);
+        } catch (RuntimeException e) {
+            runStatus = new RunStatus();
+            log.error("Run Status not available for report: {}", report_id, e);
+        }
         model.addAttribute(RUN_STATUS, runStatus);
         return "reports/dbdetail";
     }

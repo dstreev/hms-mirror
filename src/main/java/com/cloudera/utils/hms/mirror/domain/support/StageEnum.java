@@ -19,12 +19,17 @@ package com.cloudera.utils.hms.mirror.domain.support;
 
 public enum StageEnum {
 
-    ENVIRONMENT_VARS("Environment Variables"),
-    DATABASES("Load Databases"),
-    TABLES("Load Tables"),
-    CREATE_DATABASES("Create Databases"),
-    LOAD_TABLE_METADATA("Load Table Metadata"),
-    MIGRATE_TABLES("Migrate Tables");
+    VALIDATE_CONNECTION_CONFIG("Validating Connection Configuration"),
+    CONNECTION("Connecting to Endpoints"),
+    GLM_BUILD("Building GLM's from Sources"),
+    VALIDATING_CONFIG("Validating Configuration"),
+    GATHERING_DATABASES("Gathering Databases"),
+    ENVIRONMENT_VARS("Retrieving Environment Variables"),
+    DATABASES("Loading Databases"),
+    TABLES("Loading Tables"),
+    CREATE_DATABASES("Creating Databases"),
+    LOAD_TABLE_METADATA("Loading Table Metadata"),
+    MIGRATE_TABLES("Migrating Tables");
 
     private final String stage;
 

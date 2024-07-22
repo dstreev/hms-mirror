@@ -17,10 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
-import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.support.DatabaseFilterType;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -566,12 +563,25 @@ public class HmsMirrorConfig implements Cloneable {
 
     public void setGlobalLocationMapKV(String[] extLocs) {
         boolean set = Boolean.TRUE;
+        boolean conversionsPossible = HmsMirrorConfigUtil.possibleConversions(this);
         if (extLocs != null) {
             for (String property : extLocs) {
                 try {
                     String[] keyValue = property.split("=");
                     if (keyValue.length == 2) {
-                        getTranslator().addUserGlobalLocationMap(keyValue[0], keyValue[1]);
+                        if (keyValue[1].toUpperCase().startsWith(TableType.EXTERNAL_TABLE.toString())) {
+                            String targetMap = keyValue[1].substring(TableType.EXTERNAL_TABLE.toString().length());
+                            getTranslator().addUserGlobalLocationMap(TableType.EXTERNAL_TABLE, keyValue[0], targetMap);
+                        } else if (keyValue[1].toUpperCase().startsWith(TableType.MANAGED_TABLE.toString())) {
+                            String targetMap = keyValue[1].substring(TableType.MANAGED_TABLE.toString().length());
+                            getTranslator().addUserGlobalLocationMap(TableType.MANAGED_TABLE, keyValue[0], targetMap);
+                            if (conversionsPossible) {
+                                getTranslator().addUserGlobalLocationMap(TableType.EXTERNAL_TABLE, keyValue[0], targetMap);
+                            }
+                        } else {
+                            getTranslator().addUserGlobalLocationMap(TableType.EXTERNAL_TABLE, keyValue[0], keyValue[1]);
+                            getTranslator().addUserGlobalLocationMap(TableType.MANAGED_TABLE, keyValue[0], keyValue[1]);
+                        }
                     }
                 } catch (Throwable t) {
                     set = Boolean.FALSE;

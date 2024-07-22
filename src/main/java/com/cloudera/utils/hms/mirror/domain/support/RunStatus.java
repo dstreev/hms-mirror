@@ -132,7 +132,7 @@ public class RunStatus implements Comparable<RunStatus> {
 
     public RunStatus() {
         for (StageEnum stage : StageEnum.values()) {
-            stages.put(stage, CollectionEnum.EMPTY);
+            stages.put(stage, CollectionEnum.WAITING);
         }
     }
 
@@ -150,7 +150,7 @@ public class RunStatus implements Comparable<RunStatus> {
             }
             errorMessages.clear();
             warningMessages.clear();
-            stages.forEach((k, v) -> v = CollectionEnum.EMPTY);
+            stages.forEach((k, v) -> v = CollectionEnum.WAITING);
             operationStatistics.reset();
         } else {
             rtn = Boolean.FALSE;

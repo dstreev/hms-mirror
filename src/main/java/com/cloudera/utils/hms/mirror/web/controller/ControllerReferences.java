@@ -72,6 +72,7 @@ public interface ControllerReferences {
     String OTHERS = "OTHERS";
     String DISTCP = "DISTCP";
     String SQL = "SQL";
+    String TABLE_TYPE = "TABLE_TYPE";
     String SOURCE = "SOURCE";
     String TARGET = "TARGET";
 }

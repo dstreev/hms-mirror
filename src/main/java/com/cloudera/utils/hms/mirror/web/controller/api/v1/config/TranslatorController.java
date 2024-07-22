@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1.config;
 
 import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -106,12 +107,13 @@ public class TranslatorController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap")
     public void addGlobalLocationMap(@RequestParam(name = "source", required = true) String source,
+                                     @RequestParam(name = "tableType", required = true) TableType tableType,
                                      @RequestParam(name = "target", required = true) String target) throws SessionException {
         log.info("Adding global location map for source: {} and target: {}", source, target);
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
-        translatorService.addGlobalLocationMap(source, target);
+        translatorService.addGlobalLocationMap(tableType, source, target);
     }
 
     @Operation(summary = "Remove GLM")
@@ -125,12 +127,13 @@ public class TranslatorController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.DELETE, value = "/globalLocationMap")
-    public String removeGlobalLocationMap(@RequestParam(name = "source", required = true) String source) throws SessionException {
+    public void removeGlobalLocationMap(@RequestParam(name = "source", required = true) String source,
+                                          @RequestParam(name = "tableType", required = true) TableType tableType) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
         log.info("Removing global location map for source: {}", source);
-        return translatorService.removeGlobalLocationMap(source);
+        translatorService.removeGlobalLocationMap(source, tableType);
     }
 
     // Get Global Location Map
@@ -145,7 +148,7 @@ public class TranslatorController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/globalLocationMap/list")
-    public Map<String, String> getGlobalLocationMaps() {
+    public Map<String, Map<TableType, String>> getGlobalLocationMaps() {
         log.info("Getting global location maps");
         return translatorService.getGlobalLocationMap();
     }
@@ -162,7 +165,7 @@ public class TranslatorController {
                     content = @Content)})
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/globalLocationMap/build")
-    public Map<String, String> buildGLMFromPlans(@RequestParam(name = "dryrun", required = false) Boolean dryrun,
+    public Map<String, Map<TableType, String>> buildGLMFromPlans(@RequestParam(name = "dryrun", required = false) Boolean dryrun,
                                                  @RequestParam(name = "buildSources", required = false) Boolean buildSources,
                                                  @RequestParam(name = "partitionLevelMisMatch", required = false) Boolean partitionLevelMisMatch,
                                                  @RequestParam(name = "consolidationLevel", required = false) Integer consolidationLevel)

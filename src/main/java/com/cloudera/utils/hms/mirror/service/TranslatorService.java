@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
@@ -42,6 +41,7 @@ import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREH
 import static com.cloudera.utils.hms.mirror.MessageCode.RDL_W_EPL_NO_MAPPING;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
@@ -50,8 +50,10 @@ public class TranslatorService {
 
     @Getter
     private ExecuteSessionService executeSessionService = null;
+//    @Getter
+//    private ConfigService configService = null;
 
-//    private ConfigService configService;
+    //    private ConfigService configService;
     private DatabaseService databaseService;
 
 //    @Autowired
@@ -83,7 +85,7 @@ public class TranslatorService {
 
         for (EnvironmentMap.TranslationLevel translationLevel : dbTranslationLevel) {
             if (translationLevel.getOriginal() != null &&
-                translationLevel.getTarget() != null) {
+                    translationLevel.getTarget() != null) {
                 dbLocationMap.put(translationLevel.getAdjustedOriginal(), translationLevel.getAdjustedTarget());
             }
         }
@@ -123,7 +125,10 @@ public class TranslatorService {
         return sbPartitionDetails.toString();
     }
 
-    public String processGlobalLocationMap(String originalLocation) {
+    /*
+    TODO: Need to ensure that an "EXTERNAL" location is set in EVERY entry in-order for this to work.
+     */
+    public String processGlobalLocationMap(String originalLocation, Boolean externalTable) {
         String newLocation = null;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -131,18 +136,27 @@ public class TranslatorService {
             log.debug("Checking location: {} for replacement element in global location map.", originalLocation);
             for (String key : hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().keySet()) {
                 if (originalLocation.startsWith(key)) {
-                    String rLoc = hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().get(key);
-                    newLocation = originalLocation.replace(key, rLoc);
+                    Map<TableType, String> rLocMap = hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().get(key);
+                    String rLoc = null;
+                    if (externalTable) {
+                        rLoc = rLocMap.get(TableType.EXTERNAL_TABLE);
+                        newLocation = rLoc + originalLocation.replace(key, "");
+                    } else {
+                        rLoc = rLocMap.get(TableType.MANAGED_TABLE);
+                        if (nonNull(rLoc)) {
+                            newLocation = rLoc + originalLocation.replace(key, "");
+                        }
+                    }
+                    // If entry not found, use original location
+                    if (isNull(newLocation))
+                        newLocation = originalLocation;
                     log.info("Location Map Found. {}:{} New Location: {}", key, rLoc, newLocation);
                     // Stop Processing
                     break;
                 }
             }
         }
-        if (newLocation != null)
-            return newLocation;
-        else
-            return originalLocation;
+        return newLocation;
     }
 
     @Autowired
@@ -218,6 +232,7 @@ public class TranslatorService {
                 && (tblMirror.getStrategy() == DataStrategyEnum.SCHEMA_ONLY)) {
             // Only Translate for SCHEMA_ONLY.  Leave the DUMP location as is.
             EnvironmentTable target = tblMirror.getEnvironmentTable(Environment.RIGHT);
+            boolean isExternal = TableUtils.isExternal(target);
             /*
             Review the target partition locations and replace the namespace with the new namespace.
             Check whether any global location maps match the location and adjust.
@@ -241,7 +256,7 @@ public class TranslatorService {
                     // Get the relative dir.
                     String relativeDir = partitionLocation.replace(config.getCluster(Environment.LEFT).getHcfsNamespace(), "");
                     // Check the Global Location Map for a match.
-                    String mappedDir = processGlobalLocationMap(relativeDir);
+                    String mappedDir = processGlobalLocationMap(relativeDir, isExternal);
                     if (relativeDir.equals(mappedDir) && config.isResetToDefaultLocation()) {
                         // This is a problem, since we've asked to translate the partitions but didn't find a map, nothing changed.
                         // Which would be inconsistent with the table location details.
@@ -264,26 +279,26 @@ public class TranslatorService {
                     // Check and warn against warehouse locations if specified.
 //                    if (config.getTransfer().getWarehouse().getExternalDirectory() != null &&
 //                            config.getTransfer().getWarehouse().getManagedDirectory() != null) {
-                        if (TableUtils.isExternal(tblMirror.getEnvironmentTable(Environment.LEFT))) {
-                            // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                            if (!newPartitionLocation.startsWith(tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
-                                // Set warning that even though you've specified to warehouse directories, the current configuration
-                                // will NOT place it in that directory.
-                                String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
-                                        tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
-                                        newPartitionLocation);
-                                tblMirror.addIssue(Environment.RIGHT, msg);
-                            }
-                        } else {
-                            if (!newPartitionLocation.startsWith(tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION))) {
-                                // Set warning that even though you've specified to warehouse directories, the current configuration
-                                // will NOT place it in that directory.
-                                String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
-                                        tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
-                                        newPartitionLocation);
-                                tblMirror.addIssue(Environment.RIGHT, msg);
-                            }
+                    if (TableUtils.isExternal(tblMirror.getEnvironmentTable(Environment.LEFT))) {
+                        // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
+                        if (!newPartitionLocation.startsWith(tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION))) {
+                            // Set warning that even though you've specified to warehouse directories, the current configuration
+                            // will NOT place it in that directory.
+                            String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
+                                    tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_LOCATION),
+                                    newPartitionLocation);
+                            tblMirror.addIssue(Environment.RIGHT, msg);
                         }
+                    } else {
+                        if (!newPartitionLocation.startsWith(tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION))) {
+                            // Set warning that even though you've specified to warehouse directories, the current configuration
+                            // will NOT place it in that directory.
+                            String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), "partition",
+                                    tblMirror.getParent().getDBDefinition(Environment.RIGHT).get(DB_MANAGED_LOCATION),
+                                    newPartitionLocation);
+                            tblMirror.addIssue(Environment.RIGHT, msg);
+                        }
+                    }
 //                    }
 
                 }
@@ -300,6 +315,7 @@ public class TranslatorService {
         StringBuilder dirBuilder = new StringBuilder();
         String tableName = tableMirror.getName();
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         String dbName = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
 
@@ -321,7 +337,7 @@ public class TranslatorService {
         String relativeDir = NamespaceUtils.stripNamespace(rtn);
 
         // Check the Global Location Map for a match.
-        String mappedDir = processGlobalLocationMap(relativeDir);
+        String mappedDir = processGlobalLocationMap(relativeDir, TableUtils.isExternal(ret));
         // If they don't match, it was reMapped!
         boolean reMapped = !relativeDir.equals(mappedDir);
         if (reMapped) {
@@ -350,7 +366,7 @@ public class TranslatorService {
 //        if (config.getTransfer().getCommonStorage() != null) {
 //            sbDir.append(config.getTransfer().getCommonStorage());
 //        } else {
-            sbDir.append(rightNS);
+        sbDir.append(rightNS);
 //        }
         if (reMapped) {
             sbDir.append(mappedDir);
@@ -425,34 +441,40 @@ public class TranslatorService {
         return dirBuilder.toString().trim();
     }
 
-    public void addGlobalLocationMap(String source, String target) throws SessionException {
+    public void addGlobalLocationMap(TableType type, String source, String target) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        hmsMirrorConfig.getTranslator().addUserGlobalLocationMap(source, target);
+        hmsMirrorConfig.getTranslator().addUserGlobalLocationMap(type, source, target);
     }
 
-    public String removeGlobalLocationMap(String source) throws SessionException {
+    public void removeGlobalLocationMap(String source, TableType type) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        return hmsMirrorConfig.getTranslator().removeUserGlobalLocationMap(source);
+        hmsMirrorConfig.getTranslator().removeUserGlobalLocationMap(source, type);
     }
 
-    public Map<String, String> getGlobalLocationMap() {
+    public Map<String, Map<TableType, String>> getGlobalLocationMap() {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
 
-    public Map<String, String> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
+    public Map<String, Map<TableType, String>> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
         // Don't reload if running.
 //        executeSessionService.clearActiveSession();
 
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        // We need to know if we are dealing with potential conversions (IE: Legacy Hive Managed to External)
+        // If we are, we need to ensure that there are GLM's built for Managed Tables into External Locations.
+        // This is because the location will be different and we need to ensure that the location is translated correctly.
+        boolean conversions = HmsMirrorConfigUtil.possibleConversions(config);
+
         Translator translator = config.getTranslator();
-        Map<String, String> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
+        Map<String, Map<TableType, String>> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
 
         WarehouseMapBuilder warehouseMapBuilder = translator.getWarehouseMapBuilder();
         Map<String, Warehouse> warehousePlans = warehouseMapBuilder.getWarehousePlans();
@@ -477,45 +499,75 @@ public class TranslatorService {
         */
 
         for (Map.Entry<String, Warehouse> warehouseEntry : warehousePlans.entrySet()) {
-            String database = warehouseEntry.getKey();
+//            String database = warehouseEntry.getKey();
+            String database = HmsMirrorConfigUtil.getResolvedDB(warehouseEntry.getKey(), config);
             Warehouse warehouse = warehouseEntry.getValue();
             String externalBaseLocation = warehouse.getExternalDirectory();
             String managedBaseLocation = warehouse.getManagedDirectory();
-            SourceLocationMap locationMap = sources.get(database);
-            if (locationMap != null) {
-                for (Map.Entry<TableType, Map<String, Set<String>>> locationEntry : locationMap.getLocations().entrySet()) {
-                    String typeLocation = null;
+            SourceLocationMap sourceLocationMap = sources.get(database);
+            if (sourceLocationMap != null) {
+                for (Map.Entry<TableType, Map<String, Set<String>>> sourceLocationEntry : sourceLocationMap.getLocations().entrySet()) {
+                    String typeTargetLocation = null;
+                    String extTargetLocation = new String(externalBaseLocation + "/" + database + ".db");
+                    String mngdTargetLocation = new String(managedBaseLocation + "/" + database + ".db");
                     // Set the location based on the table type.
-                    switch (locationEntry.getKey()) {
-                        case EXTERNAL_TABLE:
-                            typeLocation = externalBaseLocation;
-                            break;
-                        case MANAGED_TABLE:
-                            typeLocation = managedBaseLocation;
-                            break;
-                    }
-                    typeLocation = typeLocation + "/" + database + ".db";
+
+//                    switch (sourceLocationEntry.getKey()) {
+//                        case EXTERNAL_TABLE:
+//                            typeTargetLocation = externalBaseLocation;
+//                            break;
+//                        case MANAGED_TABLE:
+//                            typeTargetLocation = managedBaseLocation;
+//                            break;
+//                    }
+//                    typeTargetLocation = typeTargetLocation + "/" + database + ".db";
                     // Locations and the tables that are in that location.
-                    for (Map.Entry<String, Set<String>> locationSet : locationEntry.getValue().entrySet()) {
-                        String location = new String(locationSet.getKey());
-                        // String the namespace from the location.
-                        location = NamespaceUtils.stripNamespace(location); //.replace(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace(), "");
-                        if (config.getTransfer().getStorageMigration().isStrict() && (!location.startsWith("/") || (location.length() == locationSet.getKey().length()))) {
+                    for (Map.Entry<String, Set<String>> sourceLocationSet : sourceLocationEntry.getValue().entrySet()) {
+                        String sourceLocation = new String(sourceLocationSet.getKey());
+                        // Strip the namespace from the location.
+                        sourceLocation = NamespaceUtils.stripNamespace(sourceLocation); //.replace(hmsMirrorConfig.getCluster(Environment.LEFT).getHcfsNamespace(), "");
+                        // I don't think this is relevant anymore, since we switch the namespace stripping to not required the LEFT hcfsNamespace.
+                        if (config.getTransfer().getStorageMigration().isStrict() && (!sourceLocation.startsWith("/") || (sourceLocation.length() == sourceLocationSet.getKey().length()))) {
                             // Issue with reducing the location.
                             // This happens when the table(s) location doesn't match the source namespace.
                             throw new MismatchException("Location doesn't start with the configured namespace.  This is a problem"
                                     + " and doesn't allow for the location to be converted to the new namespace."
-                                    + " Location: " + locationSet.getKey() + " Database: " + database + " Type: " + locationEntry.getKey()
-                                    + " containing tables: " + String.join(",",locationSet.getValue())
+                                    + " Location: " + sourceLocationSet.getKey() + " Database: " + database + " Type: " + sourceLocationEntry.getKey()
+                                    + " containing tables: " + String.join(",", sourceLocationSet.getValue())
                                     + " HCFS Namespace: " + config.getCluster(Environment.LEFT).getHcfsNamespace());
                         }
-                        // TODO: Review Consolidation Level for this.
-//                        String reducedLocation = UrlUtils.reduceUrlBy(location, consolidationLevel);
-                        String reducedLocation = UrlUtils.reduceUrlBy(location, 0);
-                        if (typeLocation != null) {
-                            if (!location.startsWith(typeLocation)) {
-                                lclGlobalLocationMap.put(reducedLocation, typeLocation);
+
+                        // NOTE: The locations were already reduced by '1' when the Sources were built.
+                        //       This removed the 'table' directory from the location and allows for them to
+                        //       by normalized to the database directory.
+                        String reducedLocation = UrlUtils.reduceUrlBy(sourceLocation, 0);
+
+                        if (sourceLocationEntry.getKey() == TableType.EXTERNAL_TABLE) {
+                            if (!sourceLocation.startsWith(extTargetLocation)) {
+                                // Get current entry
+                                Map<TableType, String> currentEntry = lclGlobalLocationMap.get(reducedLocation);
+                                if (isNull(currentEntry)) {
+                                    currentEntry = new TreeMap<>();
+                                    lclGlobalLocationMap.put(reducedLocation, currentEntry);
+                                }
+                                currentEntry.put(sourceLocationEntry.getKey(), extTargetLocation);
                             }
+                        }
+                        if (sourceLocationEntry.getKey() == TableType.MANAGED_TABLE) {
+                            if (!sourceLocation.startsWith(mngdTargetLocation)) {
+                                // Get current entry
+                                Map<TableType, String> currentEntry = lclGlobalLocationMap.get(reducedLocation);
+                                if (isNull(currentEntry)) {
+                                    currentEntry = new TreeMap<>();
+                                    lclGlobalLocationMap.put(reducedLocation, currentEntry);
+                                }
+                                currentEntry.put(sourceLocationEntry.getKey(), mngdTargetLocation);
+                                // When we have conversions, we need to ensure that the managed location is also added.
+                                if (conversions) {
+                                    currentEntry.put(TableType.EXTERNAL_TABLE, extTargetLocation);
+                                }
+                            }
+
                         }
                     }
                 }

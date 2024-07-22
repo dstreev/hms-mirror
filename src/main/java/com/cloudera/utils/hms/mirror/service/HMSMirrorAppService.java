@@ -117,32 +117,52 @@ public class HMSMirrorAppService {
         OperationStatistics stats = runStatus.getOperationStatistics();
 
         try {// Refresh the connections pool.
+            runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.IN_PROGRESS);
+
             configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.TRUE);
+            runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.COMPLETED);
+
+            runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.IN_PROGRESS);
             connectionPoolService.init();
+            runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.COMPLETED);
         } catch (SQLException sqle) {
             log.error("Issue refreshing connections pool", sqle);
             runStatus.addError(CONNECTION_ISSUE, sqle.getMessage());
+            runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
             return new AsyncResult<>(Boolean.FALSE);
         } catch (SessionException se) {
             log.error("Issue with Session", se);
             runStatus.addError(SESSION_ISSUE, se.getMessage());
+            runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
             return new AsyncResult<>(Boolean.FALSE);
         } catch (EncryptionException ee) {
             log.error("Issue with Decryption", ee);
             runStatus.addError(ENCRYPTION_ISSUE, ee.getMessage());
+            runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
             return new AsyncResult<>(Boolean.FALSE);
         }
 
         try {
             int defaultConsolidationLevel = 1;
+            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.IN_PROGRESS);
+
             databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
             translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
+            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.COMPLETED);
+
+            runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
             configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.FALSE);
+            runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
+
 //            session.getConfig().setValidated(Boolean.TRUE);
         } catch (EncryptionException | SessionException | RequiredConfigurationException | MismatchException e) {
             log.error("Issue validating configuration", e);
             runStatus.addError(RUNTIME_EXCEPTION, e.getMessage());
             log.error("Configuration is not valid.  Exiting.");
+
+            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.ERRORED);
+            runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
+
             reportWriterService.wrapup();
             return new AsyncResult<>(Boolean.FALSE);
         }
@@ -175,6 +195,8 @@ public class HMSMirrorAppService {
 //        session.getRunning().set(Boolean.TRUE);
 
         Date startTime = new Date();
+        runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.IN_PROGRESS);
+
         log.info("GATHERING METADATA: Start Processing for databases: {}", String.join(",", config.getDatabases()));
 
         if (config.isLoadingTestData()) {
@@ -211,6 +233,7 @@ public class HMSMirrorAppService {
                 // Issue
                 log.error("Issue getting databases for dbRegEx", se);
                 stats.getFailures().incrementDatabases();
+                runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.ERRORED);
                 executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
                 reportWriterService.wrapup();
                 return new AsyncResult<>(Boolean.FALSE);
@@ -225,6 +248,7 @@ public class HMSMirrorAppService {
                 }
             }
         }
+        runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.COMPLETED);
 
         if (!config.isLoadingTestData()) {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.IN_PROGRESS);

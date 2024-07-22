@@ -19,6 +19,9 @@ package com.cloudera.utils.hms.mirror.domain.support;
 
 import java.util.Comparator;
 
+/*
+This comparator is used to sort strings by length in descending order.
+ */
 public class StringLengthComparator implements Comparator<String> {
 
     @Override

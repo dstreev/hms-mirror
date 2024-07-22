@@ -19,6 +19,8 @@ package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 
+import static java.util.Objects.nonNull;
+
 public class HmsMirrorConfigUtil {
 
     public static String getResolvedDB(String database, HmsMirrorConfig config) {
@@ -33,4 +35,13 @@ public class HmsMirrorConfigUtil {
     }
 
 
+    public static boolean possibleConversions(HmsMirrorConfig config) {
+        boolean conversions = Boolean.FALSE;
+        if (config.getCluster(Environment.LEFT).isLegacyHive() &&
+                (nonNull(config.getCluster(Environment.RIGHT)) && !config.getCluster(Environment.RIGHT).isLegacyHive())) {
+            conversions = Boolean.TRUE;
+        }
+
+        return conversions;
+    }
 }

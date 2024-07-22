@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -77,6 +78,7 @@ public class TranslatorMVController {
 
     @RequestMapping(value = "/globalLocationMap/add", method = RequestMethod.POST)
     public String addGlobalLocationMap(Model model,
+                                       @RequestParam(name = TABLE_TYPE, required = true) TableType tableType,
                                        @RequestParam(name = SOURCE, required = true) String source,
                                        @RequestParam(name = TARGET, required = true) String target) throws SessionException, RequiredConfigurationException {
         log.info("Adding global location map for source: {} and target: {}", source, target);
@@ -86,7 +88,7 @@ public class TranslatorMVController {
         if (isBlank(source) || isBlank(target)) {
             throw new RequiredConfigurationException("Source and Target are required (and can't be blank) when adding a global location map.");
         }
-        translatorService.addGlobalLocationMap(source, target);
+        translatorService.addGlobalLocationMap(tableType, source, target);
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
         return "redirect:/config/view";
@@ -94,12 +96,13 @@ public class TranslatorMVController {
 
     @RequestMapping(value = "/globalLocationMap/delete", method = RequestMethod.POST)
     public String removeGlobalLocationMap(Model model,
-                                          @RequestParam String source) throws SessionException {
+                                          @RequestParam String source,
+                                          @RequestParam TableType tableType) throws SessionException {
         // Don't reload if running.
         executeSessionService.clearActiveSession();
 
         log.info("Removing global location map for source: {}", source);
-        translatorService.removeGlobalLocationMap(source);
+        translatorService.removeGlobalLocationMap(source, tableType);
 
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
 
@@ -130,7 +133,7 @@ public class TranslatorMVController {
             databaseService.buildDatabaseSources(lclConsolidationLevel, lclPartitionLevelMismatch);
             model.addAttribute(SOURCES, config.getTranslator().getWarehouseMapBuilder().getSources());
 
-            Map<String, String> globalLocationMap = null;
+            Map<String, Map<TableType, String>> globalLocationMap = null;
             try {
                 globalLocationMap = translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(lclDryrun, lclConsolidationLevel);
             } catch (MismatchException e) {
