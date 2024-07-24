@@ -69,22 +69,24 @@
 
     -->
     <h4 th:text="#{reports.for(${SESSION_ID})}"/>
+    <b th:if="${RUN_STATUS != null && RUN_STATUS.appVersion != null}" th:text="#{version(${RUN_STATUS.appVersion})}"/>
     <form class="pure-form pure-form-aligned">
         <div class="pure-g">
             <div class="pure-u-1">
                 <div class="pure-control-group">
-                    <!--                    <span class="tooltiptext" th:text="#{reports.tooltip}"></span>-->
-                    <!--                    <label for="report_id" th:text="#{reports.available}"/>-->
+
                     <th:block th:each="section: ${ARTIFACTS}">
-                        <fieldset>
+                        <fieldset th:if="${section.key == 'DISTCP_PLANS'}">
+                            <legend th:text="#{distcp.workbook}"/>
+                            <a class="pure-button"
+                               th:href="@{/reports/distcpWorkbook?REPORT_ID=__${SESSION_ID}__}"
+                               target="_blank" th:text="#{button.view}"/>
+                        </fieldset>
+                        <fieldset th:if="${section.key != 'DISTCP_PLANS'}">
                             <legend th:text="${section.key}"/>
                             <table class="pure-table pure-table-bordered pure-table-striped">
-                                <!--                            <tr>-->
-                                <!--                                <th colspan="2" th:text="#{database.reports}"/>-->
-                                <!--                            </tr>-->
                                 <tr th:each="file: ${section.value}">
-                                    <td th:text="${file}">
-                                    </td>
+                                    <td th:text="${file}"/>
                                     <td>
                                         <a class="pure-button"
                                            th:if="${section.key == 'DATABASES'}"
@@ -99,36 +101,6 @@
                             </table>
                         </fieldset>
                     </th:block>
-
-
-                    <!--                    <table class="pure-table pure-table-striped">-->
-                    <!--                        <tr>-->
-                    <!--                            <th colspan="2" th:text="#{database.reports}"/>-->
-                    <!--                        </tr>-->
-                    <!--                        <tr th:each="database: ${DATABASES}">-->
-                    <!--                            <td th:text="${database}">-->
-                    <!--                            </td>-->
-                    <!--                            <td>-->
-                    <!--                                <a class="pure-button"-->
-                    <!--                                   th:href="@{/reports/dbdetail?REPORT_ID=__${SESSION_ID}__&DATABASE=__${database}__}"-->
-                    <!--                                   target="_blank" th:text="#{button.view}"/>-->
-                    <!--                            </td>-->
-                    <!--                        </tr>-->
-                    <!--                    </table>-->
-                    <!--                    <table class="pure-table pure-table-striped">-->
-                    <!--                        <tr>-->
-                    <!--                            <th colspan="2" th:text="#{report.files}"/>-->
-                    <!--                        </tr>-->
-                    <!--                        <tr th:each="reportFile: ${REPORT_FILES}">-->
-                    <!--                            <td th:text="${reportFile}">-->
-                    <!--                            </td>-->
-                    <!--                            <td>-->
-                    <!--                                <a class="pure-button"-->
-                    <!--                                   th:href="@{/reports/viewReportFile?REPORT_ID=__${SESSION_ID}__&REPORT_FILE=__${distcpFile}__}"-->
-                    <!--                                   target="_blank" th:text="#{button.view}"/>-->
-                    <!--                            </td>-->
-                    <!--                        </tr>-->
-                    <!--                    </table>-->
                 </div>
             </div>
         </div>

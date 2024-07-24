@@ -21,5 +21,6 @@ public enum CollectionEnum {
     WAITING,
     IN_PROGRESS,
     COMPLETED,
-    ERRORED;
+    ERRORED,
+    SKIPPED;
 }

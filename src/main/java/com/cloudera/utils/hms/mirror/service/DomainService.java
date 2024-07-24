@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Conversion;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -32,6 +33,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.Objects.isNull;
 
@@ -131,5 +134,16 @@ public class DomainService {
         return config;
     }
 
+    public Map<String, Map<String, Set<String>>> deserializeDistCpWorkbook(String fileName) {
+        String distcpWorkbookAsString = fileToString(fileName);
+        Map<String, Map<String, Set<String>>> distcpWorkbook = null;
+        try {
+            distcpWorkbook = yamlMapper.readerFor(new TypeReference<Map<String, Map<String, Set<String>>>>() {
+            }).readValue(distcpWorkbookAsString);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return distcpWorkbook;
+    }
 
 }

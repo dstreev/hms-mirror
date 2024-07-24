@@ -191,7 +191,7 @@ public class DatabaseService {
             // Check to see if there are any warehouse plans defined.  If not, skip this process.
             if (warehouseMapBuilder.getWarehousePlans().isEmpty()) {
                 log.warn("No Warehouse Plans defined.  Skipping building out the database sources.");
-                throw new RequiredConfigurationException("No Warehouse Plans defined.  Skipping building out the database sources.");
+                return;
             }
 
             // Need to have this set to ensure we're picking everything up.

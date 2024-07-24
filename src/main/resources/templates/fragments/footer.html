@@ -28,9 +28,16 @@
     <link rel="stylesheet" type="text/css" th:href="@{/css/mirror.css}">
 </head>
 <body>
-<div th:fragment="footer" style="float: right; margin-right: 30px;">
-    <h6 th:text="#{version(${VERSION})}"/>
-    <h6 th:text="#{copyright}"/>
+<div th:fragment="footer">
+    <div class="pure-g">
+        <div class="pure-u-3-4">
+        </div>
+        <div class="pure-u-1-8">
+            <b th:text="#{version(${VERSION})}" th:if="${VERSION != 'Unknown'}"/>
+            <br>
+            <a href="https://github.com/cloudera-labs/hms-mirror" target="_blank"><b th:text="#{copyright}"/></a>
+        </div>
+    </div>
 </div>
 </body>
 </html>

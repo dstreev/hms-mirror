@@ -339,6 +339,7 @@ public class ConfigService {
         switch (dataStrategy) {
             case DUMP:
                 rtn.getMigrateACID().setOn(Boolean.TRUE);
+                rtn.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.MANUAL);
                 Cluster leftDump = new Cluster();
                 leftDump.setEnvironment(Environment.LEFT);
                 leftDump.setHiveServer2(new HiveServer2Config());
@@ -670,6 +671,7 @@ public class ConfigService {
 
         switch (config.getDataStrategy()) {
             case DUMP:
+                config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.MANUAL);
                 break;
             case STORAGE_MIGRATION:
                 // Ensure we have the metastore_direct config set.

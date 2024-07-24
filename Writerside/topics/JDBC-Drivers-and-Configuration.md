@@ -6,6 +6,19 @@
 
 When using the Cloudera JDBC driver, you'll need to add the property `driverClassName: "com.cloudera.hive.jdbc.HS2Driver"` to the `hiveServer2` configuration. If you're NOT using the Cloudera JDBC driver, just remove the property.
 
+
+<tabs>
+<tab title="Web UI">
+<b> Hive Server 2 Configuration</b>
+
+![hs2_cfg.png](hs2_cfg.png)
+
+<b>Metastore Direct Configuration</b>
+
+![metastore_direct_cfg.png](metastore_direct_cfg.png)
+
+</tab>
+<tab title="CLI">
 ```yaml
 hiveServer2:
   uri: "<cloudera_jdbc_url>"
@@ -14,6 +27,8 @@ hiveServer2:
     user: "xxx"
     password: "xxx"
 ```
+</tab>
+</tabs>
 
 Starting with the Apache Standalone driver shipped with CDP 7.1.8 cummulative hot fix parcels, you will need to include additional jars in the configuration `jarFile` configuration, due to some packaging adjustments.
 

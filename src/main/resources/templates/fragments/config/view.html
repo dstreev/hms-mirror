@@ -42,7 +42,7 @@
         <!--        Right Cluster-->
         <!--        Transfer-->
         <!--        Translator-->
-        <h4 th:text="#{config.dataStrategy(${CONFIG.dataStrategy})}"/>
+        <a th:href="#{docs.url(${CONFIG.dataStrategy.name})}" target="_blank"><h4 th:text="#{config.dataStrategy(${CONFIG.dataStrategy})}"/></a>
 
         <div class="pure-menu pure-menu-horizontal menubox">
             <!--            <a href="#" class="pure-menu-heading pure-menu-link">BRAND</a>-->

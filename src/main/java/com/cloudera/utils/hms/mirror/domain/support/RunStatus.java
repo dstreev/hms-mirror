@@ -86,7 +86,7 @@ public class RunStatus implements Comparable<RunStatus> {
     private OperationStatistics operationStatistics = new OperationStatistics();
 
     private String reportName;
-
+    private String appVersion;
 
     @JsonIgnore
     public long getDuration() {

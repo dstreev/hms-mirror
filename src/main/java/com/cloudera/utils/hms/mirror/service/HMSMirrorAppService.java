@@ -17,10 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.*;
@@ -29,7 +29,6 @@ import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -110,6 +109,8 @@ public class HMSMirrorAppService {
         Boolean rtn = Boolean.TRUE;
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
+        // Clean up session before continuing.
+        config.reset();
         RunStatus runStatus = session.getRunStatus();
         Conversion conversion = session.getConversion();
         // Reset Start time to the actual 'execution' start time.
@@ -142,30 +143,39 @@ public class HMSMirrorAppService {
             return new AsyncResult<>(Boolean.FALSE);
         }
 
-        try {
-            int defaultConsolidationLevel = 1;
-            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.IN_PROGRESS);
+        if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
+            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.SKIPPED);
+        } else {
+            try {
+                int defaultConsolidationLevel = 1;
+                runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.IN_PROGRESS);
 
-            databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
-            translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
-            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.COMPLETED);
+                databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
+                translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
+                runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.COMPLETED);
 
-            runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
-            configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.FALSE);
+            } catch (EncryptionException | SessionException | RequiredConfigurationException | MismatchException e) {
+                log.error("Issue validating configuration", e);
+                runStatus.addError(RUNTIME_EXCEPTION, e.getMessage());
+                log.error("Configuration is not valid.  Exiting.");
+
+                runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.ERRORED);
+                runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
+
+                reportWriterService.wrapup();
+                return new AsyncResult<>(Boolean.FALSE);
+            }
+        }
+
+        runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
+        if (configService.validate(session, executeSessionService.getCliEnvironment(), Boolean.FALSE)) {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
-
-//            session.getConfig().setValidated(Boolean.TRUE);
-        } catch (EncryptionException | SessionException | RequiredConfigurationException | MismatchException e) {
-            log.error("Issue validating configuration", e);
-            runStatus.addError(RUNTIME_EXCEPTION, e.getMessage());
-            log.error("Configuration is not valid.  Exiting.");
-
-            runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.ERRORED);
+        } else {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
-
             reportWriterService.wrapup();
             return new AsyncResult<>(Boolean.FALSE);
         }
+
 
         // Correct the load data issue ordering.
         if (config.isLoadingTestData() &&

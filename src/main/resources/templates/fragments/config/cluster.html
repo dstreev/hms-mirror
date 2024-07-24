@@ -63,7 +63,7 @@
                             <label th:text="#{cluster.cine}"/>
                         </div>
                         <div class="pure-control-group"
-                             th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT').contains(CONFIG.dataStrategy.toString())}">
+                             th:if="${('STORAGE_MIGRATION HYBRID SQL EXPORT_IMPORT SCHEMA_ONLY').contains(CONFIG.dataStrategy.toString())}">
                             <input type="checkbox"
                                    th:field="*{clusters[__${env}__].hdpHive3}"
                                    th:checked="${CONFIG.clusters[__${env}__]?.hdpHive3}"/>

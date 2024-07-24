@@ -25,10 +25,24 @@ If you install both options, your environment PATH will determine which one is r
 
 ## Quick Start
 
+After installation (above), run `hms-mirror` for the particular interface that interests you.
+<tabs>
+<tab title="Web UI">
+Run:
+
+<code>hms-mirror --service</code>
+
+Open a browser to 
+<code>http://hostname:8090/hms-mirror</code> to access the Web UI.
+</tab>
+<tab title="CLI">
 `hms-mirror` requires a configuration file describing the LEFT (source) and RIGHT (target) cluster connections.  There are two ways to create the config:
 
 - Use the [default config template](hms-mirror-Default-Configuration-Template.md)) as a starting point.  Edit and place a copy here `$HOME/.hms-mirror/cfg/default.yaml`.
 - `hms-mirror --setup` - Prompts a series of questions about the LEFT and RIGHT clusters to build the default configuration file.
+</tab>
+</tabs>
+
 
 If either or both clusters are Kerberized, please review the detailed configuration guidance [here](hms-mirror-running.md#running-against-a-legacy-non-cdp-kerberized-hiveserver2) and [here](hms-mirror-running.md#kerberized-connections).
 

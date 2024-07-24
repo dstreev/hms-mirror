@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Getter
@@ -56,6 +57,12 @@ public class WarehouseMapBuilder implements Cloneable {
 
      */
     private Map<String, Warehouse> warehousePlans = new HashMap<>();
+
+    public void reset() {
+        if (nonNull(sources))
+            sources.clear();
+        inSync = Boolean.FALSE;
+    }
 
     public Map<String, Warehouse> getWarehousePlans() {
         if (isNull(warehousePlans))

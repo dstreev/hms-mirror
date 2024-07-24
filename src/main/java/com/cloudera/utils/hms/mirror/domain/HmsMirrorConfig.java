@@ -176,6 +176,15 @@ public class HmsMirrorConfig implements Cloneable {
 //    private boolean validated = Boolean.FALSE;
 
     /*
+    Reset before/after running a session.
+     */
+    public void reset() {
+        if (nonNull(translator)) {
+            translator.reset();
+        }
+    }
+
+    /*
     Depending on which way we've added databases to be processed, use this to determine the 'type' of filter.
      */
     @JsonIgnore

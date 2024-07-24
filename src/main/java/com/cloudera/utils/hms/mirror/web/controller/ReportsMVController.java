@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @Controller
 @RequestMapping(path = "/reports")
@@ -71,11 +72,11 @@ public class ReportsMVController implements ControllerReferences {
     @RequestMapping(value = "/select", method = RequestMethod.GET)
     public String listReports(Model model) {
         log.info("Listing reports");
-
         // Populate model
         uiModelService.sessionToModel(model, 1, Boolean.FALSE);
         // Get list of Reports
         model.addAttribute(REPORT_LIST, reportService.getAvailableReports());
+        model.addAttribute(DISTCP_PLANS, Boolean.TRUE);
         model.addAttribute(ACTION, "select"); // Supports which form fragment is loaded.
         return "reports/view";
     }
@@ -99,6 +100,25 @@ public class ReportsMVController implements ControllerReferences {
         }
         model.addAttribute(RUN_STATUS, runStatus);
         return "reports/dbdetail";
+    }
+
+    @RequestMapping(value = "/distcpWorkbook", method = RequestMethod.GET)
+    public String viewDistcpReport(Model model,
+                             @RequestParam(value = REPORT_ID, required = true) String report_id) {
+        model.addAttribute(REPORT_ID, report_id);
+//        model.addAttribute(DATABASE, database);
+        Map<String, Map<String, Set<String>>> distcpWorkbookPlan = reportService.getDistCpWorkbook(report_id);
+        model.addAttribute(DISTCP_PLANS, distcpWorkbookPlan);
+
+        RunStatus runStatus = null;
+        try {
+            runStatus = reportService.getRunStatus(report_id);
+        } catch (RuntimeException e) {
+            runStatus = new RunStatus();
+            log.error("Run Status not available for report: {}", report_id, e);
+        }
+        model.addAttribute(RUN_STATUS, runStatus);
+        return "reports/distcpWorkbook";
     }
 
     // viewReportFile?REPORT_ID=__${SESSION_ID}__&FILE=__${file}__}"

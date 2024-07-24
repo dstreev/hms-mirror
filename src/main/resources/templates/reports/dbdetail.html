@@ -30,6 +30,8 @@
     <div class="pure-u-1">
         <h2 th:text="#{detailed.database.report(${DB_MIRROR.name})}"/>
         <hr>
+        <b th:if="${RUN_STATUS != null && RUN_STATUS.appVersion != null}"
+           th:text="#{version(${RUN_STATUS.appVersion})}"/>
     </div>
 
     <div class="pure-u-1" th:if="${RUN_STATUS.getErrorMessages().size() > 0}">

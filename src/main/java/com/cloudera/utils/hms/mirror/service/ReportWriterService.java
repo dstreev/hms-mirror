@@ -238,8 +238,14 @@ public class ReportWriterService {
                             distcpWorkbookSb.append("|:---|:---|:---|\n");
 
                             FileWriter distcpSourceFW = null;
-                            for (Map.Entry<String, Map<String, Set<String>>> entry :
-                                    getTranslatorService().buildDistcpList(database, distcpEnv, 1).entrySet()) {
+
+                            Map<String, Map<String, Set<String>>> distcpPlans = getTranslatorService().buildDistcpList(database, distcpEnv, 1);
+                            String distcpPlansFile = config.getOutputDirectory() + FileSystems.getDefault().getSeparator() + "distcp_plans.yaml";
+                            FileWriter distcpPlansFW = new FileWriter(distcpPlansFile);
+                            distcpPlansFW.write(yamlMapper.writeValueAsString(distcpPlans));
+                            distcpPlansFW.close();
+
+                            for (Map.Entry<String, Map<String, Set<String>>> entry : distcpPlans.entrySet()) {
 
                                 distcpWorkbookSb.append("| ").append(entry.getKey()).append(" | | |\n");
                                 Map<String, Set<String>> value = entry.getValue();

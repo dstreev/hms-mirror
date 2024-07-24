@@ -38,8 +38,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
-import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.DATABASES;
-import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.OTHERS;
+import static com.cloudera.utils.hms.mirror.web.controller.ControllerReferences.*;
 import static java.util.Objects.isNull;
 
 @Component
@@ -120,6 +119,13 @@ public class ReportService {
                     artifacts.put(DATABASES, databases);
                 }
                 databases.add(databaseName);
+            } else if (srcFile.endsWith("distcp_plans.yaml")) {
+                List<String> distcp_plans = artifacts.get(DISTCP_PLANS);//.add(databaseName);
+                if (isNull(distcp_plans)) {
+                    distcp_plans = new ArrayList<>();
+                    artifacts.put(DISTCP_PLANS, distcp_plans);
+                }
+                distcp_plans.add(srcFile);
             } else {
                 List<String> others = artifacts.get(OTHERS);
                 if (isNull(others)) {
@@ -152,11 +158,23 @@ public class ReportService {
         return reportDirectory + File.separator + sessionId + File.separator + "run-status.yaml";
     }
 
+    public String getDistcpWorkbookFile(String sessionId) {
+        String reportDirectory = executeSessionService.getReportOutputDirectory();
+        return reportDirectory + File.separator + sessionId + File.separator + "distcp_plans.yaml";
+    }
+
     public HmsMirrorConfig getConfig(String sessionId) {
         String configFile = getSessionConfigFile(sessionId);
         log.info("Loading Config File: {}", configFile);
         HmsMirrorConfig config = domainService.deserializeConfig(configFile);
         return config;
+    }
+
+    public Map<String, Map<String, Set<String>>> getDistCpWorkbook(String sessionId) {
+        String distcpWorkbookFile = getDistcpWorkbookFile(sessionId);
+        log.info("Loading DistCp Workbook File: {}", distcpWorkbookFile);
+        Map<String, Map<String, Set<String>>> distcpPlan = domainService.deserializeDistCpWorkbook(distcpWorkbookFile);
+        return distcpPlan;
     }
 
     public RunStatus getRunStatus(String sessionId) {

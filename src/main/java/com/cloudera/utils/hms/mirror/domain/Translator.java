@@ -27,7 +27,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -56,12 +59,28 @@ public class Translator implements Cloneable {
     /*
     GLM's that are manually added by the user.
      */
-    private Map<String,  Map<TableType, String>> userGlobalLocationMap = null;
+    private Map<String, Map<TableType, String>> userGlobalLocationMap = null;
 
     @JsonIgnore
-    private Map<String,  Map<TableType, String>> orderedGlobalLocationMap = null;
+    private Map<String, Map<TableType, String>> orderedGlobalLocationMap = null;
 
     private WarehouseMapBuilder warehouseMapBuilder = new WarehouseMapBuilder();
+
+    /*
+    After a session run where we capture state, we need to clean it up before running another session.
+     */
+    public void reset() {
+        if (nonNull(translationMap))
+            translationMap.clear();
+        if (nonNull(userGlobalLocationMap))
+            userGlobalLocationMap.clear();
+        if (nonNull(autoGlobalLocationMap))
+            autoGlobalLocationMap.clear();
+        if (nonNull(orderedGlobalLocationMap))
+            orderedGlobalLocationMap.clear();
+        if (nonNull(warehouseMapBuilder))
+            warehouseMapBuilder.reset();
+    }
 
     public void addUserGlobalLocationMap(TableType tableType, String from, String to) {
         if (isNull(userGlobalLocationMap))
@@ -91,7 +110,7 @@ public class Translator implements Cloneable {
             if (nonNull(autoGlobalLocationMap))
                 clone.autoGlobalLocationMap = new TreeMap<>(autoGlobalLocationMap);
             if (nonNull(warehouseMapBuilder))
-                clone.warehouseMapBuilder = (WarehouseMapBuilder)warehouseMapBuilder.clone();
+                clone.warehouseMapBuilder = (WarehouseMapBuilder) warehouseMapBuilder.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

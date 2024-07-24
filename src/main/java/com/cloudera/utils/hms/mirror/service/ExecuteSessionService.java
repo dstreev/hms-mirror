@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.jcabi.manifests.Manifests;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -273,6 +274,12 @@ public class ExecuteSessionService {
             // Create the RunStatus and Conversion objects.
             RunStatus runStatus = new RunStatus();
             runStatus.setConcurrency(concurrency);
+            try {
+                runStatus.setAppVersion(Manifests.read("HMS-Mirror-Version"));
+            } catch (IllegalArgumentException iae) {
+                runStatus.setAppVersion("Unknown");
+            }
+
             // Link the RunStatus to the session so users know what session details to retrieve.
             runStatus.setSessionId(session.getSessionId());
             session.setRunStatus(runStatus);

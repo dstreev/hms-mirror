@@ -162,8 +162,8 @@ public enum MessageCode {
     RDL_W_EPL_NO_MAPPING(74, "`-epl` with `-rdl` requires an entry in `-glm` to ensure we can map from the original location " +
             "to the new location. The `-glm` entry 'should' match the target 'warehouse' location if `-[e]wd` was specified to ensure " +
             "alignment. Source: {0} : {1} "),
-    LOCATION_NOT_MATCH_WAREHOUSE(75, "You have specified `-[e]wd]` in the config but after all the translations, the `{0}` " +
-            "location is still NOT aligned in the DBs warehouse. `{1}`->`{2}`. Consider adding a `-glm` mapping to align them"),
+    LOCATION_NOT_MATCH_WAREHOUSE(75, "After all the translations, the `{0}` " +
+            "location is still NOT aligned in the DBs warehouse. `{1}`->`{2}`. Consider adding a warehouse plan or a glm mapping to align them"),
     DISTCP_FOR_SO_ACID(76, "`distcp` can NOT be used to migrate data for ACID tables.  Try using strategies: " +
             "SQL, EXPORT_IMPORT, or HYBRID"),
     SQL_ACID_W_DC(77, "`distcp` isn't valid for SQL strategies on ACID tables."),

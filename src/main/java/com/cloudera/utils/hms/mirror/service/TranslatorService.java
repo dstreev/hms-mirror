@@ -129,7 +129,8 @@ public class TranslatorService {
     TODO: Need to ensure that an "EXTERNAL" location is set in EVERY entry in-order for this to work.
      */
     public String processGlobalLocationMap(String originalLocation, Boolean externalTable) {
-        String newLocation = null;
+        // Set to original, so we capture the original location if we don't find a match.
+        String newLocation = originalLocation;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         if (!hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
@@ -147,11 +148,7 @@ public class TranslatorService {
                             newLocation = rLoc + originalLocation.replace(key, "");
                         }
                     }
-                    // If entry not found, use original location
-                    if (isNull(newLocation))
-                        newLocation = originalLocation;
                     log.info("Location Map Found. {}:{} New Location: {}", key, rLoc, newLocation);
-                    // Stop Processing
                     break;
                 }
             }
@@ -478,7 +475,17 @@ public class TranslatorService {
 
         WarehouseMapBuilder warehouseMapBuilder = translator.getWarehouseMapBuilder();
         Map<String, Warehouse> warehousePlans = warehouseMapBuilder.getWarehousePlans();
+
+        // Checks to see if we should move forward.
+        if (isNull(warehousePlans) || warehousePlans.isEmpty()) {
+            log.info("No warehouse plans available to build glm's from sources");
+            return lclGlobalLocationMap;
+        }
         Map<String, SourceLocationMap> sources = translator.getWarehouseMapBuilder().getSources();
+        if (isNull(sources) || sources.isEmpty()) {
+            log.info("No sources available to build glm's from warehouse plans");
+            return lclGlobalLocationMap;
+        }
 
         /*
          What do we have:

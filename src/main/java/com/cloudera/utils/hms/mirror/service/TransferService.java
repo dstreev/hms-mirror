@@ -122,7 +122,6 @@ public class TransferService {
             EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
             EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
-            warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
 
             // Set Database to Transfer DB.
             tableMirror.setPhaseState(PhaseState.STARTED);
@@ -162,6 +161,7 @@ public class TransferService {
                 }
                 // Build out DISTCP workplans.
                 if (rtn.getStatus() == ReturnStatus.Status.SUCCESS && config.getTransfer().getStorageMigration().isDistcp()) {
+                    warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
                     // Build distcp reports.
                     if (!isBlank(config.getTransfer().getIntermediateStorage())) {
                         // LEFT PUSH INTERMEDIATE
