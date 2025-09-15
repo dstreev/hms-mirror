@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScans;
 import org.springframework.scheduling.annotation.EnableAsync;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -44,6 +43,10 @@ import java.lang.management.ManagementFactory;
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.domain")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.service")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.util")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.config")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.core")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.infrastructure")
+        // Springdoc OpenAPI components disabled to avoid root path conflict
 })
 @EnableAsync
 @Slf4j

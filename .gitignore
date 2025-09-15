@@ -46,3 +46,19 @@ replay_pid*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Node.js / React build artifacts
+src/main/frontend/node_modules/
+src/main/frontend/build/
+src/main/frontend/dist/
+src/main/frontend/.vite/
+src/main/frontend/coverage/
+
+# Node.js package lock files (optional - team preference)
+src/main/frontend/package-lock.json
+src/main/frontend/npm-debug.log*
+src/main/frontend/yarn-debug.log*
+src/main/frontend/yarn-error.log*
+
+# React build artifacts copied to static resources
+src/main/resources/static/

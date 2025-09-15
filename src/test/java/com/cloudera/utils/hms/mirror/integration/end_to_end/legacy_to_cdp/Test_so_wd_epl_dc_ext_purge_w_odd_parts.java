@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ public class Test_so_wd_epl_dc_ext_purge_w_odd_parts extends E2EBaseTest {
     @Test
     public void issueTest_01() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.RIGHT, 19);
+                Environment.RIGHT, 20);
     }
 
 //    @Test

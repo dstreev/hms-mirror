@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ public class Test_sm_ma_parts_epl_dc extends E2EBaseTest {
     @Test
     public void issueTest() {
         validateTableIssueCount("assort_test_db", "acid_03",
-                Environment.RIGHT, 201);
+                Environment.RIGHT, 202);
     }
 
     @Test

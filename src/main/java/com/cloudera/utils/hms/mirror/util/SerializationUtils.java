@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,10 +23,19 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.yaml.snakeyaml.LoaderOptions;
 
 @Configuration
 public class SerializationUtils {
+
+    @Bean
+    @Primary
+    public ObjectMapper jsonMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return mapper;
+    }
 
     @Bean("yamlMapper")
     public ObjectMapper YAMLMapper(@Value("${hms-mirror.config.yaml.codePointLimit}") int codePointLimit) {

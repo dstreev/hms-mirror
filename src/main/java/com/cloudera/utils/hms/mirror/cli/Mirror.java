@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
         // For the Hadoop CLI Interface
         @ComponentScan(basePackages = "com.cloudera.utils.hadoop")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.cli")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.config")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.datastrategy")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.domain")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.reporting")

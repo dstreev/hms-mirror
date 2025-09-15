@@ -16,8 +16,11 @@ dbcp2:
   maxWaitMillis: 10000
   validationQuery: "SELECT 1"
 springdoc:
+  api-docs:
+    enabled=true:
   swagger-ui:
-    path: "/swagger-ui.html"
+    enabled: true
+#    path: "/swagger-ui.html"
 spring:
   datasource:
 #    hikari:
@@ -28,16 +31,21 @@ spring:
   main:
     banner-mode: "off"
   thymeleaf:
+    enabled: true
     prefix: classpath:/templates/
+    suffix: .html
 hadoop:
   cli:
     api: "true"
 hms-mirror:
+  ui:
+    # Options: 'thymeleaf' (legacy) or 'react' (new)
+    version: "react"
   config:
     beta: "false"
     testing: "false"
     output-dir: "false"
-    path: ${HOME}/.hms-mirror/cfg
+    path: ${user.home}/.hms-mirror/cfg
     filename: "default.yaml"
     setup: "false"
     suppress-cli-warnings: "false"

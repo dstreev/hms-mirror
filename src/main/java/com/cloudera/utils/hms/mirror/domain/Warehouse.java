@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ public class Warehouse implements Cloneable {
     }
 
     @Override
-    protected Warehouse clone() throws CloneNotSupportedException {
+    public Warehouse clone() throws CloneNotSupportedException {
         return (Warehouse)super.clone();
     }
 

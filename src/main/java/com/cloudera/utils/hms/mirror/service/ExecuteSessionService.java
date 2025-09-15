@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -241,7 +241,7 @@ public class ExecuteSessionService {
     public Boolean startSession(Integer concurrency) throws SessionException {
         Boolean rtn = Boolean.TRUE;
 
-        ExecuteSession session = getSession();
+         ExecuteSession session = getSession();
         // Set the concurrency.
         session.setConcurrency(concurrency);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.renderer.html.HtmlRenderer;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -58,7 +59,7 @@ public class ReportWriterService {
 
     public ReportWriterService(
             DistCpService distCpService,
-            ObjectMapper yamlMapper,
+            @Qualifier("yamlMapper") ObjectMapper yamlMapper,
             ConfigService configService,
             ExecuteSessionService executeSessionService,
             TranslatorService translatorService,

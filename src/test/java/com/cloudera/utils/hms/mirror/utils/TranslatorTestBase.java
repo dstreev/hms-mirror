@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2022-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,10 +18,13 @@
 package com.cloudera.utils.hms.mirror.utils;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
+import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
+import com.cloudera.utils.hms.mirror.core.impl.LocationTranslatorImpl;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,6 +71,8 @@ public abstract class TranslatorTestBase {
 
     WarehouseService warehouseService;
 
+    LocationTranslator locationTranslator;
+
     TranslatorService translatorService;
 
     Translator translator;
@@ -90,8 +95,30 @@ public abstract class TranslatorTestBase {
         // Warehouse needs: ExecuteSessionService,
         warehouseService = new WarehouseService(executeSessionService);
 
-        // TranslatorService needs: ExecuteSessionService, WarehouseService
-        translatorService = new TranslatorService(executeSessionService, warehouseService);
+        // Create ConfigurationProvider for LocationTranslator
+        ConfigurationProvider configProvider = new ConfigurationProvider() {
+            @Override
+            public HmsMirrorConfig getConfig() {
+                return config;
+            }
+            
+            @Override
+            public void updateConfig(HmsMirrorConfig config) {}
+            
+            @Override
+            public boolean validateConfig() {
+                return true;
+            }
+            
+            @Override
+            public void reloadConfig() {}
+        };
+
+        // Create real LocationTranslator with test configuration
+        locationTranslator = new LocationTranslatorImpl(configProvider);
+
+        // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
+        translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
 
         ExecuteSession session = executeSessionService.createSession("test-session", config);
         executeSessionService.setSession(session);

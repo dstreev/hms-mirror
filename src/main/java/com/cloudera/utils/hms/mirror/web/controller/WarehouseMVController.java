@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -71,18 +71,31 @@ public class WarehouseMVController {
         // Set this incase it wasn't set yet.
         ExecuteSession session = executeSessionService.getSession();
         connectionPoolService.setExecuteSession(session);
-        if (connectionPoolService.init()) {
-            List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
-            model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
-            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
-            if (session.isRunning()) {
-                session.getRunStatus().setProgress(ProgressEnum.COMPLETED);
+        
+        try {
+            if (connectionPoolService.init()) {
+                List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
+                model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+                uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+                if (session.isRunning()) {
+                    session.getRunStatus().setProgress(ProgressEnum.COMPLETED);
+                }
+                return "warehouse/plan/add";
+            } else {
+                uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+                model.addAttribute(TYPE, "Connections");
+                model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
+                if (session.isRunning()) {
+                    session.getRunStatus().setProgress(ProgressEnum.FAILED);
+                }
+                return "error";
             }
-            return "warehouse/plan/add";
-        } else {
+        } catch (RuntimeException e) {
+            // Catch runtime exceptions like Kerberos auth errors
             uiModelService.sessionToModel(model, 1, Boolean.FALSE);
-            model.addAttribute(TYPE, "Connections");
-            model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
+            model.addAttribute(TYPE, "Authentication Error");
+            model.addAttribute(MESSAGE, e.getMessage());
+            log.error("Failed to initialize connection pool for warehouse plans", e);
             if (session.isRunning()) {
                 session.getRunStatus().setProgress(ProgressEnum.FAILED);
             }
@@ -115,13 +128,22 @@ public class WarehouseMVController {
     ) throws RequiredConfigurationException {
         // Don't reload if running.
 //        executeSessionService.clearActiveSession();
-        log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
-        warehouseService.addWarehousePlan(database, externalDirectory, managedDirectory);
-        configService.validate(executeSessionService.getSession(), null);
-        List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
-        model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
-        uiModelService.sessionToModel(model, 1, Boolean.FALSE);
-        return "warehouse/plan/add";
+        try {
+            log.info("Adding Warehouse Plan: {} E:{} M:{}", database, externalDirectory, managedDirectory);
+            warehouseService.addWarehousePlan(database, externalDirectory, managedDirectory);
+            configService.validate(executeSessionService.getSession(), null);
+            List<String> availableDatabases = databaseService.listAvailableDatabases(Environment.LEFT);
+            model.addAttribute(AVAILABLE_DATABASES, availableDatabases);
+            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+            return "warehouse/plan/add";
+        } catch (RuntimeException e) {
+            // Handle runtime exceptions
+            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+            model.addAttribute(TYPE, "Error Adding Warehouse Plan");
+            model.addAttribute(MESSAGE, e.getMessage());
+            log.error("Failed to add warehouse plan", e);
+            return "error";
+        }
 //        return "redirect:/config/view";
     }
 

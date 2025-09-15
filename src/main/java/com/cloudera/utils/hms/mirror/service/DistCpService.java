@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -63,7 +64,7 @@ public class DistCpService {
      *
      * @param yamlMapper The ObjectMapper configured for YAML serialization
      */
-    public DistCpService(ObjectMapper yamlMapper) {
+    public DistCpService(@Qualifier("yamlMapper") ObjectMapper yamlMapper) {
         this.yamlMapper = yamlMapper;
     }
 

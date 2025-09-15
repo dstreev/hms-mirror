@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
+import com.cloudera.utils.hms.mirror.core.api.TableOperations;
+import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +71,7 @@ public class TableService {
     private final QueryDefinitionsService queryDefinitionsService;
     private final TranslatorService translatorService;
     private final StatsCalculatorService statsCalculatorService;
+    private final TableOperations tableOperations;  // NEW: Core business logic injection
 
     // Assuming your logger is already defined, e.g.
     // private static final Logger log = LoggerFactory.getLogger(TableService.class);
@@ -79,101 +82,50 @@ public class TableService {
             ConnectionPoolService connectionPoolService,
             QueryDefinitionsService queryDefinitionsService,
             TranslatorService translatorService,
-            StatsCalculatorService statsCalculatorService
+            StatsCalculatorService statsCalculatorService,
+            TableOperations tableOperations  // NEW: Inject core business logic
     ) {
-        log.debug("Initializing TableService with provided service dependencies");
+        log.debug("Initializing TableService with provided service dependencies and core business logic");
         this.configService = configService;
         this.executeSessionService = executeSessionService;
         this.connectionPoolService = connectionPoolService;
         this.queryDefinitionsService = queryDefinitionsService;
         this.translatorService = translatorService;
         this.statsCalculatorService = statsCalculatorService;
+        this.tableOperations = tableOperations;  // NEW
     }
 
     /**
-     * Checks the table filter.
+     * Checks the table filter using the new core business logic.
+     * This method now delegates to the pure business logic layer.
      */
     protected void checkTableFilter(TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
-        // ...existing logic...
-        EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-        RunStatus runStatus = session.getRunStatus();
-        OperationStatistics stats = runStatus.getOperationStatistics();
-
-        if (isNull(et) | isEmpty(et.getDefinition())) {
-            return;
-        }
-
-        if (config.getMigrateVIEW().isOn() && config.getDataStrategy() != DUMP) {
-            if (!TableUtils.isView(et)) {
-                tableMirror.setRemove(Boolean.TRUE);
-                tableMirror.setRemoveReason("VIEW's only processing selected.");
-            }
+        
+        // NEW: Delegate to core business logic instead of doing it inline
+        ValidationResult result = tableOperations.validateTableFilter(tableMirror, environment);
+        
+        // Handle the result in Spring-specific way (side effects, metrics, etc.)
+        if (!result.isValid()) {
+            log.warn("Table filter validation failed: {}", result.getMessage());
+            tableMirror.setRemove(Boolean.TRUE);
+            tableMirror.setRemoveReason(result.getMessage());
+            
+            // Log errors for debugging
+            result.getErrors().forEach(error -> log.error("Filter error: {}", error));
         } else {
-            // Check if ACID for only the LEFT cluster.  If it's the RIGHT cluster, other steps will deal with
-            // the conflict.  IE: Rename or exists already.
-            if (TableUtils.isManaged(et)) {
-                if (TableUtils.isACID(et)) {
-                    // For ACID tables, check that Migrate is ON.
-                    if (config.getMigrateACID().isOn()) {
-                        tableMirror.addStep("TRANSACTIONAL", Boolean.TRUE);
-                    } else {
-                        tableMirror.setRemove(Boolean.TRUE);
-                        tableMirror.setRemoveReason("ACID table and ACID processing not selected (-ma|-mao).");
-                    }
-                } else if (config.getMigrateACID().isOnly()) {
-                    // Non ACID Tables should NOT be process if 'isOnly' is set.
-                    tableMirror.setRemove(Boolean.TRUE);
-                    tableMirror.setRemoveReason("Non-ACID table and ACID only processing selected `-mao`");
-                }
-            } else if (TableUtils.isHiveNative(et)) {
-                // Non ACID Tables should NOT be process if 'isOnly' is set.
-                if (config.getMigrateACID().isOnly()) {
-                    tableMirror.setRemove(Boolean.TRUE);
-                    tableMirror.setRemoveReason("Non-ACID table and ACID only processing selected `-mao`");
-                }
-            } else if (TableUtils.isView(et)) {
-                if (config.getDataStrategy() != DUMP) {
-                    tableMirror.setRemove(Boolean.TRUE);
-                    tableMirror.setRemoveReason("This is a VIEW and VIEW processing wasn't selected.");
-                }
-            } else {
-                // Non-Native Tables.
-                if (!config.isMigrateNonNative()) {
-                    tableMirror.setRemove(Boolean.TRUE);
-                    tableMirror.setRemoveReason("This is a Non-Native hive table and non-native process wasn't " +
-                            "selected.");
+            // For ACID tables that pass validation, add the TRANSACTIONAL step
+            EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
+            if (et != null && TableUtils.isManaged(et) && TableUtils.isACID(et)) {
+                ExecuteSession session = executeSessionService.getSession();
+                HmsMirrorConfig config = session.getConfig();
+                if (config.getMigrateACID().isOn()) {
+                    tableMirror.addStep("TRANSACTIONAL", Boolean.TRUE);
                 }
             }
         }
-//        }
-
-        // Check for tables migration flag, to avoid 're-migration'.
-        if (config.getDataStrategy() == STORAGE_MIGRATION) {
-            String smFlag = TableUtils.getTblProperty(HMS_STORAGE_MIGRATION_FLAG, et);
-            if (smFlag != null) {
-                tableMirror.setRemove(Boolean.TRUE);
-                tableMirror.setRemoveReason("The table has already gone through the STORAGE_MIGRATION process on " +
-                        smFlag + " If this isn't correct, remove the TBLPROPERTY '" + HMS_STORAGE_MIGRATION_FLAG + "' " +
-                        "from the table and try again.");
-            }
-        }
-
-        // Check for table size filter
-        if (config.getFilter().getTblSizeLimit() != null && config.getFilter().getTblSizeLimit() > 0) {
-            Long dataSize = (Long) et.getStatistics().get(DATA_SIZE);
-            if (dataSize != null) {
-                if (config.getFilter().getTblSizeLimit() * (1024 * 1024) < dataSize) {
-                    tableMirror.setRemove(Boolean.TRUE);
-                    tableMirror.setRemoveReason("The table dataset size exceeds the specified table filter size limit: " +
-                            config.getFilter().getTblSizeLimit() + "Mb < " + dataSize);
-                }
-            }
-        }
-
-        log.trace("Table filter checked for table: {}", tableMirror);
+        
+        log.trace("Table filter checked for table: {} - Valid: {}", tableMirror, result.isValid());
     }
 
     public String getCreateStatement(TableMirror tableMirror, Environment environment) {

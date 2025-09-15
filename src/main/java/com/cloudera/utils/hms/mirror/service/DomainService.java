@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -44,7 +45,7 @@ public class DomainService {
     private final ObjectMapper yamlMapper;
 
     // Use constructor injection instead of setter injection
-    public DomainService(ObjectMapper yamlMapper) {
+    public DomainService(@Qualifier("yamlMapper") ObjectMapper yamlMapper) {
         this.yamlMapper = yamlMapper;
     }
 

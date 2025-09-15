@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2023-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ public class HmsMirrorConfig implements Cloneable {
     private final List<String> flags = new LinkedList<>();
     @JsonIgnore
     private final List<String> supportFileSystems = new ArrayList<String>(Arrays.asList(
-            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs"
+            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs", "maprfs", "gs"
     ));
     @Setter
     @Getter
@@ -730,5 +730,34 @@ public class HmsMirrorConfig implements Cloneable {
 //
 //    }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        
+        HmsMirrorConfig that = (HmsMirrorConfig) o;
+        
+        return Objects.equals(acceptance, that.acceptance) &&
+                Objects.equals(clusters, that.clusters) &&
+                Objects.equals(databases, that.databases) &&
+                Objects.equals(filter, that.filter) &&
+                Objects.equals(hybrid, that.hybrid) &&
+                Objects.equals(migrateACID, that.migrateACID) &&
+                Objects.equals(migrateVIEW, that.migrateVIEW) &&
+                Objects.equals(transfer, that.transfer) &&
+                Objects.equals(translator, that.translator) &&
+                Objects.equals(optimization, that.optimization) &&
+                Objects.equals(dataStrategy, that.dataStrategy) &&
+                Objects.equals(execute, that.execute) &&
+                Objects.equals(sync, that.sync) &&
+                Objects.equals(icebergConversion, that.icebergConversion);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(acceptance, clusters, databases, filter, hybrid, migrateACID, 
+                migrateVIEW, transfer, translator, optimization, dataStrategy, 
+                execute, sync, icebergConversion);
+    }
 
 }

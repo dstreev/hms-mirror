@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -73,7 +74,7 @@ public class ConfigService {
      * @param springEnv Spring environment
      * @param domainService Service for domain operations
      */
-    public ConfigService(ObjectMapper yamlMapper, 
+    public ConfigService(@Qualifier("yamlMapper") ObjectMapper yamlMapper, 
                         org.springframework.core.env.Environment springEnv, 
                         DomainService domainService) {
         this.yamlMapper = yamlMapper;

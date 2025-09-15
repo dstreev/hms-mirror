@@ -1,6 +1,25 @@
+/*
+ * Copyright (c) 2025. Cloudera, Inc. All Rights Reserved
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ */
+
+
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
+import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
@@ -55,6 +74,9 @@ public class ServiceTestBase {
 
     WarehouseService warehouseService;
 
+    @Mock
+    LocationTranslator locationTranslator;
+
     TranslatorService translatorService;
 
     Translator translator;
@@ -83,8 +105,8 @@ public class ServiceTestBase {
         // Warehouse needs: ExecuteSessionService,
         warehouseService = new WarehouseService(executeSessionService);
 
-        // TranslatorService needs: ExecuteSessionService, WarehouseService
-        translatorService = new TranslatorService(executeSessionService, warehouseService);
+        // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
+        translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
 
         ExecuteSession session = executeSessionService.createSession("test-session", config);
         executeSessionService.setSession(session);

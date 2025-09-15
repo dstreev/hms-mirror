@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn:*)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_wd_epl_16/**)",
+      "Bash(sed:*)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts_4/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts_4/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts_5/**)",
+      "Read(/Users/dstreev/.hms-mirror/test-output/e2e/legacy_cdp/so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts_5/**)",
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(/tmp/add_copyright.sh:*)",
+      "Bash(lsof:*)",
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Read(/Users/dstreev/.hms-mirror/reports/customer/wellsfargo/2025-05-27_11-08-10/**)",
+      "Read(/Users/dstreev/.hms-mirror/reports/customer/wellsfargo/2025-05-27_11-08-10/**)",
+      "Read(/Users/dstreev/.hms-mirror/reports/customer/wellsfargo/2025-05-27_11-08-10/**)",
+      "Read(/Users/dstreev/.hms-mirror/reports/customer/wellsfargo/2025-05-27_11-08-10/**)",
+      "Bash(java:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install)",
+      "Bash(npm audit:*)",
+      "Bash(npm update)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_glm_fel_19",
+      "/",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp_cdp/so_cine_sync_epl_tf_01_23",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp_cdp/so_01_16",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_20",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_21",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_24",
+      "/Users/dstreev/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_25",
+      "/Users/dstreev/.hms-mirror/reports/customer/wellsfargo/2025-05-27_11-08-10",
+      "/Users/dstreev/projects",
+      "/Users/dstreev/.hms-mirror/cfg"
+    ]
+  }
+}

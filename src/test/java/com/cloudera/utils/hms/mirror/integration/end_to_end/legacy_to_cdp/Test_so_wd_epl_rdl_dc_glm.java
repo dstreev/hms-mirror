@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Cloudera, Inc. All Rights Reserved
+ * Copyright (c) 2024-2025. Cloudera, Inc. All Rights Reserved
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -141,6 +141,6 @@ public class Test_so_wd_epl_rdl_dc_glm extends E2EBaseTest {
     @Test
     public void tableIssueCountTest_01() {
         validateTableIssueCount("tpcds_bin_partitioned_orc_10", "web_sales",
-                Environment.RIGHT, 1828);
+                Environment.RIGHT, 1829);
     }
 }
