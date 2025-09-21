@@ -6,7 +6,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext';
 
 const NewConfigPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dispatch, loadConfiguration } = useConfiguration();
+  const { dispatch, loadConfiguration, state } = useConfiguration();
   const [showStrategyModal, setShowStrategyModal] = useState(true);
 
   const handleStrategySelect = async (strategy: string) => {
@@ -30,6 +30,7 @@ const NewConfigPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    // Always go back to the config management page when back button is clicked
     navigate('/config');
   };
 
@@ -68,7 +69,10 @@ const NewConfigPage: React.FC = () => {
 
         <DataStrategySelectionModal
           isOpen={showStrategyModal}
-          onClose={() => setShowStrategyModal(false)}
+          onClose={() => {
+            // When modal is cancelled, always go back to config management page
+            navigate('/config');
+          }}
           onSelect={handleStrategySelect}
           title="Select Data Migration Strategy"
         />

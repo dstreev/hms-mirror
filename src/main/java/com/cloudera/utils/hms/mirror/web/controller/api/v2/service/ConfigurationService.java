@@ -156,6 +156,23 @@ public class ConfigurationService {
         log.debug("Retrieving current HmsMirror configuration.");
         return currentConfig.get();
     }
+    
+    /**
+     * Replaces the entire current configuration with the provided one.
+     * Used for file uploads where we want to completely replace the config.
+     *
+     * @param newConfig The new configuration to set
+     * @return The new configuration
+     */
+    public HmsMirrorConfig replaceConfiguration(HmsMirrorConfig newConfig) {
+        log.info("Replacing entire HmsMirror configuration.");
+        if (newConfig == null) {
+            throw new IllegalArgumentException("Configuration cannot be null");
+        }
+        currentConfig.set(newConfig);
+        log.info("Configuration replaced successfully.");
+        return newConfig;
+    }
 
     /**
      * Updates the main HmsMirrorConfig object selectively.

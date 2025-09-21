@@ -12,6 +12,7 @@ export interface ConfigurationState {
   lastSavedState: any; // snapshot of config when last saved to file
   isConfigurationLoaded: boolean; // true when user has explicitly loaded/created a config
   pendingDataStrategy?: string; // data strategy to apply after loading config
+  skipNextAutoSave?: boolean; // Flag to skip the next auto-save (e.g., after upload/load)
   
   // UI state
   isLoading: boolean;
@@ -69,6 +70,7 @@ function configurationReducer(state: ConfigurationState, action: ConfigurationAc
           : 'New Config',
         error: null,
         pendingDataStrategy: undefined, // Clear pending strategy
+        skipNextAutoSave: true, // Skip auto-save after loading config
       };
       
       // Note: If we applied a data strategy, it will be handled in loadConfiguration function
@@ -92,6 +94,7 @@ function configurationReducer(state: ConfigurationState, action: ConfigurationAc
         config: { ...state.config, ...action.payload },
         hasUnsavedChanges: true,
         error: null,
+        skipNextAutoSave: false, // Clear the flag after any update
       };
       return newState;
     }
@@ -224,10 +227,19 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
       // Load current configuration from backend
       const hadPendingDataStrategy = state.pendingDataStrategy;
       const response = await fetch('/hms-mirror/api/v2/config');
+      console.log('GET /api/v2/config response status:', response.status);
+      if (response.status === 204) {
+        // No content - no configuration loaded
+        console.log('No configuration found on backend (204)');
+        throw new Error('No configuration found on backend');
+      }
       if (response.ok) {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const config = await response.json();
+          console.log('Loaded config from backend:', config);
+          console.log('Config has clusters?', config?.clusters);
+          console.log('Config has databases?', config?.databases);
           dispatch({ 
             type: 'LOAD_CONFIG', 
             payload: { config, filename } 
@@ -347,14 +359,16 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
   // Update config with auto-save
   const updateConfig = (configUpdate: any) => {
     dispatch({ type: 'UPDATE_CONFIG', payload: configUpdate });
-    // Auto-save to backend after state update
-    const newState = {
-      ...state,
-      config: { ...state.config, ...configUpdate },
-      hasUnsavedChanges: true,
-      error: null,
-    };
-    autoSaveToBackend(newState, dispatch);
+    // Auto-save to backend after state update (unless flag is set)
+    if (!state.skipNextAutoSave) {
+      const newState = {
+        ...state,
+        config: { ...state.config, ...configUpdate },
+        hasUnsavedChanges: true,
+        error: null,
+      };
+      autoSaveToBackend(newState, dispatch);
+    }
   };
 
   // Load configuration as a template (for creating new config based on existing)

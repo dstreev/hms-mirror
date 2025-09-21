@@ -13,7 +13,7 @@ interface ConfigFile {
 
 const LoadConfigurationPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loadConfiguration, updateConfig } = useConfiguration();
+  const { loadConfiguration, updateConfig, dispatch } = useConfiguration();
   const [configFiles, setConfigFiles] = useState<ConfigFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
@@ -55,11 +55,8 @@ const LoadConfigurationPage: React.FC = () => {
     setError(null);
 
     try {
-      console.log('Loading configuration:', filename);
-      
       // Use the ConfigurationContext's loadConfiguration to ensure state is updated
       await loadConfiguration(filename);
-      console.log('Configuration loaded successfully via context');
       
       setIsLoading(false);
       setLoadingConfigName(null);
@@ -139,8 +136,15 @@ const LoadConfigurationPage: React.FC = () => {
 
       const uploadedConfig = await response.json();
       
-      // Update the configuration in the context
-      updateConfig(uploadedConfig);
+      // Directly dispatch LOAD_CONFIG with the uploaded config
+      // This sets skipNextAutoSave flag to prevent interference
+      dispatch({ 
+        type: 'LOAD_CONFIG', 
+        payload: { 
+          config: uploadedConfig, 
+          filename: file.name 
+        } 
+      });
       
       // Navigate to the current configuration page
       navigate('/config/current');

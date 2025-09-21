@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -79,6 +80,9 @@ public class GlobalConfigController {
     @Autowired
     private PasswordService passwordService;
     
+    @Autowired
+    private com.cloudera.utils.hms.mirror.service.ExecuteSessionService executeSessionService;
+    
     @Value("${hms-mirror.config.path}")
     private String configPath;
     
@@ -109,9 +113,40 @@ public class GlobalConfigController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<HmsMirrorConfig> getFullConfiguration() {
-        log.info("Received request to get full HmsMirror configuration.");
-        HmsMirrorConfig config = configService.getConfiguration();
-        log.info("Returning full HmsMirror configuration.");
+        log.info("=== GET /api/v2/config called ===");
+        // Check if we have a session with config first
+        com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = executeSessionService.getSession();
+        log.info("ExecuteSession is null? {}", session == null);
+        if (session != null) {
+            log.info("Session ID: {}", session.getSessionId());
+            log.info("Session config is null? {}", session.getConfig() == null);
+        }
+        
+        HmsMirrorConfig config = null;
+        if (session != null && session.getConfig() != null) {
+            log.info("Returning configuration from ExecuteSession.");
+            config = session.getConfig();
+            log.info("ExecuteSession config has clusters? {}", config.getClusters() != null);
+            if (config.getClusters() != null) {
+                log.info("ExecuteSession config cluster count: {}", config.getClusters().size());
+            }
+        } else {
+            log.info("No ExecuteSession found, returning configuration from ConfigurationService.");
+            config = configService.getConfiguration();
+            log.info("ConfigurationService config is null? {}", config == null);
+            if (config != null) {
+                log.info("ConfigurationService config has clusters? {}", config.getClusters() != null);
+                if (config.getClusters() != null) {
+                    log.info("ConfigurationService config cluster count: {}", config.getClusters().size());
+                }
+            }
+        }
+        
+        log.info("Final config to return is null? {}", config == null);
+        if (config == null) {
+            log.warn("Returning null configuration - this will cause 'Configuration Required' page");
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(config);
     }
 
@@ -302,11 +337,23 @@ public class GlobalConfigController {
                 return ResponseEntity.badRequest().body(null);
             }
             
-            // Update the current configuration with the loaded one
-            HmsMirrorConfig updatedConfig = configService.updateConfiguration(loadedConfig);
+            // Close any existing session first
+            try {
+                executeSessionService.closeSession();
+            } catch (SessionException e) {
+                log.warn("Error closing existing session: {}", e.getMessage());
+            }
+            
+            // Create and set a new ExecuteSession as the single source of truth
+            String sessionId = filename != null ? filename.replace(".yaml", "").replace(".yml", "") : "loaded-config";
+            com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = executeSessionService.createSession(sessionId, loadedConfig);
+            executeSessionService.setSession(session);
+            
+            // Also update ConfigurationService to keep it in sync (for any legacy code that might use it)
+            configService.replaceConfiguration(loadedConfig);
             
             log.info("Successfully loaded configuration from file: {}", filename);
-            return ResponseEntity.ok(updatedConfig);
+            return ResponseEntity.ok(loadedConfig);
             
         } catch (Exception e) {
             log.error("Error loading configuration: {}", e.getMessage(), e);
@@ -855,8 +902,12 @@ public class GlobalConfigController {
             @ApiResponse(responseCode = "400", description = "Invalid file or configuration"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<HmsMirrorConfig> uploadConfigFile(@RequestParam("file") MultipartFile file) {
-        log.info("Received request to upload configuration file: {}", file.getOriginalFilename());
+    public ResponseEntity<HmsMirrorConfig> uploadConfigFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "filename", required = false) String filename) {
+        log.info("=== UPLOAD CONFIG CALLED ===");
+        log.info("File original name: {}", file.getOriginalFilename());
+        log.info("Filename param: {}", filename);
         
         try {
             if (file.isEmpty()) {
@@ -864,14 +915,16 @@ public class GlobalConfigController {
                 return ResponseEntity.badRequest().build();
             }
             
-            String filename = file.getOriginalFilename();
-            if (filename == null || (!filename.endsWith(".yaml") && !filename.endsWith(".yml"))) {
-                log.error("Invalid file type: {}", filename);
+            // Use the filename parameter if provided, otherwise use the original filename
+            String actualFilename = (filename != null && !filename.isEmpty()) ? filename : file.getOriginalFilename();
+            if (actualFilename == null || (!actualFilename.endsWith(".yaml") && !actualFilename.endsWith(".yml"))) {
+                log.error("Invalid file type: {}", actualFilename);
                 return ResponseEntity.badRequest().build();
             }
+            log.info("Using filename: {}", actualFilename);
             
             // Save the uploaded file temporarily
-            Path tempFile = Files.createTempFile("upload-", filename);
+            Path tempFile = Files.createTempFile("upload-", actualFilename);
             file.transferTo(tempFile.toFile());
             
             try {
@@ -883,11 +936,45 @@ public class GlobalConfigController {
                     return ResponseEntity.badRequest().build();
                 }
                 
-                // Update the current configuration
-                HmsMirrorConfig updatedConfig = configService.updateConfiguration(uploadedConfig);
+                // Close any existing session first
+                try {
+                    executeSessionService.closeSession();
+                } catch (SessionException e) {
+                    log.warn("Error closing existing session: {}", e.getMessage());
+                }
                 
-                log.info("Successfully uploaded and loaded configuration from file: {}", filename);
-                return ResponseEntity.ok(updatedConfig);
+                // Log the uploaded config details
+                log.info("Uploaded config has clusters? {}", uploadedConfig.getClusters() != null);
+                if (uploadedConfig.getClusters() != null) {
+                    log.info("Uploaded config cluster count: {}", uploadedConfig.getClusters().size());
+                    log.info("Uploaded config clusters: {}", uploadedConfig.getClusters().keySet());
+                }
+                log.info("Uploaded config has databases? {}", uploadedConfig.getDatabases() != null);
+                if (uploadedConfig.getDatabases() != null) {
+                    log.info("Uploaded config database count: {}", uploadedConfig.getDatabases().size());
+                }
+                
+                // Create and set a new ExecuteSession as the single source of truth
+                // Don't bother with ConfigurationService - just use ExecuteSessionService
+                String sessionId = actualFilename != null ? actualFilename.replace(".yaml", "").replace(".yml", "") : "uploaded-config";
+                log.info("Creating new session with ID: {}", sessionId);
+                com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = executeSessionService.createSession(sessionId, uploadedConfig);
+                log.info("Created session, setting as current...");
+                executeSessionService.setSession(session);
+                
+                // Also update ConfigurationService to keep it in sync (for any legacy code that might use it)
+                configService.replaceConfiguration(uploadedConfig);
+                
+                // Verify it was set
+                com.cloudera.utils.hms.mirror.domain.support.ExecuteSession verifySession = executeSessionService.getSession();
+                log.info("Verification - Session is null? {}", verifySession == null);
+                if (verifySession != null) {
+                    log.info("Verification - Session ID: {}", verifySession.getSessionId());
+                    log.info("Verification - Config is null? {}", verifySession.getConfig() == null);
+                }
+                
+                log.info("Successfully uploaded and loaded configuration from file: {}", actualFilename);
+                return ResponseEntity.ok(uploadedConfig);
                 
             } finally {
                 // Clean up temp file
