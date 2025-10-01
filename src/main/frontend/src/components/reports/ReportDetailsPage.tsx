@@ -10,8 +10,11 @@ import {
   FolderIcon,
   TableCellsIcon,
   CodeBracketIcon,
-  XMarkIcon
+  XMarkIcon,
+  FolderArrowDownIcon
 } from '@heroicons/react/24/outline';
+import YamlViewer from './YamlViewer';
+import DistcpPlanViewer from './DistcpPlanViewer';
 
 interface ReportDetails {
   id: string;
@@ -28,7 +31,6 @@ interface ReportDetails {
   };
   tables: TableResult[];
   artifacts: ArtifactFile[];
-  logs: LogEntry[];
 }
 
 interface TableResult {
@@ -50,13 +52,6 @@ interface ArtifactFile {
   description: string;
 }
 
-interface LogEntry {
-  timestamp: string;
-  level: 'INFO' | 'WARN' | 'ERROR';
-  message: string;
-  database?: string;
-  table?: string;
-}
 
 const ReportDetailsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -66,18 +61,93 @@ const ReportDetailsPage: React.FC = () => {
   const [artifacts, setArtifacts] = useState<ArtifactFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tables' | 'artifacts' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tables' | 'artifacts' | 'config' | 'status' | 'distcpLeft' | 'distcpRight'>('overview');
+  const [sessionConfig, setSessionConfig] = useState<string | null>(null);
+  const [runStatus, setRunStatus] = useState<string | null>(null);
+  const [leftDistcpPlan, setLeftDistcpPlan] = useState<string | null>(null);
+  const [rightDistcpPlan, setRightDistcpPlan] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [tableDetailsMode, setTableDetailsMode] = useState<'LEFT' | 'RIGHT' | null>(null);
   const [tableDetails, setTableDetails] = useState<any>(null);
   const [showTableDetailsModal, setShowTableDetailsModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (path) {
       loadReportDetails(path);
       loadArtifacts(path);
+      loadYamlFiles(path);
     }
   }, [path]);
+
+  const loadYamlFiles = async (reportPath: string) => {
+    try {
+      // Load session-config.yaml
+      console.log('Loading session-config.yaml from:', reportPath);
+      const configResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=session-config.yaml`);
+      if (configResponse.ok) {
+        const configText = await configResponse.text();
+        console.log('Loaded session-config.yaml, length:', configText.length);
+        setSessionConfig(configText);
+      } else {
+        console.log('session-config.yaml not found or error:', configResponse.status);
+      }
+      
+      // Load run-status.yaml
+      console.log('Loading run-status.yaml from:', reportPath);
+      const statusResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=run-status.yaml`);
+      if (statusResponse.ok) {
+        const statusText = await statusResponse.text();
+        console.log('Loaded run-status.yaml, length:', statusText.length);
+        setRunStatus(statusText);
+      } else {
+        console.log('run-status.yaml not found or error:', statusResponse.status);
+      }
+      
+      // Try to find and load distcp plan files
+      // We need to check the artifacts list for files matching the pattern
+      try {
+        const artifactsResponse = await fetch(`/hms-mirror/api/reports/artifacts?path=${encodeURIComponent(reportPath)}`);
+        if (artifactsResponse.ok) {
+          const artifactsList = await artifactsResponse.json();
+          
+          // Look for LEFT and RIGHT distcp_plans.yaml files
+          const leftDistcpFile = artifactsList.find((a: any) => 
+            a.name && a.name.includes('LEFT_distcp_plans.yaml')
+          );
+          const rightDistcpFile = artifactsList.find((a: any) => 
+            a.name && a.name.includes('RIGHT_distcp_plans.yaml')
+          );
+          
+          // Load LEFT distcp plan if found
+          if (leftDistcpFile) {
+            console.log('Loading LEFT distcp plan:', leftDistcpFile.name);
+            const leftResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(leftDistcpFile.name)}`);
+            if (leftResponse.ok) {
+              const leftText = await leftResponse.text();
+              console.log('Loaded LEFT distcp plan, length:', leftText.length);
+              setLeftDistcpPlan(leftText);
+            }
+          }
+          
+          // Load RIGHT distcp plan if found
+          if (rightDistcpFile) {
+            console.log('Loading RIGHT distcp plan:', rightDistcpFile.name);
+            const rightResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(rightDistcpFile.name)}`);
+            if (rightResponse.ok) {
+              const rightText = await rightResponse.text();
+              console.log('Loaded RIGHT distcp plan, length:', rightText.length);
+              setRightDistcpPlan(rightText);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load distcp plans:', error);
+      }
+    } catch (error) {
+      console.error('Failed to load YAML files:', error);
+    }
+  };
 
   const loadReportDetails = async (reportPath: string) => {
     try {
@@ -106,8 +176,7 @@ const ReportDetailsPage: React.FC = () => {
           failedTables: data.summary?.failedTables || 0
         },
         tables: data.tables || [],
-        artifacts: [], // Will be loaded separately
-        logs: extractLogs(data)
+        artifacts: [] // Will be loaded separately
       };
       
       setReport(transformedReport);
@@ -148,12 +217,6 @@ const ReportDetailsPage: React.FC = () => {
     return 'Unknown duration';
   };
   
-  
-  const extractLogs = (data: any): LogEntry[] => {
-    // For now return empty array, could be enhanced to parse logs from runStatus
-    return [];
-  };
-  
   const mapFileTypeToArtifactType = (fileType: string): 'report' | 'log' | 'sql' | 'plan' => {
     switch (fileType) {
       case 'report': return 'report';
@@ -191,6 +254,46 @@ const ReportDetailsPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleDownloadAll = async () => {
+    if (!path) return;
+    
+    try {
+      setIsDownloading(true);
+      
+      // Create a download URL for the zip endpoint
+      const downloadUrl = `/hms-mirror/api/reports/download-all?path=${encodeURIComponent(path)}`;
+      
+      // Fetch the zip file
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download: ${response.statusText}`);
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${path.replace(/\//g, '_')}_artifacts.zip`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Failed to download all artifacts:', error);
+      alert('Failed to download report artifacts. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleViewTableDetails = async (tableName: string, mode: 'LEFT' | 'RIGHT') => {
     if (!path) return;
     
@@ -223,19 +326,6 @@ const ReportDetailsPage: React.FC = () => {
         return <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />;
       default:
         return null;
-    }
-  };
-
-  const getLogLevelClass = (level: string) => {
-    switch (level) {
-      case 'INFO':
-        return 'text-blue-600';
-      case 'WARN':
-        return 'text-yellow-600';
-      case 'ERROR':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
     }
   };
 
@@ -318,7 +408,10 @@ const ReportDetailsPage: React.FC = () => {
                 { id: 'overview', name: 'Overview' },
                 { id: 'tables', name: 'Table Results' },
                 { id: 'artifacts', name: 'Artifacts' },
-                { id: 'logs', name: 'Execution Log' }
+                ...(sessionConfig ? [{ id: 'config', name: 'Session Config' }] : []),
+                ...(runStatus ? [{ id: 'status', name: 'Run Status' }] : []),
+                ...(leftDistcpPlan ? [{ id: 'distcpLeft', name: 'DistCp Plan (LEFT)' }] : []),
+                ...(rightDistcpPlan ? [{ id: 'distcpRight', name: 'DistCp Plan (RIGHT)' }] : [])
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -339,7 +432,29 @@ const ReportDetailsPage: React.FC = () => {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Execution Summary</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">Execution Summary</h3>
+                    <button
+                      onClick={handleDownloadAll}
+                      disabled={isDownloading}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <FolderArrowDownIcon className="h-5 w-5 mr-2" />
+                          Download All Artifacts
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-600">Started:</span> {report.timestamp}</div>
                     <div><span className="text-gray-600">Duration:</span> {report.duration}</div>
@@ -474,28 +589,20 @@ const ReportDetailsPage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'logs' && (
-              <div className="space-y-2">
-                {report.logs.map((log, index) => (
-                  <div key={index} className="border-l-4 border-gray-200 pl-4 py-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center text-sm">
-                          <span className="text-gray-500 mr-2">{log.timestamp}</span>
-                          <span className={`font-medium mr-2 ${getLogLevelClass(log.level)}`}>{log.level}</span>
-                          {log.database && (
-                            <span className="text-blue-600 mr-2">[{log.database}]</span>
-                          )}
-                          {log.table && (
-                            <span className="text-purple-600 mr-2">{log.table}</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-900 mt-1">{log.message}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {activeTab === 'config' && sessionConfig && (
+              <YamlViewer content={sessionConfig} title="Session Configuration" />
+            )}
+
+            {activeTab === 'status' && runStatus && (
+              <YamlViewer content={runStatus} title="Run Status" />
+            )}
+
+            {activeTab === 'distcpLeft' && leftDistcpPlan && (
+              <DistcpPlanViewer content={leftDistcpPlan} title="DistCp Plan - LEFT Environment" environment="LEFT" />
+            )}
+
+            {activeTab === 'distcpRight' && rightDistcpPlan && (
+              <DistcpPlanViewer content={rightDistcpPlan} title="DistCp Plan - RIGHT Environment" environment="RIGHT" />
             )}
           </div>
         </div>

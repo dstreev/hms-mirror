@@ -30,11 +30,14 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -256,6 +259,33 @@ public class ReportsController {
         }
     }
     
+    @GetMapping(value = "/file", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getFile(@RequestParam(value = "path") String path, 
+                                          @RequestParam(value = "file") String fileName) {
+        try {
+            Path filePath = Paths.get(reportsBaseDir, path, fileName).normalize();
+            
+            // Security check - ensure the file is within the reports directory
+            if (!filePath.startsWith(Paths.get(reportsBaseDir).normalize())) {
+                log.warn("Attempted to access file outside reports directory: {}", filePath);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            String content = Files.readString(filePath);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(content);
+                    
+        } catch (Exception e) {
+            log.error("Failed to read file for path: {}, file: {}", path, fileName, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
     @GetMapping("/artifacts/download")
     public ResponseEntity<org.springframework.core.io.Resource> downloadArtifact(@RequestParam(value = "path") String path) {
         try {
@@ -286,6 +316,72 @@ public class ReportsController {
             
         } catch (Exception e) {
             log.error("Failed to download artifact for path: {}", path, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @GetMapping("/download-all")
+    public ResponseEntity<byte[]> downloadAllArtifacts(@RequestParam(value = "path") String path) {
+        try {
+            Path reportPath = Paths.get(reportsBaseDir, path).normalize();
+            
+            // Security check - ensure the directory is within the reports directory
+            if (!reportPath.startsWith(Paths.get(reportsBaseDir).normalize())) {
+                log.warn("Attempted to access directory outside reports directory: {}", reportPath);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            if (!Files.exists(reportPath) || !Files.isDirectory(reportPath)) {
+                log.warn("Report directory does not exist: {}", reportPath);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Create zip file in memory
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+                // Walk through all files in the directory
+                Files.walk(reportPath)
+                    .filter(Files::isRegularFile)
+                    .forEach(file -> {
+                        try {
+                            // Get relative path for zip entry
+                            Path relativePath = reportPath.relativize(file);
+                            String zipEntryName = relativePath.toString().replace(File.separatorChar, '/');
+                            
+                            // Skip hidden files
+                            if (!file.getFileName().toString().startsWith(".")) {
+                                ZipEntry zipEntry = new ZipEntry(zipEntryName);
+                                zipEntry.setTime(Files.getLastModifiedTime(file).toMillis());
+                                zos.putNextEntry(zipEntry);
+                                
+                                // Copy file content to zip
+                                Files.copy(file, zos);
+                                zos.closeEntry();
+                                
+                                log.debug("Added to zip: {}", zipEntryName);
+                            }
+                        } catch (IOException e) {
+                            log.error("Failed to add file to zip: {}", file, e);
+                        }
+                    });
+            }
+            
+            byte[] zipContent = baos.toByteArray();
+            
+            // Generate filename from path or use default
+            String zipFileName = reportPath.getFileName().toString() + "_artifacts.zip";
+            
+            log.info("Created zip file for report: {}, size: {} bytes", path, zipContent.length);
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                           "attachment; filename=\"" + zipFileName + "\"")
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(zipContent.length))
+                    .body(zipContent);
+                    
+        } catch (Exception e) {
+            log.error("Failed to create zip file for path: {}", path, e);
             return ResponseEntity.internalServerError().build();
         }
     }

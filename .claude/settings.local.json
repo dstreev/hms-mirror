@@ -28,7 +28,8 @@
       "Bash(npm ls:*)",
       "Bash(npm install)",
       "Bash(npm audit:*)",
-      "Bash(npm update)"
+      "Bash(npm update)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": [],
