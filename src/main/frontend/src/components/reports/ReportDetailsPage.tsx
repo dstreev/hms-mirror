@@ -407,11 +407,11 @@ const ReportDetailsPage: React.FC = () => {
               {[
                 { id: 'overview', name: 'Overview' },
                 { id: 'tables', name: 'Table Results' },
-                { id: 'artifacts', name: 'Artifacts' },
                 ...(sessionConfig ? [{ id: 'config', name: 'Session Config' }] : []),
                 ...(runStatus ? [{ id: 'status', name: 'Run Status' }] : []),
                 ...(leftDistcpPlan ? [{ id: 'distcpLeft', name: 'DistCp Plan (LEFT)' }] : []),
-                ...(rightDistcpPlan ? [{ id: 'distcpRight', name: 'DistCp Plan (RIGHT)' }] : [])
+                ...(rightDistcpPlan ? [{ id: 'distcpRight', name: 'DistCp Plan (RIGHT)' }] : []),
+                { id: 'artifacts', name: 'Artifacts' }
               ].map((tab) => (
                 <button
                   key={tab.id}
