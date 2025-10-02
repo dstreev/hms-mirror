@@ -27,9 +27,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
+
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_LOCATION_DESC;
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_MNGD_LOCATION_DESC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -76,16 +80,6 @@ public class Test_sql_mao_wd_da_rdl_is_dc extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
     @Test
     public void sqlPairTest() {
@@ -116,5 +110,46 @@ public class Test_sql_mao_wd_da_rdl_is_dc extends E2EBaseTest {
                 "s3a://my_is_bucket/hms_mirror_working/[0-9]{8}_[0-9]{6}/assorted_test_db/acid_01");
         validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
                 null);
+    }
+
+    @Test
+    public void statisticsValidationTest() {
+        // Validate operation statistics based on test output
+        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+        assertEquals(3, 
+                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+                "Should have 3 ACID tables processed with migrate-acid-only");
+    }
+    
+    @Test
+    public void phaseValidationTest() {
+        // Validate phase state from test output
+        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_03", PhaseState.CALCULATED_SQL);
+    }
+    
+    @Test
+    public void acidTableValidationTest() {
+        // Validate ACID tables are properly identified and downgraded
+        validateTableIsACID("assorted_test_db", "acid_01", Environment.LEFT);
+        validateTableIsACID("assorted_test_db", "acid_02", Environment.LEFT);
+        validateTableIsACID("assorted_test_db", "acid_03", Environment.LEFT);
+    }
+    
+    @Test
+    public void intermediateStorageValidationTest() {
+        // Validate intermediate storage is configured
+        assertEquals("s3a://my_is_bucket", 
+                getConfig().getTransfer().getIntermediateStorage(),
+                "Intermediate storage should be configured");
+    }
+    
+    @Test
+    public void sqlStrategyValidationTest() {
+        // Validate SQL data strategy is being used
+        assertEquals("SQL", 
+                getConfig().getDataStrategy().toString(),
+                "Data strategy should be SQL");
     }
 }

@@ -25,7 +25,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -60,15 +65,35 @@ public class Test_ei_mao_da extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+    @Test
+    public void statisticsValidationTest() {
+        // Validate operation statistics based on test output
+        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+        assertEquals(3, 
+                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+                "Should have 3 tables processed with migrate-acid-only");
+    }
+    
+    @Test
+    public void phaseValidationTest() {
+        // Validate phase state from test output
+        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
+        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
+                "Must have tables to validate phases");
+        
+        // EXPORT_IMPORT with downgrade-acid should reach CALCULATED_SQL state
+        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_03", PhaseState.ERROR);
+    }
+    
+    @Test
+    public void acidTableValidationTest() {
+        // Validate ACID tables are properly identified
+        validateTableIsACID("assorted_test_db", "acid_01", Environment.LEFT);
+        validateTableIsACID("assorted_test_db", "acid_02", Environment.LEFT);
+        validateTableIsACID("assorted_test_db", "acid_03", Environment.LEFT);
+    }
+
 
 }

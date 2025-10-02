@@ -29,7 +29,12 @@
       "Bash(npm install)",
       "Bash(npm audit:*)",
       "Bash(npm update)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(/Users/dstreev/projects/hms-mirror/analyze_test_outputs.sh:*)",
+      "Bash(for test in hybrid_mao ei_mao_da sql_ma_wd so_ro)",
+      "Bash(python3:*)",
+      "Bash(/Users/dstreev/projects/hms-mirror/generate_validations.sh)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": [],
