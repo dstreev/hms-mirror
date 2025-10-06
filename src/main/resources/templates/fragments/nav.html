@@ -81,14 +81,20 @@
                        th:href="@{/reports/select}"/>
                 </li>
             </ul>
-            <!--        <ul class="pure-menu-list bottom-nav">-->
-            <!--            <li class="pure-menu-item">-->
-            <!--                <a th:href="#{docs.website}" target="_blank"><b th:text="#{documentation}"/></a>-->
-            <!--            </li>-->
-            <!--            <li class="pure-menu-item" th:if="${RUN_CONTAINER != null && RUN_CONTAINER.sessionId != null}">-->
-            <!--                <b th:text="#{session.id(${RUN_CONTAINER.sessionId})}"/>-->
-            <!--            </li>-->
-            <!--        </ul>-->
+            <div class="pure-menu-list bottom-nav" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+                <div class="pure-menu-item" style="padding: 5px; font-size: 0.75em; color: #666;">
+                    <div th:if="${SESSION_ID != null and SESSION_ID != 'unknown'}">
+                        <strong>Session:</strong><br/>
+                        <span th:text="${SESSION_ID}" style="font-family: monospace; word-break: break-all;"/>
+                    </div>
+                    <div th:if="${CURRENT_SESSION != null and CURRENT_SESSION.running}">
+                        <span style="color: #28a745;">● Running</span>
+                    </div>
+                    <div th:if="${CURRENT_SESSION != null and CURRENT_SESSION.connected}">
+                        <span style="color: #007bff;">● Connected</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </nav>

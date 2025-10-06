@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
+import SessionInfo from './SessionInfo';
 
 const Header: React.FC = () => {
   const { state } = useConfiguration();
@@ -42,6 +43,9 @@ const Header: React.FC = () => {
             >
               Documentation
             </a>
+            <div className="flex items-center pl-4 border-l border-gray-200">
+              <SessionInfo compact={true} className="opacity-70" />
+            </div>
           </nav>
         </div>
       </div>

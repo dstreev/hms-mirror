@@ -17,19 +17,32 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
+import com.cloudera.utils.hms.mirror.web.interceptor.SessionInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    @Autowired
+    private SessionInterceptor sessionInterceptor;
+
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/")
                 .setViewName("forward:/config/");
         registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(sessionInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/images/**", "/favicon.ico");
     }
 
 }

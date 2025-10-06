@@ -17,6 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.service.SessionManager;
 import com.cloudera.utils.hms.mirror.web.config.UIVersionConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 @Order(1) // High priority to override other controllers
@@ -36,6 +40,9 @@ public class ReactSpaController {
     
     @Autowired
     private UIVersionConfig uiVersionConfig;
+    
+    @Autowired
+    private SessionManager sessionManager;
 
     /**
      * Serves the React SPA for the root path.
@@ -44,6 +51,7 @@ public class ReactSpaController {
     public String index(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         log.info("Serving React SPA for root: {}", requestUri);
+        ensureSessionExists(request);
         return "forward:/react/index.html";
     }
 
@@ -54,7 +62,41 @@ public class ReactSpaController {
     public String spa(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         log.info("Serving React SPA for client route: {}", requestUri);
+        ensureSessionExists(request);
         return "forward:/react/index.html";
+    }
+    
+    /**
+     * Ensures that an ExecuteSession exists for the current HTTP session.
+     * This is needed because static resource forwards don't go through the SessionInterceptor.
+     */
+    private void ensureSessionExists(HttpServletRequest request) {
+        HttpSession httpSession = request.getSession(true);
+        ExecuteSession executeSession = (ExecuteSession) httpSession.getAttribute("executeSession");
+        
+        if (executeSession == null) {
+            String sessionId = "web-" + httpSession.getId().substring(0, 8);
+            log.debug("Creating ExecuteSession {} for HTTP session {}", sessionId, httpSession.getId());
+            
+            try {
+                executeSession = sessionManager.createSession(sessionId, null);
+                if (executeSession != null) {
+                    httpSession.setAttribute("executeSession", executeSession);
+                    log.info("Created ExecuteSession {} for React UI", sessionId);
+                } else {
+                    log.warn("Failed to create ExecuteSession, using default");
+                    executeSession = sessionManager.getDefaultSession();
+                    httpSession.setAttribute("executeSession", executeSession);
+                }
+            } catch (SessionException e) {
+                log.warn("Failed to create ExecuteSession: {}, using default", e.getMessage());
+                executeSession = sessionManager.getDefaultSession();
+                httpSession.setAttribute(SessionManager.HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
+            }
+        } else {
+            log.debug("ExecuteSession {} already exists for HTTP session {}", 
+                     executeSession.getSessionId(), httpSession.getId());
+        }
     }
 
     /**

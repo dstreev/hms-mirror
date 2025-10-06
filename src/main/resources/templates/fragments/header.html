@@ -45,7 +45,14 @@
             </a>
         </div>
         <div class="pure-u-1-8" style="margin-top: 20px;">
-            <a th:href="#{docs.website}" target="_blank"><b th:text="#{documentation}"/></a>
+            <div style="text-align: right;">
+                <a th:href="#{docs.website}" target="_blank"><b th:text="#{documentation}"/></a>
+                <div style="margin-top: 5px; font-size: 0.8em; color: #666; opacity: 0.7;">
+                    <span th:if="${SESSION_ID != null and SESSION_ID != 'unknown'}">
+                        Session: <span th:text="${SESSION_ID}" style="font-family: monospace;"/>
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 </body>

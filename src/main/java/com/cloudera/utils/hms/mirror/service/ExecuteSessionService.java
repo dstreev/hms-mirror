@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.service.SessionContextHolder;
 import com.jcabi.manifests.Manifests;
 import lombok.Getter;
 import lombok.Setter;
@@ -58,6 +59,9 @@ public class ExecuteSessionService {
     configurations can be changed before running.  Once the session is kicked off, the object
     should be cloned and the original session moved to the 'activeSession' field and added
     to the 'executeSessionQueue'.
+    
+    NOTE: For multi-session support, this represents the default session for CLI usage.
+    Web sessions are managed through SessionManager and HTTP session association.
      */
     @Setter
     private ExecuteSession session;
@@ -209,6 +213,16 @@ public class ExecuteSessionService {
     }
 
     public ExecuteSession getSession() {
+        // For web context, try to get from thread-local context (set by interceptor)
+        ExecuteSession contextSession = SessionContextHolder.getSession();
+        if (contextSession != null) {
+            log.debug("getSession() - Found session in thread context: {}", contextSession.getSessionId());
+            return contextSession;
+        }
+        
+        // For CLI context, fall back to local session field
+        log.debug("getSession() - No thread context session, returning local session: {}", 
+                 session != null ? session.getSessionId() : "null");
         return session;
     }
 
@@ -227,6 +241,21 @@ public class ExecuteSessionService {
         
         log.error("Session not found: {}", sessionId);
         return null;
+    }
+
+    public ExecuteSession getOrCreateDefaultSession() {
+        // Check thread context first for web sessions
+        ExecuteSession contextSession = SessionContextHolder.getSession();
+        if (contextSession != null) {
+            log.debug("getOrCreateDefaultSession() - Using existing session from context: {}", contextSession.getSessionId());
+            return contextSession;
+        }
+        
+        // Fall back to local session for CLI usage
+        if (isNull(session)) {
+            session = createSession(DEFAULT, null);
+        }
+        return session;
     }
 
     /*

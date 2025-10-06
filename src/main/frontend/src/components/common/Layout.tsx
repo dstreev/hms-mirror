@@ -12,6 +12,7 @@ import {
   LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
+import SessionInfo from './SessionInfo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,12 +36,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
+      <div className="w-64 bg-white shadow-lg relative">
         <div className="p-6">
           <h1 className="text-xl font-bold text-gray-900">HMS-Mirror</h1>
           <p className="text-sm text-gray-600">Migration Tool</p>
         </div>
-        <nav className="mt-6">
+        <nav className="mt-6 pb-24">
           {navigation.map((item) => {
             // Special handling for Create/Load and Configuration routes
             const isActive = 
@@ -96,6 +97,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             );
           })}
         </nav>
+        
+        {/* Session info at bottom of sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+          <SessionInfo showStatus={true} className="text-center" />
+        </div>
       </div>
 
       {/* Main content */}
