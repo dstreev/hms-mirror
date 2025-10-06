@@ -13,9 +13,10 @@ HMS-Mirror now supports multiple concurrent sessions within the same runtime env
 ### Core Components
 
 1. **SessionManager**: Central service for managing multiple ExecuteSession instances
-2. **SessionContextHolder**: Thread-local storage for session context
+2. **SessionContextHolder**: Thread-local storage for session context using static ThreadLocal
 3. **SessionInterceptor**: Web interceptor that associates HTTP sessions with ExecuteSession instances
-4. **ExecuteSessionService**: Enhanced for multi-session support while maintaining backward compatibility
+4. **ExecuteSessionService**: Enhanced to read from thread-local context for web sessions while maintaining CLI compatibility
+5. **ReactSpaController**: Enhanced to ensure sessions are created for React UI requests
 
 ### Session Association
 
@@ -68,19 +69,54 @@ public class SessionManager {
 1. **Web Request Processing**:
    ```
    HTTP Request → SessionInterceptor → SessionContextHolder.setSession() 
-   → Controller/Service → SessionManager.getCurrentSession() → ExecuteSession
+   → Controller/Service → ExecuteSessionService.getSession() → SessionContextHolder.getSession() → ExecuteSession
    ```
 
 2. **CLI Processing**:
    ```
-   CLI → ExecuteSessionService.getSession() → ExecuteSession (default)
+   CLI → ExecuteSessionService.getSession() → local session field → ExecuteSession (default)
    ```
+
+### Implementation Details
+
+#### SessionContextHolder
+```java
+public class SessionContextHolder {
+    private static final ThreadLocal<ExecuteSession> sessionContext = new ThreadLocal<>();
+    
+    public static void setSession(ExecuteSession session) {
+        sessionContext.set(session);
+    }
+    
+    public static ExecuteSession getSession() {
+        return sessionContext.get();
+    }
+    
+    public static void clearSession() {
+        sessionContext.remove();
+    }
+}
+```
+
+#### SessionInterceptor
+- Intercepts all web requests
+- Creates unique session IDs with "web-" prefix
+- Associates ExecuteSession with HTTP session
+- Sets thread-local context for request processing
+- Enhanced logging for debugging session flow
+
+#### ExecuteSessionService Integration
+- Modified `getSession()` to check thread-local context first
+- Falls back to local session field for CLI usage
+- Resolves circular dependency issues with SessionManager
 
 ## API Endpoints
 
 ### New Session Management Endpoints
 
 - `GET /api/v2/session/current` - Get current session
+- `GET /api/v2/session/info` - Get current session basic info (used by React UI)
+- `GET /api/v2/session/debug` - Debug session information for troubleshooting
 - `GET /api/v2/session/{sessionId}` - Get specific session
 - `POST /api/v2/session/{sessionId}` - Create new session
 - `POST /api/v2/session/{sessionId}/start` - Start session execution
@@ -168,3 +204,104 @@ No migration is required for existing functionality:
 - Existing web API endpoints maintain backward compatibility
 - Single-session web usage continues to work as before
 - New multi-session features are opt-in through new API endpoints
+
+## Implementation Challenges & Solutions
+
+### 1. Circular Dependency Resolution
+**Problem**: SessionManager depended on ExecuteSessionService, and ExecuteSessionService needed SessionManager for web sessions.
+
+**Solution**: Modified ExecuteSessionService to use SessionContextHolder directly instead of depending on SessionManager:
+```java
+public ExecuteSession getSession() {
+    // Check thread-local context first for web sessions
+    ExecuteSession contextSession = SessionContextHolder.getSession();
+    if (contextSession != null) {
+        return contextSession;
+    }
+    // Fall back to local session for CLI
+    return session;
+}
+```
+
+### 2. React UI API Integration
+**Problem**: React UI showing "Failed to fetch session info" due to incorrect API URLs.
+
+**Issues Resolved**:
+- BaseApi baseURL: `/hms-mirror/api` + SessionApi paths: `/api/v2/session/info` = `/hms-mirror/api/api/v2/session/info` (double /api)
+- **Solution**: Updated SessionApi to use `/v2/session/info` (removed duplicate /api prefix)
+
+### 3. Session Display in UI
+**Implementation**:
+- Added `SessionInfo` React component for both Thymeleaf and React UIs
+- Shows session ID subtly in the interface
+- Supports both compact and full display modes
+- Real-time session status updates
+
+### 4. Thread-Local Context Management
+**Key Implementation Details**:
+- SessionInterceptor sets thread-local context on each request
+- Context is automatically cleared after request processing
+- Thread-safe session isolation between concurrent web requests
+- No impact on CLI session behavior
+
+## React Frontend Integration
+
+### Session API Client
+```typescript
+class SessionApi extends BaseApi {
+  async getCurrentSessionInfo(): Promise<SessionInfo> {
+    return this.get<SessionInfo>('/v2/session/info');
+  }
+  
+  async getCurrentSession(): Promise<ExecuteSession> {
+    return this.get<ExecuteSession>('/v2/session/current');
+  }
+}
+```
+
+### Session Display Component
+```typescript
+const SessionInfo: React.FC<SessionInfoProps> = ({ compact = false }) => {
+  const [sessionInfo, setSessionInfo] = useState<SessionInfoType | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSessionInfo = async () => {
+      try {
+        const info = await sessionApi.getCurrentSessionInfo();
+        setSessionInfo(info);
+      } catch (err) {
+        setError('Failed to fetch session info');
+      }
+    };
+    fetchSessionInfo();
+  }, []);
+}
+```
+
+## Session ID Generation
+
+### Web Sessions
+- Format: `web-{httpSessionId}` (e.g., `web-9B563B51`)
+- Based on truncated HTTP session ID for uniqueness
+- Automatically created by SessionInterceptor
+
+### CLI Sessions  
+- Default session ID: `default.yaml`
+- Maintains backward compatibility
+- Single session per CLI instance
+
+## Debugging and Monitoring
+
+### Debug Endpoint
+`GET /api/v2/session/debug` provides comprehensive session state information:
+- Thread context session
+- HTTP session details
+- SessionManager session state
+- Request attributes availability
+
+### Logging
+Enhanced logging throughout the session lifecycle:
+- SessionInterceptor: Request processing and session association
+- ExecuteSessionService: Session resolution logic
+- SessionManager: Session creation and management operations

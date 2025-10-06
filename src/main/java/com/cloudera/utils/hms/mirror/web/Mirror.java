@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScans;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -49,6 +50,7 @@ import java.lang.management.ManagementFactory;
         // Springdoc OpenAPI components disabled to avoid root path conflict
 })
 @EnableAsync
+@EnableScheduling
 @Slf4j
 public class Mirror {
 

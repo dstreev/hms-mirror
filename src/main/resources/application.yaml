@@ -7,6 +7,8 @@ server:
   port: 8090
   servlet:
     context-path: /hms-mirror
+    session:
+      timeout: 30m  # HTTP session timeout
 hikari:
   idleTimeout: 10000
   connectionTestQuery: "SELECT 1"
@@ -38,6 +40,11 @@ hadoop:
   cli:
     api: "true"
 hms-mirror:
+  session:
+    keep-alive:
+      enabled: true
+      interval: 10m     # How often to perform keep-alive for running sessions
+      cleanup-interval: 30m  # How often to cleanup stale keep-alive sessions
   ui:
     # Options: 'thymeleaf' (legacy) or 'react' (new)
     version: "react"

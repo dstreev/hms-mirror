@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.SessionContextHolder;
+import com.cloudera.utils.hms.mirror.service.SessionKeepAliveService;
 import com.cloudera.utils.hms.mirror.service.SessionManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -50,6 +51,9 @@ public class SessionController {
 
     @Autowired
     private SessionManager sessionManager;
+    
+    @Autowired(required = false)
+    private SessionKeepAliveService sessionKeepAliveService;
 
     @Operation(summary = "Get current session information")
     @ApiResponses(value = {
@@ -247,5 +251,64 @@ public class SessionController {
     public ResponseEntity<Map<String, ExecuteSession>> listSessions() {
         Map<String, ExecuteSession> sessions = sessionManager.getAllSessions();
         return ResponseEntity.ok(sessions);
+    }
+
+    @Operation(summary = "Keep current session alive")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Session keep-alive performed successfully")
+    })
+    @PostMapping("/keep-alive")
+    public ResponseEntity<Map<String, Object>> keepAlive() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            if (sessionKeepAliveService != null) {
+                sessionKeepAliveService.touchCurrentSession();
+                
+                ExecuteSession session = sessionManager.getCurrentSession();
+                if (session != null) {
+                    response.put("sessionId", session.getSessionId());
+                    response.put("isRunning", session.isRunning());
+                    response.put("isBeingKeptAlive", sessionKeepAliveService.isSessionBeingKeptAlive(session.getSessionId()));
+                    response.put("status", "success");
+                } else {
+                    response.put("status", "no_session");
+                }
+            } else {
+                response.put("status", "service_unavailable");
+            }
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error performing keep-alive", e);
+            response.put("status", "error");
+            response.put("error", e.getMessage());
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    @Operation(summary = "Get session keep-alive status")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Keep-alive status retrieved successfully")
+    })
+    @GetMapping("/keep-alive/status")
+    public ResponseEntity<Map<String, Object>> getKeepAliveStatus() {
+        Map<String, Object> response = new HashMap<>();
+        
+        if (sessionKeepAliveService != null) {
+            response.put("serviceEnabled", true);
+            response.put("activeKeepAliveSessions", sessionKeepAliveService.getActiveKeepAliveSessionCount());
+            
+            ExecuteSession session = sessionManager.getCurrentSession();
+            if (session != null) {
+                response.put("currentSessionId", session.getSessionId());
+                response.put("currentSessionRunning", session.isRunning());
+                response.put("currentSessionBeingKeptAlive", sessionKeepAliveService.isSessionBeingKeptAlive(session.getSessionId()));
+            }
+        } else {
+            response.put("serviceEnabled", false);
+        }
+        
+        return ResponseEntity.ok(response);
     }
 }

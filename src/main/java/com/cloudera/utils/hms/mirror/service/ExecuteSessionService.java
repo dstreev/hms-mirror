@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.SessionContextHolder;
 import com.jcabi.manifests.Manifests;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,9 @@ public class ExecuteSessionService {
     private final CliEnvironment cliEnvironment;
     private final ConfigService configService;
     private final ConnectionPoolService connectionPoolService;
+    
+    // Optional injection to avoid circular dependency
+    private SessionKeepAliveService sessionKeepAliveService;
 
     /*
     This is the current session that can be modified (but not running yet).  This is where
@@ -89,6 +93,16 @@ public class ExecuteSessionService {
         this.cliEnvironment = cliEnvironment;
         this.connectionPoolService = connectionPoolService;
         log.debug("ExecuteSessionService initialized");
+    }
+
+    /**
+     * Optional setter for SessionKeepAliveService to avoid circular dependency.
+     * This is called after bean initialization if the service is available.
+     */
+    @Autowired(required = false)
+    public void setSessionKeepAliveService(SessionKeepAliveService sessionKeepAliveService) {
+        this.sessionKeepAliveService = sessionKeepAliveService;
+        log.debug("SessionKeepAliveService injected into ExecuteSessionService");
     }
 
     public void setReportOutputDirectory(String reportOutputDirectory, boolean amendSessionIdToReportDir) {
@@ -314,6 +328,12 @@ public class ExecuteSessionService {
 
         // New Conversion object for each run.
         session.setConversion(new Conversion());
+
+        // Register session for keep-alive during execution
+        if (sessionKeepAliveService != null) {
+            sessionKeepAliveService.registerRunningSession(session.getSessionId());
+            log.debug("Registered session {} for keep-alive during execution", session.getSessionId());
+        }
 
         return rtn;
     }

@@ -45,12 +45,24 @@ public class SessionManager {
     
     private final Map<String, ExecuteSession> sessions = new ConcurrentHashMap<>();
     
+    // Optional injection to avoid circular dependency
+    private SessionKeepAliveService sessionKeepAliveService;
+    
     private ExecuteSession defaultSession;
 
     @Autowired
     public SessionManager(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
         log.debug("SessionManager initialized");
+    }
+
+    /**
+     * Optional setter for SessionKeepAliveService to avoid circular dependency.
+     */
+    @Autowired(required = false)
+    public void setSessionKeepAliveService(SessionKeepAliveService sessionKeepAliveService) {
+        this.sessionKeepAliveService = sessionKeepAliveService;
+        log.debug("SessionKeepAliveService injected into SessionManager");
     }
 
     public ExecuteSession getCurrentSession() {
@@ -195,6 +207,12 @@ public class SessionManager {
         ExecuteSession session = sessions.remove(sessionId);
         if (session != null) {
             session.close();
+            
+            // Unregister from keep-alive service
+            if (sessionKeepAliveService != null) {
+                sessionKeepAliveService.unregisterRunningSession(sessionId);
+            }
+            
             log.debug("Closed session: {}", sessionId);
         }
     }
