@@ -25,7 +25,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -55,20 +58,210 @@ public class Test_ei_01 extends E2EBaseTest {
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
-        // Verify the return code.
-        long check = 1L;
-        assertEquals(check, rtn, "Return Code Failure: " + rtn);
+        // Verify the return code is 1 due to ext_part_01 error
+        assertEquals(1L, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+    @Test
+    public void databaseLocationTest() {
+        // Validate database locations
+        validateDBLocation("assorted_test_db", Environment.LEFT,
+                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db");
+        validateDBLocation("assorted_test_db", Environment.RIGHT,
+                "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
+    }
+
+    @Test
+    public void tableCountTest() {
+        // Validate that 4 tables are processed  
+        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+        assertEquals(4, 
+                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+                "Should have 4 tables");
+    }
+
+    @Test
+    public void ext_part_01_phaseErrorTest() {
+        // Validate phase state for ext_part_01 - ERROR due to partition limit
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.ERROR);
+    }
+
+    @Test
+    public void ext_part_02_phaseTest() {
+        // Validate phase state for ext_part_02 - successful
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void legacy_mngd_01_phaseTest() {
+        // Validate phase state for legacy_mngd_01 - successful
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_missing_01_phaseTest() {
+        // Validate phase state for ext_missing_01 - successful despite issue
+        validatePhase("assorted_test_db", "ext_missing_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void validatePartitionLimitError() {
+        // ext_part_01 should have error about exceeding partition limit
+        var ext_part_01_errors = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getErrors();
+        assertFalse(ext_part_01_errors.isEmpty(), "ext_part_01 should have errors");
+        assertTrue(ext_part_01_errors.get(0).contains("The number of partitions: 440 exceeds the configuration limit"));
+        assertTrue(ext_part_01_errors.get(0).contains("100"));
+    }
+
+    @Test
+    public void validateExportImportStrategy() {
+        // Validate that all tables use EXPORT_IMPORT strategy
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
+    }
+
+    @Test
+    public void validatePartitionCount() {
+        // ext_part_01 has 440 partitions which exceeds limit
+        validatePartitionCount("assorted_test_db", "ext_part_01", Environment.LEFT, 440);
+    }
+
+    @Test
+    public void validateExportPaths() {
+        // Validate export paths for successful tables
+        var ext_part_02_left_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).getSql();
+        boolean foundExport = false;
+        for (var pair : ext_part_02_left_sql) {
+            if (pair.getDescription().equals("EXPORT Table")) {
+                assertEquals("EXPORT TABLE ext_part_02 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\"",
+                        pair.getAction());
+                foundExport = true;
+            }
+        }
+        assertTrue(foundExport, "EXPORT statement not found for ext_part_02");
+    }
+
+    @Test
+    public void validateImportPaths() {
+        // Validate import paths for successful tables
+        var ext_part_02_right_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).getSql();
+        boolean foundImport = false;
+        for (var pair : ext_part_02_right_sql) {
+            if (pair.getDescription().equals("IMPORT Table")) {
+                assertEquals("IMPORT EXTERNAL TABLE ext_part_02 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_02\"",
+                        pair.getAction());
+                foundImport = true;
+            }
+        }
+        assertTrue(foundImport, "IMPORT statement not found for ext_part_02");
+    }
+
+    @Test
+    public void validateExtMissingHandling() {
+        // ext_missing_01 exists on RIGHT but not on LEFT
+        assertFalse(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).isExists());
+        
+        // Should have issue on RIGHT
+        var issues = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getIssues();
+        assertFalse(issues.isEmpty());
+        assertTrue(issues.get(0).contains("Schema exists on the target, but not on the source"));
+    }
+
+    @Test
+    public void validateTableExistence() {
+        // Validate table existence
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertFalse(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
+    }
+
+    @Test
+    public void validateErrorTableStillGeneratesSQL() {
+        // ext_part_01 with ERROR still generates SQL (but won't be executed)
+        var ext_part_01_left_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getSql();
+        assertFalse(ext_part_01_left_sql.isEmpty(), "LEFT SQL is still generated for ERROR table");
+        
+        // Check that EXPORT is in LEFT SQL
+        boolean foundExport = false;
+        for (var pair : ext_part_01_left_sql) {
+            if (pair.getDescription().equals("EXPORT Table")) {
+                foundExport = true;
+            }
+        }
+        assertTrue(foundExport, "EXPORT should be in LEFT SQL even with error");
+        
+        // RIGHT SQL is also generated
+        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
+        assertFalse(ext_part_01_right_sql.isEmpty(), "RIGHT SQL is still generated for ERROR table");
+    }
+
+    @Test
+    public void validatePhaseSummary() {
+        // Validate phase summary
+        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
+        assertNotNull(phaseSummary);
+        assertEquals(1, phaseSummary.get(PhaseState.ERROR).intValue(), 
+                "Should have 1 table in ERROR phase");
+        assertEquals(3, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(), 
+                "Should have 3 tables in CALCULATED_SQL phase");
+    }
+
+    @Test
+    public void validateDatabaseSQL() {
+        // Validate database creation SQL on RIGHT
+        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+                "Create Database",
+                "CREATE DATABASE IF NOT EXISTS assorted_test_db\n"));
+        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+                "Alter Database Location",
+                "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\""));
+    }
+
+    @Test
+    public void validateTableProperties() {
+        // Validate bucketing_version for existing tables
+        validateTableProperty("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "bucketing_version", "2");
+        validateTableProperty("assorted_test_db", "ext_part_02", Environment.LEFT,
+                "bucketing_version", "2");
+        validateTableProperty("assorted_test_db", "legacy_mngd_01", Environment.LEFT,
+                "bucketing_version", "2");
+    }
+
+    @Test
+    public void validateErrorCount() {
+        // Validate error counts
+        validateTableErrorCount("assorted_test_db", "ext_part_01", Environment.LEFT, 1);
+        validateTableErrorCount("assorted_test_db", "ext_part_02", Environment.LEFT, 0);
+        validateTableErrorCount("assorted_test_db", "legacy_mngd_01", Environment.LEFT, 0);
+    }
+
+    @Test
+    public void validateIssueCount() {
+        // Validate issue counts
+        validateTableIssueCount("assorted_test_db", "ext_missing_01", Environment.RIGHT, 1);
+        validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.LEFT, 0);
+    }
+
 
 }

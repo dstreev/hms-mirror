@@ -17,7 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -25,7 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -39,19 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_ei_is_ep extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "EXPORT_IMPORT",
-//                "-sql", "-is", INTERMEDIATE_STORAGE,
-//                "-ep", "500",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
 
     @Test
     public void returnCodeTest() {
@@ -62,15 +51,152 @@ public class Test_ei_is_ep extends E2EBaseTest {
         assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+    @Test
+    public void databaseLocationTest() {
+        // Validate database location on RIGHT
+        validateDBLocation("assorted_test_db", Environment.RIGHT, 
+                "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
+    }
+
+    @Test
+    public void ext_part_01_phaseTest() {
+        // Validate phase state for ext_part_01
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_part_02_phaseTest() {
+        // Validate phase state for ext_part_02
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void legacy_mngd_01_phaseTest() {
+        // Validate phase state for legacy_mngd_01
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_missing_01_phaseTest() {
+        // Validate phase state for ext_missing_01
+        validatePhase("assorted_test_db", "ext_missing_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_part_01_partitionCountTest() {
+        // Validate partition count for ext_part_01 on LEFT
+        // Based on the yaml, ext_part_01 has 440 partitions
+        validatePartitionCount("assorted_test_db", "ext_part_01", Environment.LEFT, 440);
+    }
+
+    @Test
+    public void validateExportImportStrategy() {
+        // Validate that all tables use EXPORT_IMPORT strategy
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
+    }
+
+    @Test
+    public void validateIntermediateStorageUsed() {
+        // Validate that intermediate storage is used in EXPORT commands
+        // The actual timestamp in the path will vary, so we check the pattern
+        boolean found = false;
+        var leftTable = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT);
+        for (var pair : leftTable.getSql()) {
+            if (pair.getDescription().equals("EXPORT Table")) {
+                assertTrue(pair.getAction().startsWith("EXPORT TABLE ext_part_01 TO \"s3a://my_is_bucket/hms_mirror_working/"));
+                assertTrue(pair.getAction().contains("/assorted_test_db/ext_part_01\""));
+                found = true;
+            }
+        }
+        assertTrue(found, "EXPORT Table SQL not found");
+    }
+
+    @Test
+    public void validateImportTableSql() {
+        // Validate IMPORT command exists on RIGHT side for ext_part_01
+        // Note: For EXTERNAL tables, the IMPORT command includes EXTERNAL keyword and LOCATION
+        boolean found = false;
+        var rightTable = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT);
+        for (var pair : rightTable.getSql()) {
+            if (pair.getDescription().equals("IMPORT Table")) {
+                assertTrue(pair.getAction().startsWith("IMPORT EXTERNAL TABLE ext_part_01 FROM \"s3a://my_is_bucket/hms_mirror_working/"));
+                assertTrue(pair.getAction().contains("/assorted_test_db/ext_part_01\""));
+                assertTrue(pair.getAction().contains("LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01\""));
+                found = true;
+            }
+        }
+        assertTrue(found, "IMPORT Table SQL not found");
+    }
+
+    @Test
+    public void validateTableDefinitions() {
+        // Validate that table definitions exist on LEFT
+        assertNotNull(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getDefinition());
+        assertNotNull(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).getDefinition());
+        assertNotNull(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).getDefinition());
+    }
+
+    @Test
+    public void validateTableProperties() {
+        // Validate specific table properties for ext_part_01
+        validateTableProperty("assorted_test_db", "ext_part_01", Environment.LEFT, 
+                "bucketing_version", "2");
+    }
+
+    @Test
+    public void validatePartitionLocations() {
+        // Validate some specific partition locations for ext_part_01
+        validatePartitionLocation("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "num=50", "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01/num=50");
+        validatePartitionLocation("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "num=100", "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01/num=100");
+        validatePartitionLocation("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "num=200", "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01/num=200");
+    }
+
+    @Test
+    public void validateDatabaseSql() {
+        // Validate database creation SQL on RIGHT
+        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+                "Create Database",
+                "CREATE DATABASE IF NOT EXISTS assorted_test_db\n"));
+        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+                "Alter Database Location",
+                "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\""));
+    }
+
+    @Test
+    public void validateTableCreateStrategy() {
+        // Validate create strategy for tables
+        // LEFT side should not be modified (NOTHING)
+        assertEquals("NOTHING", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getCreateStrategy().toString());
+        // RIGHT side also has NOTHING since the table will be created via IMPORT command
+        assertEquals("NOTHING", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getCreateStrategy().toString());
+    }
+
+    @Test
+    public void validateTableExistence() {
+        // Validate that tables exist on LEFT side
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
+    }
 
 }

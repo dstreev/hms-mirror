@@ -25,7 +25,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -57,19 +60,239 @@ public class Test_dump_01 extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 0L;
-        assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
+        assertEquals(0L, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+    @Test
+    public void databaseLocationTest() {
+        // Validate database location on LEFT only (DUMP strategy)
+        validateDBLocation("assorted_test_db", Environment.LEFT,
+                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db");
+    }
+
+    @Test
+    public void tableCountTest() {
+        // Validate that 4 tables are processed with DUMP strategy  
+        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+        assertEquals(4, 
+                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+                "Should have 4 tables");
+    }
+
+    @Test
+    public void ext_part_01_phaseTest() {
+        // Validate phase state for ext_part_01
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_part_02_phaseTest() {
+        // Validate phase state for ext_part_02
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void legacy_mngd_01_phaseTest() {
+        // Validate phase state for legacy_mngd_01
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_missing_01_phaseTest() {
+        // Validate phase state for ext_missing_01 (even though it doesn't exist on LEFT)
+        validatePhase("assorted_test_db", "ext_missing_01", PhaseState.CALCULATED_SQL);
+    }
+    
+    @Test
+    public void validateExtMissingHandling() {
+        // ext_missing_01 doesn't exist on LEFT - validate empty SQL generation
+        var ext_missing_left = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT);
+        assertFalse(ext_missing_left.isExists(), "ext_missing_01 should not exist on LEFT");
+        
+        // Should have minimal SQL with empty CREATE statement  
+        var ext_missing_sql = ext_missing_left.getSql();
+        boolean foundEmpty = false;
+        for (var pair : ext_missing_sql) {
+            if (pair.getDescription().equals("Creating Table")) {
+                assertTrue(pair.getAction().isEmpty(), "Create table action should be empty for missing table");
+                foundEmpty = true;
+            }
+        }
+        assertTrue(foundEmpty, "Should have empty CREATE TABLE entry");
+    }
+
+    @Test
+    public void validateDumpStrategy() {
+        // Validate that all tables use DUMP strategy
+        assertEquals("DUMP", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getStrategy().toString());
+        assertEquals("DUMP", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getStrategy().toString());
+        assertEquals("DUMP", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
+        assertEquals("DUMP", getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
+    }
+
+    @Test
+    public void validateTableLocations() {
+        // Validate table locations on LEFT for tables that exist
+        validateTableLocation("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01");
+        validateTableLocation("assorted_test_db", "ext_part_02", Environment.LEFT,
+                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_02");
+        validateTableLocation("assorted_test_db", "legacy_mngd_01", Environment.LEFT,
+                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/legacy_mngd_01");
+        // ext_missing_01 doesn't exist on LEFT
+    }
+
+    @Test
+    public void validateDumpGeneratesLeftSQL() {
+        // DUMP strategy generates SQL on LEFT side only
+        var ext_part_01_left_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getSql();
+        assertFalse(ext_part_01_left_sql.isEmpty(), "LEFT SQL should be generated for ext_part_01");
+        
+        // Verify CREATE TABLE exists
+        boolean foundCreate = false;
+        for (var pair : ext_part_01_left_sql) {
+            if (pair.getDescription().equals("Creating Table")) {
+                assertTrue(pair.getAction().contains("CREATE EXTERNAL TABLE `ext_part_01`"));
+                foundCreate = true;
+            }
+        }
+        assertTrue(foundCreate, "Should have CREATE TABLE statement");
+    }
+
+    @Test
+    public void validatePartitionAddStatements() {
+        // ext_part_01 is partitioned - should have ALTER TABLE ADD PARTITION statements
+        var ext_part_01_left_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getSql();
+        boolean foundPartitions = false;
+        for (var pair : ext_part_01_left_sql) {
+            if (pair.getDescription().equals("Alter Table Partition Add Location")) {
+                assertTrue(pair.getAction().contains("ALTER TABLE ext_part_01 ADD IF NOT EXISTS"));
+                assertTrue(pair.getAction().contains("PARTITION"));
+                foundPartitions = true;
+            }
+        }
+        assertTrue(foundPartitions, "Partitioned table should have ADD PARTITION statements");
+    }
+
+    @Test
+    public void validateNoRightSQL() {
+        // DUMP strategy should not generate RIGHT side SQL
+        var databaseSQL = getConversion().getDatabase("assorted_test_db").getSql();
+        assertTrue(databaseSQL.get(Environment.RIGHT).isEmpty(), "No RIGHT SQL should be generated for DUMP");
+    }
+
+    @Test
+    public void validateTableExistence() {
+        // Validate table existence on LEFT  
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
+        // ext_missing_01 doesn't exist on LEFT
+        assertFalse(getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists(),
+                "ext_missing_01 should not exist on LEFT");
+    }
+
+    @Test
+    public void validatePartitionCount() {
+        // ext_part_01 has 440 partitions
+        validatePartitionCount("assorted_test_db", "ext_part_01", Environment.LEFT, 440);
+    }
+
+    @Test
+    public void validateTableProperties() {
+        // Validate bucketing_version for tables that exist on LEFT
+        validateTableProperty("assorted_test_db", "ext_part_01", Environment.LEFT,
+                "bucketing_version", "2");
+        validateTableProperty("assorted_test_db", "ext_part_02", Environment.LEFT,
+                "bucketing_version", "2");
+        validateTableProperty("assorted_test_db", "legacy_mngd_01", Environment.LEFT,
+                "bucketing_version", "2");
+        // ext_missing_01 doesn't exist on LEFT so no properties to validate
+    }
+
+    @Test
+    public void validateDatabaseSQL() {
+        // Validate database creation SQL on LEFT
+        var dbSQL = getConversion().getDatabase("assorted_test_db").getSql();
+        assertFalse(dbSQL.get(Environment.LEFT).isEmpty(), "LEFT database SQL should exist");
+        
+        boolean foundCreate = false;
+        for (var pair : dbSQL.get(Environment.LEFT)) {
+            if (pair.getDescription().equals("Create Database")) {
+                assertTrue(pair.getAction().contains("CREATE DATABASE IF NOT EXISTS assorted_test_db"));
+                assertTrue(pair.getAction().contains("hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db"));
+                foundCreate = true;
+            }
+        }
+        assertTrue(foundCreate, "Should have CREATE DATABASE statement");
+    }
+
+    @Test
+    public void validatePhaseSummary() {
+        // Validate phase summary shows all tables in CALCULATED_SQL phase
+        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
+        assertNotNull(phaseSummary);
+        assertEquals(4, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(), 
+                "Should have 4 tables in CALCULATED_SQL phase");
+    }
+
+    @Test
+    public void validateTotalPhaseCount() {
+        // Validate total phase count for tables
+        assertEquals(5, getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getTotalPhaseCount().get(), 
+                "ext_part_01 should have 5 total phases");
+        assertEquals(4, getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getTotalPhaseCount().get(), 
+                "ext_part_02 should have 4 total phases");
+        assertEquals(4, getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getTotalPhaseCount().get(), 
+                "legacy_mngd_01 should have 4 total phases");
+        assertEquals(4, getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_missing_01").getTotalPhaseCount().get(), 
+                "ext_missing_01 should have 4 total phases");
+    }
+
+    @Test
+    public void validateNonPartitionedTableNoPartitions() {
+        // ext_part_02 is non-partitioned - should NOT have partition statements
+        var ext_part_02_left_sql = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).getSql();
+        boolean foundPartitions = false;
+        for (var pair : ext_part_02_left_sql) {
+            if (pair.getDescription().contains("Partition")) {
+                foundPartitions = true;
+            }
+        }
+        assertFalse(foundPartitions, "Non-partitioned table should not have partition statements");
+    }
+
+    @Test
+    public void validateTableDefinitions() {
+        // Validate that table definitions are captured
+        var ext_part_01_def = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getDefinition();
+        assertFalse(ext_part_01_def.isEmpty(), "Table definition should exist");
+        assertTrue(ext_part_01_def.stream().anyMatch(line -> line.contains("CREATE EXTERNAL TABLE")));
+        assertTrue(ext_part_01_def.stream().anyMatch(line -> line.contains("PARTITIONED BY")));
+        
+        var legacy_mngd_01_def = getConversion().getDatabase("assorted_test_db")
+                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).getDefinition();
+        assertFalse(legacy_mngd_01_def.isEmpty(), "Table definition should exist");
+        // Legacy managed table definition
+        assertTrue(legacy_mngd_01_def.stream().anyMatch(line -> line.contains("CREATE TABLE")));
+    }
+
 
 }

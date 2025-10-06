@@ -17,7 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -25,7 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -40,22 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_ei_ma_da_sync extends E2EBaseTest {
-//
-//        String[] args = new String[]{"-d", "EXPORT_IMPORT",
-//                "-ma",
-////                "-wd", "/warehouse/managed", "-ewd", "/warehouse/external",
-//                "-da",
-//                "-sync",
-//                "-ltd", EXISTS_07,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
 
     @Test
     public void returnCodeTest() {
@@ -66,15 +52,171 @@ public class Test_ei_ma_da_sync extends E2EBaseTest {
         assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+    @Test
+    public void databaseLocationTest() {
+        // Validate database locations for merge_files_migrate
+        validateDBLocation("merge_files_migrate", Environment.LEFT, 
+                "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db");
+        validateDBLocation("merge_files_migrate", Environment.RIGHT,
+                "hdfs://HOME90/apps/hive/warehouse/merge_files_migrate.db");
+    }
+
+    @Test
+    public void acid_01_phaseTest() {
+        // Validate phase state for acid_01 ACID table
+        validatePhase("merge_files_migrate", "acid_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void ext_01_phaseTest() {
+        // Validate phase state for ext_01 external table
+        validatePhase("merge_files_migrate", "ext_01", PhaseState.CALCULATED_SQL);
+    }
+
+    @Test
+    public void validateTableCount() {
+        // Validate that we have 2 tables in the database
+        assertEquals(2, getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().size(), "Table count mismatch");
+    }
+
+    @Test
+    public void validateExportImportStrategy() {
+        // Validate that all tables use EXPORT_IMPORT strategy
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getStrategy().toString());
+        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getStrategy().toString());
+    }
+
+    @Test
+    public void validateACIDTableIsTransactional() {
+        // Validate that acid_01 is transactional on LEFT
+        validateTableIsACID("merge_files_migrate", "acid_01", Environment.LEFT);
+        
+        // Validate transactional property
+        validateTableProperty("merge_files_migrate", "acid_01", Environment.LEFT,
+                "transactional", "true");
+    }
+
+    @Test
+    public void validateACIDTableDowngrade() {
+        // Since downgrade-acid is true, RIGHT side should also be transactional but with different properties
+        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+                "transactional", "true");
+        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+                "transactional_properties", "default");
+    }
+
+    @Test
+    public void validateTableExistence() {
+        // Validate that tables exist on both LEFT and RIGHT
+        assertTrue(getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).isExists());
+        assertTrue(getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).isExists());
+        assertTrue(getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).isExists());
+    }
+
+    @Test
+    public void validateCreateStrategy() {
+        // LEFT side should not be modified (NOTHING)
+        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getCreateStrategy().toString());
+        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).getCreateStrategy().toString());
+        
+        // RIGHT side should have LEAVE strategy since tables exist and sync=true
+        assertEquals("LEAVE", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getCreateStrategy().toString());
+        assertEquals("LEAVE", getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).getCreateStrategy().toString());
+    }
+
+    @Test
+    public void validateSyncIssues() {
+        // When sync=true and table exists on RIGHT, it should have an issue
+        validateTableIssueCount("merge_files_migrate", "acid_01", Environment.RIGHT, 1);
+        validateTableIssueCount("merge_files_migrate", "ext_01", Environment.RIGHT, 1);
+        
+        // Check the specific issue message
+        var acid01Issues = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getIssues();
+        assertTrue(acid01Issues.contains("Schema exists on the target, but not on the source."));
+        
+        var ext01Issues = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).getIssues();
+        assertTrue(ext01Issues.contains("Schema exists on the target, but not on the source."));
+    }
+
+    @Test
+    public void validateACIDTableBuckets() {
+        // Validate acid_01 has 2 buckets on LEFT
+        var acid01LeftDef = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getDefinition();
+        assertTrue(acid01LeftDef.stream().anyMatch(line -> line.contains("INTO 2 BUCKETS")));
+    }
+
+    @Test
+    public void validateTableLocations() {
+        // Validate table locations
+        validateTableLocation("merge_files_migrate", "acid_01", Environment.LEFT,
+                "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db/acid_01");
+        validateTableLocation("merge_files_migrate", "acid_01", Environment.RIGHT,
+                "hdfs://HOME90/warehouse/tablespace/managedDirectory/hive/merge_files_migrate.db/acid_01");
+        validateTableLocation("merge_files_migrate", "ext_01", Environment.LEFT,
+                "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db/ext_01");
+        validateTableLocation("merge_files_migrate", "ext_01", Environment.RIGHT,
+                "hdfs://HOME90/apps/hive/warehouse/merge_files_migrate.db/ext_01");
+    }
+
+    @Test
+    public void validateTableProperties() {
+        // Validate bucketing_version for acid_01
+        validateTableProperty("merge_files_migrate", "acid_01", Environment.LEFT,
+                "bucketing_version", "2");
+        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+                "bucketing_version", "2");
+        
+        // Validate that RIGHT has hms-mirror_Metadata_Stage1 property
+        assertNotNull(getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT)
+                .getDefinition().stream()
+                .filter(line -> line.contains("hms-mirror_Metadata_Stage1"))
+                .findFirst()
+                .orElse(null), "hms-mirror_Metadata_Stage1 property not found");
+    }
+
+    @Test
+    public void validateNoSQLGenerated() {
+        // Since sync=true and tables exist, no SQL should be generated
+        var leftSql = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
+        assertTrue(leftSql.isEmpty(), "LEFT SQL should be empty");
+        
+        var rightSql = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getSql();
+        assertTrue(rightSql.isEmpty(), "RIGHT SQL should be empty");
+        
+        var leftExtSql = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).getSql();
+        assertTrue(leftExtSql.isEmpty(), "LEFT ext_01 SQL should be empty");
+        
+        var rightExtSql = getConversion().getDatabase("merge_files_migrate")
+                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).getSql();
+        assertTrue(rightExtSql.isEmpty(), "RIGHT ext_01 SQL should be empty");
+    }
+
+    @Test
+    public void validatePhaseSummary() {
+        // Validate phase summary shows 2 tables in CALCULATED_SQL phase
+        var phaseSummary = getConversion().getDatabase("merge_files_migrate").getPhaseSummary();
+        assertNotNull(phaseSummary);
+        assertEquals(2, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(), 
+                "Should have 2 tables in CALCULATED_SQL phase");
+    }
 
 }
