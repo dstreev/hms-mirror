@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -60,7 +61,7 @@ public class SessionManager {
      * Optional setter for SessionKeepAliveService to avoid circular dependency.
      */
     @Autowired(required = false)
-    public void setSessionKeepAliveService(SessionKeepAliveService sessionKeepAliveService) {
+    public void setSessionKeepAliveService(@Lazy SessionKeepAliveService sessionKeepAliveService) {
         this.sessionKeepAliveService = sessionKeepAliveService;
         log.debug("SessionKeepAliveService injected into SessionManager");
     }

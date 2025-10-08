@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror;
 
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +36,7 @@ public class StateMaintenance
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final int sleepInterval = 1000;
     private Thread worker;
-    private Conversion conversion;
+    private ConversionResult conversionResult;
 
     /*
     public void start() {

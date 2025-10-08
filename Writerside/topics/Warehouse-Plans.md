@@ -17,7 +17,7 @@ It's recommended to define a warehouse plan for each **database** you want to mo
 data movement strategy.  When this is defined for the database, we'll inspect the all the current locations of tables
 and partitions in that dataset and make the necessary adjustments to locations.
 
-The 'Warehouse Plans' get converted into 'Global Location Maps' that are inspected during processing to make that conversion.
+The 'Warehouse Plans' get converted into 'Global Location Maps' that are inspected during processing to make that conversionResult.
 
 ## Standard Locations
 

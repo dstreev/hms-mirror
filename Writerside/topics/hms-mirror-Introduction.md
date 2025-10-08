@@ -16,4 +16,4 @@ layer. For example: Move data into an encrypted zone or to a different storage l
 There are two interface (working on a third) for `hms-mirror`: [CLI](CLI-Interface.md) and [WebUI](Web-Interface.md)
 
 From both interfaces, reports are generated that detail the actions taken by the application. You can direct it to run
-the conversion scripts automatically or just generate the scripts for you to run later.
+the conversionResult scripts automatically or just generate the scripts for you to run later.

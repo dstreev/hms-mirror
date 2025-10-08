@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
-import com.cloudera.utils.hms.mirror.core.model.GlobalLocationMapResult;
 import com.cloudera.utils.hms.mirror.core.model.LocationTranslationRequest;
 import com.cloudera.utils.hms.mirror.core.model.LocationTranslationResult;
 import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
@@ -532,7 +531,7 @@ public class TranslatorService {
 
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
 
         // We need to know if we are dealing with potential conversions (IE: Legacy Hive Managed to External)
         // If we are, we need to ensure that there are GLM's built for Managed Tables into External Locations.
@@ -580,7 +579,7 @@ public class TranslatorService {
             String externalBaseLocation = warehouse.getExternalDirectory();
             String managedBaseLocation = warehouse.getManagedDirectory();
             SourceLocationMap sourceLocationMap = sources.get(database);
-            DBMirror dbMirror = conversion.getDatabase(warehouseEntry.getKey());
+            DBMirror dbMirror = conversionResult.getDatabase(warehouseEntry.getKey());
             if (sourceLocationMap != null && dbMirror != null) {
                 for (Map.Entry<TableType, Map<String, Set<String>>> sourceLocationEntry : sourceLocationMap.getLocations().entrySet()) {
                     String typeTargetLocation = null;

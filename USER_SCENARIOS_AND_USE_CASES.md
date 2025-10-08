@@ -173,7 +173,7 @@ translator:
 
 **Challenges**:
 - ACID format incompatibility with Spark
-- Preserve data during conversion
+- Preserve data during conversionResult
 - Maintain transaction history
 - Minimize downtime
 
@@ -428,8 +428,8 @@ optimization:
 **Scenario**: "Convert legacy text tables to modern columnar formats (ORC/Parquet) for 10x query improvement."
 
 **Challenges**:
-- Format conversion at scale
-- Storage space during conversion
+- Format conversionResult at scale
+- Storage space during conversionResult
 - Query compatibility
 - Rollback planning
 
@@ -437,7 +437,7 @@ optimization:
 ```yaml
 dataStrategy: SQL
 transfer:
-  intermediateStorage: "hdfs://conversion-staging"
+  intermediateStorage: "hdfs://conversionResult-staging"
 # Custom properties for format change
 clusters:
   RIGHT:
@@ -448,14 +448,14 @@ clusters:
 **Workflow**:
 - SQL rewrites data in new format
 - Intermediate storage for safety
-- Parallel conversion possible
+- Parallel conversionResult possible
 - Original preserved until validated
 
 ### Use Case 6.3: Iceberg Table Adoption
 **Scenario**: "Convert high-churn dimension tables to Iceberg format for time-travel and ACID without Hive ACID overhead."
 
 **Challenges**:
-- Format conversion complexity
+- Format conversionResult complexity
 - Metadata catalog setup
 - Query engine compatibility
 - Historical data preservation
@@ -474,7 +474,7 @@ icebergConversion:
 ```
 
 **Workflow**:
-- Identifies conversion candidates
+- Identifies conversionResult candidates
 - Creates Iceberg metadata
 - Preserves table history
 - Enables time-travel queries

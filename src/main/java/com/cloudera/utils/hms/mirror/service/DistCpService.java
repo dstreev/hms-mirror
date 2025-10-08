@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
 import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
@@ -84,9 +84,9 @@ public class DistCpService {
      */
     public void buildAllDistCpReports(ExecuteSession session, String outputDir) {
         HmsMirrorConfig config = session.getConfig();
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
 
-        for (Map.Entry<String, DBMirror> dbEntry : conversion.getDatabases().entrySet()) {
+        for (Map.Entry<String, DBMirror> dbEntry : conversionResult.getDatabases().entrySet()) {
             String database = HmsMirrorConfigUtil.getResolvedDB(dbEntry.getKey(), config);
             String originalDatabase = dbEntry.getKey();
 

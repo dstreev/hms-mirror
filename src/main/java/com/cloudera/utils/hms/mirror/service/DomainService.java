@@ -19,7 +19,7 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,16 +61,16 @@ public class DomainService {
         return dbMirror;
     }
 
-    public Conversion deserializeConversion(String fileName) {
+    public ConversionResult deserializeConversion(String fileName) {
         String conversionAsString = fileToString(fileName);
-        Conversion conversion = null;
+        ConversionResult conversionResult = null;
         try {
-            conversion = yamlMapper.readerFor(Conversion.class).readValue(conversionAsString);
+            conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(conversionAsString);
         } catch (JsonProcessingException e) {
             log.error("Issue deserializing DomainService object", e);
 //            throw new RuntimeException(e);
         }
-        return conversion;
+        return conversionResult;
     }
 
     protected String fileToString(String configFilename) {

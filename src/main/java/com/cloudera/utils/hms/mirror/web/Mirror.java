@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web;
 
+import com.cloudera.utils.hms.mirror.config.RocksDBConfig;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
@@ -28,6 +29,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScans;
+import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import java.io.File;
@@ -36,6 +38,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 
 @SpringBootApplication
+@Import(RocksDBConfig.class)
 @ComponentScans({
         // For the Hadoop CLI Interface
         @ComponentScan(basePackages = "com.cloudera.utils.hadoop")
@@ -45,6 +48,7 @@ import java.lang.management.ManagementFactory;
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.service")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.util")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.config")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.repository")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.core")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.infrastructure")
         // Springdoc OpenAPI components disabled to avoid root path conflict

@@ -24,7 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -75,16 +75,16 @@ public class E2EBaseTest {
         return executeSessionService;
     }
 
-    protected Conversion getConversion() {
-        return executeSessionService.getSession().getConversion();
+    protected ConversionResult getConversion() {
+        return executeSessionService.getSession().getConversionResult();
     }
 
     protected String[] getDatabasesFromTestDataFile(String testDataSet) {
         System.out.println("Test data file: " + testDataSet);
-        Conversion conversion = domainService.deserializeConversion(testDataSet);
+        ConversionResult conversionResult = domainService.deserializeConversion(testDataSet);
         String[] databases = null;
 
-        databases = conversion.getDatabases().keySet().toArray(new String[0]);
+        databases = conversionResult.getDatabases().keySet().toArray(new String[0]);
 
         return databases;
     }

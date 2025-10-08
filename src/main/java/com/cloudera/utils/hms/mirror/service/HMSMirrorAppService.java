@@ -31,7 +31,6 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ratis.thirdparty.io.netty.util.concurrent.CompleteFuture;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +42,6 @@ import java.sql.Statement;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
@@ -106,11 +104,11 @@ public class HMSMirrorAppService {
     public long getReturnCode() {
         long rtn = 0L;
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        Conversion conversion = executeSessionService.getSession().getConversion();
+        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         rtn = runStatus.getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
-            rtn = conversion.getUnsuccessfullTableCount();
+            rtn = conversionResult.getUnsuccessfullTableCount();
         }
         return rtn;
     }
@@ -118,7 +116,7 @@ public class HMSMirrorAppService {
     public long getWarningCode() {
         long rtn = 0L;
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        Conversion conversion = executeSessionService.getSession().getConversion();
+        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         rtn = runStatus.getWarningCode();
         return rtn;
     }
@@ -137,7 +135,7 @@ public class HMSMirrorAppService {
         } else {
             runStatus.setComment("No comments provided for this run.  Consider adding one for easier tracking.");
         }
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
         // Reset Start time to the actual 'execution' start time.
         runStatus.setStart(new Date());
         runStatus.setProgress(ProgressEnum.STARTED);
@@ -223,7 +221,7 @@ public class HMSMirrorAppService {
                 (!config.loadMetadataDetails() && config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
             // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
             log.info("Resetting Partition Data for Test Data Load");
-            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
                     runStatus.getOperationStatistics().getCounts().incrementTables();
@@ -243,7 +241,7 @@ public class HMSMirrorAppService {
         if (config.isLoadingTestData()) {
             log.info("Loading Test Data.  Skipping Database Collection.");
             Set<String> databases = new TreeSet<>();
-            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
                 stats.getCounts().incrementDatabases();
                 databases.add(dbMirror.getName());
             }
@@ -330,7 +328,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
             for (String database : config.getDatabases()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
-                DBMirror dbMirror = conversion.addDatabase(database);
+                DBMirror dbMirror = conversionResult.addDatabase(database);
                 try {
                     // Get the Database definitions for the LEFT and RIGHT clusters.
                     if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) { //getConfig().getCluster(Environment.LEFT).getDatabase(config, dbMirror)) {
@@ -460,7 +458,7 @@ public class HMSMirrorAppService {
             }
         } else {
             runStatus.setStage(StageEnum.BUILDING_DATABASES, CollectionEnum.SKIPPED);
-            conversion.getDatabases().values().forEach(db -> {
+            conversionResult.getDatabases().values().forEach(db -> {
                         db.addIssue(Environment.LEFT, "No Database DDL when migrating 'views'." +
                             "All database constructs expected to be in-place already.");
                         db.addIssue(Environment.RIGHT, "No Database DDL when migrating 'views'." +
@@ -471,7 +469,7 @@ public class HMSMirrorAppService {
 
         // Shortcut.  Only DB's.
         if (!config.isDatabaseOnly()) {
-            Set<String> collectedDbs = conversion.getDatabases().keySet();
+            Set<String> collectedDbs = conversionResult.getDatabases().keySet();
             // ========================================
             // Get the table METADATA for the tables collected in the databases.
             // ========================================
@@ -480,7 +478,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.IN_PROGRESS);
             if (rtn) {
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversion.getDatabase(database);
+                    DBMirror dbMirror = conversionResult.getDatabase(database);
                     Set<String> tables = dbMirror.getTableMirrors().keySet();
                     for (String table : tables) {
                         TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
@@ -550,7 +548,7 @@ public class HMSMirrorAppService {
 
                 // Remove the tables that are marked for removal.
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversion.getDatabase(database);
+                    DBMirror dbMirror = conversionResult.getDatabase(database);
                     Set<String> tables = dbMirror.getTableMirrors().keySet();
                     for (String table : tables) {
                         TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
@@ -609,7 +607,7 @@ public class HMSMirrorAppService {
             if (rtn) {
                 // Check the Unique SET statements.
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversion.getDatabase(database);
+                    DBMirror dbMirror = conversionResult.getDatabase(database);
                     if (!databaseService.checkSqlStatements(dbMirror)) {
                         rtn = Boolean.FALSE;
                     }

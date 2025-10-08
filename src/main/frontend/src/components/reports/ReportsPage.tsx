@@ -74,7 +74,7 @@ const ReportsPage: React.FC = () => {
         params.append('path', currentPath);
       }
       
-      const url = `/hms-mirror/api/reports/browse?${params}`;
+      const url = `/hms-mirror/api/v1/reports/browse?${params}`;
       console.log('API URL:', url);
       const response = await fetch(url);
       console.log('API response status:', response.status);

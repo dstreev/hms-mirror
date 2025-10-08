@@ -40,6 +40,8 @@ hadoop:
   cli:
     api: "true"
 hms-mirror:
+  rocksdb:
+    enabled: true
   session:
     keep-alive:
       enabled: true

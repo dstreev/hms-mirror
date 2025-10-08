@@ -153,9 +153,9 @@ public class DatabaseService {
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
 
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
 
-        conversion.getDatabases().forEach((dbName, dbMirror) -> {
+        conversionResult.getDatabases().forEach((dbName, dbMirror) -> {
             dbMirror.getTableMirrors().forEach((tableName, tableMirror) -> {
                 EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
                 if (et != null) {
@@ -930,12 +930,12 @@ public class DatabaseService {
             return true;
         }
 
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
         RunStatus runStatus = session.getRunStatus();
         OperationStatistics stats = runStatus.getOperationStatistics();
         for (String database : config.getDatabases()) {
             log.info("Building Database commands: {}", database);
-            DBMirror dbMirror = conversion.getDatabase(database);
+            DBMirror dbMirror = conversionResult.getDatabase(database);
             try {
                 rtn = buildDBStatements(dbMirror);
             } catch (RuntimeException rte) {
@@ -975,12 +975,12 @@ public class DatabaseService {
             return true;
         }
 
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
         RunStatus runStatus = session.getRunStatus();
         OperationStatistics stats = runStatus.getOperationStatistics();
         for (String database : config.getDatabases()) {
             log.info("Executing Database Commands for: {}", database);
-            DBMirror dbMirror = conversion.getDatabase(database);
+            DBMirror dbMirror = conversionResult.getDatabase(database);
 
             if (rtn) {
                 if (!runDatabaseSql(dbMirror, Environment.LEFT)) {

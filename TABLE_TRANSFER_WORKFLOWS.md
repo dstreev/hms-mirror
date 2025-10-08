@@ -268,7 +268,7 @@ graph LR
 
 ### Workflow: Managed Table
 
-Similar to External, with automatic conversion handling during IMPORT
+Similar to External, with automatic conversionResult handling during IMPORT
 
 ### Workflow: ACID Table
 
@@ -534,7 +534,7 @@ graph TD
 4. Never attempt direct distcp
 
 ### Managed Tables
-1. Consider conversion to External
+1. Consider conversionResult to External
 2. Verify ownership requirements
 3. Check location alignment for distcp
 4. Plan for warehouse changes
@@ -551,7 +551,7 @@ graph TD
 
 The workflow for transferring tables varies significantly based on:
 
-1. **Table Type**: ACID requires special handling, Managed may need conversion, External most flexible
+1. **Table Type**: ACID requires special handling, Managed may need conversionResult, External most flexible
 2. **Strategy Selected**: Determines data movement method
 3. **DistCp Configuration**: When enabled, affects workflow execution
 4. **Location Standards**: Non-standard locations complicate workflows

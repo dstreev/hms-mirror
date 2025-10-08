@@ -18,12 +18,10 @@
 package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.domain.*;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -33,7 +31,6 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -53,7 +50,6 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 @Component
 @Slf4j
@@ -199,25 +195,25 @@ public class CliInit {
             }
 
             yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-            Conversion conversion = yamlMapper.readerFor(Conversion.class).readValue(yamlCfgFile);
+            ConversionResult conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(yamlCfgFile);
             // Set Config Databases;
-            Set<String> databases = new TreeSet<>(conversion.getDatabases().keySet());
+            Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
             config.setDatabases(databases);
             // Replace the conversion in the session.
-            executeSessionService.getSession().setConversion(conversion);
+            executeSessionService.getSession().setConversionResult(conversionResult);
         } catch (UnrecognizedPropertyException upe) {
             // Appears that the file isn't a Conversion file, so try to load it as a DBMirror file.
             try {
                 DBMirror dbMirror = loadDBMirrorFromFile(config.getLoadTestDataFile());
                 // Reset the work for debug session.
                 dbMirror.stripWork();
-                Conversion conversion = new Conversion();
-                conversion.getDatabases().put(dbMirror.getName(), dbMirror);
+                ConversionResult conversionResult = new ConversionResult();
+                conversionResult.getDatabases().put(dbMirror.getName(), dbMirror);
                 // Set Config Databases;
-                Set<String> databases = new TreeSet<>(conversion.getDatabases().keySet());
+                Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
                 config.setDatabases(databases);
                 // Replace the conversion in the session.
-                executeSessionService.getSession().setConversion(conversion);
+                executeSessionService.getSession().setConversionResult(conversionResult);
             } catch (Throwable t2) {
                 log.error(t2.getMessage(), t2);
                 throw t2;
@@ -288,16 +284,16 @@ public class CliInit {
 
             HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
-            Conversion conversion = null;
+            ConversionResult conversionResult = null;
             log.info("Post Processing Conversion");
             if (config.isLoadingTestData()) {
                 // Load Test Data.
                 loadTestData(session);
 
-                conversion = executeSessionService.getSession().getConversion();
+                conversionResult = executeSessionService.getSession().getConversionResult();
 
                 // Clean up the test data to match the configuration.
-                for (DBMirror dbMirror : conversion.getDatabases().values()) {
+                for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
                     String database = dbMirror.getName();
                     for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
                         EnvironmentTable et = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -343,10 +339,10 @@ public class CliInit {
                     }
                 }
             } else {
-                conversion = executeSessionService.getSession().getConversion();
+                conversionResult = executeSessionService.getSession().getConversionResult();
             }
             // Remove Tables from Map.
-            for (DBMirror dbMirror : conversion.getDatabases().values()) {
+            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
                 dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
             }
         };

@@ -2,7 +2,7 @@
 
 You'll find the **run report** in the file:
 
-`conversion/literal-dc/sm_orders_hms-mirror.md|html` 
+`conversionResult/literal-dc/sm_orders_hms-mirror.md|html` 
 
 This file includes details about the configuration at the time this was run and the output/actions on each table in the database that was included.
 

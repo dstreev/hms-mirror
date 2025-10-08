@@ -41,7 +41,7 @@ public class ExecuteSession implements Cloneable {
     private Connections connections = new Connections();
     private RunStatus runStatus;
     private HmsMirrorConfig config;
-    private Conversion conversion;
+    private ConversionResult conversionResult;
     
     public void addError(MessageCode code) {
         getRunStatus().addError(code);

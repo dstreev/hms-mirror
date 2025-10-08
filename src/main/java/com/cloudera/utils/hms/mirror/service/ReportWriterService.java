@@ -74,7 +74,7 @@ public class ReportWriterService {
 
     public void wrapup() {
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        Conversion conversion = executeSessionService.getSession().getConversion();
+        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         log.info("Wrapping up the Application Workflow");
         log.info("Setting 'running' to FALSE");
         //        executeSessionService.getSession().getRunning().set(Boolean.FALSE);
@@ -100,7 +100,7 @@ public class ReportWriterService {
         HmsMirrorConfig config = session.getConfig();
         RunStatus runStatus = session.getRunStatus();
         runStatus.setReportName(session.getSessionId());
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
         // Remove the abstract environments from config before reporting output.
         config.getClusters().remove(Environment.TRANSFER);
         config.getClusters().remove(Environment.SHADOW);
@@ -169,7 +169,7 @@ public class ReportWriterService {
             log.error("Problem 'writing' run status", ioe);
         }
 
-        for (Map.Entry<String, DBMirror> dbEntry : conversion.getDatabases().entrySet()) {
+        for (Map.Entry<String, DBMirror> dbEntry : conversionResult.getDatabases().entrySet()) {
             String database = HmsMirrorConfigUtil.getResolvedDB(dbEntry.getKey(), config);
             String originalDatabase = dbEntry.getKey();
             Map<String, Number> leftSummaryStats = databaseService.getEnvironmentSummaryStatistics(dbEntry.getValue(), Environment.LEFT);
@@ -210,12 +210,12 @@ public class ReportWriterService {
                 }
                 int step = 1;
                 FileWriter reportFile = new FileWriter(dbReportOutputFile + ".md");
-                String mdReportStr = conversion.toReport(originalDatabase, getExecuteSessionService());
+                String mdReportStr = conversionResult.toReport(originalDatabase, getExecuteSessionService());
 
                 File dbYamlFile = new File(dbReportOutputFile + ".yaml");
                 FileWriter dbYamlFileWriter = new FileWriter(dbYamlFile);
 
-                DBMirror yamlDb = conversion.getDatabase(originalDatabase);
+                DBMirror yamlDb = conversionResult.getDatabase(originalDatabase);
                 Map<PhaseState, Integer> phaseSummaryMap = yamlDb.getPhaseSummary();
                 if (phaseSummaryMap.containsKey(PhaseState.ERROR)) {
                     Integer errCount = phaseSummaryMap.get(PhaseState.ERROR);
@@ -249,7 +249,7 @@ public class ReportWriterService {
 
                 log.info("Status Report of 'hms-mirror' is here: {}.md|html", dbReportOutputFile);
 
-                String les = conversion.executeSql(Environment.LEFT, originalDatabase);
+                String les = conversionResult.executeSql(Environment.LEFT, originalDatabase);
                 if (les != null) {
                     FileWriter leftExecOutput = new FileWriter(dbLeftExecuteFile);
                     leftExecOutput.write(les);
@@ -269,7 +269,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String res = conversion.executeSql(Environment.RIGHT, originalDatabase);
+                String res = conversionResult.executeSql(Environment.RIGHT, originalDatabase);
                 if (res != null) {
                     FileWriter rightExecOutput = new FileWriter(dbRightExecuteFile);
                     rightExecOutput.write(res);
@@ -293,7 +293,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String lcu = conversion.executeCleanUpSql(Environment.LEFT, originalDatabase);
+                String lcu = conversionResult.executeCleanUpSql(Environment.LEFT, originalDatabase);
                 if (lcu != null) {
                     FileWriter leftCleanUpOutput = new FileWriter(dbLeftCleanUpFile);
                     leftCleanUpOutput.write(lcu);
@@ -304,7 +304,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String rcu = conversion.executeCleanUpSql(Environment.RIGHT, originalDatabase);
+                String rcu = conversionResult.executeCleanUpSql(Environment.RIGHT, originalDatabase);
                 if (rcu != null) {
                     FileWriter rightCleanUpOutput = new FileWriter(dbRightCleanUpFile);
                     rightCleanUpOutput.write(rcu);

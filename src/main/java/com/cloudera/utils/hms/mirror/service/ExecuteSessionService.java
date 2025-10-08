@@ -18,13 +18,9 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.SessionContextHolder;
 import com.jcabi.manifests.Manifests;
 import org.springframework.beans.factory.annotation.Autowired;
 import lombok.Getter;
@@ -327,7 +323,7 @@ public class ExecuteSessionService {
         session.setRunStatus(runStatus);
 
         // New Conversion object for each run.
-        session.setConversion(new Conversion());
+        session.setConversionResult(new ConversionResult());
 
         // Register session for keep-alive during execution
         if (sessionKeepAliveService != null) {

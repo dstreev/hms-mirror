@@ -4,7 +4,7 @@ This process will look at Hive tables, evaluate if the table is a candidate for 
 
 Specify `-d ICEBERG_CONVERSION` as the DataStrategy to run the Iceberg Migration.
 
-This process uses Hive SQL to build(and run) the conversion scripts.  These are "inplace" migrations.
+This process uses Hive SQL to build(and run) the conversionResult scripts.  These are "inplace" migrations.
 
 The following options apply to the Iceberg Migration:
 - `-iv|--iceberg-version` - The Iceberg version to use.  Default is 1.  Can be 1 or 2.

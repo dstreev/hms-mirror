@@ -38,7 +38,7 @@ HMS-Mirror provides multiple data migration strategies to transfer Hive metadata
 **Capabilities:**
 - Schema replication without data movement
 - Location translation to target namespace
-- Support for managed-to-external table conversion
+- Support for managed-to-external table conversionResult
 - Ownership management (PURGE option)
 - Sync mode for schema consistency
 
@@ -247,7 +247,7 @@ HMS-Mirror provides multiple data migration strategies to transfer Hive metadata
 - Namespace translation configuration
 
 **Capabilities:**
-- In-place schema conversion
+- In-place schema conversionResult
 - Location namespace updates
 - Ownership transfer
 - Purge flag management
@@ -270,10 +270,10 @@ HMS-Mirror provides multiple data migration strategies to transfer Hive metadata
 - Iceberg runtime support
 - Compatible table formats
 - Metadata catalog configuration
-- Spark or similar engine for conversion
+- Spark or similar engine for conversionResult
 
 **Capabilities:**
-- Format conversion to Iceberg
+- Format conversionResult to Iceberg
 - Schema evolution support
 - Snapshot isolation
 - Time travel capabilities
@@ -302,7 +302,7 @@ HMS-Mirror provides multiple data migration strategies to transfer Hive metadata
 
 ### SQL_ACID_DOWNGRADE_INPLACE Strategy
 - Downgrades ACID tables to external tables
-- In-place conversion process
+- In-place conversionResult process
 - Preserves data while changing table type
 
 ### EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE Strategy

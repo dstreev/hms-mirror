@@ -711,7 +711,7 @@ class HmsMirrorMcpServer {
     // Try web service first if available
     if (this.shouldUseWebService()) {
       try {
-        const response = await this.httpClient.get('/api/reports', {
+        const response = await this.httpClient.get('/api/v1/reports', {
           params: { database, limit }
         });
         
@@ -795,7 +795,7 @@ class HmsMirrorMcpServer {
     // Try web service first if available
     if (this.shouldUseWebService()) {
       try {
-        const response = await this.httpClient.get('/api/reports/details', {
+        const response = await this.httpClient.get('/api/v1/reports/details', {
           params: { path: reportPath }
         });
         
@@ -846,7 +846,7 @@ class HmsMirrorMcpServer {
     // Try web service first if available
     if (this.shouldUseWebService()) {
       try {
-        const response = await this.httpClient.get('/api/reports/table-details', {
+        const response = await this.httpClient.get('/api/v1/reports/table-details', {
           params: { path: reportPath, table: tableName, environment }
         });
         

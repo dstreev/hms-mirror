@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.cli;
 import com.cloudera.utils.hms.mirror.domain.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
@@ -81,7 +81,7 @@ public class CliReporter {
     protected void displayReport(Boolean showAll) {
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
-        Conversion conversion = session.getConversion();
+        ConversionResult conversionResult = session.getConversionResult();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -107,7 +107,7 @@ public class CliReporter {
         // Output
         if (showAll) {
             report.append("\nDatabases(<db>):\n");
-            report.append(String.join(",", conversion.getDatabases().keySet()));
+            report.append(String.join(",", conversionResult.getDatabases().keySet()));
             report.append("\n");
             report.append(ReportingConf.substituteAllVariables(reportTemplateOutput, varMap));
             log.info(report.toString());
@@ -176,7 +176,7 @@ public class CliReporter {
      */
     private void populateVarMap() {
         ExecuteSession session = executeSessionService.getSession();
-        Conversion conversion = executeSessionService.getSession().getConversion();
+        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         HmsMirrorConfig config = session.getConfig();
 
         tiktok = !tiktok;
@@ -208,11 +208,11 @@ public class CliReporter {
         varMap.put("right.execute.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
         varMap.put("right.cleanup.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
 
-        varMap.put("total.dbs", Integer.toString(conversion.getDatabases().size()));
+        varMap.put("total.dbs", Integer.toString(conversionResult.getDatabases().size()));
         // Count
         int tblCount = 0;
-        for (String database : conversion.getDatabases().keySet()) {
-            tblCount += conversion.getDatabase(database).getTableMirrors().size();
+        for (String database : conversionResult.getDatabases().keySet()) {
+            tblCount += conversionResult.getDatabase(database).getTableMirrors().size();
         }
         varMap.put("total.tbls", Integer.toString(tblCount));
 
@@ -221,8 +221,8 @@ public class CliReporter {
         int completed = 0;
         int errors = 0;
         int skipped = 0;
-        for (String database : conversion.getDatabases().keySet()) {
-            DBMirror dbMirror = conversion.getDatabase(database);
+        for (String database : conversionResult.getDatabases().keySet()) {
+            DBMirror dbMirror = conversionResult.getDatabase(database);
             for (String tbl : dbMirror.getTableMirrors().keySet()) {
                 switch (dbMirror.getTable(tbl).getPhaseState()) {
                     case INIT:

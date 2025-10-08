@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.ProgressEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -45,7 +46,7 @@ public class SessionKeepAliveService {
     private final Map<String, LocalDateTime> activeRunningSessions = new ConcurrentHashMap<>();
 
     @Autowired
-    public SessionKeepAliveService(SessionManager sessionManager) {
+    public SessionKeepAliveService(@Lazy SessionManager sessionManager) {
         this.sessionManager = sessionManager;
         log.debug("SessionKeepAliveService initialized");
     }

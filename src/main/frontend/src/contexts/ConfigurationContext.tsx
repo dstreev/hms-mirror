@@ -151,7 +151,7 @@ async function autoSaveToBackend(state: ConfigurationState, dispatch: React.Disp
   try {
     if (state.config) {
       // Save entire config to backend
-      const response = await fetch('/hms-mirror/api/v2/config', {
+      const response = await fetch('/hms-mirror/api/v1/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state.config),
@@ -206,7 +206,7 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
     try {
       if (filename) {
         // Load specific file from disk and set as current config
-        const response = await fetch('/hms-mirror/api/v2/config/load', {
+        const response = await fetch('/hms-mirror/api/v1/config/load', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename })
@@ -226,8 +226,8 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
       
       // Load current configuration from backend
       const hadPendingDataStrategy = state.pendingDataStrategy;
-      const response = await fetch('/hms-mirror/api/v2/config');
-      console.log('GET /api/v2/config response status:', response.status);
+      const response = await fetch('/hms-mirror/api/v1/config');
+      console.log('GET /api/v1/config response status:', response.status);
       if (response.status === 204) {
         // No content - no configuration loaded
         console.log('No configuration found on backend (204)');
@@ -306,7 +306,7 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
         throw new Error('No filename provided');
       }
 
-      const response = await fetch('/hms-mirror/api/v2/config/persist', {
+      const response = await fetch('/hms-mirror/api/v1/config/persist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: saveFilename }),
@@ -377,7 +377,7 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      const response = await fetch('/hms-mirror/api/v2/config/load', {
+      const response = await fetch('/hms-mirror/api/v1/config/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename }),

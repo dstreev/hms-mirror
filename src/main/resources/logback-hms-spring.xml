@@ -59,6 +59,9 @@
     <logger name="com.cloudera.utils.hms.util.NamespaceUtils" level="info" additivity="true">
         <appender-ref ref="Console" />
     </logger>
+    <logger name="com.cloudera.utils.hms.mirror.config" level="info" additivity="true">
+        <appender-ref ref="Console" />
+    </logger>
     <logger name="com.cloudera.utils.hms.mirror.web" level="debug" additivity="true">
         <appender-ref ref="Console" />
     </logger>

@@ -2,11 +2,11 @@
 
 This process will look at Hive tables, evaluate if the table is a candidate for migration to Iceberg, and then migrate the table to Iceberg.
 
-Currently the conversion of Hive Table Format to Iceberg is supported through the [STORAGE_MIGRATION](storage_migration.md) data strategy.  Efforts are in place to extend this conversion to SCHEMA_ONLY and SQL data strategies.
+Currently the conversionResult of Hive Table Format to Iceberg is supported through the [STORAGE_MIGRATION](storage_migration.md) data strategy.  Efforts are in place to extend this conversionResult to SCHEMA_ONLY and SQL data strategies.
 
 ![iceberg_conversion.png](iceberg_conversion.png)
 
-Simply 'enable' the conversion and all tables covered by the data strategy will be converted to Iceberg.  You can 
+Simply 'enable' the conversionResult and all tables covered by the data strategy will be converted to Iceberg.  You can 
 also determine which iceberg table format to apply to the table.
 
 ## Requirements

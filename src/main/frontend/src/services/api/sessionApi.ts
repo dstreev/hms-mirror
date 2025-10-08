@@ -19,7 +19,7 @@ export interface ExecuteSession {
 class SessionApi extends BaseApi {
   
   async getCurrentSessionInfo(): Promise<SessionInfo> {
-    return this.get<SessionInfo>('/v2/session/info');
+    return this.get<SessionInfo>('/v1/session/info');
   }
 
   async getCurrentSession(): Promise<ExecuteSession> {

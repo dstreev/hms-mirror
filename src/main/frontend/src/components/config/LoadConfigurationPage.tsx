@@ -32,7 +32,7 @@ const LoadConfigurationPage: React.FC = () => {
       setError(null);
       
       // Get metadata for config files from backend
-      const response = await fetch('/hms-mirror/api/v2/config/files/metadata');
+      const response = await fetch('/hms-mirror/api/v1/config/files/metadata');
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -81,7 +81,7 @@ const LoadConfigurationPage: React.FC = () => {
     
     try {
       // Fetch the configuration file content
-      const response = await fetch(`/hms-mirror/api/v2/config/file/${encodeURIComponent(filename)}`);
+      const response = await fetch(`/hms-mirror/api/v1/config/file/${encodeURIComponent(filename)}`);
       if (!response.ok) {
         throw new Error(`Failed to download configuration: ${response.statusText}`);
       }
@@ -125,7 +125,7 @@ const LoadConfigurationPage: React.FC = () => {
       formData.append('filename', file.name);
 
       // Upload and load the configuration
-      const response = await fetch('/hms-mirror/api/v2/config/upload', {
+      const response = await fetch('/hms-mirror/api/v1/config/upload', {
         method: 'POST',
         body: formData,
       });

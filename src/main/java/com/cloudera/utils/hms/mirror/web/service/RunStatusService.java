@@ -18,7 +18,7 @@ package com.cloudera.utils.hms.mirror.web.service;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Conversion;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
@@ -55,15 +55,15 @@ public class RunStatusService {
     }
 
     public synchronized void updateProgress(RunStatus runStatus) {
-        Conversion conversion = executeSessionService.getSession().getConversion();
-        if (nonNull(conversion)) {
+        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
+        if (nonNull(conversionResult)) {
             // Reset the inProgressTables with what's currently working.
             runStatus.getInProgressTables().clear();
             // In a safe concurrent stream fashion, go thru the conversion databases
             // and tables to update the inProgressTables.
             List<TableMirror> inProgressTables = new ArrayList<>();
             try {
-                inProgressTables = conversion.getDatabases().values().stream()
+                inProgressTables = conversionResult.getDatabases().values().stream()
                         .flatMap(db -> db.getTableMirrors().values().stream())
                         .filter(table -> Objects.requireNonNull(table.getPhaseState()) == PhaseState.CALCULATING_SQL)
                         .collect(Collectors.toList());

@@ -18,7 +18,7 @@ const SessionInfo: React.FC<SessionInfoProps> = ({
   useEffect(() => {
     const fetchSessionInfo = async () => {
       try {
-        console.log('Fetching session info from:', '/hms-mirror/api/v2/session/info');
+        console.log('Fetching session info from:', '/hms-mirror/api/v1/session/info');
         const info = await sessionApi.getCurrentSessionInfo();
         console.log('Session info received:', info);
         setSessionInfo(info);

@@ -120,4 +120,4 @@ In this scenario, you're choosing to downgrade ACID tables that are migrated, as
 
 This will migrate ACID tables only (-mao vs. -ma), downgrade them to EXTERNAL/PURGE tables, and 'replace' the current ACID table with a MANAGED Non-Transactional table in legacy environments OR a EXTERNAL/PURGE table in Hive3+ environments.
 
-Using the DRY-RUN mode, experiment with options `-is` and `-cs` for various implementations of this conversion.
+Using the DRY-RUN mode, experiment with options `-is` and `-cs` for various implementations of this conversionResult.

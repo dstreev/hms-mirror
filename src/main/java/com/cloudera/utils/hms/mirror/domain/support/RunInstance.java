@@ -33,6 +33,6 @@ public class RunInstance {
     private RunStatus runStatus = new RunStatus();
     // Needs to be a clone of the original configuration at the time of the run.
     private HmsMirrorConfig hmsMirrorConfig;
-    private Conversion conversion;
+    private ConversionResult conversionResult;
 
 }

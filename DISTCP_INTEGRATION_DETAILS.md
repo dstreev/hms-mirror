@@ -194,11 +194,11 @@ dataFlow: PUSH # Source cluster pushes to target
 
 ### 10. ICEBERG_CONVERSION Strategy
 
-**DistCp Role**: DEPENDS - On conversion approach
+**DistCp Role**: DEPENDS - On conversionResult approach
 
 **Integration Details**:
 - May require distcp for data files
-- Metadata conversion separate from data
+- Metadata conversionResult separate from data
 - Complex integration with Iceberg catalogs
 
 ## DistCp Optimization Features

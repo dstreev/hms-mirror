@@ -45,7 +45,7 @@ import java.util.*;
 @Getter
 @Setter
 @Slf4j
-public class Conversion {
+public class ConversionResult {
 
 //    @JsonIgnore
 //    private Date start = new Date();

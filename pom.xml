@@ -56,6 +56,9 @@
         <hadoop-cli.version>3.2.0.0</hadoop-cli.version>
         <hive-sre.version>3.0.1.8</hive-sre.version>
 
+        <!-- RocksDB Support -->
+        <rocksdb.version>9.7.3</rocksdb.version>
+
     </properties>
 
     <dependencies>
@@ -204,6 +207,13 @@
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
             <version>${javax.validation.version}</version>
+        </dependency>
+
+        <!-- RocksDB Embedded Database -->
+        <dependency>
+            <groupId>org.rocksdb</groupId>
+            <artifactId>rocksdbjni</artifactId>
+            <version>${rocksdb.version}</version>
         </dependency>
     </dependencies>
 

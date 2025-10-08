@@ -114,15 +114,15 @@ public class SessionContextHolder {
 
 ### New Session Management Endpoints
 
-- `GET /api/v2/session/current` - Get current session
-- `GET /api/v2/session/info` - Get current session basic info (used by React UI)
-- `GET /api/v2/session/debug` - Debug session information for troubleshooting
-- `GET /api/v2/session/{sessionId}` - Get specific session
-- `POST /api/v2/session/{sessionId}` - Create new session
-- `POST /api/v2/session/{sessionId}/start` - Start session execution
-- `PUT /api/v2/session/{sessionId}/config` - Save session configuration
-- `DELETE /api/v2/session/{sessionId}` - Delete session
-- `GET /api/v2/session/list` - List all sessions
+- `GET /api/v1/session/current` - Get current session
+- `GET /api/v1/session/info` - Get current session basic info (used by React UI)
+- `GET /api/v1/session/debug` - Debug session information for troubleshooting
+- `GET /api/v1/session/{sessionId}` - Get specific session
+- `POST /api/v1/session/{sessionId}` - Create new session
+- `POST /api/v1/session/{sessionId}/start` - Start session execution
+- `PUT /api/v1/session/{sessionId}/config` - Save session configuration
+- `DELETE /api/v1/session/{sessionId}` - Delete session
+- `GET /api/v1/session/list` - List all sessions
 
 ## Usage Examples
 
@@ -130,22 +130,22 @@ public class SessionContextHolder {
 
 ```javascript
 // Browser Tab 1 - Creates session automatically
-POST /api/v2/session/migration-prod-1
+POST /api/v1/session/migration-prod-1
 {
   "clusters": { ... },
   "dataStrategy": "HYBRID"
 }
 
 // Browser Tab 2 - Creates separate session automatically  
-POST /api/v2/session/migration-test-1
+POST /api/v1/session/migration-test-1
 {
   "clusters": { ... },
   "dataStrategy": "SCHEMA_ONLY"
 }
 
 // Both sessions can run concurrently
-POST /api/v2/session/migration-prod-1/start?concurrency=20
-POST /api/v2/session/migration-test-1/start?concurrency=10
+POST /api/v1/session/migration-prod-1/start?concurrency=20
+POST /api/v1/session/migration-test-1/start?concurrency=10
 ```
 
 ### CLI - Single Session (Unchanged)
@@ -227,7 +227,7 @@ public ExecuteSession getSession() {
 **Problem**: React UI showing "Failed to fetch session info" due to incorrect API URLs.
 
 **Issues Resolved**:
-- BaseApi baseURL: `/hms-mirror/api` + SessionApi paths: `/api/v2/session/info` = `/hms-mirror/api/api/v2/session/info` (double /api)
+- BaseApi baseURL: `/hms-mirror/api` + SessionApi paths: `/api/v1/session/info` = `/hms-mirror/api/api/v1/session/info` (double /api)
 - **Solution**: Updated SessionApi to use `/v2/session/info` (removed duplicate /api prefix)
 
 ### 3. Session Display in UI
@@ -294,7 +294,7 @@ const SessionInfo: React.FC<SessionInfoProps> = ({ compact = false }) => {
 ## Debugging and Monitoring
 
 ### Debug Endpoint
-`GET /api/v2/session/debug` provides comprehensive session state information:
+`GET /api/v1/session/debug` provides comprehensive session state information:
 - Thread context session
 - HTTP session details
 - SessionManager session state

@@ -73,7 +73,7 @@ const PasswordEncryptionPage: React.FC = () => {
     
     try {
       // Try to decrypt passwords in memory to verify the key
-      const response = await fetch('/hms-mirror/api/v2/config/check-password-key', {
+      const response = await fetch('/hms-mirror/api/v1/config/check-password-key', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ const PasswordEncryptionPage: React.FC = () => {
     
     try {
       // Reset encryption by removing encrypted passwords and marking as not encrypted
-      const response = await fetch('/hms-mirror/api/v2/config/reset-encryption', {
+      const response = await fetch('/hms-mirror/api/v1/config/reset-encryption', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -48,7 +48,7 @@ clusters:
       auto: true
       initMSCK: true
 commandLineOptions: "[-d, STORAGE_MIGRATION, -db, sm_orders, -ma, -smn, ofs://OHOME90,\
-  \ -ewd, /finance/operations-ext, -wd, /finance/operations-mngd, -rdl, -o, conversion/rdl]"
+  \ -ewd, /finance/operations-ext, -wd, /finance/operations-mngd, -rdl, -o, conversionResult/rdl]"
 copyAvroSchemaUrls: false
 dataStrategy: "STORAGE_MIGRATION"
 databaseOnly: false

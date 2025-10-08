@@ -104,7 +104,7 @@ Source ACID Table → Transfer Table (EXTERNAL) → Target Table (ACID or EXTERN
 
 **Transfer Table Creation**:
 - Not typically used
-- Export/Import handles format conversion
+- Export/Import handles format conversionResult
 
 **Limitations**:
 - Hive 1/2 EXPORT incompatible with Hive 3 IMPORT for ACID
@@ -186,7 +186,7 @@ if (TableUtils.isACID(let) && configService.legacyMigration(config)) {
 **Behavior**:
 - Converts ACID to Iceberg format
 - Requires intermediate processing
-- Complex multi-step conversion
+- Complex multi-step conversionResult
 
 ## Transfer Table Details
 
@@ -199,7 +199,7 @@ if (TableUtils.isACID(let) && configService.legacyMigration(config)) {
 | Legacy to non-legacy migration | YES | Version incompatibility |
 | intermediateStorage configured | YES | Staging requirement |
 | targetNamespace configured | YES | Namespace translation |
-| ACID downgrade | YES | Format conversion |
+| ACID downgrade | YES | Format conversionResult |
 | ACID in-place migration | YES | Same-cluster transformation |
 | Non-ACID with SCHEMA_ONLY | NO | Direct schema transfer |
 | Non-ACID with LINKED | NO | No data movement |

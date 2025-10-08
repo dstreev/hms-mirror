@@ -49,7 +49,7 @@ clusters:
       initMSCK: true
 commandLineOptions: "[-d, STORAGE_MIGRATION, -db, sm_orders, -smn, ofs://OHOME90,\
   \ -ewd, /warehouse/tablespace/external/hive, -wd, /warehouse/tablespace/managed/hive,\
-  \ -dc, -o, conversion/literal-dc]"
+  \ -dc, -o, conversionResult/literal-dc]"
 copyAvroSchemaUrls: false
 dataStrategy: "STORAGE_MIGRATION"
 databaseOnly: false

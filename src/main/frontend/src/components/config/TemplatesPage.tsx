@@ -31,7 +31,7 @@ const TemplatesPage: React.FC = () => {
       setError(null);
       
       // Get metadata for config files from backend - same as Load Configuration page
-      const response = await fetch('/hms-mirror/api/v2/config/files/metadata');
+      const response = await fetch('/hms-mirror/api/v1/config/files/metadata');
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

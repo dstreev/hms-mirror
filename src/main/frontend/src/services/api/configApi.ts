@@ -3,7 +3,7 @@ import { HmsMirrorConfig, ConfigValidationResult } from '../../types/api';
 
 class ConfigApi extends BaseApi {
   constructor() {
-    super('/hms-mirror/api/v2');
+    super('/hms-mirror/api/v1');
   }
 
   async getConfig(): Promise<HmsMirrorConfig | null> {

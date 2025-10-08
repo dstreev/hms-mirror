@@ -84,7 +84,7 @@ const ReportDetailsPage: React.FC = () => {
     try {
       // Load session-config.yaml
       console.log('Loading session-config.yaml from:', reportPath);
-      const configResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=session-config.yaml`);
+      const configResponse = await fetch(`/hms-mirror/api/v1/reports/file?path=${encodeURIComponent(reportPath)}&file=session-config.yaml`);
       if (configResponse.ok) {
         const configText = await configResponse.text();
         console.log('Loaded session-config.yaml, length:', configText.length);
@@ -95,7 +95,7 @@ const ReportDetailsPage: React.FC = () => {
       
       // Load run-status.yaml
       console.log('Loading run-status.yaml from:', reportPath);
-      const statusResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=run-status.yaml`);
+      const statusResponse = await fetch(`/hms-mirror/api/v1/reports/file?path=${encodeURIComponent(reportPath)}&file=run-status.yaml`);
       if (statusResponse.ok) {
         const statusText = await statusResponse.text();
         console.log('Loaded run-status.yaml, length:', statusText.length);
@@ -107,7 +107,7 @@ const ReportDetailsPage: React.FC = () => {
       // Try to find and load distcp plan files
       // We need to check the artifacts list for files matching the pattern
       try {
-        const artifactsResponse = await fetch(`/hms-mirror/api/reports/artifacts?path=${encodeURIComponent(reportPath)}`);
+        const artifactsResponse = await fetch(`/hms-mirror/api/v1/reports/artifacts?path=${encodeURIComponent(reportPath)}`);
         if (artifactsResponse.ok) {
           const artifactsList = await artifactsResponse.json();
           
@@ -122,7 +122,7 @@ const ReportDetailsPage: React.FC = () => {
           // Load LEFT distcp plan if found
           if (leftDistcpFile) {
             console.log('Loading LEFT distcp plan:', leftDistcpFile.name);
-            const leftResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(leftDistcpFile.name)}`);
+            const leftResponse = await fetch(`/hms-mirror/api/v1/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(leftDistcpFile.name)}`);
             if (leftResponse.ok) {
               const leftText = await leftResponse.text();
               console.log('Loaded LEFT distcp plan, length:', leftText.length);
@@ -133,7 +133,7 @@ const ReportDetailsPage: React.FC = () => {
           // Load RIGHT distcp plan if found
           if (rightDistcpFile) {
             console.log('Loading RIGHT distcp plan:', rightDistcpFile.name);
-            const rightResponse = await fetch(`/hms-mirror/api/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(rightDistcpFile.name)}`);
+            const rightResponse = await fetch(`/hms-mirror/api/v1/reports/file?path=${encodeURIComponent(reportPath)}&file=${encodeURIComponent(rightDistcpFile.name)}`);
             if (rightResponse.ok) {
               const rightText = await rightResponse.text();
               console.log('Loaded RIGHT distcp plan, length:', rightText.length);
@@ -154,7 +154,7 @@ const ReportDetailsPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch(`/hms-mirror/api/reports/details?path=${encodeURIComponent(reportPath)}`);
+      const response = await fetch(`/hms-mirror/api/v1/reports/details?path=${encodeURIComponent(reportPath)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -191,7 +191,7 @@ const ReportDetailsPage: React.FC = () => {
   
   const loadArtifacts = async (reportPath: string) => {
     try {
-      const response = await fetch(`/hms-mirror/api/reports/artifacts?path=${encodeURIComponent(reportPath)}`);
+      const response = await fetch(`/hms-mirror/api/v1/reports/artifacts?path=${encodeURIComponent(reportPath)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -245,7 +245,7 @@ const ReportDetailsPage: React.FC = () => {
 
   const handleDownloadArtifact = (artifact: ArtifactFile) => {
     // Create a download link for the artifact
-    const downloadUrl = `/hms-mirror/api/reports/artifacts/download?path=${encodeURIComponent(artifact.path)}`;
+    const downloadUrl = `/hms-mirror/api/v1/reports/artifacts/download?path=${encodeURIComponent(artifact.path)}`;
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = artifact.name;
@@ -261,7 +261,7 @@ const ReportDetailsPage: React.FC = () => {
       setIsDownloading(true);
       
       // Create a download URL for the zip endpoint
-      const downloadUrl = `/hms-mirror/api/reports/download-all?path=${encodeURIComponent(path)}`;
+      const downloadUrl = `/hms-mirror/api/v1/reports/download-all?path=${encodeURIComponent(path)}`;
       
       // Fetch the zip file
       const response = await fetch(downloadUrl);
@@ -301,7 +301,7 @@ const ReportDetailsPage: React.FC = () => {
       setSelectedTable(tableName);
       setTableDetailsMode(mode);
       
-      const response = await fetch(`/hms-mirror/api/reports/table-details?path=${encodeURIComponent(path)}&table=${encodeURIComponent(tableName)}&environment=${mode}`);
+      const response = await fetch(`/hms-mirror/api/v1/reports/table-details?path=${encodeURIComponent(path)}&table=${encodeURIComponent(tableName)}&environment=${mode}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

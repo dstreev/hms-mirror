@@ -109,7 +109,7 @@ Fixed an issue with tables being processed multiple times under some conditions.
 
 **What's New**
 
-BETA Iceberg conversion support for the STORAGE_MIGRATION data strategy. See [Iceberg Conversion](hms-mirror-iceberg_migration.md) for more details. To activate this beta feature for the WebUI, add `--hms-mirror.
+BETA Iceberg conversionResult support for the STORAGE_MIGRATION data strategy. See [Iceberg Conversion](hms-mirror-iceberg_migration.md) for more details. To activate this beta feature for the WebUI, add `--hms-mirror.
 config.beta=true` to the startup command.  EG: `hms-mirror --service --hms-mirror.config.beta=true`
 
 **Bugs (Fixed)**
