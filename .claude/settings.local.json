@@ -40,7 +40,15 @@
       "Bash(cat:*)",
       "Bash(printf:*)",
       "Bash(paste:*)",
-      "Bash(timeout 10s mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8103 --hms-mirror.rocksdb.enabled=true\" -q)"
+      "Bash(timeout 10s mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8103 --hms-mirror.rocksdb.enabled=true\" -q)",
+      "Bash(for i in {1..5})",
+      "Bash(do echo \"=== Test Run $i ===\")",
+      "Bash(if [ $? -ne 0 ])",
+      "Bash(then echo \"FAILED on run $i\")",
+      "Bash(break)",
+      "Bash(fi)",
+      "Bash(echo \"Run $i completed successfully\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": [],

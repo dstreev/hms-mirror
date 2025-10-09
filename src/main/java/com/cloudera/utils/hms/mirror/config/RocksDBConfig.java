@@ -33,6 +33,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * RocksDB Configuration for HMS-Mirror application.
@@ -79,6 +81,10 @@ public class RocksDBConfig {
     private ColumnFamilyHandle configurationsColumnFamily;
     private ColumnFamilyHandle sessionsColumnFamily;
     private ColumnFamilyHandle connectionsColumnFamily;
+    
+    // Thread-safety for cleanup
+    private final AtomicBoolean isShutdown = new AtomicBoolean(false);
+    private final ReentrantLock cleanupLock = new ReentrantLock();
 
     public RocksDBConfig() {
         System.out.println("=== RocksDBConfig CONSTRUCTOR CALLED ===");
@@ -223,22 +229,45 @@ public class RocksDBConfig {
 
     @PreDestroy
     public void cleanup() {
-        log.info("=============================================================");
-        log.info("=== RocksDB Configuration @PreDestroy Starting ===");
-        log.info("=============================================================");
+        // Use atomic operation to ensure cleanup happens only once
+        if (!isShutdown.compareAndSet(false, true)) {
+            log.debug("RocksDB cleanup already in progress or completed");
+            return;
+        }
         
+        cleanupLock.lock();
         try {
-            // Check for and cancel pending compaction before shutdown
-            if (rocksDB != null) {
+            log.info("=============================================================");
+            log.info("=== RocksDB Configuration @PreDestroy Starting ===");
+            log.info("=============================================================");
+            
+            // Safe shutdown of RocksDB with proper resource management
+            performSafeShutdown();
+            
+        } catch (Exception e) {
+            log.error("Error during RocksDB cleanup", e);
+        } finally {
+            cleanupLock.unlock();
+        }
+        
+        log.info("=============================================================");
+        log.info("✅ RocksDB SHUTDOWN COMPLETE");
+        log.info("=============================================================");
+    }
+    
+    /**
+     * Perform safe shutdown of RocksDB resources without accessing potentially invalid handles
+     */
+    private void performSafeShutdown() {
+        try {
+            // Cancel background work BEFORE checking properties to avoid race conditions
+            if (rocksDB != null && rocksDB.isOwningHandle()) {
                 try {
-                    String compactionPending = rocksDB.getProperty("rocksdb.compaction-pending");
-                    if ("1".equals(compactionPending)) {
-                        log.info("Compaction is pending - attempting to cancel background jobs");
-                        rocksDB.cancelAllBackgroundWork(true); // true = wait for jobs to finish
-                        log.info("✓ Background jobs cancelled");
-                    }
+                    log.info("Cancelling RocksDB background jobs before shutdown");
+                    rocksDB.cancelAllBackgroundWork(true); // true = wait for jobs to finish
+                    log.info("✓ Background jobs cancelled");
                 } catch (Exception e) {
-                    log.warn("Could not check/cancel pending compaction: {}", e.getMessage());
+                    log.warn("Could not cancel background work: {}", e.getMessage());
                 }
                 
                 // Force flush any pending writes
@@ -251,23 +280,29 @@ public class RocksDBConfig {
             }
             
             // Close column families in reverse order
-            if (connectionsColumnFamily != null) {
-                connectionsColumnFamily.close();
-                log.info("✓ Closed connections column family");
-            }
-            if (sessionsColumnFamily != null) {
-                sessionsColumnFamily.close();
-                log.info("✓ Closed sessions column family");
-            }
-            if (configurationsColumnFamily != null) {
-                configurationsColumnFamily.close();
-                log.info("✓ Closed configurations column family");
-            }
+            closeColumnFamilyHandle("connections", connectionsColumnFamily);
+            closeColumnFamilyHandle("sessions", sessionsColumnFamily);
+            closeColumnFamilyHandle("configurations", configurationsColumnFamily);
+            
+            // Null out column family references before closing main DB
+            connectionsColumnFamily = null;
+            sessionsColumnFamily = null;
+            configurationsColumnFamily = null;
             
             // Close the main RocksDB instance
             if (rocksDB != null) {
-                rocksDB.close();
-                log.info("✓ RocksDB database closed successfully");
+                try {
+                    if (rocksDB.isOwningHandle()) {
+                        rocksDB.close();
+                        log.info("✓ RocksDB database closed successfully");
+                    } else {
+                        log.warn("RocksDB handle was already closed");
+                    }
+                } catch (Exception e) {
+                    log.warn("Error closing RocksDB: {}", e.getMessage());
+                } finally {
+                    rocksDB = null;
+                }
             }
             
             // Force garbage collection to help release native resources
@@ -278,6 +313,36 @@ public class RocksDBConfig {
             Thread.sleep(100);
             
             // Check lock file status and attempt cleanup for test scenarios
+            performLockFileCleanup();
+            
+        } catch (Exception e) {
+            log.error("Error during safe RocksDB shutdown", e);
+        }
+    }
+    
+    /**
+     * Safely close a column family handle
+     */
+    private void closeColumnFamilyHandle(String name, ColumnFamilyHandle handle) {
+        if (handle != null) {
+            try {
+                if (handle.isOwningHandle()) {
+                    handle.close();
+                    log.info("✓ Closed {} column family", name);
+                } else {
+                    log.warn("{} column family handle was already closed", name);
+                }
+            } catch (Exception e) {
+                log.warn("Error closing {} column family: {}", name, e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Perform lock file cleanup for test environments
+     */
+    private void performLockFileCleanup() {
+        try {
             File dataDir = new File(rocksDBPath);
             File lockFile = new File(dataDir, "LOCK");
             
@@ -304,14 +369,10 @@ public class RocksDBConfig {
             
             log.info("RocksDB data directory: {}", dataDir.getAbsolutePath());
             log.info("All RocksDB resources have been properly released");
-            
         } catch (Exception e) {
-            log.error("Error during RocksDB shutdown", e);
+            log.warn("Error during lock file cleanup: {}", e.getMessage());
         }
-        
-        log.info("=============================================================");
-        log.info("✅ RocksDB SHUTDOWN COMPLETE");
-        log.info("=============================================================");
+            
     }
 
     private boolean isTestEnvironment() {
@@ -337,21 +398,37 @@ public class RocksDBConfig {
 
     @Bean
     public RocksDB rocksDB() {
+        if (isShutdown.get()) {
+            log.warn("RocksDB bean requested after shutdown - returning null");
+            return null;
+        }
         return rocksDB;
     }
 
     @Bean("configurationsColumnFamily")
     public ColumnFamilyHandle configurationsColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Configurations column family bean requested after shutdown - returning null");
+            return null;
+        }
         return configurationsColumnFamily;
     }
 
     @Bean("sessionsColumnFamily") 
     public ColumnFamilyHandle sessionsColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Sessions column family bean requested after shutdown - returning null");
+            return null;
+        }
         return sessionsColumnFamily;
     }
 
     @Bean("connectionsColumnFamily")
     public ColumnFamilyHandle connectionsColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Connections column family bean requested after shutdown - returning null");
+            return null;
+        }
         return connectionsColumnFamily;
     }
 

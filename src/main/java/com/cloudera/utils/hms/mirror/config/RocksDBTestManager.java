@@ -58,7 +58,7 @@ public class RocksDBTestManager {
         if (cleanupExecuted.compareAndSet(false, true)) {
             log.info("RocksDBTestManager: Force cleaning up RocksDB resources");
             try {
-                // Call the RocksDB cleanup directly
+                // Call the RocksDB cleanup directly - this is now thread-safe
                 rocksDBConfig.cleanup();
                 
                 // Additional aggressive cleanup for tests
@@ -67,6 +67,8 @@ public class RocksDBTestManager {
                 log.info("RocksDBTestManager: Force cleanup completed successfully");
             } catch (Exception e) {
                 log.error("RocksDBTestManager: Error during force cleanup", e);
+                // Reset cleanup state on error so cleanup can be retried
+                cleanupExecuted.set(false);
             }
         } else {
             log.debug("RocksDBTestManager: Cleanup already executed, skipping");

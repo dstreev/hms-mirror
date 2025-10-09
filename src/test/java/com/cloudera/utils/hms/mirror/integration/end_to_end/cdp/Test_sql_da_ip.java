@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
                 "--hms-mirror.config.migrate-acid-only=true",
                 "--hms-mirror.config.right-is-disconnected=true"
         })
-@ActiveProfiles("e2e-cdp-sql-acid")
+@ActiveProfiles({"e2e-cdp-sql-acid","no-cli","test"})
 @Slf4j
 public class Test_sql_da_ip extends E2EBaseTest {
 //
