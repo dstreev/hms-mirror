@@ -48,6 +48,19 @@ public class IcebergConversion implements Cloneable {
             "through a transfer.")
     private boolean inplace = Boolean.FALSE;
 
+    @Override
+    public IcebergConversion clone() {
+        try {
+            IcebergConversion clone = (IcebergConversion) super.clone();
+            if (this.tableProperties != null) {
+                clone.tableProperties = new HashMap<>(this.tableProperties);
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for IcebergConversion", e);
+        }
+    }
+
     @JsonIgnore
     public void setPropertyOverridesStr(String[] overrides) {
         if (overrides != null) {

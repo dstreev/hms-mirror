@@ -44,6 +44,7 @@ class TableServiceTest extends ServiceTestBase {
 //    private TranslatorService translatorService;
     private StatsCalculatorService statsCalculatorService;
     private TableOperations tableOperations;  // NEW: Mock for core business logic
+    private SessionManager sessionManager;
 
     private TableService tableService;
 
@@ -55,6 +56,7 @@ class TableServiceTest extends ServiceTestBase {
         
         // NEW: Mock the core business logic
         tableOperations = mock(TableOperations.class);
+        sessionManager = mock(SessionManager.class);
 
         tableService = new TableService(
                 configService,
@@ -63,7 +65,8 @@ class TableServiceTest extends ServiceTestBase {
                 queryDefinitionsService,
                 translatorService,
                 statsCalculatorService,
-                tableOperations  // NEW: Include the mock
+                tableOperations,
+                sessionManager
         );
     }
 

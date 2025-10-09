@@ -45,11 +45,26 @@ import java.util.*;
 @Getter
 @Setter
 @Slf4j
-public class ConversionRequest {
+public class ConversionRequest implements Cloneable {
 
     /*
     A map of databases to the tables that need to be converted.
      */
     private Map<String, List<String>> databases = new TreeMap<>();
 
+    @Override
+    public ConversionRequest clone() {
+        try {
+            ConversionRequest clone = (ConversionRequest) super.clone();
+            if (this.databases != null) {
+                clone.databases = new TreeMap<>();
+                for (Map.Entry<String, List<String>> entry : this.databases.entrySet()) {
+                    clone.databases.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+                }
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for ConversionRequest", e);
+        }
+    }
 }

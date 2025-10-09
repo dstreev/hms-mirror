@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.infrastructure.connection.ConnectionProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -174,6 +175,7 @@ class SimplifiedTableOperationsTest {
         // Create a mock table mirror
         TableMirror tableMirror = mock(TableMirror.class);
         EnvironmentTable environmentTable = mock(EnvironmentTable.class);
+        ExecuteSession session = mock(ExecuteSession.class);
         
         // Set up mock behavior
         when(tableMirror.getEnvironmentTable(Environment.LEFT)).thenReturn(environmentTable);
@@ -184,7 +186,7 @@ class SimplifiedTableOperationsTest {
         // For this standalone demo, we'll keep the validation simple
         
         // Test table filter validation
-        ValidationResult validation = tableOperations.validateTableFilter(tableMirror, Environment.LEFT);
+        ValidationResult validation = tableOperations.validateTableFilter(session, tableMirror, Environment.LEFT);
         
         assertNotNull(validation, "Validation result should not be null");
         System.out.println("✓ Table filter validation completed");

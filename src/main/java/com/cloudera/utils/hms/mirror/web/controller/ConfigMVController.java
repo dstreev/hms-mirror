@@ -47,6 +47,7 @@ public class ConfigMVController implements ControllerReferences {
 
     private final ConfigService configService;
     private final ExecuteSessionService executeSessionService;
+    private final SessionManager sessionManager;
     private final PasswordService passwordService;
     private final ReportService reportService;
     private final WebConfigService webConfigService;
@@ -56,6 +57,7 @@ public class ConfigMVController implements ControllerReferences {
     public ConfigMVController(
             ConfigService configService,
             ExecuteSessionService executeSessionService,
+            SessionManager sessionManager,
             PasswordService passwordService,
             ReportService reportService,
             WebConfigService webConfigService,
@@ -64,6 +66,7 @@ public class ConfigMVController implements ControllerReferences {
     ) {
         this.configService = configService;
         this.executeSessionService = executeSessionService;
+        this.sessionManager = sessionManager;
         this.passwordService = passwordService;
         this.reportService = reportService;
         this.webConfigService = webConfigService;
@@ -114,9 +117,7 @@ public class ConfigMVController implements ControllerReferences {
         HmsMirrorConfig config = configService.createForDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
         // Control Beta Features
         config.setBeta(beta);
-        ExecuteSession session = executeSessionService.createSession(NEW_CONFIG, config);
-        // Set the Loaded Session
-        executeSessionService.setSession(session);
+        ExecuteSession session = sessionManager.createSession(NEW_CONFIG, config);
         model.addAttribute(READ_ONLY, Boolean.FALSE);
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);
         return "config/view";
@@ -232,8 +233,7 @@ public class ConfigMVController implements ControllerReferences {
         // Control Beta Features.
         config.setBeta(beta);
 
-        ExecuteSession session = executeSessionService.createSession(sessionId, config);
-        executeSessionService.setSession(session);
+        ExecuteSession session = sessionManager.createSession(sessionId, config);
 
         configService.validate(session, null);
 
@@ -267,8 +267,7 @@ public class ConfigMVController implements ControllerReferences {
         newConfig.setBeta(beta);
 
         // Create a new session
-        ExecuteSession session = executeSessionService.createSession(sessionId, newConfig);
-        executeSessionService.setSession(session);
+        ExecuteSession session = sessionManager.createSession(sessionId, newConfig);
 
         // Set it as the current session.
         uiModelService.sessionToModel(model, maxThreads, Boolean.FALSE);

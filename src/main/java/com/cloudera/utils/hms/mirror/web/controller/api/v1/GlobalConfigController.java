@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.web.controller.api.v1.service.Configuration
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
+import com.cloudera.utils.hms.mirror.service.SessionManager;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,6 +82,9 @@ public class GlobalConfigController {
     
     @Autowired
     private com.cloudera.utils.hms.mirror.service.ExecuteSessionService executeSessionService;
+    
+    @Autowired
+    private SessionManager sessionManager;
     
     @Value("${hms-mirror.config.path}")
     private String configPath;
@@ -345,8 +349,12 @@ public class GlobalConfigController {
             
             // Create and set a new ExecuteSession as the single source of truth
             String sessionId = filename != null ? filename.replace(".yaml", "").replace(".yml", "") : "loaded-config";
-            com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = executeSessionService.createSession(sessionId, loadedConfig);
-            executeSessionService.setSession(session);
+//            try {
+                com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = sessionManager.createSession(sessionId, loadedConfig);
+//            } catch (SessionException e) {
+//                log.error("Error creating session for config load: {}", e.getMessage());
+//                return ResponseEntity.badRequest().body(null);
+//            }
             
             // Also update ConfigurationService to keep it in sync (for any legacy code that might use it)
             configService.replaceConfiguration(loadedConfig);
@@ -954,12 +962,16 @@ public class GlobalConfigController {
                 }
                 
                 // Create and set a new ExecuteSession as the single source of truth
-                // Don't bother with ConfigurationService - just use ExecuteSessionService
+                // Don't bother with ConfigurationService - just use SessionManager
                 String sessionId = actualFilename != null ? actualFilename.replace(".yaml", "").replace(".yml", "") : "uploaded-config";
                 log.info("Creating new session with ID: {}", sessionId);
-                com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = executeSessionService.createSession(sessionId, uploadedConfig);
-                log.info("Created session, setting as current...");
-                executeSessionService.setSession(session);
+//                try {
+                    com.cloudera.utils.hms.mirror.domain.support.ExecuteSession session = sessionManager.createSession(sessionId, uploadedConfig);
+                    log.info("Created session, setting as current...");
+//                } catch (SessionException e) {
+//                    log.error("Error creating session for config upload: {}", e.getMessage());
+//                    return ResponseEntity.badRequest().build();
+//                }
                 
                 // Also update ConfigurationService to keep it in sync (for any legacy code that might use it)
                 configService.replaceConfiguration(uploadedConfig);

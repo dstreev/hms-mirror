@@ -31,6 +31,7 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.protocol.ExecutionContext;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -77,6 +78,7 @@ public class HMSMirrorAppService {
     private final EnvironmentService environmentService;
     private final ExecuteSessionService executeSessionService;
     private final ReportWriterService reportWriterService;
+    private final SessionManager sessionManager;
     private final TableService tableService;
     private final TranslatorService translatorService;
     private final TransferService transferService;
@@ -85,6 +87,7 @@ public class HMSMirrorAppService {
                                ConnectionPoolService connectionPoolService,
                                DatabaseService databaseService,
                                ReportWriterService reportWriterService,
+                               SessionManager sessionManager,
                                TableService tableService,
                                TranslatorService translatorService,
                                TransferService transferService,
@@ -94,6 +97,7 @@ public class HMSMirrorAppService {
         this.connectionPoolService = connectionPoolService;
         this.databaseService = databaseService;
         this.reportWriterService = reportWriterService;
+        this.sessionManager = sessionManager;
         this.tableService = tableService;
         this.translatorService = translatorService;
         this.transferService = transferService;
@@ -121,21 +125,62 @@ public class HMSMirrorAppService {
         return rtn;
     }
 
-    @Async("executionThreadPool")
-    public CompletableFuture<Boolean> run() {
+    /*
+    In this case, we want the session to remain the same as the calling thread.
+    The session for this thread is the same via the "ThreadPoolConfigurator" and the Decorator process that inherits
+    the session from the calling thread.
+     */
+    @Async("cliExecutionThreadPool")
+    public CompletableFuture<Boolean> cliRun() {
         Boolean rtn = Boolean.TRUE;
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-        // Clean up session before continuing.
+        ExecuteSession session = sessionManager.getCurrentSession();
+        rtn = theWork(session);
+        return CompletableFuture.completedFuture(rtn);
+
+    }
+
+    /*
+    This method is were all the work starts.  The configuration and asks are configured before this point.  The passed in
+    objects are 'deep' copies of the working objects in the ExecuteSession and will be used to drive forward.
+
+    The incoming 'masterSession' is needed to establish a 'run instance' for this thread. So we need to create a new
+    session and add 'clones' to the new session.
+     */
+    @Async("executionThreadPool")
+    public CompletableFuture<Boolean> run(RunStatus runStatus, ConversionRequest conversionRequest,
+                                          ConversionResult conversionResult, HmsMirrorConfig config, ExecuteSession masterSession) {
+        Boolean rtn = Boolean.TRUE;
+        // Now that we're in a new Thread, create a New Session for this thread and set the id to the masterSession id + subId.
+        ExecuteSession session = sessionManager.createSession(masterSession.getNextSubSessionId(), config);
         config.reset();
+        session.setRunStatus(runStatus);
+
+        // Set cloned ConversionRequest and ConversionResult if not null.
+        if (conversionRequest != null) {
+            session.setConversionRequest(conversionRequest.clone());
+        }
+        if (conversionResult != null) {
+            session.setConversionResult(conversionResult.clone());
+        }
+        rtn = theWork(session);
+        return CompletableFuture.completedFuture(rtn);
+
+    }
+
+    private Boolean theWork(ExecuteSession session) {
+        Boolean rtn = Boolean.TRUE;
+
+        HmsMirrorConfig config = session.getConfig();
+        ConversionResult conversionResult = session.getConversionResult();
         RunStatus runStatus = session.getRunStatus();
+
         // Transfer the Comment.
         if (config.getComment() != null) {
             runStatus.setComment(config.getComment());
         } else {
             runStatus.setComment("No comments provided for this run.  Consider adding one for easier tracking.");
         }
-        ConversionResult conversionResult = session.getConversionResult();
+
         // Reset Start time to the actual 'execution' start time.
         runStatus.setStart(new Date());
         runStatus.setProgress(ProgressEnum.STARTED);
@@ -148,7 +193,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
             reportWriterService.wrapup();
             runStatus.setProgress(ProgressEnum.FAILED);
-            return CompletableFuture.completedFuture(Boolean.FALSE);
+            return Boolean.FALSE;
         }
 
         if (!config.isLoadingTestData()) {
@@ -172,7 +217,7 @@ public class HMSMirrorAppService {
                     runStatus.setProgress(ProgressEnum.FAILED);
                     connectionPoolService.close();
                     runStatus.setProgress(ProgressEnum.FAILED);
-                    return CompletableFuture.completedFuture(Boolean.FALSE);
+                    return Boolean.FALSE;
                 }
             } catch (SQLException sqle) {
                 log.error("Issue refreshing connections pool", sqle);
@@ -180,35 +225,35 @@ public class HMSMirrorAppService {
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             } catch (URISyntaxException e) {
                 log.error("URI issue with connections pool", e);
                 runStatus.addError(CONNECTION_ISSUE, e.getMessage());
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             } catch (SessionException se) {
                 log.error("Issue with Session", se);
                 runStatus.addError(SESSION_ISSUE, se.getMessage());
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             } catch (EncryptionException ee) {
                 log.error("Issue with Decryption", ee);
                 runStatus.addError(ENCRYPTION_ISSUE, ee.getMessage());
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             } catch (RuntimeException rte) {
                 log.error("Runtime Issue", rte);
                 runStatus.addError(SESSION_ISSUE, rte.getMessage());
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             }
         } else {
             runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.SKIPPED);
@@ -233,6 +278,7 @@ public class HMSMirrorAppService {
         }
 
         log.info("Starting Application Workflow");
+        log.info("Debug: isLoadingTestData={}, isDatabaseOnly={}", config.isLoadingTestData(), config.isDatabaseOnly());
         runStatus.setProgress(ProgressEnum.IN_PROGRESS);
 
         Date startTime = new Date();
@@ -280,7 +326,7 @@ public class HMSMirrorAppService {
                 reportWriterService.wrapup();
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             } finally {
                 if (nonNull(conn)) {
                     try {
@@ -305,7 +351,7 @@ public class HMSMirrorAppService {
                 reportWriterService.wrapup();
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             }
         } else {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.SKIPPED);
@@ -316,7 +362,7 @@ public class HMSMirrorAppService {
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             connectionPoolService.close();
             runStatus.setProgress(ProgressEnum.FAILED);
-            return CompletableFuture.completedFuture(Boolean.FALSE);
+            return Boolean.FALSE;
         }
 
         List<CompletableFuture<ReturnStatus>> gtf = new ArrayList<>();
@@ -347,7 +393,7 @@ public class HMSMirrorAppService {
                     reportWriterService.wrapup();
                     connectionPoolService.close();
                     runStatus.setProgress(ProgressEnum.FAILED);
-                    return CompletableFuture.completedFuture(Boolean.FALSE);
+                    return Boolean.FALSE;
                 } catch (RuntimeException rte) {
                     log.error("Runtime Issue", rte);
                     runStatus.addError(MISC_ERROR, rte.getMessage());
@@ -356,11 +402,11 @@ public class HMSMirrorAppService {
                     reportWriterService.wrapup();
                     connectionPoolService.close();
                     runStatus.setProgress(ProgressEnum.FAILED);
-                    return CompletableFuture.completedFuture(Boolean.FALSE);
+                    return Boolean.FALSE;
                 }
 
                 // Build out the table in a database.
-                if (!config.isLoadingTestData() && !config.isDatabaseOnly()) {
+                if (!config.isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
                     CompletableFuture<ReturnStatus> gt = getTableService().getTables(dbMirror);
                     gtf.add(gt);
@@ -401,9 +447,10 @@ public class HMSMirrorAppService {
                 reportWriterService.wrapup();
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             }
         } else {
+            log.warn("DAVID DEBUG: Skipping database and table stages for test data");
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.SKIPPED);
             runStatus.setStage(StageEnum.TABLES, CollectionEnum.SKIPPED);
         }
@@ -436,7 +483,7 @@ public class HMSMirrorAppService {
 
                 runStatus.setProgress(ProgressEnum.FAILED);
 
-                return CompletableFuture.completedFuture(Boolean.FALSE);
+                return Boolean.FALSE;
             }
         }
 
@@ -468,7 +515,10 @@ public class HMSMirrorAppService {
         }
 
         // Shortcut.  Only DB's.
+        log.warn("DAVID DEBUG: Processing tables: isDatabaseOnly={}, isLoadingTestData={}, collectedDbs={}",
+                config.isDatabaseOnly(), config.isLoadingTestData(), conversionResult.getDatabases().keySet());
         if (!config.isDatabaseOnly()) {
+            log.warn("DAVID DEBUG: Entering table processing section");
             Set<String> collectedDbs = conversionResult.getDatabases().keySet();
             // ========================================
             // Get the table METADATA for the tables collected in the databases.
@@ -740,6 +790,6 @@ public class HMSMirrorAppService {
             connectionPoolService.close();
         }
 
-        return CompletableFuture.completedFuture(rtn);
+        return rtn;
     }
 }

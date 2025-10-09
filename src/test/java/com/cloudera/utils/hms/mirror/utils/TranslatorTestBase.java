@@ -69,6 +69,8 @@ public abstract class TranslatorTestBase {
 
     ExecuteSessionService executeSessionService;
 
+    SessionManager sessionManager;
+
     WarehouseService warehouseService;
 
     LocationTranslator locationTranslator;
@@ -117,16 +119,18 @@ public abstract class TranslatorTestBase {
         // Create real LocationTranslator with test configuration
         locationTranslator = new LocationTranslatorImpl(configProvider);
 
+        // SessionManager needs: ExecuteSessionService
+        sessionManager = new SessionManager(executeSessionService);
+
         // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
         translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
 
-        ExecuteSession session = executeSessionService.createSession("test-session", config);
-        executeSessionService.setSession(session);
-        try {
-            executeSessionService.startSession(1);
-        } catch (SessionException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+            ExecuteSession session = sessionManager.createSession("test-session", config);
+//            sessionManager.startSession(1);
+//        } catch (SessionException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
     /**

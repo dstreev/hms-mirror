@@ -26,7 +26,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @ToString
-public class Pair {
+public class Pair implements Cloneable {
     private String description;
     private String action;
 
@@ -36,6 +36,15 @@ public class Pair {
     public Pair(String description, String action) {
         this.description = description;
         this.action = action;
+    }
+
+    @Override
+    public Pair clone() {
+        try {
+            return (Pair) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for Pair", e);
+        }
     }
 
 }

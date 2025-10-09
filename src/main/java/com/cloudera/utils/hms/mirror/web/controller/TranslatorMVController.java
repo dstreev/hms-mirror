@@ -111,7 +111,7 @@ public class TranslatorMVController {
         executeSessionService.closeSession();
         ExecuteSession session = executeSessionService.getSession();
         configService.validateForConnections(session);
-        if (executeSessionService.startSession(maxThreads)) {
+//        if (executeSessionService.startSession(maxThreads)) {
             session = executeSessionService.getSession();
             HmsMirrorConfig config = session.getConfig();
             int lclConsolidationLevel = consolidationLevel != null ? consolidationLevel : 1;
@@ -144,11 +144,11 @@ public class TranslatorMVController {
                 configService.validate(executeSessionService.getSession(), null);
                 return "redirect:/config/view";
             }
-        } else {
-            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
-            model.addAttribute(TYPE, "Connections");
-            model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
-            return "error";
-        }
+//        } else {
+//            uiModelService.sessionToModel(model, 1, Boolean.FALSE);
+//            model.addAttribute(TYPE, "Connections");
+//            model.addAttribute(MESSAGE, "Issue validating connections.  Review Messages and try again.");
+//            return "error";
+//        }
     }
 }

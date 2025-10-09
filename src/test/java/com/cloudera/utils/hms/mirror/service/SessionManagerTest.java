@@ -62,10 +62,6 @@ class SessionManagerTest {
         // Given
         String sessionId = "test-session";
         HmsMirrorConfig config = new HmsMirrorConfig();
-        ExecuteSession expectedSession = new ExecuteSession();
-        expectedSession.setSessionId(sessionId);
-        
-        when(executeSessionService.createSession(sessionId, config)).thenReturn(expectedSession);
 
         // When
         ExecuteSession result = sessionManager.createSession(sessionId, config);
@@ -80,10 +76,6 @@ class SessionManagerTest {
     void testGetCurrentSessionFromHttpSession() throws SessionException {
         // Given
         String sessionId = "web-session";
-        ExecuteSession session = new ExecuteSession();
-        session.setSessionId(sessionId);
-        
-        when(executeSessionService.createSession(sessionId, null)).thenReturn(session);
         
         // When
         sessionManager.createSession(sessionId, null);
@@ -98,10 +90,6 @@ class SessionManagerTest {
     void testGetCurrentSessionWithoutHttpSession() {
         // Given - clear the request context
         RequestContextHolder.setRequestAttributes(null);
-        ExecuteSession defaultSession = new ExecuteSession();
-        defaultSession.setSessionId(SessionManager.DEFAULT_SESSION_ID);
-        
-        when(executeSessionService.getSession()).thenReturn(defaultSession);
 
         // When
         ExecuteSession result = sessionManager.getCurrentSession();
@@ -113,12 +101,6 @@ class SessionManagerTest {
 
     @Test
     void testGetDefaultSession() {
-        // Given
-        ExecuteSession defaultSession = new ExecuteSession();
-        defaultSession.setSessionId(SessionManager.DEFAULT_SESSION_ID);
-        
-        when(executeSessionService.getOrCreateDefaultSession()).thenReturn(defaultSession);
-
         // When
         ExecuteSession result = sessionManager.getDefaultSession();
 
@@ -129,12 +111,6 @@ class SessionManagerTest {
 
     @Test
     void testCreateDefaultSessionWhenNull() throws SessionException {
-        // Given
-        when(executeSessionService.getOrCreateDefaultSession()).thenReturn(null);
-        ExecuteSession defaultSession = new ExecuteSession();
-        defaultSession.setSessionId(SessionManager.DEFAULT_SESSION_ID);
-        when(executeSessionService.createSession(SessionManager.DEFAULT_SESSION_ID, null)).thenReturn(defaultSession);
-
         // When
         ExecuteSession result = sessionManager.getDefaultSession();
 
@@ -148,10 +124,6 @@ class SessionManagerTest {
         // Given
         String sessionId = "specific-session";
         HmsMirrorConfig config = new HmsMirrorConfig();
-        ExecuteSession session = new ExecuteSession();
-        session.setSessionId(sessionId);
-        
-        when(executeSessionService.createSession(sessionId, config)).thenReturn(session);
 
         // When
         sessionManager.createSession(sessionId, config);
@@ -167,10 +139,6 @@ class SessionManagerTest {
         // Given
         String sessionId = "session-to-close";
         HmsMirrorConfig config = new HmsMirrorConfig();
-        ExecuteSession session = new ExecuteSession();
-        session.setSessionId(sessionId);
-        
-        when(executeSessionService.createSession(sessionId, config)).thenReturn(session);
 
         // When
         sessionManager.createSession(sessionId, config);
@@ -187,17 +155,6 @@ class SessionManagerTest {
         // Given
         String session1Id = "session1";
         String session2Id = "session2";
-        
-        ExecuteSession session1 = new ExecuteSession();
-        session1.setSessionId(session1Id);
-        ExecuteSession session2 = new ExecuteSession();
-        session2.setSessionId(session2Id);
-        ExecuteSession defaultSession = new ExecuteSession();
-        defaultSession.setSessionId(SessionManager.DEFAULT_SESSION_ID);
-        
-        when(executeSessionService.createSession(session1Id, null)).thenReturn(session1);
-        when(executeSessionService.createSession(session2Id, null)).thenReturn(session2);
-        when(executeSessionService.getOrCreateDefaultSession()).thenReturn(defaultSession);
 
         // When
         sessionManager.createSession(session1Id, null);
@@ -216,10 +173,6 @@ class SessionManagerTest {
     void testIsSessionExists() throws SessionException {
         // Given
         String sessionId = "existing-session";
-        ExecuteSession session = new ExecuteSession();
-        session.setSessionId(sessionId);
-        
-        when(executeSessionService.createSession(sessionId, null)).thenReturn(session);
 
         // When
         assertFalse(sessionManager.isSessionExists(sessionId));

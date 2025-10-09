@@ -72,6 +72,8 @@ public class ServiceTestBase {
 
     ExecuteSessionService executeSessionService;
 
+    SessionManager sessionManager;
+
     WarehouseService warehouseService;
 
     @Mock
@@ -102,19 +104,21 @@ public class ServiceTestBase {
         // ExecuteSessionService needs: ConfigService, CliEnvironment, ConnectionPoolService
         executeSessionService = new ExecuteSessionService(configService, cliEnvironment, connectionPoolService);
 
+        // SessionManager needs: ExecuteSessionService
+        sessionManager = new SessionManager(executeSessionService);
+
         // Warehouse needs: ExecuteSessionService,
         warehouseService = new WarehouseService(executeSessionService);
 
         // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
         translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
 
-        ExecuteSession session = executeSessionService.createSession("test-session", config);
-        executeSessionService.setSession(session);
-        try {
-            executeSessionService.startSession(1);
-        } catch (SessionException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+            ExecuteSession session = sessionManager.createSession("test-session", config);
+//            sessionManager.startSession(1);
+//        } catch (SessionException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
     // TODO: Move to TranslatorTest

@@ -104,29 +104,25 @@ public class SessionManager {
         if (defaultSession == null) {
             synchronized (this) {
                 if (defaultSession == null) {
-                    defaultSession = executeSessionService.getOrCreateDefaultSession();
-                    if (defaultSession == null) {
-                        try {
-                            defaultSession = createSession(DEFAULT_SESSION_ID, null);
-                        } catch (SessionException e) {
-                            log.error("Failed to create default session", e);
-                            throw new RuntimeException("Failed to create default session", e);
-                        }
-                    }
+                    // Use SessionContextHolder for consistent session creation
+                    defaultSession = SessionContextHolder.getOrCreateSession(DEFAULT_SESSION_ID);
                 }
             }
         }
         return defaultSession;
     }
 
-    public ExecuteSession createSession(String sessionId, HmsMirrorConfig config) throws SessionException {
+    public ExecuteSession createSession(String sessionId, HmsMirrorConfig config) {
         String actualSessionId = isBlank(sessionId) ? DEFAULT_SESSION_ID : sessionId;
         
-        ExecuteSession session = executeSessionService.createSession(actualSessionId, config);
+        // Use SessionContextHolder for centralized session creation
+        ExecuteSession session = SessionContextHolder.getOrCreateSession(actualSessionId);
+        if (config != null) {
+            session.setConfig(config.clone());
+        }
         
         if (DEFAULT_SESSION_ID.equals(actualSessionId)) {
             defaultSession = session;
-            executeSessionService.setSession(session);
         } else {
             sessions.put(actualSessionId, session);
         }
@@ -144,17 +140,17 @@ public class SessionManager {
         }
         
         ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        
-        if (attr != null) {
-            HttpSession httpSession = attr.getRequest().getSession(true);
-            httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, session);
-            log.debug("Associated ExecuteSession {} with HTTP session {}", 
-                     session.getSessionId(), httpSession.getId());
-        }
+
+        // Not sure this is helpful.  It's possible we'll have multiple ExecuteSessions per HTTP session.
+//        if (attr != null) {
+//            HttpSession httpSession = attr.getRequest().getSession(true);
+//            httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, session);
+//            log.debug("Associated ExecuteSession {} with HTTP session {}",
+//                     session.getSessionId(), httpSession.getId());
+//        }
     }
 
     public boolean save(HmsMirrorConfig config, int maxThreads) throws SessionException {
-        ExecuteSession session = getCurrentSession();
         return executeSessionService.save(config, maxThreads);
     }
 
@@ -164,41 +160,33 @@ public class SessionManager {
             throw new SessionException("Session not found: " + sessionId);
         }
         
-        ExecuteSession originalSession = executeSessionService.getSession();
+        ExecuteSession originalSession = SessionContextHolder.getSession();
         try {
-            executeSessionService.setSession(session);
+            SessionContextHolder.setSession(session);
             return executeSessionService.save(config, maxThreads);
         } finally {
-            executeSessionService.setSession(originalSession);
+            SessionContextHolder.setSession(originalSession);
         }
     }
 
-    public Boolean startSession(Integer concurrency) throws SessionException {
-        ExecuteSession session = getCurrentSession();
-        
-        ExecuteSession originalSession = executeSessionService.getSession();
-        try {
-            executeSessionService.setSession(session);
-            return executeSessionService.startSession(concurrency);
-        } finally {
-            executeSessionService.setSession(originalSession);
-        }
-    }
-
-    public Boolean startSession(String sessionId, Integer concurrency) throws SessionException {
-        ExecuteSession session = getCurrentSession(sessionId);
-        if (session == null) {
-            throw new SessionException("Session not found: " + sessionId);
-        }
-        
-        ExecuteSession originalSession = executeSessionService.getSession();
-        try {
-            executeSessionService.setSession(session);
-            return executeSessionService.startSession(concurrency);
-        } finally {
-            executeSessionService.setSession(originalSession);
-        }
-    }
+//    public Boolean startSession(Integer concurrency) throws SessionException {
+//        return executeSessionService.startSession(concurrency);
+//    }
+//
+//    public Boolean startSession(String sessionId, Integer concurrency) throws SessionException {
+//        ExecuteSession session = getCurrentSession(sessionId);
+//        if (session == null) {
+//            throw new SessionException("Session not found: " + sessionId);
+//        }
+//
+//        ExecuteSession originalSession = SessionContextHolder.getSession();
+//        try {
+//            SessionContextHolder.setSession(session);
+//            return executeSessionService.startSession(concurrency);
+//        } finally {
+//            SessionContextHolder.setSession(originalSession);
+//        }
+//    }
 
     public void closeSession(String sessionId) throws SessionException {
         if (isBlank(sessionId) || DEFAULT_SESSION_ID.equals(sessionId)) {

@@ -17,6 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.service;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
@@ -42,6 +45,7 @@ public class RuntimeService {
     private final DatabaseService databaseService;
     private final ExecuteSessionService executeSessionService;
     private final HMSMirrorAppService hmsMirrorAppService;
+    private final SessionManager sessionManager;
     private final TranslatorService translatorService;
 
     public RuntimeService(
@@ -49,37 +53,44 @@ public class RuntimeService {
             DatabaseService databaseService,
             ExecuteSessionService executeSessionService,
             HMSMirrorAppService hmsMirrorAppService,
+            SessionManager sessionManager,
             TranslatorService translatorService) {
         this.configService = configService;
         this.databaseService = databaseService;
         this.executeSessionService = executeSessionService;
         this.hmsMirrorAppService = hmsMirrorAppService;
+        this.sessionManager = sessionManager;
         this.translatorService = translatorService;
     }
 
     public RunStatus start(boolean dryrun,
                            Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
-        RunStatus runStatus = null;
         ExecuteSession session = executeSessionService.getSession();
-        if (executeSessionService.startSession(concurrency)) {
-            session = executeSessionService.getSession();
-            runStatus = session.getRunStatus();
-//            if (configService.validate(session, executeSessionService.getCliEnvironment())) {
-                if (runStatus.reset()) {
-                    executeSessionService.getSession().getConfig().setExecute(!dryrun);
-                    // Start job in a separate thread.
-                    CompletableFuture<Boolean> runningTask = hmsMirrorAppService.run();
-                    // Set the running task reference in the RunStatus.
-                    runStatus.setRunningTask(runningTask);
-                }
-//            } else {
-//                runStatus.addError(MessageCode.CONFIG_INVALID);
-//                runStatus.setProgress(ProgressEnum.FAILED);
-//            }
-        } else {
-            throw new SessionException("Session is already running. " +
-                    "You can't start a new session while the current session is running.");
-        }
+
+        HmsMirrorConfig config = session.getConfig();
+        ConversionRequest conversionRequest = session.getConversionRequest();
+        ConversionResult conversionResult = session.getConversionResult();
+        log.debug("Starting the HMS Mirror Application");
+        RunStatus runStatus = new RunStatus();
+        session.addSubRunStatus(runStatus);
+        // NOTE: The transitionToActive process happens in another bean....
+        CompletableFuture<Boolean> result = hmsMirrorAppService.run(runStatus, conversionRequest, conversionResult, config, session);
+        runStatus.setRunningTask(result);
+
+//        session = executeSessionService.getSession();
+//        runStatus = session.getRunStatus();
+////            if (configService.validate(session, executeSessionService.getCliEnvironment())) {
+//        if (runStatus.reset()) {
+//            executeSessionService.getSession().getConfig().setExecute(!dryrun);
+//            // Start job in a separate thread.
+//            CompletableFuture<Boolean> runningTask = hmsMirrorAppService.run();
+//            // Set the running task reference in the RunStatus.
+//            runStatus.setRunningTask(runningTask);
+//        }
+////            } else {
+////                runStatus.addError(MessageCode.CONFIG_INVALID);
+////                runStatus.setProgress(ProgressEnum.FAILED);
+////            }
         return runStatus;
     }
 }

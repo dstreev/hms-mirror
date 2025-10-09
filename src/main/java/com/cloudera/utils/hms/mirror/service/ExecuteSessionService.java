@@ -24,19 +24,15 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.jcabi.manifests.Manifests;
 import org.springframework.beans.factory.annotation.Autowired;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.ENCRYPTED_PASSWORD_CHANGE_ATTEMPT;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -54,26 +50,9 @@ public class ExecuteSessionService {
     // Optional injection to avoid circular dependency
     private SessionKeepAliveService sessionKeepAliveService;
 
-    /*
-    This is the current session that can be modified (but not running yet).  This is where
-    configurations can be changed before running.  Once the session is kicked off, the object
-    should be cloned and the original session moved to the 'activeSession' field and added
-    to the 'executeSessionQueue'.
-    
-    NOTE: For multi-session support, this represents the default session for CLI usage.
-    Web sessions are managed through SessionManager and HTTP session association.
-     */
-    @Setter
-    private ExecuteSession session;
-
     private String reportOutputDirectory;
 
     private boolean amendSessionIdToReportDir = Boolean.TRUE;
-
-    /**
-     * Used to limit the number of sessionHistory that are retained in memory.
-     */
-    private final Map<String, ExecuteSession> sessionHistory = new HashMap<>();
 
     /**
      * Constructor for ExecuteSessionService.
@@ -209,64 +188,29 @@ public class ExecuteSessionService {
         return rtn;
     }
 
-    public ExecuteSession createSession(String sessionId, HmsMirrorConfig hmsMirrorConfig) {
-        String sessionName = !isBlank(sessionId) ? sessionId : DEFAULT;
-        
-        ExecuteSession session = new ExecuteSession();
-        session.setSessionId(sessionName);
-        session.setConfig(hmsMirrorConfig);
-        return session;
-    }
 
     public void closeSession() throws SessionException {
         // No-op for now, but keeping method for future implementation
     }
 
     public ExecuteSession getSession() {
-        // For web context, try to get from thread-local context (set by interceptor)
+        // Always use SessionContextHolder for consistent session management across CLI and Web
         ExecuteSession contextSession = SessionContextHolder.getSession();
-        if (contextSession != null) {
-            log.debug("getSession() - Found session in thread context: {}", contextSession.getSessionId());
-            return contextSession;
-        }
-        
-        // For CLI context, fall back to local session field
-        log.debug("getSession() - No thread context session, returning local session: {}", 
-                 session != null ? session.getSessionId() : "null");
-        return session;
+        log.debug("getSession() - Using session from context: {}", contextSession.getSessionId());
+        return contextSession;
     }
 
     public ExecuteSession getSession(String sessionId) {
         if (isBlank(sessionId)) {
-            if (isNull(session)) {
-                log.error("No session loaded");
-                return null;
-            }
-            return session;
+            return getSession(); // Delegate to the main getSession method
         }
         
-        if (sessionHistory.containsKey(sessionId)) {
-            return sessionHistory.get(sessionId);
-        }
-        
-        log.error("Session not found: {}", sessionId);
-        return null;
+        // This method should not be used anymore - delegate to SessionManager instead
+        // For now, just return current session as fallback
+        log.warn("getSession(String) is deprecated - use SessionManager.getCurrentSession(String) instead");
+        return getSession();
     }
 
-    public ExecuteSession getOrCreateDefaultSession() {
-        // Check thread context first for web sessions
-        ExecuteSession contextSession = SessionContextHolder.getSession();
-        if (contextSession != null) {
-            log.debug("getOrCreateDefaultSession() - Using existing session from context: {}", contextSession.getSessionId());
-            return contextSession;
-        }
-        
-        // Fall back to local session for CLI usage
-        if (isNull(session)) {
-            session = createSession(DEFAULT, null);
-        }
-        return session;
-    }
 
     /*
       Look at the 'activeSession' and if it is not null, check that it is not running.
@@ -277,61 +221,58 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessionHistory separate.  The active session is the
         one that will be referenced during the run.
      */
-    public Boolean startSession(Integer concurrency) throws SessionException {
-        Boolean rtn = Boolean.TRUE;
-
-         ExecuteSession session = getSession();
-        // Set the concurrency.
-        session.setConcurrency(concurrency);
-
-        if (!isNull(session) && session.isRunning()) {
-            throw new SessionException("Session is still running.  Cannot transition to active.");
-        }
-
-        // This should get the loaded session and clone it.
-        if (isNull(session)) {
-            throw new SessionException("No session loaded.");
-        }
-
-        // Will create new RunStatus and set version info.
-        RunStatus runStatus = new RunStatus();
-        runStatus.setConcurrency(concurrency);
-        // Link the RunStatus to the session so users know what session details to retrieve.
-        runStatus.setSessionId(session.getSessionId());
-        runStatus.setProgress(ProgressEnum.STARTED);
-
-        // Reset for each transition.
-        // Set the active session id to the current date and time.
-        DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-        session.setSessionId(dtf.format(new Date()));
-
-        // If it's connected (Active Session), don't go through all this again.
-        log.debug("Configure and setup Session");
-        HmsMirrorConfig config = session.getConfig();
-
-        // TODO: Set Metastore Direct Concurrency.
-
-        // Connection Service should be set to the resolved config.
-        connectionPoolService.setExecuteSession(session);
-
-        try {
-            runStatus.setAppVersion(Manifests.read("HMS-Mirror-Version"));
-        } catch (IllegalArgumentException iae) {
-            runStatus.setAppVersion("Unknown");
-        }
-        // Set/Reset the run status.
-        session.setRunStatus(runStatus);
-
-        // New Conversion object for each run.
-        session.setConversionResult(new ConversionResult());
-
-        // Register session for keep-alive during execution
-        if (sessionKeepAliveService != null) {
-            sessionKeepAliveService.registerRunningSession(session.getSessionId());
-            log.debug("Registered session {} for keep-alive during execution", session.getSessionId());
-        }
-
-        return rtn;
-    }
+//    public Boolean startSession(Integer concurrency) throws SessionException {
+//        Boolean rtn = Boolean.TRUE;
+//
+//         ExecuteSession session = getSession();
+//        // Set the concurrency.
+//        session.setConcurrency(concurrency);
+//
+//        if (session.isRunning()) {
+//            throw new SessionException("Session is still running.  Cannot transition to active.");
+//        }
+//
+//        // Will create new RunStatus and set version info.
+//        RunStatus runStatus = new RunStatus();
+//        runStatus.setConcurrency(concurrency);
+//        // Link the RunStatus to the session so users know what session details to retrieve.
+//        runStatus.setSessionId(session.getSessionId());
+//        runStatus.setProgress(ProgressEnum.STARTED);
+//
+//        // Reset for each transition.
+//        // Set the active session id to the current date and time, only if not already set.
+//        if (session.getSessionId() == null || session.getSessionId().equals("default")) {
+//            DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+//            session.setSessionId(dtf.format(new Date()));
+//        }
+//
+//        // If it's connected (Active Session), don't go through all this again.
+//        log.debug("Configure and setup Session");
+//        HmsMirrorConfig config = session.getConfig();
+//
+//        // TODO: Set Metastore Direct Concurrency.
+//
+//        // Connection Service should be set to the resolved config.
+//        connectionPoolService.setExecuteSession(session);
+//
+//        try {
+//            runStatus.setAppVersion(Manifests.read("HMS-Mirror-Version"));
+//        } catch (IllegalArgumentException iae) {
+//            runStatus.setAppVersion("Unknown");
+//        }
+//        // Set/Reset the run status.
+//        session.setRunStatus(runStatus);
+//
+//        // New Conversion object for each run.
+//        session.setConversionResult(new ConversionResult());
+//
+//        // Register session for keep-alive during execution
+//        if (sessionKeepAliveService != null) {
+//            sessionKeepAliveService.registerRunningSession(session.getSessionId());
+//            log.debug("Registered session {} for keep-alive during execution", session.getSessionId());
+//        }
+//
+//        return rtn;
+//    }
 
 }

@@ -72,6 +72,7 @@ public class TableService {
     private final TranslatorService translatorService;
     private final StatsCalculatorService statsCalculatorService;
     private final TableOperations tableOperations;  // NEW: Core business logic injection
+    private final SessionManager sessionManager;
 
     // Assuming your logger is already defined, e.g.
     // private static final Logger log = LoggerFactory.getLogger(TableService.class);
@@ -83,8 +84,8 @@ public class TableService {
             QueryDefinitionsService queryDefinitionsService,
             TranslatorService translatorService,
             StatsCalculatorService statsCalculatorService,
-            TableOperations tableOperations  // NEW: Inject core business logic
-    ) {
+            TableOperations tableOperations,  // NEW: Inject core business logic
+            SessionManager sessionManager) {
         log.debug("Initializing TableService with provided service dependencies and core business logic");
         this.configService = configService;
         this.executeSessionService = executeSessionService;
@@ -93,17 +94,18 @@ public class TableService {
         this.translatorService = translatorService;
         this.statsCalculatorService = statsCalculatorService;
         this.tableOperations = tableOperations;  // NEW
+        this.sessionManager = sessionManager;
     }
 
     /**
      * Checks the table filter using the new core business logic.
      * This method now delegates to the pure business logic layer.
      */
-    protected void checkTableFilter(TableMirror tableMirror, Environment environment) {
+    protected void checkTableFilter(ExecuteSession session, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
         
         // NEW: Delegate to core business logic instead of doing it inline
-        ValidationResult result = tableOperations.validateTableFilter(tableMirror, environment);
+        ValidationResult result = tableOperations.validateTableFilter(session, tableMirror, environment);
         
         // Handle the result in Spring-specific way (side effects, metrics, etc.)
         if (!result.isValid()) {
@@ -117,7 +119,7 @@ public class TableService {
             // For ACID tables that pass validation, add the TRANSACTIONAL step
             EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
             if (et != null && TableUtils.isManaged(et) && TableUtils.isACID(et)) {
-                ExecuteSession session = executeSessionService.getSession();
+//                ExecuteSession session = executeSessionService.getSession();
                 HmsMirrorConfig config = session.getConfig();
                 if (config.getMigrateACID().isOn()) {
                     tableMirror.addStep("TRANSACTIONAL", Boolean.TRUE);
@@ -173,13 +175,15 @@ public class TableService {
      * @param tableMirror The table mirror object.
      * @param environment The environment (LEFT or RIGHT).
      */
-    public void getTableDefinition(TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
+    private void getTableDefinition(ExecuteSession session, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
         final String tableId = String.format("%s:%s.%s",
                 environment, tableMirror.getParent().getName(), tableMirror.getName());
         log.info("Fetching table definition for table: {} in environment: {}", tableMirror.getName(), environment);
 //        EnvironmentTable environmentTable = null;
         log.info("Starting to get table definition for {}", tableId);
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+//        ExecuteSession s_session = sessionManager.getCurrentSession();
+//        ExecuteSession session = executeSessionService.getSession();
+        HmsMirrorConfig config = session.getConfig();
 //            environmentTable = tableMirror.getEnvironmentTable(environment);
         // Fetch Table Definition
         if (config.isLoadingTestData()) {
@@ -189,7 +193,7 @@ public class TableService {
             loadSchemaFromCatalog(tableMirror, environment);
         }
         log.debug("Checking table filter for {}", tableId);
-        checkTableFilter(tableMirror, environment);
+        checkTableFilter(session, tableMirror, environment);
         if (!tableMirror.isRemove() && !config.isLoadingTestData()) {
             log.debug("Table is not marked for removal. Proceeding with data strategy checks for {}", tableId);
             handleDataStrategy(config, tableMirror, environment, environmentTable, tableId);
@@ -254,15 +258,16 @@ public class TableService {
         ReturnStatus rtn = new ReturnStatus();
         // Preset and overwrite the status when an issue or anomoly occurs.
         rtn.setStatus(ReturnStatus.Status.SUCCESS);
+        ExecuteSession session = executeSessionService.getSession();
+
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // ...logic...
                 rtn.setTableMirror(tableMirror);
-                HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-                RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+                HmsMirrorConfig hmsMirrorConfig = session.getConfig();
                 EnvironmentTable leftEnvTable = tableMirror.getEnvironmentTable(Environment.LEFT);
                 try {
-                    getTableDefinition(tableMirror, leftEnvTable, Environment.LEFT);
+                    getTableDefinition(session, tableMirror, leftEnvTable, Environment.LEFT);
                     if (tableMirror.isRemove()) {
                         rtn.setStatus(ReturnStatus.Status.SKIP);
                         return rtn;
@@ -281,7 +286,7 @@ public class TableService {
                             default:
                                 EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                                 try {
-                                    getTableDefinition(tableMirror, rightEnvTable, Environment.RIGHT);
+                                    getTableDefinition(session, tableMirror, rightEnvTable, Environment.RIGHT);
                                     rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                                 } catch (SQLException se) {
                                     // Can't find the table on the RIGHT.  This is OK if the table doesn't exist.
@@ -295,7 +300,7 @@ public class TableService {
                     if (hmsMirrorConfig.isSync()) {
                         EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                         try {
-                            getTableDefinition(tableMirror, rightEnvTable, Environment.RIGHT);
+                            getTableDefinition(session, tableMirror, rightEnvTable, Environment.RIGHT);
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                         } catch (SQLException se) {
                             // OK, if the db doesn't exist yet.

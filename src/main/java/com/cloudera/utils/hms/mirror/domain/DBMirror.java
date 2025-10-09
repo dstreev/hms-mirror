@@ -38,7 +38,7 @@ import static java.util.Objects.nonNull;
 @Setter
 @Slf4j
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DBMirror {
+public class DBMirror implements Cloneable {
 
     private final Map<Environment, List<String>> issues = new TreeMap<>();
     /*
@@ -299,6 +299,86 @@ public class DBMirror {
 //            tableMirror.getSql().clear();
 //            tableMirror.getStatistics().clear();
             tableMirror.getSteps().clear();
+        }
+    }
+
+    @Override
+    public DBMirror clone() {
+        try {
+            DBMirror clone = (DBMirror) super.clone();
+            
+            // Clone the final Maps by clearing and repopulating them
+            // Note: We can't reassign final fields, but we can clear and repopulate them
+            
+            // Clone issues map (final field)
+            clone.issues.clear();
+            for (Map.Entry<Environment, List<String>> entry : this.issues.entrySet()) {
+                clone.issues.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            }
+            
+            // Clone filteredOut map (final field)
+            clone.filteredOut.clear();
+            clone.filteredOut.putAll(this.filteredOut);
+            
+            // Clone sql map (final field)
+            clone.sql.clear();
+            for (Map.Entry<Environment, List<Pair>> entry : this.sql.entrySet()) {
+                List<Pair> clonedList = new ArrayList<>();
+                for (Pair pair : entry.getValue()) {
+                    // Pair is immutable, so we can share the reference
+                    clonedList.add(pair);
+                }
+                clone.sql.put(entry.getKey(), clonedList);
+            }
+            
+            // Clone problemSQL map (final field)
+            clone.problemSQL.clear();
+            for (Map.Entry<Environment, Map<String, String>> entry : this.problemSQL.entrySet()) {
+                clone.problemSQL.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+            }
+            
+            // Clone non-final fields
+            if (this.properties != null) {
+                clone.properties = new TreeMap<>();
+                for (Map.Entry<Environment, Map<String, String>> entry : this.properties.entrySet()) {
+                    if (entry.getValue() != null) {
+                        clone.properties.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+                    } else {
+                        clone.properties.put(entry.getKey(), null);
+                    }
+                }
+            }
+            
+            // Clone tableMirrors map and its contents
+            if (this.tableMirrors != null) {
+                clone.tableMirrors = new TreeMap<>();
+                for (Map.Entry<String, TableMirror> entry : this.tableMirrors.entrySet()) {
+                    if (entry.getValue() != null) {
+                        // Deep clone TableMirror objects
+                        TableMirror clonedTableMirror = entry.getValue().clone();
+                        clonedTableMirror.setParent(clone);  // Set the cloned table's parent to the clone
+                        clone.tableMirrors.put(entry.getKey(), clonedTableMirror);
+                    } else {
+                        clone.tableMirrors.put(entry.getKey(), null);
+                    }
+                }
+            }
+            
+            // Clone environmentStatistics map
+            if (this.environmentStatistics != null) {
+                clone.environmentStatistics = new TreeMap<>();
+                for (Map.Entry<Environment, Map<String, Number>> entry : this.environmentStatistics.entrySet()) {
+                    if (entry.getValue() != null) {
+                        clone.environmentStatistics.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+                    } else {
+                        clone.environmentStatistics.put(entry.getKey(), null);
+                    }
+                }
+            }
+            
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for DBMirror", e);
         }
     }
 

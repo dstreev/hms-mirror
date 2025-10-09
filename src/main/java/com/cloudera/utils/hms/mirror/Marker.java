@@ -24,7 +24,7 @@ import static java.util.Objects.isNull;
 
 @Getter
 @Setter
-public class Marker {
+public class Marker implements Cloneable {
     private String mark;
     private String description;
     private String action;
@@ -39,6 +39,15 @@ public class Marker {
             this.action = "";
         else
             this.action = action.toString();
+    }
+
+    @Override
+    public Marker clone() {
+        try {
+            return (Marker) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for Marker", e);
+        }
     }
 
 }

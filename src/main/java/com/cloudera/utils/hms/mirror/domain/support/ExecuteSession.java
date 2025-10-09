@@ -24,8 +24,12 @@ import com.jcabi.manifests.Manifests;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.xbill.DNS.dnssec.R;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -36,11 +40,16 @@ import static java.util.Objects.nonNull;
 public class ExecuteSession implements Cloneable {
 
     private String sessionId;
+    private AtomicInteger counter = new AtomicInteger(0);
     private int concurrency = 10; // Default
     private boolean connected = Boolean.FALSE;
     private Connections connections = new Connections();
+    // This is the List of RunStatuses.  The main session will have all of the RunStatuses for each of the sub-sessions
+    // kicked off for each of the sub-sessions.
     private RunStatus runStatus;
+    private List<RunStatus> subRunStatuses = new ArrayList<RunStatus>();
     private HmsMirrorConfig config;
+    private ConversionRequest conversionRequest;
     private ConversionResult conversionResult;
     
     public void addError(MessageCode code) {
@@ -57,6 +66,16 @@ public class ExecuteSession implements Cloneable {
 
     public void addWarning(MessageCode code, Object... args) {
         getRunStatus().addWarning(code, args);
+    }
+
+    public void addSubRunStatus(RunStatus runStatus) {
+        if (nonNull(runStatus)) {
+            this.subRunStatuses.add(runStatus);
+        }
+    }
+
+    public String getNextSubSessionId() {
+        return MessageFormat.format("{0}-{1}", getSessionId(), counter.incrementAndGet());
     }
 
     public void close() throws SessionException {

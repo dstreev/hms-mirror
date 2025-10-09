@@ -78,7 +78,7 @@ public class ReactSpaController {
             String sessionId = "web-" + httpSession.getId().substring(0, 8);
             log.debug("Creating ExecuteSession {} for HTTP session {}", sessionId, httpSession.getId());
             
-            try {
+//            try {
                 executeSession = sessionManager.createSession(sessionId, null);
                 if (executeSession != null) {
                     httpSession.setAttribute("executeSession", executeSession);
@@ -88,11 +88,11 @@ public class ReactSpaController {
                     executeSession = sessionManager.getDefaultSession();
                     httpSession.setAttribute("executeSession", executeSession);
                 }
-            } catch (SessionException e) {
-                log.warn("Failed to create ExecuteSession: {}, using default", e.getMessage());
-                executeSession = sessionManager.getDefaultSession();
-                httpSession.setAttribute(SessionManager.HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
-            }
+//            } catch (SessionException e) {
+//                log.warn("Failed to create ExecuteSession: {}, using default", e.getMessage());
+//                executeSession = sessionManager.getDefaultSession();
+//                httpSession.setAttribute(SessionManager.HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
+//            }
         } else {
             log.debug("ExecuteSession {} already exists for HTTP session {}", 
                      executeSession.getSessionId(), httpSession.getId());

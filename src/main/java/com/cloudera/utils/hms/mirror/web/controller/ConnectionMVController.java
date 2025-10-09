@@ -72,7 +72,7 @@ public class ConnectionMVController {
             URISyntaxException, EncryptionException {
 
         environmentService.setupGSS();
-        if (executeSessionService.startSession(1)) {
+//        if (executeSessionService.startSession(1)) {
             try {
                 RunStatus runStatus = executeSessionService.getSession().getRunStatus();
                 ExecuteSession session = executeSessionService.getSession();
@@ -95,7 +95,7 @@ public class ConnectionMVController {
                 executeSessionService.getSession().getRunStatus().addError(MessageCode.CONNECTION_ISSUE);
                 throw new SessionException(rte.getMessage());
             }
-        }
+//        }
 
         uiModelService.sessionToModel(model, 1, false);
 

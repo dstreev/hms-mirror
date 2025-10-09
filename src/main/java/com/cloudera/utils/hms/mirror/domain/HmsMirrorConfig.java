@@ -487,12 +487,48 @@ public class HmsMirrorConfig implements Cloneable {
     public HmsMirrorConfig clone() {
         try {
             HmsMirrorConfig clone = (HmsMirrorConfig) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
-
+            
+            // Deep clone all mutable objects to ensure complete independence
+            
+            // Clone the Date objects
+            clone.initDate = isNull(this.initDate) ? null : new Date(this.initDate.getTime());
+            
+            // Note: flags and supportFileSystems are final fields and cannot be reassigned
+            // They are initialized in constructor and shared between original and clone
+            clone.databases = isNull(this.databases) ? null : new TreeSet<>(this.databases);
+            
+            // Deep clone complex objects
+            clone.acceptance = isNull(this.acceptance) ? null : this.acceptance.clone();
+            clone.filter = isNull(this.filter) ? null : this.filter.clone();
+            clone.hybrid = isNull(this.hybrid) ? null : this.hybrid.clone();
+            clone.migrateACID = isNull(this.migrateACID) ? null : this.migrateACID.clone();
+            clone.migrateVIEW = isNull(this.migrateVIEW) ? null : this.migrateVIEW.clone();
+            clone.optimization = isNull(this.optimization) ? null : this.optimization.clone();
+            clone.transfer = isNull(this.transfer) ? null : this.transfer.clone();
+            clone.ownershipTransfer = isNull(this.ownershipTransfer) ? null : this.ownershipTransfer.clone();
+            clone.translator = isNull(this.translator) ? null : this.translator.clone();
+            clone.icebergConversion = isNull(this.icebergConversion) ? null : this.icebergConversion.clone();
+            clone.legacyTranslations = isNull(this.legacyTranslations) ? null : this.legacyTranslations.clone();
+            
+            // Deep clone the clusters map
+            if (isNull(this.clusters)) {
+                clone.clusters = null;
+            } else {
+                clone.clusters = new TreeMap<>();
+                for (Map.Entry<Environment, Cluster> entry : this.clusters.entrySet()) {
+                    clone.clusters.put(entry.getKey(), 
+                        isNull(entry.getValue()) ? null : entry.getValue().clone());
+                }
+            }
+            
             return clone;
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+            throw new AssertionError("Clone not supported for HmsMirrorConfig", e);
         }
+    }
+
+    public HmsMirrorConfig deepClone() {
+        return this.clone();
     }
 
 //    public void addError(MessageCode code) {

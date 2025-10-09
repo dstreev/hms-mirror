@@ -162,43 +162,43 @@ public class SessionController {
             @Parameter(description = "Session ID") @PathVariable String sessionId,
             @RequestBody(required = false) HmsMirrorConfig config) {
         
-        try {
+//        try {
             ExecuteSession session = sessionManager.createSession(sessionId, config);
             return ResponseEntity.status(201).body(session);
-        } catch (SessionException e) {
-            log.error("Failed to create session: {}", sessionId, e);
-            return ResponseEntity.badRequest().build();
-        }
+//        } catch (SessionException e) {
+//            log.error("Failed to create session: {}", sessionId, e);
+//            return ResponseEntity.badRequest().build();
+//        }
     }
 
-    @Operation(summary = "Start a session")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Session started successfully"),
-            @ApiResponse(responseCode = "400", description = "Session cannot be started"),
-            @ApiResponse(responseCode = "404", description = "Session not found")
-    })
-    @PostMapping("/{sessionId}/start")
-    public ResponseEntity<RunStatus> startSession(
-            @Parameter(description = "Session ID") @PathVariable String sessionId,
-            @Parameter(description = "Concurrency level") @RequestParam(defaultValue = "10") Integer concurrency) {
-        
-        try {
-            if (!sessionManager.isSessionExists(sessionId)) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            Boolean started = sessionManager.startSession(sessionId, concurrency);
-            if (started) {
-                ExecuteSession session = sessionManager.getCurrentSession(sessionId);
-                return ResponseEntity.ok(session.getRunStatus());
-            } else {
-                return ResponseEntity.badRequest().build();
-            }
-        } catch (SessionException e) {
-            log.error("Failed to start session: {}", sessionId, e);
-            return ResponseEntity.badRequest().build();
-        }
-    }
+//    @Operation(summary = "Start a session")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Session started successfully"),
+//            @ApiResponse(responseCode = "400", description = "Session cannot be started"),
+//            @ApiResponse(responseCode = "404", description = "Session not found")
+//    })
+//    @PostMapping("/{sessionId}/start")
+//    public ResponseEntity<RunStatus> startSession(
+//            @Parameter(description = "Session ID") @PathVariable String sessionId,
+//            @Parameter(description = "Concurrency level") @RequestParam(defaultValue = "10") Integer concurrency) {
+//
+//        try {
+//            if (!sessionManager.isSessionExists(sessionId)) {
+//                return ResponseEntity.notFound().build();
+//            }
+//
+//            Boolean started = sessionManager.startSession(sessionId, concurrency);
+//            if (started) {
+//                ExecuteSession session = sessionManager.getCurrentSession(sessionId);
+//                return ResponseEntity.ok(session.getRunStatus());
+//            } else {
+//                return ResponseEntity.badRequest().build();
+//            }
+//        } catch (SessionException e) {
+//            log.error("Failed to start session: {}", sessionId, e);
+//            return ResponseEntity.badRequest().build();
+//        }
+//    }
 
     @Operation(summary = "Save session configuration")
     @ApiResponses(value = {

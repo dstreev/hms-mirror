@@ -119,16 +119,37 @@ public class EnvironmentTable implements Cloneable {
     @Override
     public EnvironmentTable clone() throws CloneNotSupportedException {
         EnvironmentTable clone = (EnvironmentTable) super.clone();
-        // /Clean up/detach the lists.
+        
+        // Deep clone sql list with Pair objects
         clone.setSql(new ArrayList<>());
+        for (Pair pair : this.sql) {
+            if (pair != null) {
+                clone.getSql().add(pair.clone());
+            }
+        }
+        
+        // Deep clone cleanUpSql list with Pair objects
         clone.setCleanUpSql(new ArrayList<>());
-        clone.setAddProperties(new TreeMap<>());
-//         We don't want these to be cloned.
+        for (Pair pair : this.cleanUpSql) {
+            if (pair != null) {
+                clone.getCleanUpSql().add(pair.clone());
+            }
+        }
+        
+        // Clone properties map
+        clone.setAddProperties(new TreeMap<>(addProperties));
+        
+        // We don't want these to be cloned - create fresh instances
         clone.setStatistics(new HashMap<>());
         clone.setIssues(new ArrayList<>());
-        // detach the definition with new objects.
+        clone.setErrors(new ArrayList<>());
+        
+        // Clone other collections
         clone.setDefinition(new ArrayList<>(definition));
         clone.setPartitions(new HashMap<>(partitions));
+        
+        // Note: parent reference intentionally not cloned to avoid circular references
+        clone.setParent(null);
 
         return clone;
     }

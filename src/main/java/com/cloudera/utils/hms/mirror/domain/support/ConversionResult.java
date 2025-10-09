@@ -45,7 +45,7 @@ import java.util.*;
 @Getter
 @Setter
 @Slf4j
-public class ConversionResult {
+public class ConversionResult implements Cloneable {
 
 //    @JsonIgnore
 //    private Date start = new Date();
@@ -586,5 +586,25 @@ public class ConversionResult {
         sb.append("\tPartitions: ").append(partitions);
 
         return sb.toString();
+    }
+
+    @Override
+    public ConversionResult clone() {
+        try {
+            ConversionResult clone = (ConversionResult) super.clone();
+            if (this.databases != null) {
+                clone.databases = new TreeMap<>();
+                for (Map.Entry<String, DBMirror> entry : this.databases.entrySet()) {
+                    if (entry.getValue() != null) {
+                        clone.databases.put(entry.getKey(), entry.getValue().clone());
+                    } else {
+                        clone.databases.put(entry.getKey(), null);
+                    }
+                }
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for ConversionResult", e);
+        }
     }
 }

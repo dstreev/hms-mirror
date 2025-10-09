@@ -109,8 +109,8 @@ public class RuntimeMVController {
                 session.getConfig().setAcceptance(runContainer.getAcceptance());
             }
         }
-        RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(),
-                maxThreads);
+//        RunStatus runStatus =  runtimeService.start(runContainer.isDryrun(),
+//                maxThreads);
         return "redirect:/runtime/status";
     }
 

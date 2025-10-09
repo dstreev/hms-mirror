@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.core.api;
 import com.cloudera.utils.hms.mirror.core.model.*;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.infrastructure.connection.ConnectionProvider;
 
@@ -114,7 +115,7 @@ public class SimplifiedTableOperationsImpl implements TableOperations {
     }
 
     @Override
-    public ValidationResult validateTableFilter(TableMirror tableMirror, Environment environment) {
+    public ValidationResult validateTableFilter(ExecuteSession session, TableMirror tableMirror, Environment environment) {
         try {
             // Simplified validation for demo - just check if table mirror has data
             if (tableMirror == null) {

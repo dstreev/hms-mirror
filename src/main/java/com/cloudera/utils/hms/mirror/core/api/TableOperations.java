@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.core.api;
 import com.cloudera.utils.hms.mirror.core.model.*;
 import com.cloudera.utils.hms.mirror.domain.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 
 /**
  * Core business interface for table operations.
@@ -41,7 +42,7 @@ public interface TableOperations {
     /**
      * Validates table filter rules against a table.
      */
-    ValidationResult validateTableFilter(TableMirror tableMirror, Environment environment);
+    ValidationResult validateTableFilter(ExecuteSession session, TableMirror tableMirror, Environment environment);
 
     /**
      * Extracts metadata from a table for analysis.

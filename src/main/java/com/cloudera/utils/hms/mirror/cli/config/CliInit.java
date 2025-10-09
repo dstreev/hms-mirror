@@ -19,11 +19,13 @@ package com.cloudera.utils.hms.mirror.cli.config;
 
 import com.cloudera.utils.hms.mirror.domain.*;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResultHelper;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.SessionManager;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -45,6 +47,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -200,7 +205,7 @@ public class CliInit {
             Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
             config.setDatabases(databases);
             // Replace the conversion in the session.
-            executeSessionService.getSession().setConversionResult(conversionResult);
+            session.setConversionResult(conversionResult);
         } catch (UnrecognizedPropertyException upe) {
             // Appears that the file isn't a Conversion file, so try to load it as a DBMirror file.
             try {
@@ -213,7 +218,7 @@ public class CliInit {
                 Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
                 config.setDatabases(databases);
                 // Replace the conversion in the session.
-                executeSessionService.getSession().setConversionResult(conversionResult);
+                session.setConversionResult(conversionResult);
             } catch (Throwable t2) {
                 log.error(t2.getMessage(), t2);
                 throw t2;
@@ -266,23 +271,27 @@ public class CliInit {
     @Bean
     // Needs to happen after all the configs have been set.
     @Order(15)
-    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig builtConfig,
+    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig config,
+                                                      SessionManager sessionManager,
                                                       @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
         return args -> {
             // TODO: Need to review this process for redundancy.
-            ExecuteSession session = executeSessionService.createSession(null, builtConfig);
-            executeSessionService.setSession(session);
+//            ExecuteSession session;
+//            try {
+                // Create a session for the CLI.  It will be the 'current' session. prefix 'cli-' with timestamp.
+                log.info("Creating Session for CLI");
+                DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
+                String cliSessionId = "cli-" + dtf.format(new Date());
+                ExecuteSession session = sessionManager.createSession(cliSessionId, config);
+//                sessionManager.startSession(maxThreads);
+//            } catch (SessionException e) {
+//                log.error("Issue creating session or starting session");
+//                throw new RuntimeException(e);
+//            }
 
-            try {
-                executeSessionService.startSession(maxThreads);
-            } catch (SessionException e) {
-                log.error("Issue creating ");
-                throw new RuntimeException(e);
-            }
+//            session = sessionManager.getCurrentSession();
 
-            session = executeSessionService.getSession();
-
-            HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+//            HmsMirrorConfig config = sessionManager.getCurrentSession().getConfig();
 
             ConversionResult conversionResult = null;
             log.info("Post Processing Conversion");
@@ -293,51 +302,8 @@ public class CliInit {
                 conversionResult = executeSessionService.getSession().getConversionResult();
 
                 // Clean up the test data to match the configuration.
-                for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
-                    String database = dbMirror.getName();
-                    for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
-                        EnvironmentTable et = tableMirror.getEnvironmentTable(Environment.LEFT);
-                        String tableName = tableMirror.getName();
-                        if (config.isDatabaseOnly()) {
-                            // Only work with the database.
-                            tableMirror.setRemove(true);
-                        } else if (TableUtils.isACID(et)
-                                && !config.getMigrateACID().isOn()) {
-                            tableMirror.setRemove(true);
-                        } else if (!TableUtils.isACID(et)
-                                && config.getMigrateACID().isOnly()) {
-                            tableMirror.setRemove(true);
-                        } else {
-                            // Same logic as in TableService.getTables to filter out tables that are not to be processed.
-                            if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
-                                log.info("Database: {} Table: {} was NOT added to list.  The name matches the transfer prefix and is most likely a remnant of a previous event. If this is a mistake, change the 'transferPrefix' to something more unique.", database, tableName);
-                                tableMirror.setRemove(true);
-                                tableMirror.setRemoveReason("Table name starts with transfer prefix.");
-                            } else if (tableName.endsWith(config.getTransfer().getStorageMigrationPostfix())) {
-                                log.info("Database: {} Table: {} was NOT added to list.  The name is the result of a previous STORAGE_MIGRATION attempt that has not been cleaned up.", database, tableName);
-                                tableMirror.setRemove(true);
-                                tableMirror.setRemoveReason("Table name ends with storage migration postfix.");
-                            } else {
-                                if (config.getFilter().getTblRegEx() != null) {
-                                    // Filter Tables
-                                    assert (config.getFilter().getTblFilterPattern() != null);
-                                    Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
-                                    if (!matcher.matches()) {
-                                        log.info("{}:{} didn't match table regex filter and will NOT be added to processing list.", database, tableName);
-                                        tableMirror.setRemove(true);
-                                    }
-                                } else if (config.getFilter().getTblExcludeRegEx() != null) {
-                                    assert (config.getFilter().getTblExcludeFilterPattern() != null);
-                                    Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
-                                    if (matcher.matches()) { // ANTI-MATCH
-                                        log.info("{}:{} matched exclude table regex filter and will NOT be added to processing list.", database, tableName);
-                                        tableMirror.setRemove(true);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                ConversionResultHelper.removeWorkingData(conversionResult, config);
+
             } else {
                 conversionResult = executeSessionService.getSession().getConversionResult();
             }

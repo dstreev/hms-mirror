@@ -18,6 +18,11 @@ package com.cloudera.utils.hms.mirror.cli.run;
 
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -48,6 +53,7 @@ public class HmsMirrorAppCfg {
     private final ConnectionPoolService connectionPoolService;
     private final DatabaseService databaseService;
     private final HMSMirrorAppService hmsMirrorAppService;
+    private final SessionManager sessionManager;
     private final TableService tableService;
     private final TransferService transferService;
 
@@ -59,6 +65,7 @@ public class HmsMirrorAppCfg {
             ConnectionPoolService connectionPoolService,
             DatabaseService databaseService,
             HMSMirrorAppService hmsMirrorAppService,
+            SessionManager sessionManager,
             TableService tableService,
             TransferService transferService
     ) {
@@ -67,6 +74,7 @@ public class HmsMirrorAppCfg {
         this.hmsMirrorCommandLineOptions = hmsMirrorCommandLineOptions;
         this.executeSessionService = executeSessionService;
         this.connectionPoolService = connectionPoolService;
+        this.sessionManager = sessionManager;
         this.databaseService = databaseService;
         this.hmsMirrorAppService = hmsMirrorAppService;
         this.tableService = tableService;
@@ -82,8 +90,13 @@ public class HmsMirrorAppCfg {
             matchIfMissing = true)
     public CommandLineRunner start() {
         return args -> {
+            ExecuteSession session = sessionManager.getCurrentSession();
+            log.debug("Starting the HMS Mirror Application");
+            RunStatus runStatus = new RunStatus();
+            // This RunStatus is for the Thread about to kick off.
+            session.setRunStatus(runStatus);
             // NOTE: The transitionToActive process happens in another bean....
-            CompletableFuture<Boolean> result = hmsMirrorAppService.run();
+            CompletableFuture<Boolean> result = hmsMirrorAppService.cliRun();
             while (!result.isDone()) {
                 try {
                     Thread.sleep(1000);

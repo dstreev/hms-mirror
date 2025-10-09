@@ -57,17 +57,13 @@ public class SessionInterceptor implements HandlerInterceptor {
             log.debug("Creating new ExecuteSession with ID: {}", sessionId);
             
             try {
-                executeSession = sessionManager.createSession(sessionId, null);
-                if (executeSession != null) {
-                    httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
-                    log.info("Created new ExecuteSession {} for HTTP session {}", sessionId, httpSession.getId());
-                } else {
-                    log.warn("sessionManager.createSession returned null");
-                    executeSession = sessionManager.getDefaultSession();
-                    httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
-                }
-            } catch (SessionException e) {
-                log.warn("Failed to create ExecuteSession, falling back to default: {}", e.getMessage());
+                // Use SessionContextHolder for standardized session creation
+                // Since getOrCreateSession(sessionId) handles the specific sessionId case
+                executeSession = SessionContextHolder.getOrCreateSession(sessionId);
+                httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
+                log.info("Created new ExecuteSession {} for HTTP session {}", executeSession.getSessionId(), httpSession.getId());
+            } catch (Exception e) {
+                log.warn("Failed to create ExecuteSession via SessionContextHolder, falling back to default: {}", e.getMessage());
                 executeSession = sessionManager.getDefaultSession();
                 httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, executeSession);
             }

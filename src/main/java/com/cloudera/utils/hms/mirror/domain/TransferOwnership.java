@@ -23,7 +23,16 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class TransferOwnership {
+public class TransferOwnership implements Cloneable {
     private boolean database = Boolean.FALSE;
     private boolean table = Boolean.FALSE;
+
+    @Override
+    public TransferOwnership clone() {
+        try {
+            return (TransferOwnership) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for TransferOwnership", e);
+        }
+    }
 }

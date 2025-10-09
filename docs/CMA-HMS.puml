@@ -1,0 +1,32 @@
+@startuml
+collections "ConversionRequest\n(Contract)" as CR
+participant "CMA\n(System)" as CMA
+participant "HMS-Mirror\n(System)" as HMS
+entity "Execution\n(Contract)" as EX
+
+note over CR: Databases & Tables List
+
+CR -> CMA: Defined
+CMA -> HMS: Send ConversionRequest
+
+note over HMS: Review Request
+
+loop For each element
+    HMS -> CMA: Request details
+    CMA -> HMS: Return details
+
+    note over HMS
+        Save to ConversionResult
+        Process element
+        Build migration strategy
+        Enhance ConversionResult
+    end note
+
+    HMS -> EX: Create Execution payload
+    EX -> CMA: Send migration payload
+    note over CMA: Execute strategy
+end
+
+note over CMA, HMS: Processing complete
+
+@enduml

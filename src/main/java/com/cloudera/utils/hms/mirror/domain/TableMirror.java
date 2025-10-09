@@ -41,7 +41,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TableMirror {
+public class TableMirror implements Cloneable {
 //    @JsonIgnore
     private final List<Marker> steps = new ArrayList<Marker>();
     /*
@@ -346,5 +346,52 @@ public class TableMirror {
         int result = Objects.hashCode(name);
         result = 31 * result + Objects.hashCode(parent.getName());
         return result;
+    }
+
+    @Override
+    public TableMirror clone() {
+        try {
+            TableMirror clone = (TableMirror) super.clone();
+            
+            // Deep clone the steps list with Marker objects
+            clone.steps.clear();
+            for (Marker marker : this.steps) {
+                if (marker != null) {
+                    clone.steps.add(marker.clone());
+                }
+            }
+            
+            // Clone Date fields
+            clone.start = new Date(this.start.getTime());
+            
+            // Clone atomic fields (they need new instances)
+            clone.currentPhase = new AtomicInteger(this.currentPhase.get());
+            clone.totalPhaseCount = new AtomicInteger(this.totalPhaseCount.get());
+            
+            // Deep clone environments map with EnvironmentTable objects
+            if (this.environments != null) {
+                clone.environments = new TreeMap<>();
+                for (Map.Entry<Environment, EnvironmentTable> entry : this.environments.entrySet()) {
+                    if (entry.getValue() != null) {
+                        try {
+                            EnvironmentTable clonedEnvTable = entry.getValue().clone();
+                            clonedEnvTable.setParent(clone);  // Set the cloned table's parent to the clone
+                            clone.environments.put(entry.getKey(), clonedEnvTable);
+                        } catch (CloneNotSupportedException e) {
+                            throw new RuntimeException("Failed to clone EnvironmentTable", e);
+                        }
+                    } else {
+                        clone.environments.put(entry.getKey(), null);
+                    }
+                }
+            }
+            
+            // Note: parent reference intentionally not cloned to avoid circular references
+            clone.parent = null;
+            
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported for TableMirror", e);
+        }
     }
 }

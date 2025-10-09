@@ -62,10 +62,12 @@ public class LegacyTranslations extends BaseFeature implements Feature, Cloneabl
     public LegacyTranslations clone() {
         try {
             LegacyTranslations clone = (LegacyTranslations) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            if (this.rowSerde != null) {
+                clone.rowSerde = new TreeMap<>(this.rowSerde);
+            }
             return clone;
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+            throw new AssertionError("Clone not supported for LegacyTranslations", e);
         }
     }
 
