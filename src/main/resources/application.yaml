@@ -30,6 +30,8 @@ spring:
 #      connectionTimeout: 60000
 #      validationTimeout: 30000
 #      minimumIdle: 2
+  lifecycle:
+    timeout-per-shutdown-phase: 1s
   main:
     banner-mode: "off"
   thymeleaf:

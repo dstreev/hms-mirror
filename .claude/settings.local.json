@@ -39,7 +39,8 @@
       "Bash(awk:*)",
       "Bash(cat:*)",
       "Bash(printf:*)",
-      "Bash(paste:*)"
+      "Bash(paste:*)",
+      "Bash(timeout 10s mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8103 --hms-mirror.rocksdb.enabled=true\" -q)"
     ],
     "deny": [],
     "ask": [],

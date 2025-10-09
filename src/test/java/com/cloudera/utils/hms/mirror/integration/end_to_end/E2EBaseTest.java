@@ -59,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @Getter
-@ActiveProfiles("no-cli")
+@ActiveProfiles({"no-cli", "test"})
 public class E2EBaseTest {
 
     protected DomainService domainService;

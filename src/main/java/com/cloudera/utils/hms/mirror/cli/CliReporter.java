@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.SessionManager;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,8 +60,7 @@ public class CliReporter {
     private final List<String> reportTemplateOutput = new ArrayList<>();
     private final Map<String, String> varMap = new TreeMap<>();
     private final List<TableMirror> startedTables = new ArrayList<>();
-    private final ConfigService configService;
-    private final ExecuteSessionService executeSessionService;
+    private final SessionManager sessionManager;
 
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
@@ -67,9 +68,8 @@ public class CliReporter {
     private boolean tiktok = false;
 
     // Constructor injection for dependencies
-    public CliReporter(ConfigService configService, ExecuteSessionService executeSessionService) {
-        this.configService = configService;
-        this.executeSessionService = executeSessionService;
+    public CliReporter(SessionManager sessionManager) {
+        this.sessionManager  = sessionManager;
     }
 
     @Bean
@@ -79,7 +79,7 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-        ExecuteSession session = executeSessionService.getSession();
+        ExecuteSession session = sessionManager.getCurrentSession();
         HmsMirrorConfig config = session.getConfig();
         ConversionResult conversionResult = session.getConversionResult();
 
@@ -122,8 +122,9 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ExecuteSession session = sessionManager.getCurrentSession();
+        RunStatus runStatus = session.getRunStatus();
+        HmsMirrorConfig config = session.getConfig();
 
         if (runStatus.hasErrors()) {
             report.append("\n=== Errors ===\n");
@@ -175,8 +176,8 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
-        ExecuteSession session = executeSessionService.getSession();
-        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
+        ExecuteSession session = sessionManager.getCurrentSession();
+        ConversionResult conversionResult = session.getConversionResult();
         HmsMirrorConfig config = session.getConfig();
 
         tiktok = !tiktok;
@@ -196,9 +197,9 @@ public class CliReporter {
         varMap.put("os.arch", System.getProperty("os.arch"));
         varMap.put("memory", Runtime.getRuntime().totalMemory() / 1024 / 1024 + "MB");
 
-        String outputDir = executeSessionService.getSession().getConfig().getOutputDirectory();
-        if (!isBlank(executeSessionService.getSession().getConfig().getFinalOutputDirectory())) {
-            outputDir = executeSessionService.getSession().getConfig().getFinalOutputDirectory();
+        String outputDir = session.getConfig().getOutputDirectory();
+        if (!isBlank(session.getConfig().getFinalOutputDirectory())) {
+            outputDir = session.getConfig().getFinalOutputDirectory();
         }
 
         varMap.put("report.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
@@ -273,12 +274,12 @@ public class CliReporter {
 
     @Async("reportingThreadPool")
     public void run() {
-        ExecuteSession session = executeSessionService.getSession();
+        ExecuteSession session = sessionManager.getCurrentSession();
         try {
             fetchReportTemplates();
             log.info("Starting Reporting Thread");
             // Wait for the main thread to start.
-            while (!session.isRunning()) {
+            while (!session.isRunning() && session.getRunStatus().getStages().isEmpty()) {
                 try {
                     Thread.sleep(sleepInterval);
                 } catch (InterruptedException e) {
@@ -297,6 +298,11 @@ public class CliReporter {
         } catch (IOException ioe) {
             System.out.println("Missing Reporting Template");
         }
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        log.info("Cleaning up Reporting Thread");
     }
 
     public void setVariable(String key, String value) {

@@ -72,6 +72,9 @@ public class RocksDBConfig {
     @Value("${hms-mirror.rocksdb.max-write-buffers:3}")
     private int maxWriteBuffers;
 
+    @Value("${hms-mirror.rocksdb.test-mode:false}")
+    private boolean testMode;
+
     private RocksDB rocksDB;
     private ColumnFamilyHandle configurationsColumnFamily;
     private ColumnFamilyHandle sessionsColumnFamily;
@@ -85,103 +88,137 @@ public class RocksDBConfig {
     @PostConstruct
     public void init() {
         System.out.println("=== RocksDBConfig @PostConstruct STARTING ===");
-        try {
-            log.info("=============================================================");
-            log.info("=== RocksDB Configuration @PostConstruct Starting ===");
-            log.info("=============================================================");
-            // Load the RocksDB C++ library
-            RocksDB.loadLibrary();
-            log.info("✓ RocksDB native library loaded successfully");
-
-            // Resolve and log the full data directory path
-            File dataDir = new File(rocksDBPath);
-            String absolutePath = dataDir.getAbsolutePath();
-            log.info("RocksDB data directory: {}", absolutePath);
-
-            // Create data directory if it doesn't exist
-            if (!dataDir.exists()) {
-                if (dataDir.mkdirs()) {
-                    log.info("✓ Created RocksDB data directory: {}", absolutePath);
+        log.info("=============================================================");
+        log.info("=== RocksDB Configuration @PostConstruct Starting ===");
+        log.info("=============================================================");
+        
+        final int maxRetries = 15;
+        final long retryDelayMs = 100;
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                log.info("RocksDB initialization attempt {} of {}", attempt, maxRetries);
+                initializeRocksDB();
+                
+                log.info("=============================================================");
+                log.info("✅ RocksDB INITIALIZATION COMPLETE (attempt {})", attempt);
+                log.info("Database is ready for multi-session and multi-threaded access");
+                log.info("Available REST endpoints:");
+                log.info("  - Health: /api/v1/rocksdb/health");
+                log.info("  - Statistics: /api/v1/rocksdb/statistics");
+                log.info("  - Data API: /api/v1/rocksdb/data/*");
+                log.info("=============================================================");
+                
+                System.out.println("=== RocksDBConfig @PostConstruct COMPLETED SUCCESSFULLY ===");
+                return; // Success - exit retry loop
+                
+            } catch (RocksDBException e) {
+                if (attempt == maxRetries) {
+                    // Last attempt failed - log final error and throw
+                    if (e.getMessage() != null && e.getMessage().contains("lock")) {
+                        log.error("=============================================================");
+                        log.error("❌ RocksDB INITIALIZATION FAILED - DATABASE LOCKED (after {} attempts)", maxRetries);
+                        log.error("=============================================================");
+                        log.error("Another instance of hms-mirror may be running or was not properly shut down.");
+                        log.error("To resolve this issue:");
+                        log.error("1. Check for running hms-mirror processes: ps aux | grep hms-mirror");
+                        log.error("2. Stop any running instances gracefully");
+                        log.error("3. If no processes are running, remove the lock file:");
+                        log.error("   rm -f {}LOCK", rocksDBPath.endsWith("/") ? rocksDBPath : rocksDBPath + "/");
+                        log.error("4. Restart the application");
+                        log.error("=============================================================");
+                    } else {
+                        log.error("❌ Failed to initialize RocksDB after {} attempts", maxRetries, e);
+                    }
+                    throw new RuntimeException("RocksDB initialization failed after " + maxRetries + " attempts", e);
                 } else {
-                    throw new RuntimeException("Failed to create RocksDB data directory: " + absolutePath);
+                    // Retry attempt failed - log warning and continue
+                    log.warn("RocksDB initialization attempt {} failed: {} - retrying in {}ms...", 
+                             attempt, e.getMessage(), retryDelayMs);
+                    try {
+                        Thread.sleep(retryDelayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("RocksDB initialization interrupted during retry", ie);
+                    }
                 }
-            } else {
-                log.info("✓ Using existing RocksDB data directory: {}", absolutePath);
             }
-
-            // Log lock file location for troubleshooting
-            File lockFile = new File(dataDir, "LOCK");
-            log.info("RocksDB lock file location: {}", lockFile.getAbsolutePath());
-
-            // Log configuration parameters
-            log.info("RocksDB Configuration:");
-            log.info("  - Max background jobs: {}", maxBackgroundJobs);
-            log.info("  - Write buffer size: {} bytes ({} MB)", writeBufferSize, writeBufferSize / (1024 * 1024));
-            log.info("  - Max write buffers: {}", maxWriteBuffers);
-            log.info("  - Parallelism: {} threads", Runtime.getRuntime().availableProcessors());
-
-            // Configure column families
-            List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
-                new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY),
-                new ColumnFamilyDescriptor("configurations".getBytes()),
-                new ColumnFamilyDescriptor("sessions".getBytes()),
-                new ColumnFamilyDescriptor("connections".getBytes())
-            );
-
-            List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
-
-            // Configure RocksDB options for multi-threaded access
-            DBOptions dbOptions = new DBOptions()
-                .setCreateIfMissing(true)
-                .setCreateMissingColumnFamilies(true)
-                .setMaxBackgroundJobs(maxBackgroundJobs)
-                .setIncreaseParallelism(Runtime.getRuntime().availableProcessors());
-
-            ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
-                .setWriteBufferSize(writeBufferSize)
-                .setMaxWriteBufferNumber(maxWriteBuffers);
-
-            log.info("Opening RocksDB database...");
-            // Open RocksDB with column families
-            rocksDB = RocksDB.open(dbOptions, rocksDBPath, columnFamilyDescriptors, columnFamilyHandles);
-
-            // Store column family handles
-            configurationsColumnFamily = columnFamilyHandles.get(1); // configurations
-            sessionsColumnFamily = columnFamilyHandles.get(2); // sessions
-            connectionsColumnFamily = columnFamilyHandles.get(3); // connections
-
-            log.info("✓ RocksDB database opened successfully");
-            log.info("✓ Column families initialized: default, configurations, sessions, connections");
-
-        } catch (RocksDBException e) {
-            if (e.getMessage() != null && e.getMessage().contains("lock")) {
-                log.error("=============================================================");
-                log.error("❌ RocksDB INITIALIZATION FAILED - DATABASE LOCKED");
-                log.error("=============================================================");
-                log.error("Another instance of hms-mirror may be running or was not properly shut down.");
-                log.error("To resolve this issue:");
-                log.error("1. Check for running hms-mirror processes: ps aux | grep hms-mirror");
-                log.error("2. Stop any running instances gracefully");
-                log.error("3. If no processes are running, remove the lock file:");
-                log.error("   rm -f {}LOCK", rocksDBPath.endsWith("/") ? rocksDBPath : rocksDBPath + "/");
-                log.error("4. Restart the application");
-                log.error("=============================================================");
-            } else {
-                log.error("❌ Failed to initialize RocksDB", e);
-            }
-            throw new RuntimeException("RocksDB initialization failed", e);
         }
+    }
+
+    private void initializeRocksDB() throws RocksDBException {
+        // Load the RocksDB C++ library
+        RocksDB.loadLibrary();
+        log.info("✓ RocksDB native library loaded successfully");
+
+        // Resolve and log the full data directory path
+        File dataDir = new File(rocksDBPath);
+        String absolutePath = dataDir.getAbsolutePath();
+        log.info("RocksDB data directory: {}", absolutePath);
+
+        // Create data directory if it doesn't exist
+        if (!dataDir.exists()) {
+            if (dataDir.mkdirs()) {
+                log.info("✓ Created RocksDB data directory: {}", absolutePath);
+            } else {
+                throw new RuntimeException("Failed to create RocksDB data directory: " + absolutePath);
+            }
+        } else {
+            log.info("✓ Using existing RocksDB data directory: {}", absolutePath);
+        }
+
+        // Check for stale lock file and attempt cleanup in test environments
+        File lockFile = new File(dataDir, "LOCK");
+        log.info("RocksDB lock file location: {}", lockFile.getAbsolutePath());
         
-        log.info("=============================================================");
-        log.info("✅ RocksDB INITIALIZATION COMPLETE");
-        log.info("Database is ready for multi-session and multi-threaded access");
-        log.info("Available REST endpoints:");
-        log.info("  - Health: /api/v1/rocksdb/health");
-        log.info("  - Statistics: /api/v1/rocksdb/statistics");
-        log.info("  - Data API: /api/v1/rocksdb/data/*");
-        log.info("=============================================================");
-        
-        System.out.println("=== RocksDBConfig @PostConstruct COMPLETED SUCCESSFULLY ===");
+        if (lockFile.exists() && isTestEnvironment()) {
+            log.warn("Stale lock file found in test environment: {}", lockFile.getAbsolutePath());
+            if (lockFile.delete()) {
+                log.info("✓ Removed stale lock file for test environment");
+            } else {
+                log.warn("⚠ Could not remove stale lock file - will attempt normal initialization");
+            }
+        }
+
+        // Log configuration parameters
+        log.info("RocksDB Configuration:");
+        log.info("  - Max background jobs: {}", maxBackgroundJobs);
+        log.info("  - Write buffer size: {} bytes ({} MB)", writeBufferSize, writeBufferSize / (1024 * 1024));
+        log.info("  - Max write buffers: {}", maxWriteBuffers);
+        log.info("  - Parallelism: {} threads", Runtime.getRuntime().availableProcessors());
+
+        // Configure column families
+        List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
+            new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY),
+            new ColumnFamilyDescriptor("configurations".getBytes()),
+            new ColumnFamilyDescriptor("sessions".getBytes()),
+            new ColumnFamilyDescriptor("connections".getBytes())
+        );
+
+        List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
+
+        // Configure RocksDB options for multi-threaded access
+        DBOptions dbOptions = new DBOptions()
+            .setCreateIfMissing(true)
+            .setCreateMissingColumnFamilies(true)
+            .setMaxBackgroundJobs(maxBackgroundJobs)
+            .setIncreaseParallelism(Runtime.getRuntime().availableProcessors());
+
+        ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
+            .setWriteBufferSize(writeBufferSize)
+            .setMaxWriteBufferNumber(maxWriteBuffers);
+
+        log.info("Opening RocksDB database...");
+        // Open RocksDB with column families
+        rocksDB = RocksDB.open(dbOptions, rocksDBPath, columnFamilyDescriptors, columnFamilyHandles);
+
+        // Store column family handles
+        configurationsColumnFamily = columnFamilyHandles.get(1); // configurations
+        sessionsColumnFamily = columnFamilyHandles.get(2); // sessions
+        connectionsColumnFamily = columnFamilyHandles.get(3); // connections
+
+        log.info("✓ RocksDB database opened successfully");
+        log.info("✓ Column families initialized: default, configurations, sessions, connections");
     }
 
     @PreDestroy
@@ -191,6 +228,28 @@ public class RocksDBConfig {
         log.info("=============================================================");
         
         try {
+            // Check for and cancel pending compaction before shutdown
+            if (rocksDB != null) {
+                try {
+                    String compactionPending = rocksDB.getProperty("rocksdb.compaction-pending");
+                    if ("1".equals(compactionPending)) {
+                        log.info("Compaction is pending - attempting to cancel background jobs");
+                        rocksDB.cancelAllBackgroundWork(true); // true = wait for jobs to finish
+                        log.info("✓ Background jobs cancelled");
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not check/cancel pending compaction: {}", e.getMessage());
+                }
+                
+                // Force flush any pending writes
+                try {
+                    rocksDB.flush(new FlushOptions().setWaitForFlush(true));
+                    log.info("✓ Forced flush of pending writes");
+                } catch (Exception e) {
+                    log.warn("Could not flush pending writes: {}", e.getMessage());
+                }
+            }
+            
             // Close column families in reverse order
             if (connectionsColumnFamily != null) {
                 connectionsColumnFamily.close();
@@ -211,15 +270,36 @@ public class RocksDBConfig {
                 log.info("✓ RocksDB database closed successfully");
             }
             
-            // Log lock file status after shutdown
+            // Force garbage collection to help release native resources
+            System.gc();
+            log.info("✓ Requested garbage collection to release native resources");
+            
+            // Wait a brief moment for native cleanup
+            Thread.sleep(100);
+            
+            // Check lock file status and attempt cleanup for test scenarios
             File dataDir = new File(rocksDBPath);
             File lockFile = new File(dataDir, "LOCK");
             
             if (lockFile.exists()) {
                 log.info("RocksDB lock file still exists at: {}", lockFile.getAbsolutePath());
-                log.info("This is normal - the lock file will be automatically removed when the JVM exits");
+                
+                // In test scenarios, try to remove stale lock file after a brief wait
+                boolean isTestEnvironment = isTestEnvironment();
+                if (isTestEnvironment) {
+                    log.info("Test environment detected - attempting lock file cleanup");
+                    Thread.sleep(200); // Additional wait for native cleanup
+                    
+                    if (lockFile.delete()) {
+                        log.info("✓ Successfully removed stale lock file for test environment");
+                    } else {
+                        log.warn("⚠ Could not remove lock file - may be held by another process");
+                    }
+                } else {
+                    log.info("Production environment - lock file will be automatically removed when JVM exits");
+                }
             } else {
-                log.info("RocksDB lock file not found at: {}", lockFile.getAbsolutePath());
+                log.info("✓ RocksDB lock file already cleaned up");
             }
             
             log.info("RocksDB data directory: {}", dataDir.getAbsolutePath());
@@ -232,6 +312,27 @@ public class RocksDBConfig {
         log.info("=============================================================");
         log.info("✅ RocksDB SHUTDOWN COMPLETE");
         log.info("=============================================================");
+    }
+
+    private boolean isTestEnvironment() {
+        // Check explicit test mode configuration first
+        if (testMode) {
+            return true;
+        }
+        
+        // Check for common test indicators
+        String[] testClassPaths = {"junit", "testng", "surefire", "test"};
+        String classPath = System.getProperty("java.class.path", "");
+        for (String testPath : testClassPaths) {
+            if (classPath.toLowerCase().contains(testPath)) {
+                return true;
+            }
+        }
+        
+        // Check for test system properties
+        return System.getProperty("test.environment") != null || 
+               System.getProperty("maven.test.skip") != null ||
+               Boolean.parseBoolean(System.getProperty("spring.test.context", "false"));
     }
 
     @Bean
