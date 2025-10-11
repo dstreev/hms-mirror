@@ -34,10 +34,6 @@ spring:
     timeout-per-shutdown-phase: 1s
   main:
     banner-mode: "off"
-  thymeleaf:
-    enabled: true
-    prefix: classpath:/templates/
-    suffix: .html
 hadoop:
   cli:
     api: "true"
@@ -49,9 +45,6 @@ hms-mirror:
       enabled: true
       interval: 10m     # How often to perform keep-alive for running sessions
       cleanup-interval: 30m  # How often to cleanup stale keep-alive sessions
-  ui:
-    # Options: 'thymeleaf' (legacy) or 'react' (new)
-    version: "react"
   config:
     beta: "false"
     testing: "false"

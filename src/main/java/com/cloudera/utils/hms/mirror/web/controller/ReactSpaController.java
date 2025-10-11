@@ -20,10 +20,8 @@ package com.cloudera.utils.hms.mirror.web.controller;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.SessionManager;
-import com.cloudera.utils.hms.mirror.web.config.UIVersionConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,11 +33,7 @@ import jakarta.servlet.http.HttpSession;
 @Controller
 @Order(1) // High priority to override other controllers
 @Slf4j
-@ConditionalOnProperty(name = "hms-mirror.ui.version", havingValue = "react", matchIfMissing = true)
 public class ReactSpaController {
-    
-    @Autowired
-    private UIVersionConfig uiVersionConfig;
     
     @Autowired
     private SessionManager sessionManager;

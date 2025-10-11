@@ -16,28 +16,16 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "hms-mirror.ui")
 public class UIVersionConfig {
     
-    private String version = "react";  // Default to React UI
-    
-    public String getVersion() {
-        return version;
-    }
-    
-    public void setVersion(String version) {
-        this.version = version;
-    }
-    
     public boolean isReactUI() {
-        return "react".equalsIgnoreCase(version);
+        return true;  // Always React UI now
     }
     
     public boolean isThymeleafUI() {
-        return "thymeleaf".equalsIgnoreCase(version);
+        return false;  // Thymeleaf removed
     }
 }
