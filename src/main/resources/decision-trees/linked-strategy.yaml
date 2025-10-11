@@ -1,0 +1,361 @@
+# LINKED Data Strategy Decision Tree
+# Purpose: Create external tables that point to original data locations
+
+strategy: "LINKED"
+description: "Create external tables that point to original data locations"
+
+pages:
+  connections:
+    title: "Connection Selection"
+    description: "Select source and target cluster connections"
+    nodes:
+      - id: "left_connection"
+        title: "LEFT Connection"
+        description: "Select source cluster connection profile"
+        type: "CONNECTION_SELECT"
+        category: "connections"
+        required: true
+        nextNodeId: "right_connection"
+        
+      - id: "right_connection"
+        title: "RIGHT Connection"
+        description: "Select target cluster connection profile"
+        type: "CONNECTION_SELECT"
+        category: "connections"
+        required: true
+        nextPageId: "general_behavior"
+
+  general_behavior:
+    title: "General Behavior"
+    description: "Configure basic migration behavior"
+    nodes:
+      - id: "database_only"
+        title: "Database Only Migration"
+        description: "Migrate only database definitions, skip tables"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextNodeId: "copy_avro_schemas"
+        
+      - id: "copy_avro_schemas"
+        title: "Copy AVRO Schema Files"
+        description: "Copy AVRO schema files between clusters"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextNodeId: "skip_link_check"
+        
+      - id: "skip_link_check"
+        title: "Skip Link Check"
+        description: "Skip cluster storage accessibility check"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextPageId: "cluster_connectivity"
+
+  cluster_connectivity:
+    title: "Cluster Connectivity"
+    description: "Configure storage connectivity and link validation"
+    nodes:
+      - id: "link_test_threshold"
+        title: "Link Test Threshold"
+        description: "Number of partitions to test for accessibility (Default: 10)"
+        type: "NUMBER_INPUT"
+        category: "connectivity"
+        required: false
+        metadata:
+          defaultValue: 10
+          min: 1
+          max: 100
+        nextNodeId: "link_test_timeout"
+        
+      - id: "link_test_timeout"
+        title: "Link Test Timeout"
+        description: "Timeout in seconds for link tests (Default: 15)"
+        type: "NUMBER_INPUT"
+        category: "connectivity"
+        required: false
+        metadata:
+          defaultValue: 15
+          min: 5
+          max: 300
+        nextPageId: "migration_type"
+
+  migration_type:
+    title: "Migration Type Selection"
+    description: "Select which types of tables to migrate"
+    nodes:
+      - id: "acid_migration"
+        title: "ACID Tables Migration"
+        description: "Configure ACID table migration (Metadata Only for LINKED)"
+        type: "SINGLE_SELECT"
+        category: "migration"
+        required: true
+        options:
+          - value: "none"
+            label: "Skip ACID Tables"
+            description: "Do not migrate ACID tables (LINKED doesn't support ACID data)"
+            recommended: true
+          - value: "include"
+            label: "Include ACID Tables (Metadata Only)"
+            description: "Include ACID tables metadata only - no data linking"
+          - value: "only"
+            label: "ACID Tables Only (Metadata Only)"
+            description: "Migrate ONLY ACID tables metadata - no data linking"
+        nextNodeId: "acid_options"
+        
+      - id: "acid_options"
+        title: "ACID Table Options"
+        description: "Configure ACID table specific settings"
+        type: "PAGE_TRANSITION"
+        category: "migration"
+        dependencies: ["acid_migration"]
+        conditionalLogic: "acid_migration != 'none'"
+        nextNodeId: "acid_bucket_threshold"
+        
+      - id: "acid_bucket_threshold"
+        title: "Artificial Bucket Threshold"
+        description: "Remove bucket definitions if count ≤ threshold (Default: 2)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 2
+          min: 1
+          max: 100
+        nextNodeId: "acid_partition_limit"
+        
+      - id: "acid_partition_limit"
+        title: "ACID Partition Limit"
+        description: "Skip ACID tables exceeding this partition count (Default: 500)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 500
+          min: 1
+          max: 10000
+        nextNodeId: "acid_downgrade"
+        
+      - id: "acid_downgrade"
+        title: "Downgrade ACID Tables"
+        description: "Convert ACID to EXTERNAL/PURGE tables"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextNodeId: "acid_inplace"
+        
+      - id: "acid_inplace"
+        title: "In-place ACID Downgrade"
+        description: "Downgrade on same cluster"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        dependencies: ["acid_downgrade"]
+        conditionalLogic: "acid_downgrade == true"
+        nextNodeId: "migrate_views"
+        
+      - id: "migrate_views"
+        title: "Migrate Views"
+        description: "Migrate views after underlying tables exist"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextNodeId: "migrate_non_native"
+        
+      - id: "migrate_non_native"
+        title: "Migrate Non-Native Tables"
+        description: "Migrate HBase, Kafka, JDBC tables"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextPageId: "linking_options"
+
+  linking_options:
+    title: "Table Linking Configuration"
+    description: "Configure how tables are linked to original data"
+    nodes:
+      - id: "link_replacement"
+        title: "Link Replacement Strategy"
+        description: "How to handle existing tables on target"
+        type: "SINGLE_SELECT"
+        category: "linking"
+        required: true
+        options:
+          - value: "replace"
+            label: "Replace Existing"
+            description: "Drop and recreate existing tables"
+            recommended: true
+          - value: "skip"
+            label: "Skip Existing"
+            description: "Skip tables that already exist on target"
+          - value: "error"
+            label: "Error on Existing"
+            description: "Fail if tables already exist on target"
+        nextNodeId: "create_shadow_tables"
+        
+      - id: "create_shadow_tables"
+        title: "Create Shadow Tables"
+        description: "Create shadow tables on source for validation"
+        type: "BOOLEAN"
+        category: "linking"
+        required: false
+        nextNodeId: "shadow_prefix"
+        
+      - id: "shadow_prefix"
+        title: "Shadow Table Prefix"
+        description: "Prefix for shadow table names (Default: 'shadow_')"
+        type: "TEXT_INPUT"
+        category: "linking"
+        required: false
+        dependencies: ["create_shadow_tables"]
+        conditionalLogic: "create_shadow_tables == true"
+        metadata:
+          defaultValue: "shadow_"
+        nextPageId: "location_translation"
+
+  location_translation:
+    title: "Location Translation Strategy"
+    description: "Configure how table locations are translated for linking"
+    nodes:
+      - id: "translation_type"
+        title: "Translation Type"
+        description: "Select location translation strategy"
+        type: "SINGLE_SELECT"
+        category: "location"
+        required: true
+        options:
+          - value: "RELATIVE"
+            label: "Relative"
+            description: "Simple namespace replacement for cross-cluster access"
+            recommended: true
+          - value: "ALIGNED"
+            label: "Aligned"
+            description: "Use warehouse plans for organized layout"
+          - value: "NONE"
+            label: "No Translation"
+            description: "Keep original locations (same storage accessible from both clusters)"
+        nextNodeId: "source_namespace"
+        
+      - id: "source_namespace"
+        title: "Source Namespace"
+        description: "Source storage namespace to translate from"
+        type: "TEXT_INPUT"
+        category: "location"
+        required: false
+        dependencies: ["translation_type"]
+        conditionalLogic: "translation_type != 'NONE'"
+        nextNodeId: "target_namespace"
+        
+      - id: "target_namespace"
+        title: "Target Namespace"
+        description: "Target storage namespace to translate to"
+        type: "TEXT_INPUT"
+        category: "location"
+        required: false
+        dependencies: ["translation_type"]
+        conditionalLogic: "translation_type != 'NONE'"
+        nextNodeId: "warehouse_config"
+        
+      - id: "warehouse_config"
+        title: "Warehouse Configuration"
+        description: "Configure warehouse settings for ALIGNED translation"
+        type: "PAGE_TRANSITION"
+        category: "location"
+        dependencies: ["translation_type"]
+        conditionalLogic: "translation_type == 'ALIGNED'"
+        nextPageId: "optimization"
+
+  optimization:
+    title: "Optimization Settings"
+    description: "Configure optimization settings for LINKED strategy"
+    nodes:
+      - id: "optimization_approach"
+        title: "Optimization Approach"
+        description: "Select optimization strategy for metadata operations"
+        type: "SINGLE_SELECT"
+        category: "optimization"
+        required: true
+        options:
+          - value: "autoTune"
+            label: "Auto Tune (Recommended)"
+            description: "Automatically optimize based on table characteristics"
+            recommended: true
+          - value: "skip"
+            label: "Skip Optimizations"
+            description: "No optimizations. Use when metadata is already well-organized."
+        nextNodeId: "optimization_additional"
+        
+      - id: "optimization_additional"
+        title: "Additional Optimization Settings"
+        description: "Configure additional optimization options"
+        type: "MULTI_SELECT"
+        category: "optimization"
+        required: false
+        options:
+          - value: "skipStatsCollection"
+            label: "Skip Statistics Collection"
+            description: "Skip filesystem statistics gathering. Use for slow storage like S3."
+          - value: "buildShadowStatistics"
+            label: "Build Shadow Statistics"
+            description: "Build statistics on shadow tables"
+            dependencies: ["create_shadow_tables"]
+            conditionalLogic: "create_shadow_tables == true"
+          - value: "saveWorkingTables"
+            label: "Save Working Tables"
+            description: "Keep shadow tables after migration for debugging"
+            dependencies: ["create_shadow_tables"]
+            conditionalLogic: "create_shadow_tables == true"
+          - value: "validateLinks"
+            label: "Validate Links"
+            description: "Test accessibility of linked data locations"
+        nextPageId: "execution_mode"
+
+  execution_mode:
+    title: "Execution Mode"
+    description: "Final execution settings"
+    nodes:
+      - id: "execution_type"
+        title: "Execution Type"
+        description: "Choose execution mode"
+        type: "SINGLE_SELECT"
+        category: "execution"
+        required: true
+        options:
+          - value: "dryRun"
+            label: "Dry Run"
+            description: "Generate plans without executing (recommended first)"
+            recommended: true
+          - value: "execute"
+            label: "Execute"
+            description: "Execute the migration"
+            warningMessage: "This will perform the actual migration. Ensure you have tested with dry run first."
+        nextNodeId: "execution_options"
+        
+      - id: "execution_options"
+        title: "Execution Options"
+        description: "Additional execution settings"
+        type: "MULTI_SELECT"
+        category: "execution"
+        required: false
+        options:
+          - value: "readOnly"
+            label: "Read Only"
+            description: "Create tables without PURGE flag"
+          - value: "noPurge"
+            label: "No Purge"
+            description: "Force no PURGE flag"
+          - value: "sync"
+            label: "Synchronize"
+            description: "Synchronize schemas (drop/recreate if different)"
+          - value: "resetRight"
+            label: "Reset Right"
+            description: "DROP CASCADE databases on RIGHT first"
+            warningMessage: "This will delete all existing databases on the target cluster!"
+        nextNodeId: "complete"
+        
+      - id: "complete"
+        title: "Configuration Complete"
+        description: "LINKED strategy configuration is complete"
+        type: "PAGE_TRANSITION"
+        category: "completion"

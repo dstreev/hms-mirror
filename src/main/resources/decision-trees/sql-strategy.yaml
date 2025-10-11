@@ -1,0 +1,333 @@
+# SQL Data Strategy Decision Tree
+# Purpose: Use Hive SQL to move data between clusters via INSERT statements
+
+strategy: "SQL"
+description: "Use Hive SQL to move data between clusters via INSERT statements"
+
+pages:
+  connections:
+    title: "Connection Selection"
+    description: "Select source and target cluster connections"
+    nodes:
+      - id: "left_connection"
+        title: "LEFT Connection"
+        description: "Select source cluster connection profile"
+        type: "CONNECTION_SELECT"
+        category: "connections"
+        required: true
+        nextNodeId: "right_connection"
+        
+      - id: "right_connection"
+        title: "RIGHT Connection"
+        description: "Select target cluster connection profile"
+        type: "CONNECTION_SELECT"
+        category: "connections"
+        required: true
+        nextPageId: "general_behavior"
+
+  general_behavior:
+    title: "General Behavior"
+    description: "Configure basic migration behavior"
+    nodes:
+      - id: "database_only"
+        title: "Database Only Migration"
+        description: "Migrate only database definitions, skip tables"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextNodeId: "copy_avro_schemas"
+        
+      - id: "copy_avro_schemas"
+        title: "Copy AVRO Schema Files"
+        description: "Copy AVRO schema files between clusters"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextNodeId: "skip_link_check"
+        
+      - id: "skip_link_check"
+        title: "Skip Link Check"
+        description: "Skip cluster storage accessibility check"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextPageId: "cluster_connectivity"
+
+  cluster_connectivity:
+    title: "Cluster Connectivity"
+    description: "Configure storage connectivity between clusters"
+    nodes:
+      - id: "intermediate_storage"
+        title: "Intermediate Storage"
+        description: "Shared storage location accessible by both clusters for data transit. Required if skipLinkCheck=true."
+        type: "TEXT_INPUT"
+        category: "connectivity"
+        required: false
+        dependencies: ["skip_link_check"]
+        validationRules:
+          conditionalRequired: "skip_link_check == true"
+        nextPageId: "migration_type"
+
+  migration_type:
+    title: "Migration Type Selection"
+    description: "Select which types of tables to migrate"
+    nodes:
+      - id: "acid_migration"
+        title: "ACID Tables Migration"
+        description: "Configure ACID table migration (Full Support)"
+        type: "SINGLE_SELECT"
+        category: "migration"
+        required: true
+        options:
+          - value: "none"
+            label: "Skip ACID Tables"
+            description: "Do not migrate ACID tables"
+            nextNodeId: "acid_options"
+        
+      - id: "acid_options"
+        title: "ACID Table Options"
+        description: "Configure ACID table specific settings"
+        type: "PAGE_TRANSITION"
+        category: "migration"
+        dependencies: ["acid_migration"]
+        conditionalLogic: "acid_migration != 'none'"
+        nextNodeId: "acid_bucket_threshold"
+        
+      - id: "acid_bucket_threshold"
+        title: "Artificial Bucket Threshold"
+        description: "Remove bucket definitions if count ≤ threshold (Default: 2)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 2
+          min: 1
+          max: 100
+        nextNodeId: "acid_partition_limit"
+        
+      - id: "acid_partition_limit"
+        title: "ACID Partition Limit"
+        description: "Skip ACID tables exceeding this partition count (Default: 500)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 500
+          min: 1
+          max: 10000
+        nextNodeId: "acid_downgrade"
+        
+      - id: "acid_downgrade"
+        title: "Downgrade ACID Tables"
+        description: "Convert ACID to EXTERNAL/PURGE tables"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextNodeId: "acid_inplace"
+        
+      - id: "acid_inplace"
+        title: "In-place ACID Downgrade"
+        description: "Downgrade on same cluster"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        dependencies: ["acid_downgrade"]
+        conditionalLogic: "acid_downgrade == true"
+        nextNodeId: "migrate_views"
+        
+      - id: "migrate_views"
+        title: "Migrate Views"
+        description: "Migrate views after underlying tables exist"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextNodeId: "migrate_non_native"
+        
+      - id: "migrate_non_native"
+        title: "Migrate Non-Native Tables"
+        description: "Migrate HBase, Kafka, JDBC tables"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextPageId: "iceberg_conversion"
+
+  iceberg_conversion:
+    title: "Iceberg Conversion (Optional)"
+    description: "Configure optional Iceberg table format conversion"
+    nodes:
+      - id: "enable_beta"
+        title: "Enable Beta Features"
+        description: "Must be set to true to enable Iceberg conversion features"
+        type: "BOOLEAN"
+        category: "iceberg"
+        required: false
+        nextNodeId: "iceberg_enable"
+        
+      - id: "iceberg_enable"
+        title: "Enable Iceberg Conversion"
+        description: "Convert Hive tables to Iceberg format during migration"
+        type: "BOOLEAN"
+        category: "iceberg"
+        required: false
+        dependencies: ["enable_beta"]
+        conditionalLogic: "enable_beta == true"
+        nextNodeId: "iceberg_version"
+        
+      - id: "iceberg_version"
+        title: "Iceberg Table Version"
+        description: "Iceberg table format version (Default: 2 - recommended)"
+        type: "SINGLE_SELECT"
+        category: "iceberg"
+        required: false
+        dependencies: ["iceberg_enable"]
+        conditionalLogic: "iceberg_enable == true"
+        options:
+          - value: "1"
+            label: "Version 1"
+            description: "Iceberg table format version 1"
+          - value: "2"
+            label: "Version 2"
+            description: "Iceberg table format version 2 (recommended)"
+            recommended: true
+        nextNodeId: "iceberg_file_translation"
+        
+      - id: "iceberg_file_translation"
+        title: "File Type Translation"
+        description: "File type translation strategy for Iceberg conversion"
+        type: "SINGLE_SELECT"
+        category: "iceberg"
+        required: false
+        dependencies: ["iceberg_enable"]
+        conditionalLogic: "iceberg_enable == true"
+        options:
+          - value: "STANDARD"
+            label: "Standard"
+            description: "Standard file type translation"
+            recommended: true
+        nextNodeId: "iceberg_inplace"
+        
+      - id: "iceberg_inplace"
+        title: "In-place Iceberg Conversion"
+        description: "true=Convert on same cluster (LEFT only), false=Convert while migrating to different cluster"
+        type: "BOOLEAN"
+        category: "iceberg"
+        required: false
+        dependencies: ["iceberg_enable"]
+        conditionalLogic: "iceberg_enable == true"
+        nextNodeId: "iceberg_properties"
+        
+      - id: "iceberg_properties"
+        title: "Iceberg Table Properties"
+        description: "Iceberg-specific table properties as key-value pairs (e.g., write.format.default=parquet)"
+        type: "TEXT_INPUT"
+        category: "iceberg"
+        required: false
+        dependencies: ["iceberg_enable"]
+        conditionalLogic: "iceberg_enable == true"
+        helpText: "Requirements: RIGHT cluster must support Iceberg (CDP 7.3.1+, CDW 1.5.1+, Public Cloud Aug 2023+). Review CDP Iceberg limitations. Conversion is typically one-way."
+        nextPageId: "optimization"
+
+  optimization:
+    title: "Optimization (SQL Data Movement)"
+    description: "Configure optimization settings for data movement"
+    nodes:
+      - id: "optimization_approach"
+        title: "Optimization Approach"
+        description: "Select optimization strategy for data movement"
+        type: "SINGLE_SELECT"
+        category: "optimization"
+        required: true
+        options:
+          - value: "autoTune"
+            label: "Auto Tune (Recommended)"
+            description: "Automatically optimize based on file statistics and table characteristics"
+            recommended: true
+            nextNodeId: "optimization_additional"
+        
+      - id: "optimization_additional"
+        title: "Additional Optimization Settings"
+        description: "Configure additional optimization options"
+        type: "MULTI_SELECT"
+        category: "optimization"
+        required: false
+        options:
+          - value: "compressTextOutput"
+            label: "Compress TEXT Output"
+            description: "Compress TEXT format files during data movement"
+            nextNodeId: "optimization_overrides"
+        
+      - id: "optimization_overrides"
+        title: "Hive Property Overrides"
+        description: "Hive property overrides as key-value pairs (e.g., tez.queue.name=migration)"
+        type: "TEXT_INPUT"
+        category: "optimization"
+        required: false
+        nextPageId: "location_translation"
+
+  location_translation:
+    title: "Location Translation Strategy"
+    description: "Configure how table locations are translated"
+    nodes:
+      - id: "translation_type"
+        title: "Translation Type"
+        description: "Select location translation strategy"
+        type: "SINGLE_SELECT"
+        category: "location"
+        required: true
+        options:
+          - value: "RELATIVE"
+            label: "Relative"
+            description: "Simple namespace replacement"
+            nextNodeId: "target_namespace"
+        
+      - id: "target_namespace"
+        title: "Target Namespace"
+        description: "Target storage namespace"
+        type: "TEXT_INPUT"
+        category: "location"
+        required: true
+        nextNodeId: "warehouse_config"
+        
+      - id: "warehouse_config"
+        title: "Warehouse Configuration"
+        description: "Configure warehouse settings for ALIGNED translation"
+        type: "PAGE_TRANSITION"
+        category: "location"
+        dependencies: ["translation_type"]
+        conditionalLogic: "translation_type == 'ALIGNED'"
+        nextPageId: "execution_mode"
+
+  execution_mode:
+    title: "Execution Mode"
+    description: "Final execution settings"
+    nodes:
+      - id: "execution_type"
+        title: "Execution Type"
+        description: "Choose execution mode"
+        type: "SINGLE_SELECT"
+        category: "execution"
+        required: true
+        options:
+          - value: "dryRun"
+            label: "Dry Run"
+            description: "Generate plans without executing (recommended first)"
+            recommended: true
+            nextNodeId: "execution_options"
+        
+      - id: "execution_options"
+        title: "Execution Options"
+        description: "Additional execution settings"
+        type: "MULTI_SELECT"
+        category: "execution"
+        required: false
+        options:
+          - value: "readOnly"
+            label: "Read Only"
+            description: "Create tables without PURGE flag"
+            nextNodeId: "complete"
+        
+      - id: "complete"
+        title: "Configuration Complete"
+        description: "SQL strategy configuration is complete"
+        type: "PAGE_TRANSITION"
+        category: "completion"

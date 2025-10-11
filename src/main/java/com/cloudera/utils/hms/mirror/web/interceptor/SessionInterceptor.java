@@ -53,7 +53,7 @@ public class SessionInterceptor implements HandlerInterceptor {
         
         if (executeSession == null) {
             // Create a unique session ID based on HTTP session
-            String sessionId = "web-" + httpSession.getId().substring(0, 8);
+            String sessionId = "web-" + httpSession.getId();
             log.debug("Creating new ExecuteSession with ID: {}", sessionId);
             
             try {

@@ -1,0 +1,449 @@
+# COMMON Data Strategy Decision Tree
+# Purpose: Shared configuration and common operations across all strategies
+
+strategy: "COMMON"
+description: "Shared configuration and common operations across all strategies"
+
+pages:
+  connections:
+    title: "Connection Management"
+    description: "Configure and manage cluster connections"
+    nodes:
+      - id: "connection_type"
+        title: "Connection Type"
+        description: "Select connection configuration approach"
+        type: "SINGLE_SELECT"
+        category: "connections"
+        required: true
+        options:
+          - value: "existing"
+            label: "Use Existing Connections"
+            description: "Use pre-configured connection profiles"
+            recommended: true
+          - value: "new"
+            label: "Configure New Connections"
+            description: "Set up new connection profiles"
+          - value: "dynamic"
+            label: "Dynamic Configuration"
+            description: "Configure connections dynamically during execution"
+        nextNodeId: "connection_validation"
+        
+      - id: "connection_validation"
+        title: "Connection Validation"
+        description: "Validate connection settings before proceeding"
+        type: "BOOLEAN"
+        category: "connections"
+        required: false
+        nextNodeId: "connection_pooling"
+        
+      - id: "connection_pooling"
+        title: "Connection Pooling"
+        description: "Configure connection pool settings"
+        type: "SINGLE_SELECT"
+        category: "connections"
+        required: false
+        options:
+          - value: "default"
+            label: "Default Pooling"
+            description: "Use default connection pool settings"
+            recommended: true
+          - value: "custom"
+            label: "Custom Pooling"
+            description: "Configure custom connection pool parameters"
+          - value: "disabled"
+            label: "No Pooling"
+            description: "Disable connection pooling"
+        nextPageId: "security_settings"
+
+  security_settings:
+    title: "Security Configuration"
+    description: "Configure security and authentication settings"
+    nodes:
+      - id: "authentication_method"
+        title: "Authentication Method"
+        description: "Select authentication mechanism"
+        type: "SINGLE_SELECT"
+        category: "security"
+        required: true
+        options:
+          - value: "kerberos"
+            label: "Kerberos"
+            description: "Use Kerberos authentication"
+            recommended: true
+          - value: "ldap"
+            label: "LDAP"
+            description: "Use LDAP authentication"
+          - value: "simple"
+            label: "Simple Authentication"
+            description: "Use username/password authentication"
+          - value: "oauth"
+            label: "OAuth 2.0"
+            description: "Use OAuth 2.0 authentication"
+          - value: "none"
+            label: "No Authentication"
+            description: "No authentication required"
+        nextNodeId: "ssl_encryption"
+        
+      - id: "ssl_encryption"
+        title: "SSL/TLS Encryption"
+        description: "Enable SSL/TLS encryption for connections"
+        type: "BOOLEAN"
+        category: "security"
+        required: false
+        nextNodeId: "credential_management"
+        
+      - id: "credential_management"
+        title: "Credential Management"
+        description: "Configure credential storage and management"
+        type: "SINGLE_SELECT"
+        category: "security"
+        required: false
+        options:
+          - value: "keystore"
+            label: "Java Keystore"
+            description: "Store credentials in Java keystore"
+            recommended: true
+          - value: "vault"
+            label: "External Vault"
+            description: "Use external credential vault (e.g., HashiCorp Vault)"
+          - value: "config"
+            label: "Configuration File"
+            description: "Store credentials in configuration files"
+          - value: "environment"
+            label: "Environment Variables"
+            description: "Use environment variables for credentials"
+        nextPageId: "logging_monitoring"
+
+  logging_monitoring:
+    title: "Logging and Monitoring"
+    description: "Configure logging and monitoring settings"
+    nodes:
+      - id: "log_level"
+        title: "Log Level"
+        description: "Set logging level for operations"
+        type: "SINGLE_SELECT"
+        category: "logging"
+        required: false
+        options:
+          - value: "ERROR"
+            label: "Error"
+            description: "Log only errors"
+          - value: "WARN"
+            label: "Warning"
+            description: "Log warnings and errors"
+          - value: "INFO"
+            label: "Info"
+            description: "Log informational messages, warnings, and errors"
+            recommended: true
+          - value: "DEBUG"
+            label: "Debug"
+            description: "Log debug information (verbose)"
+          - value: "TRACE"
+            label: "Trace"
+            description: "Log all messages (very verbose)"
+        nextNodeId: "log_format"
+        
+      - id: "log_format"
+        title: "Log Format"
+        description: "Select log output format"
+        type: "SINGLE_SELECT"
+        category: "logging"
+        required: false
+        options:
+          - value: "standard"
+            label: "Standard"
+            description: "Standard text log format"
+            recommended: true
+          - value: "json"
+            label: "JSON"
+            description: "Structured JSON log format"
+          - value: "xml"
+            label: "XML"
+            description: "XML structured log format"
+        nextNodeId: "monitoring_enable"
+        
+      - id: "monitoring_enable"
+        title: "Enable Monitoring"
+        description: "Enable performance and progress monitoring"
+        type: "BOOLEAN"
+        category: "monitoring"
+        required: false
+        nextNodeId: "metrics_collection"
+        
+      - id: "metrics_collection"
+        title: "Metrics Collection"
+        description: "Configure metrics collection and reporting"
+        type: "MULTI_SELECT"
+        category: "monitoring"
+        required: false
+        dependencies: ["monitoring_enable"]
+        conditionalLogic: "monitoring_enable == true"
+        options:
+          - value: "performance"
+            label: "Performance Metrics"
+            description: "Collect performance metrics (CPU, memory, I/O)"
+          - value: "progress"
+            label: "Progress Metrics"
+            description: "Track migration progress and completion rates"
+          - value: "errors"
+            label: "Error Metrics"
+            description: "Collect error rates and failure statistics"
+          - value: "throughput"
+            label: "Throughput Metrics"
+            description: "Measure data processing throughput"
+        nextPageId: "resource_management"
+
+  resource_management:
+    title: "Resource Management"
+    description: "Configure resource allocation and limits"
+    nodes:
+      - id: "memory_allocation"
+        title: "Memory Allocation (GB)"
+        description: "Maximum memory allocation in gigabytes (Default: 8)"
+        type: "NUMBER_INPUT"
+        category: "resources"
+        required: false
+        metadata:
+          defaultValue: 8
+          min: 1
+          max: 64
+        nextNodeId: "cpu_cores"
+        
+      - id: "cpu_cores"
+        title: "CPU Cores"
+        description: "Number of CPU cores to utilize (Default: 4)"
+        type: "NUMBER_INPUT"
+        category: "resources"
+        required: false
+        metadata:
+          defaultValue: 4
+          min: 1
+          max: 32
+        nextNodeId: "thread_pool_size"
+        
+      - id: "thread_pool_size"
+        title: "Thread Pool Size"
+        description: "Size of thread pool for parallel operations (Default: 10)"
+        type: "NUMBER_INPUT"
+        category: "resources"
+        required: false
+        metadata:
+          defaultValue: 10
+          min: 1
+          max: 100
+        nextNodeId: "timeout_settings"
+        
+      - id: "timeout_settings"
+        title: "Timeout Settings"
+        description: "Configure operation timeout values"
+        type: "MULTI_SELECT"
+        category: "resources"
+        required: false
+        options:
+          - value: "connection"
+            label: "Connection Timeout"
+            description: "Set connection establishment timeout"
+          - value: "query"
+            label: "Query Timeout"
+            description: "Set query execution timeout"
+          - value: "transfer"
+            label: "Data Transfer Timeout"
+            description: "Set data transfer operation timeout"
+          - value: "session"
+            label: "Session Timeout"
+            description: "Set session idle timeout"
+        nextPageId: "error_handling"
+
+  error_handling:
+    title: "Error Handling and Recovery"
+    description: "Configure error handling and recovery mechanisms"
+    nodes:
+      - id: "error_strategy"
+        title: "Error Handling Strategy"
+        description: "Select how to handle errors during operations"
+        type: "SINGLE_SELECT"
+        category: "error_handling"
+        required: true
+        options:
+          - value: "fail_fast"
+            label: "Fail Fast"
+            description: "Stop immediately on first error"
+          - value: "continue"
+            label: "Continue on Error"
+            description: "Continue processing other items after errors"
+            recommended: true
+          - value: "retry"
+            label: "Retry on Error"
+            description: "Automatically retry failed operations"
+        nextNodeId: "retry_policy"
+        
+      - id: "retry_policy"
+        title: "Retry Policy"
+        description: "Configure retry behavior for failed operations"
+        type: "PAGE_TRANSITION"
+        category: "error_handling"
+        dependencies: ["error_strategy"]
+        conditionalLogic: "error_strategy == 'retry'"
+        nextNodeId: "retry_attempts"
+        
+      - id: "retry_attempts"
+        title: "Retry Attempts"
+        description: "Maximum number of retry attempts (Default: 3)"
+        type: "NUMBER_INPUT"
+        category: "error_handling"
+        required: false
+        dependencies: ["error_strategy"]
+        conditionalLogic: "error_strategy == 'retry'"
+        metadata:
+          defaultValue: 3
+          min: 1
+          max: 10
+        nextNodeId: "retry_delay"
+        
+      - id: "retry_delay"
+        title: "Retry Delay (seconds)"
+        description: "Delay between retry attempts in seconds (Default: 30)"
+        type: "NUMBER_INPUT"
+        category: "error_handling"
+        required: false
+        dependencies: ["error_strategy"]
+        conditionalLogic: "error_strategy == 'retry'"
+        metadata:
+          defaultValue: 30
+          min: 1
+          max: 300
+        nextNodeId: "recovery_options"
+        
+      - id: "recovery_options"
+        title: "Recovery Options"
+        description: "Configure recovery mechanisms"
+        type: "MULTI_SELECT"
+        category: "error_handling"
+        required: false
+        options:
+          - value: "checkpoint"
+            label: "Checkpoint Recovery"
+            description: "Enable checkpoint-based recovery"
+          - value: "transaction"
+            label: "Transaction Rollback"
+            description: "Enable transaction-based rollback"
+          - value: "backup"
+            label: "Backup Recovery"
+            description: "Enable recovery from backups"
+          - value: "manual"
+            label: "Manual Recovery"
+            description: "Require manual intervention for recovery"
+        nextPageId: "notifications"
+
+  notifications:
+    title: "Notifications and Alerts"
+    description: "Configure notification and alerting settings"
+    nodes:
+      - id: "notification_enable"
+        title: "Enable Notifications"
+        description: "Enable notification system"
+        type: "BOOLEAN"
+        category: "notifications"
+        required: false
+        nextNodeId: "notification_channels"
+        
+      - id: "notification_channels"
+        title: "Notification Channels"
+        description: "Select notification delivery channels"
+        type: "MULTI_SELECT"
+        category: "notifications"
+        required: false
+        dependencies: ["notification_enable"]
+        conditionalLogic: "notification_enable == true"
+        options:
+          - value: "email"
+            label: "Email"
+            description: "Send notifications via email"
+          - value: "slack"
+            label: "Slack"
+            description: "Send notifications to Slack channels"
+          - value: "webhook"
+            label: "Webhook"
+            description: "Send notifications via HTTP webhooks"
+          - value: "sms"
+            label: "SMS"
+            description: "Send notifications via SMS"
+        nextNodeId: "alert_conditions"
+        
+      - id: "alert_conditions"
+        title: "Alert Conditions"
+        description: "Configure when to trigger alerts"
+        type: "MULTI_SELECT"
+        category: "notifications"
+        required: false
+        dependencies: ["notification_enable"]
+        conditionalLogic: "notification_enable == true"
+        options:
+          - value: "completion"
+            label: "Operation Completion"
+            description: "Alert when operations complete successfully"
+          - value: "failure"
+            label: "Operation Failure"
+            description: "Alert when operations fail"
+            recommended: true
+          - value: "progress"
+            label: "Progress Milestones"
+            description: "Alert at specific progress milestones"
+          - value: "performance"
+            label: "Performance Issues"
+            description: "Alert when performance degrades"
+        nextPageId: "maintenance"
+
+  maintenance:
+    title: "Maintenance and Cleanup"
+    description: "Configure maintenance and cleanup operations"
+    nodes:
+      - id: "cleanup_policy"
+        title: "Cleanup Policy"
+        description: "Configure automatic cleanup behavior"
+        type: "SINGLE_SELECT"
+        category: "maintenance"
+        required: false
+        options:
+          - value: "automatic"
+            label: "Automatic Cleanup"
+            description: "Automatically clean up temporary files and resources"
+            recommended: true
+          - value: "manual"
+            label: "Manual Cleanup"
+            description: "Require manual cleanup of temporary resources"
+          - value: "scheduled"
+            label: "Scheduled Cleanup"
+            description: "Clean up on a scheduled basis"
+          - value: "disabled"
+            label: "No Cleanup"
+            description: "Do not perform any cleanup"
+        nextNodeId: "temp_directory"
+        
+      - id: "temp_directory"
+        title: "Temporary Directory"
+        description: "Location for temporary files (Default: /tmp/hms-mirror)"
+        type: "TEXT_INPUT"
+        category: "maintenance"
+        required: false
+        metadata:
+          defaultValue: "/tmp/hms-mirror"
+        nextNodeId: "log_retention"
+        
+      - id: "log_retention"
+        title: "Log Retention (days)"
+        description: "Number of days to retain log files (Default: 30)"
+        type: "NUMBER_INPUT"
+        category: "maintenance"
+        required: false
+        metadata:
+          defaultValue: 30
+          min: 1
+          max: 365
+        nextNodeId: "complete"
+        
+      - id: "complete"
+        title: "Configuration Complete"
+        description: "COMMON strategy configuration is complete"
+        type: "PAGE_TRANSITION"
+        category: "completion"

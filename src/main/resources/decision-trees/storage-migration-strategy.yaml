@@ -1,0 +1,419 @@
+# STORAGE_MIGRATION Data Strategy Decision Tree
+# Purpose: Perform in-place storage format migrations and optimizations
+
+strategy: "STORAGE_MIGRATION"
+description: "Perform in-place storage format migrations and optimizations"
+
+pages:
+  connections:
+    title: "Connection Selection"
+    description: "Select cluster connection for storage migration"
+    nodes:
+      - id: "target_connection"
+        title: "Target Connection"
+        description: "Select cluster connection profile for storage migration"
+        type: "CONNECTION_SELECT"
+        category: "connections"
+        required: true
+        helpText: "Storage migration typically operates on a single cluster"
+        nextPageId: "general_behavior"
+
+  general_behavior:
+    title: "General Behavior"
+    description: "Configure basic migration behavior"
+    nodes:
+      - id: "database_only"
+        title: "Database Only Migration"
+        description: "Migrate only database definitions, skip tables"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextNodeId: "copy_avro_schemas"
+        
+      - id: "copy_avro_schemas"
+        title: "Copy AVRO Schema Files"
+        description: "Copy AVRO schema files during migration"
+        type: "BOOLEAN"
+        category: "general"
+        required: false
+        nextPageId: "migration_type"
+
+  migration_type:
+    title: "Migration Type Selection"
+    description: "Select which types of tables to migrate"
+    nodes:
+      - id: "acid_migration"
+        title: "ACID Tables Migration"
+        description: "Configure ACID table storage migration"
+        type: "SINGLE_SELECT"
+        category: "migration"
+        required: true
+        options:
+          - value: "none"
+            label: "Skip ACID Tables"
+            description: "Do not migrate ACID table storage"
+          - value: "include"
+            label: "Include ACID Tables"
+            description: "Include ACID tables in storage migration"
+            recommended: true
+          - value: "only"
+            label: "ACID Tables Only"
+            description: "Migrate ONLY ACID table storage"
+        nextNodeId: "acid_options"
+        
+      - id: "acid_options"
+        title: "ACID Table Options"
+        description: "Configure ACID table specific settings"
+        type: "PAGE_TRANSITION"
+        category: "migration"
+        dependencies: ["acid_migration"]
+        conditionalLogic: "acid_migration != 'none'"
+        nextNodeId: "acid_bucket_threshold"
+        
+      - id: "acid_bucket_threshold"
+        title: "Artificial Bucket Threshold"
+        description: "Remove bucket definitions if count ≤ threshold (Default: 2)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 2
+          min: 1
+          max: 100
+        nextNodeId: "acid_partition_limit"
+        
+      - id: "acid_partition_limit"
+        title: "ACID Partition Limit"
+        description: "Skip ACID tables exceeding this partition count (Default: 500)"
+        type: "NUMBER_INPUT"
+        category: "migration"
+        required: false
+        metadata:
+          defaultValue: 500
+          min: 1
+          max: 10000
+        nextNodeId: "migrate_views"
+        
+      - id: "migrate_views"
+        title: "Migrate Views"
+        description: "Update view definitions after storage migration"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextNodeId: "migrate_non_native"
+        
+      - id: "migrate_non_native"
+        title: "Migrate Non-Native Tables"
+        description: "Migrate HBase, Kafka, JDBC table storage"
+        type: "BOOLEAN"
+        category: "migration"
+        required: false
+        nextPageId: "storage_format"
+
+  storage_format:
+    title: "Storage Format Configuration"
+    description: "Configure target storage formats and optimizations"
+    nodes:
+      - id: "target_format"
+        title: "Target Storage Format"
+        description: "Select target file format for migration"
+        type: "SINGLE_SELECT"
+        category: "storage"
+        required: true
+        options:
+          - value: "PARQUET"
+            label: "Parquet"
+            description: "Columnar storage format optimized for analytics"
+            recommended: true
+          - value: "ORC"
+            label: "ORC"
+            description: "Optimized Row Columnar format"
+          - value: "AVRO"
+            label: "Avro"
+            description: "Row-based format with schema evolution"
+          - value: "DELTA"
+            label: "Delta Lake"
+            description: "ACID-compliant storage layer"
+          - value: "ICEBERG"
+            label: "Apache Iceberg"
+            description: "Table format for large analytic datasets"
+        nextNodeId: "compression_type"
+        
+      - id: "compression_type"
+        title: "Compression Type"
+        description: "Select compression algorithm for target format"
+        type: "SINGLE_SELECT"
+        category: "storage"
+        required: false
+        options:
+          - value: "SNAPPY"
+            label: "Snappy"
+            description: "Fast compression with moderate compression ratio"
+            recommended: true
+          - value: "GZIP"
+            label: "GZip"
+            description: "Higher compression ratio, slower performance"
+          - value: "LZ4"
+            label: "LZ4"
+            description: "Very fast compression with lower ratio"
+          - value: "ZSTD"
+            label: "Zstandard"
+            description: "Good balance of speed and compression ratio"
+          - value: "NONE"
+            label: "No Compression"
+            description: "No compression applied"
+        nextNodeId: "block_size"
+        
+      - id: "block_size"
+        title: "Block Size (MB)"
+        description: "Target block size in megabytes (Default: 128)"
+        type: "NUMBER_INPUT"
+        category: "storage"
+        required: false
+        metadata:
+          defaultValue: 128
+          min: 64
+          max: 1024
+        nextNodeId: "partitioning_strategy"
+        
+      - id: "partitioning_strategy"
+        title: "Partitioning Strategy"
+        description: "Configure partition optimization during migration"
+        type: "SINGLE_SELECT"
+        category: "storage"
+        required: true
+        options:
+          - value: "PRESERVE"
+            label: "Preserve Existing"
+            description: "Keep existing partition structure"
+            recommended: true
+          - value: "OPTIMIZE"
+            label: "Optimize Partitions"
+            description: "Optimize partition structure based on data distribution"
+          - value: "REPARTITION"
+            label: "Repartition"
+            description: "Apply new partitioning scheme"
+          - value: "COALESCE"
+            label: "Coalesce Small Partitions"
+            description: "Merge small partitions to reduce overhead"
+        nextPageId: "optimization"
+
+  optimization:
+    title: "Storage Optimization"
+    description: "Configure storage optimization settings"
+    nodes:
+      - id: "optimization_approach"
+        title: "Optimization Approach"
+        description: "Select storage optimization strategy"
+        type: "SINGLE_SELECT"
+        category: "optimization"
+        required: true
+        options:
+          - value: "autoTune"
+            label: "Auto Tune (Recommended)"
+            description: "Automatically optimize based on data characteristics"
+            recommended: true
+          - value: "compact"
+            label: "Compact Files"
+            description: "Merge small files to improve performance"
+          - value: "rewrite"
+            label: "Rewrite Data"
+            description: "Completely rewrite data with optimizations"
+          - value: "inPlace"
+            label: "In-Place Optimization"
+            description: "Optimize without moving data"
+          - value: "skip"
+            label: "Skip Optimizations"
+            description: "Perform format conversion without optimization"
+        nextNodeId: "file_size_target"
+        
+      - id: "file_size_target"
+        title: "Target File Size (MB)"
+        description: "Target file size in megabytes (Default: 256)"
+        type: "NUMBER_INPUT"
+        category: "optimization"
+        required: false
+        metadata:
+          defaultValue: 256
+          min: 64
+          max: 2048
+        nextNodeId: "parallel_degree"
+        
+      - id: "parallel_degree"
+        title: "Parallel Processing Degree"
+        description: "Number of parallel migration operations (Default: 4)"
+        type: "NUMBER_INPUT"
+        category: "optimization"
+        required: false
+        metadata:
+          defaultValue: 4
+          min: 1
+          max: 16
+        nextNodeId: "optimization_additional"
+        
+      - id: "optimization_additional"
+        title: "Additional Optimization Settings"
+        description: "Configure additional optimization options"
+        type: "MULTI_SELECT"
+        category: "optimization"
+        required: false
+        options:
+          - value: "sortData"
+            label: "Sort Data"
+            description: "Sort data during migration for better compression and query performance"
+          - value: "bloomFilters"
+            label: "Create Bloom Filters"
+            description: "Generate bloom filters for better query pruning"
+          - value: "statistics"
+            label: "Collect Statistics"
+            description: "Collect table and column statistics during migration"
+          - value: "vacuum"
+            label: "Vacuum Old Files"
+            description: "Clean up old files after successful migration"
+          - value: "validateData"
+            label: "Validate Data Integrity"
+            description: "Verify data integrity after migration"
+          - value: "preserveAcls"
+            label: "Preserve ACLs"
+            description: "Preserve file system access control lists"
+        nextPageId: "advanced_settings"
+
+  advanced_settings:
+    title: "Advanced Settings"
+    description: "Configure advanced migration settings"
+    nodes:
+      - id: "backup_strategy"
+        title: "Backup Strategy"
+        description: "How to handle data backup during migration"
+        type: "SINGLE_SELECT"
+        category: "advanced"
+        required: true
+        options:
+          - value: "snapshot"
+            label: "Create Snapshots"
+            description: "Create storage snapshots before migration"
+            recommended: true
+          - value: "backup"
+            label: "Full Backup"
+            description: "Create full data backup before migration"
+          - value: "none"
+            label: "No Backup"
+            description: "Proceed without backup (not recommended)"
+            warningMessage: "This option does not create backups. Data loss risk if migration fails."
+        nextNodeId: "rollback_strategy"
+        
+      - id: "rollback_strategy"
+        title: "Rollback Strategy"
+        description: "Configure rollback options in case of failure"
+        type: "SINGLE_SELECT"
+        category: "advanced"
+        required: true
+        options:
+          - value: "automatic"
+            label: "Automatic Rollback"
+            description: "Automatically rollback on failure"
+            recommended: true
+          - value: "manual"
+            label: "Manual Rollback"
+            description: "Require manual intervention for rollback"
+          - value: "none"
+            label: "No Rollback"
+            description: "No rollback capability"
+        nextNodeId: "migration_mode"
+        
+      - id: "migration_mode"
+        title: "Migration Mode"
+        description: "Select migration execution mode"
+        type: "SINGLE_SELECT"
+        category: "advanced"
+        required: true
+        options:
+          - value: "online"
+            label: "Online Migration"
+            description: "Migrate while tables remain available (may impact performance)"
+          - value: "offline"
+            label: "Offline Migration"
+            description: "Take tables offline during migration for consistency"
+            recommended: true
+          - value: "hybrid"
+            label: "Hybrid Mode"
+            description: "Online where possible, offline for critical operations"
+        nextNodeId: "resource_limits"
+        
+      - id: "resource_limits"
+        title: "Resource Limits"
+        description: "Configure resource usage limits"
+        type: "MULTI_SELECT"
+        category: "advanced"
+        required: false
+        options:
+          - value: "cpuLimit"
+            label: "CPU Limit"
+            description: "Limit CPU usage during migration"
+          - value: "memoryLimit"
+            label: "Memory Limit"
+            description: "Limit memory usage during migration"
+          - value: "ioLimit"
+            label: "I/O Throttling"
+            description: "Throttle disk I/O to reduce impact on other workloads"
+          - value: "networkLimit"
+            label: "Network Throttling"
+            description: "Throttle network usage during data movement"
+        nextPageId: "execution_mode"
+
+  execution_mode:
+    title: "Execution Mode"
+    description: "Final execution settings"
+    nodes:
+      - id: "execution_type"
+        title: "Execution Type"
+        description: "Choose execution mode"
+        type: "SINGLE_SELECT"
+        category: "execution"
+        required: true
+        options:
+          - value: "dryRun"
+            label: "Dry Run"
+            description: "Generate migration plan without executing (recommended first)"
+            recommended: true
+          - value: "analyze"
+            label: "Analyze Only"
+            description: "Analyze storage and provide recommendations"
+          - value: "validate"
+            label: "Validate Migration"
+            description: "Validate migration feasibility and requirements"
+          - value: "execute"
+            label: "Execute Migration"
+            description: "Execute the storage migration"
+            warningMessage: "This will perform the actual storage migration. Ensure you have tested with dry run first."
+        nextNodeId: "execution_options"
+        
+      - id: "execution_options"
+        title: "Execution Options"
+        description: "Additional execution settings"
+        type: "MULTI_SELECT"
+        category: "execution"
+        required: false
+        options:
+          - value: "readOnly"
+            label: "Read Only"
+            description: "Perform migration without modifying original data"
+          - value: "continueOnError"
+            label: "Continue on Error"
+            description: "Continue processing other tables if one fails"
+          - value: "detailedLogging"
+            label: "Detailed Logging"
+            description: "Enable detailed logging for debugging"
+          - value: "progressReporting"
+            label: "Progress Reporting"
+            description: "Enable detailed progress reporting"
+          - value: "skipValidation"
+            label: "Skip Validation"
+            description: "Skip post-migration validation (faster but less safe)"
+        nextNodeId: "complete"
+        
+      - id: "complete"
+        title: "Configuration Complete"
+        description: "STORAGE_MIGRATION strategy configuration is complete"
+        type: "PAGE_TRANSITION"
+        category: "completion"

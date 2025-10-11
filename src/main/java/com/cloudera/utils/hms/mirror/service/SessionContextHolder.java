@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,7 +70,8 @@ public class SessionContextHolder {
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         String sessionId = "session-" + dtf.format(new Date());
         session.setSessionId(sessionId);
-        log.debug("Created default ExecuteSession with ID: {}", sessionId);
+        session.setConfig(new HmsMirrorConfig());
+        log.debug("Created default ExecuteSession with ID: {} and default config", sessionId);
         return session;
     }
     
@@ -77,7 +79,8 @@ public class SessionContextHolder {
         ExecuteSession session = new ExecuteSession();
         String actualSessionId = (sessionId != null && !sessionId.trim().isEmpty()) ? sessionId : generateSessionId();
         session.setSessionId(actualSessionId);
-        log.debug("Created ExecuteSession with ID: {}", actualSessionId);
+        session.setConfig(new HmsMirrorConfig());
+        log.debug("Created ExecuteSession with ID: {} and default config", actualSessionId);
         return session;
     }
     
