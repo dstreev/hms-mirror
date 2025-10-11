@@ -48,7 +48,11 @@
       "Bash(break)",
       "Bash(fi)",
       "Bash(echo \"Run $i completed successfully\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(kill:*)",
+      "Bash(timeout:*)",
+      "Bash(pkill:*)",
+      "Bash(open http://localhost:8103/hms-mirror)"
     ],
     "deny": [],
     "ask": [],

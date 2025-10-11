@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,7 @@ import java.sql.SQLException;
 
 @Controller
 @RequestMapping(path = "/connections")
+@ConditionalOnProperty(name = "hms-mirror.ui.version", havingValue = "thymeleaf", matchIfMissing = false)
 @Slf4j
 public class ConnectionMVController {
 

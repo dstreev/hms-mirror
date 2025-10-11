@@ -20,6 +20,8 @@ import NewConfigPage from './pages/NewConfigPage';
 import ExecutionPage from './components/execution/ExecutionPage';
 import PasswordEncryptionPage from './components/encryption/PasswordEncryptionPage';
 import SummaryViewPage from './components/summary/SummaryViewPage';
+import ConnectionsPage from './components/connections/ConnectionsPage';
+import NewConnectionWizard from './components/connections/NewConnectionWizard';
 
 const App: React.FC = () => {
   return (
@@ -34,6 +36,11 @@ const App: React.FC = () => {
         <Route path="/config/new" element={<NewConfigPage />} />
         <Route path="/config/load" element={<LoadConfigurationPage />} />
         <Route path="/config/templates" element={<TemplatesPage />} />
+        
+        {/* Connection management routes - always accessible */}
+        <Route path="/connections" element={<ConnectionsPage />} />
+        <Route path="/connections/new" element={<NewConnectionWizard />} />
+        <Route path="/connections/edit/:id" element={<NewConnectionWizard />} />
         
         {/* Protected configuration editing routes */}
         <Route path="/config/current" element={<RequireConfiguration><CurrentConfigurationPage /></RequireConfiguration>} />

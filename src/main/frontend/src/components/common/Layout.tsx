@@ -9,7 +9,8 @@ import {
   WifiIcon,
   KeyIcon,
   CodeBracketIcon,
-  LockClosedIcon
+  LockClosedIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
 import SessionInfo from './SessionInfo';
@@ -26,6 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navigation = [
     { name: 'Create/Load', href: '/config/manage', icon: HomeIcon, requiresConfig: false, requiresPasswordKey: false },
+    { name: 'Connections', href: '/connections', icon: LinkIcon, requiresConfig: false, requiresPasswordKey: false },
     { name: 'Configuration', href: '/config/current', icon: CogIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Password Encryption', href: '/encryption', icon: KeyIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Execution', href: '/execution', icon: PlayIcon, requiresConfig: true, requiresPasswordKey: true },

@@ -58,7 +58,7 @@ public class ReactSpaController {
     /**
      * Serves the React SPA for client-side routes.
      */
-    @GetMapping({"/dashboard", "/config", "/config/**", "/connections", "/databases", "/execution", "/reports", "/reports/**"})
+    @GetMapping({"/dashboard", "/config", "/config/**", "/connections", "/connections/**", "/databases", "/execution", "/reports", "/reports/**"})
     public String spa(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         log.info("Serving React SPA for client route: {}", requestUri);
