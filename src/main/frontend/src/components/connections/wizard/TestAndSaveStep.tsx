@@ -10,6 +10,8 @@ interface TestAndSaveStepProps {
   onBack: () => void;
   onSave: () => void;
   isLastStep: boolean;
+  saving?: boolean;
+  saveSuccess?: boolean;
 }
 
 const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
@@ -17,11 +19,12 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
   errors,
   onChange,
   onBack,
-  onSave
+  onSave,
+  saving = false,
+  saveSuccess = false
 }) => {
   const [testResults, setTestResults] = useState<ConnectionTestResults | null>(null);
   const [testing, setTesting] = useState(false);
-  const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [saveTestResults, setSaveTestResults] = useState(true);
 
   const handleTestConnection = async () => {
@@ -207,18 +210,6 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
           <label className="flex items-center">
             <input
               type="checkbox"
-              checked={saveAsDefault}
-              onChange={(e) => setSaveAsDefault(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <span className="ml-3 text-sm text-gray-700">
-              Make this the default connection
-            </span>
-          </label>
-          
-          <label className="flex items-center">
-            <input
-              type="checkbox"
               checked={saveTestResults}
               onChange={(e) => setSaveTestResults(e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
@@ -234,7 +225,8 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
       <div className="flex justify-between pt-6 border-t border-gray-200">
         <button
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={saving}
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ← Back
         </button>
@@ -251,9 +243,26 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
           
           <button
             onClick={onSave}
-            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={saving || saveSuccess}
+            className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${
+              saveSuccess 
+                ? 'bg-emerald-600 text-white' 
+                : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50'
+            }`}
           >
-            💾 Save Connection
+            {saving ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Saving Connection...
+              </div>
+            ) : saveSuccess ? (
+              <div className="flex items-center">
+                <CheckCircleIcon className="h-4 w-4 mr-2" />
+                Connection Saved!
+              </div>
+            ) : (
+              '💾 Save Connection'
+            )}
           </button>
         </div>
       </div>

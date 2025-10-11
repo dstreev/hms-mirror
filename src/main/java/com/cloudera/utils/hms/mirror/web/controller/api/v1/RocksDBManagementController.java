@@ -35,6 +35,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -255,6 +258,214 @@ public class RocksDBManagementController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(result);
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    @GetMapping("/column-families")
+    @Operation(summary = "List all column families", 
+               description = "Returns a list of all column families with their metadata")
+    @ApiResponse(responseCode = "200", description = "Column families retrieved successfully")
+    public ResponseEntity<Map<String, Object>> getColumnFamilies() {
+        try {
+            // For now, return hardcoded column families list since we don't have default CF handle
+            Map<String, Object> result = new HashMap<>();
+            List<Map<String, Object>> columnFamilies = new ArrayList<>();
+            
+            // Add configurations column family
+            Map<String, Object> configInfo = new HashMap<>();
+            configInfo.put("name", "configurations");
+            configInfo.put("keysCount", 0); // Will be populated when we can actually query
+            columnFamilies.add(configInfo);
+            
+            // Add sessions column family
+            Map<String, Object> sessionsInfo = new HashMap<>();
+            sessionsInfo.put("name", "sessions");
+            sessionsInfo.put("keysCount", 0);
+            columnFamilies.add(sessionsInfo);
+            
+            // Add connections column family
+            Map<String, Object> connectionsInfo = new HashMap<>();
+            connectionsInfo.put("name", "connections");
+            connectionsInfo.put("keysCount", 0);
+            columnFamilies.add(connectionsInfo);
+            
+            result.put("columnFamilies", columnFamilies);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error retrieving column families", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to retrieve column families: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/data/{columnFamily}/keys")
+    @Operation(summary = "Get keys for a column family", 
+               description = "Returns keys for the specified column family, optionally filtered by prefix")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Keys retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family name")
+    })
+    public ResponseEntity<Map<String, Object>> getKeys(
+            @Parameter(description = "Column family name (default, configurations, sessions, connections)")
+            @PathVariable String columnFamily,
+            @Parameter(description = "Key prefix filter")
+            @RequestParam(value = "prefix", required = false) String prefix) {
+        try {
+            ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
+            if (handle == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid column family: " + columnFamily));
+            }
+
+            Map<String, Object> result = managementService.getKeys(handle, prefix);
+            return ResponseEntity.ok(result);
+        } catch (RocksDBException e) {
+            log.error("Error retrieving keys for column family: {}", columnFamily, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to retrieve keys: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/data/{columnFamily}/{key}")
+    @Operation(summary = "Get value for a specific key", 
+               description = "Returns the value for the specified key in the given column family")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Value retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family name"),
+        @ApiResponse(responseCode = "404", description = "Key not found")
+    })
+    public ResponseEntity<Map<String, Object>> getValue(
+            @Parameter(description = "Column family name (default, configurations, sessions, connections)")
+            @PathVariable String columnFamily,
+            @Parameter(description = "The key to retrieve")
+            @PathVariable String key) {
+        try {
+            ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
+            if (handle == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid column family: " + columnFamily));
+            }
+
+            Map<String, Object> result = managementService.getValue(handle, key);
+            
+            if (!(Boolean) result.get("exists")) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            return ResponseEntity.ok(result);
+        } catch (RocksDBException e) {
+            log.error("Error retrieving value for key {} in column family: {}", key, columnFamily, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to retrieve value: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/maintenance/{action}")
+    @Operation(summary = "Perform maintenance operations", 
+               description = "Performs maintenance operations like flush or clear")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance operation completed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid action"),
+        @ApiResponse(responseCode = "500", description = "Failed to perform maintenance operation")
+    })
+    public ResponseEntity<Map<String, String>> performMaintenance(
+            @Parameter(description = "Maintenance action (flush, clear)")
+            @PathVariable String action) {
+        try {
+            switch (action.toLowerCase()) {
+                case "flush":
+                    managementService.flushMemTables();
+                    return ResponseEntity.ok(Map.of("message", "Memtables flushed successfully"));
+                case "clear":
+                    // For now, just clear the available column families
+                    return ResponseEntity.ok(Map.of("message", "Clear operation not yet implemented for all column families"));
+                default:
+                    return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid action: " + action));
+            }
+        } catch (RocksDBException e) {
+            log.error("Error performing maintenance action: {}", action, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to perform maintenance: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/backup")
+    @Operation(summary = "Create database backup", 
+               description = "Creates a timestamped backup of the RocksDB database")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Backup created successfully"),
+        @ApiResponse(responseCode = "500", description = "Failed to create backup")
+    })
+    public ResponseEntity<Map<String, Object>> createBackup() {
+        try {
+            Map<String, Object> result = managementService.createBackup();
+            return ResponseEntity.ok(result);
+        } catch (RocksDBException e) {
+            log.error("Error creating backup", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("status", "ERROR", "error", "Failed to create backup: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/backups")
+    @Operation(summary = "List available backups", 
+               description = "Returns a list of all available database backups")
+    @ApiResponse(responseCode = "200", description = "Backups listed successfully")
+    public ResponseEntity<Map<String, Object>> listBackups() {
+        Map<String, Object> result = managementService.listBackups();
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/backup/{backupName}")
+    @Operation(summary = "Delete a backup", 
+               description = "Deletes a specific backup by name")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Backup deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "Backup not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to delete backup")
+    })
+    public ResponseEntity<Map<String, Object>> deleteBackup(
+            @Parameter(description = "Backup name (timestamp)")
+            @PathVariable String backupName) {
+        Map<String, Object> result = managementService.deleteBackup(backupName);
+        
+        String status = (String) result.get("status");
+        if ("SUCCESS".equals(status)) {
+            return ResponseEntity.ok(result);
+        } else if (result.get("message") != null && result.get("message").toString().contains("not found")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    @PostMapping("/restore/{backupName}")
+    @Operation(summary = "Restore database from backup", 
+               description = "Restores the RocksDB database from a specific backup. WARNING: Application restart required.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Backup restored successfully"),
+        @ApiResponse(responseCode = "404", description = "Backup not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to restore backup")
+    })
+    public ResponseEntity<Map<String, Object>> restoreBackup(
+            @Parameter(description = "Backup name (timestamp) to restore from")
+            @PathVariable String backupName) {
+        try {
+            Map<String, Object> result = managementService.restoreBackup(backupName);
+            
+            String status = (String) result.get("status");
+            if ("SUCCESS".equals(status)) {
+                return ResponseEntity.ok(result);
+            } else if (result.get("message") != null && result.get("message").toString().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+            }
+        } catch (RocksDBException e) {
+            log.error("Error restoring from backup: {}", backupName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("status", "ERROR", "error", "Failed to restore backup: " + e.getMessage()));
         }
     }
 

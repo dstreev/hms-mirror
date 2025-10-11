@@ -22,6 +22,7 @@ import PasswordEncryptionPage from './components/encryption/PasswordEncryptionPa
 import SummaryViewPage from './components/summary/SummaryViewPage';
 import ConnectionsPage from './components/connections/ConnectionsPage';
 import NewConnectionWizard from './components/connections/NewConnectionWizard';
+import RocksDBPage from './components/rocksdb/RocksDBPage';
 
 const App: React.FC = () => {
   return (
@@ -41,6 +42,9 @@ const App: React.FC = () => {
         <Route path="/connections" element={<ConnectionsPage />} />
         <Route path="/connections/new" element={<NewConnectionWizard />} />
         <Route path="/connections/edit/:id" element={<NewConnectionWizard />} />
+        
+        {/* RocksDB management routes - always accessible */}
+        <Route path="/rocksdb" element={<RocksDBPage />} />
         
         {/* Protected configuration editing routes */}
         <Route path="/config/current" element={<RequireConfiguration><CurrentConfigurationPage /></RequireConfiguration>} />

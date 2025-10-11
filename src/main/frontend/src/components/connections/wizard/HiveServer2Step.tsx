@@ -167,7 +167,7 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
           {/* JAR File */}
           <div>
             <label htmlFor="hs2JarFile" className="block text-sm font-medium text-gray-700 mb-2">
-              JAR File Path *
+              JAR File Path (Optional)
             </label>
             <input
               type="text"
@@ -178,13 +178,12 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
                 errors.hs2JarFile ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="/path/to/hive-jdbc-standalone.jar"
-              required
             />
             {errors.hs2JarFile && (
               <p className="mt-1 text-sm text-red-600">{errors.hs2JarFile}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              Path to the JDBC driver JAR file. Can specify multiple JARs separated by colons.
+              Path to the JDBC driver JAR file. Can specify multiple JARs separated by colons. Optional for testing but recommended for production.
             </p>
           </div>
 

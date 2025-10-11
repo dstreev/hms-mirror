@@ -239,7 +239,7 @@ export const DEFAULT_CONNECTION_FORM: ConnectionFormData = {
   // Basic Information
   name: '',
   description: '',
-  environment: '',
+  environment: 'DEV',
   
   // Platform Configuration
   platformType: '',
@@ -342,9 +342,10 @@ export const validateConnectionForm = (data: Partial<ConnectionFormData>): Valid
       errors.hs2DriverClassName = 'Driver class name is required';
     }
     
-    if (!data.hs2JarFile?.trim()) {
-      errors.hs2JarFile = 'JAR file path is required';
-    }
+    // JAR file is optional for testing but recommended for production
+    // if (!data.hs2JarFile?.trim()) {
+    //   errors.hs2JarFile = 'JAR file path is required';
+    // }
   }
   
   // Metastore Direct validation (if enabled)
@@ -412,9 +413,10 @@ export const validateConnectionSettingsStep = (data: Partial<ConnectionFormData>
       errors.hs2DriverClassName = 'Driver class name is required';
     }
     
-    if (!data.hs2JarFile?.trim()) {
-      errors.hs2JarFile = 'JAR file path is required';
-    }
+    // JAR file is optional for testing but recommended for production
+    // if (!data.hs2JarFile?.trim()) {
+    //   errors.hs2JarFile = 'JAR file path is required';
+    // }
   }
   
   // Metastore Direct validation (if enabled)

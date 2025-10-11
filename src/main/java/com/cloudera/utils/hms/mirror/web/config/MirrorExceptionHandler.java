@@ -24,6 +24,11 @@ import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.UIModelService;
 import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +38,8 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.sql.SQLInvalidAuthorizationSpecException;
+import java.util.HashMap;
+import java.util.Map;
 
 @ControllerAdvice
 public class MirrorExceptionHandler {
@@ -109,5 +116,31 @@ public class MirrorExceptionHandler {
         model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
         uiModelService.sessionToModel(model, 0, false);
         return "error";
+    }
+
+    @ExceptionHandler(value = IllegalStateException.class)
+    public Object illegalStateExceptionHandler(HttpServletRequest request, HttpServletResponse response, IllegalStateException exception) {
+        String requestUri = request.getRequestURI();
+        
+        // Check if this is an API request
+        if (requestUri != null && requestUri.startsWith("/hms-mirror/api/")) {
+            // For API requests, return JSON response
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal Server Error");
+            errorResponse.put("message", "An internal error occurred while processing the request");
+            errorResponse.put("path", requestUri);
+            
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(errorResponse);
+        } else {
+            // For web requests, return view name
+            Model model = new ExtendedModelMap();
+            model.addAttribute(ControllerReferences.TYPE, "Internal Server Error");
+            model.addAttribute(ControllerReferences.MESSAGE, "An internal error occurred while processing the request");
+            uiModelService.sessionToModel(model, 0, false);
+            return "error";
+        }
     }
 }

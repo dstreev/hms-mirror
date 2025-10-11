@@ -15,6 +15,7 @@ import MetastoreDirectStep from './wizard/MetastoreDirectStep';
 import ConnectionPoolStep from './wizard/ConnectionPoolStep';
 import TestAndSaveStep from './wizard/TestAndSaveStep';
 import WizardProgress from './wizard/WizardProgress';
+import ErrorDialog from '../common/ErrorDialog';
 
 const NewConnectionWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ const NewConnectionWizard: React.FC = () => {
   const [formData, setFormData] = useState<ConnectionFormData>(DEFAULT_CONNECTION_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(isEditMode);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   const steps = [
     { 
@@ -76,7 +80,7 @@ const NewConnectionWizard: React.FC = () => {
             hs2JarFile: connectionData.config?.hiveServer2?.jarFile || '',
             hs2Disconnected: connectionData.config?.hiveServer2?.disconnected || false,
             hs2ConnectionProperties: connectionData.config?.hiveServer2?.connectionProperties || {},
-            metastoreDirectEnabled: Boolean(connectionData.config?.metastoreDirect),
+            metastoreDirectEnabled: Boolean(connectionData.config?.metastoreDirect?.uri),
             metastoreDirectUri: connectionData.config?.metastoreDirect?.uri || '',
             metastoreDirectType: connectionData.config?.metastoreDirect?.type || '',
             metastoreDirectUsername: connectionData.config?.metastoreDirect?.connectionProperties?.user || '',
@@ -132,6 +136,7 @@ const NewConnectionWizard: React.FC = () => {
     
     if (!validation.isValid) {
       setErrors(validation.errors);
+      setShowErrorDialog(true);
       return;
     }
     
@@ -178,6 +183,8 @@ const NewConnectionWizard: React.FC = () => {
 
   const handleSave = async () => {
     console.log('Save button clicked');
+    setSaving(true);
+    setErrors({});
     
     // Final validation of all fields before saving
     const finalValidation = validateConnectionForm(formData);
@@ -186,6 +193,8 @@ const NewConnectionWizard: React.FC = () => {
     if (!finalValidation.isValid) {
       console.log('Validation failed:', finalValidation.errors);
       setErrors(finalValidation.errors);
+      setShowErrorDialog(true);
+      setSaving(false);
       return;
     }
     
@@ -253,18 +262,37 @@ const NewConnectionWizard: React.FC = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Server error response:', errorText);
-        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} connection: ${response.status} ${errorText}`);
+        
+        // Try to parse as JSON first
+        try {
+          const errorData = JSON.parse(errorText);
+          const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
+          throw new Error(errorMessage);
+        } catch (parseError) {
+          // If JSON parsing fails, use the raw text
+          throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} connection: ${response.status} ${errorText}`);
+        }
       }
 
       const result = await response.json();
       console.log('Success response:', result);
 
-      // Navigate back to connections list
-      console.log('Navigating to /connections');
-      navigate('/connections');
+      // Show brief success message before navigation to provide user feedback
+      console.log(`Connection ${isEditMode ? 'updated' : 'created'} successfully`);
+      setSaveSuccess(true);
+      
+      // Add a small delay to show success state, then navigate
+      setTimeout(() => {
+        console.log('Navigating to /connections');
+        navigate('/connections');
+      }, 500);
     } catch (error) {
       console.error('Error creating connection:', error);
-      setErrors({ general: 'Failed to save connection: ' + (error instanceof Error ? error.message : 'Unknown error') });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setErrors({ general: errorMessage });
+      setShowErrorDialog(true);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -331,6 +359,8 @@ const NewConnectionWizard: React.FC = () => {
             onBack={handleBack}
             onSave={handleSave}
             isLastStep={currentStep === steps.length - 1}
+            saving={saving}
+            saveSuccess={saveSuccess}
           />
         </div>
       </div>
@@ -353,6 +383,14 @@ const NewConnectionWizard: React.FC = () => {
           </button>
         </div>
       )}
+      
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="Validation Errors"
+        errors={errors}
+      />
     </div>
   );
 };
