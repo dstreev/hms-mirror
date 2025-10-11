@@ -3,10 +3,8 @@ import {
   PencilIcon, 
   BeakerIcon, 
   DocumentDuplicateIcon, 
-  TrashIcon,
-  StarIcon
+  TrashIcon
 } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Connection, getConnectionStatusColor, getConnectionStatusIcon } from '../../types/Connection';
 
 interface ConnectionCardProps {
@@ -83,9 +81,6 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 truncate">
                   {connection.name}
                 </h3>
-                {connection.isDefault && (
-                  <StarIconSolid className="h-5 w-5 text-yellow-400 flex-shrink-0" title="Default connection" />
-                )}
               </div>
               
               <p className="text-gray-600 mb-2 break-all">{connection.config.hcfsNamespace}</p>
@@ -151,7 +146,6 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
                 onClick={onDelete}
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 title="Delete connection"
-                disabled={connection.isDefault}
               >
                 <TrashIcon className="h-3 w-3 mr-1" />
                 Delete

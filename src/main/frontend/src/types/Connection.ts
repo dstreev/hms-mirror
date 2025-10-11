@@ -82,7 +82,6 @@ export interface Connection {
   testResults?: ConnectionTestResults;
   created: string;
   modified: string;
-  isDefault: boolean;
 }
 
 export interface ConnectionFormData {

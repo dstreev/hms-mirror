@@ -49,7 +49,6 @@ public class ConnectionController {
         connData.put("name", conn.getName());
         connData.put("description", conn.getDescription());
         connData.put("environment", conn.getEnvironment() != null ? conn.getEnvironment().name() : null);
-        connData.put("isDefault", conn.isDefault());
         
         // Create config object that UI expects
         Map<String, Object> config = new HashMap<>();
@@ -172,7 +171,6 @@ public class ConnectionController {
                         connData.put("name", conn.getName());
                         connData.put("description", conn.getDescription());
                         connData.put("environment", conn.getEnvironment() != null ? conn.getEnvironment().name() : null);
-                        connData.put("isDefault", conn.isDefault());
                         
                         // Create config object that UI expects
                         Map<String, Object> config = new HashMap<>();
@@ -454,7 +452,7 @@ public class ConnectionController {
             
             Connection duplicatedConnection = connectionService.duplicateConnection(id, newName);
             Map<String, Object> response = new HashMap<>();
-            response.put("connection", duplicatedConnection);
+            response.put("connection", convertConnectionToMap(duplicatedConnection));
             response.put("message", "Connection duplicated successfully");
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

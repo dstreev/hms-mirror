@@ -52,7 +52,8 @@
       "Bash(kill:*)",
       "Bash(timeout:*)",
       "Bash(pkill:*)",
-      "Bash(open http://localhost:8103/hms-mirror)"
+      "Bash(open http://localhost:8103/hms-mirror)",
+      "Bash(open http://localhost:8103/hms-mirror/connections)"
     ],
     "deny": [],
     "ask": [],
