@@ -12,7 +12,8 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   ArchiveBoxIcon,
-  CloudArrowDownIcon
+  CloudArrowDownIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
 
 interface RocksDBHealth {
@@ -56,6 +57,7 @@ const RocksDBPage: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<string>('');
 
   useEffect(() => {
     loadRocksDBHealth();
@@ -79,7 +81,13 @@ const RocksDBPage: React.FC = () => {
       try {
         const regex = new RegExp(query, 'i'); // case-insensitive
         matches = regex.test(keyObj.key);
+        
+        // Debug logging for regex search
+        if (query === '.*') {
+          console.log(`Regex '.*' testing key '${keyObj.key}': ${matches}`);
+        }
       } catch (e) {
+        console.warn(`Invalid regex pattern: ${query}, falling back to string matching`);
         // If regex is invalid, fall back to simple string matching
         matches = keyObj.key.toLowerCase().includes(query.toLowerCase());
       }
@@ -153,10 +161,12 @@ const RocksDBPage: React.FC = () => {
       const response = await fetch(`/hms-mirror/api/v1/rocksdb/data/${selectedColumnFamily}/keys${pathParam}`);
       if (response.ok) {
         const data = await response.json();
+        console.log(`Loaded ${data.keys?.length || 0} keys for column family: ${selectedColumnFamily}`);
         setKeys(buildKeyTree(data.keys || []));
       }
       setError(null);
     } catch (err) {
+      console.error('Error loading keys:', err);
       setError(err instanceof Error ? err.message : 'Failed to load keys');
       setKeys([]);
     } finally {
@@ -344,10 +354,34 @@ const RocksDBPage: React.FC = () => {
     }
   };
 
+  const copyToClipboard = async () => {
+    if (!selectedValue || selectedValue === 'Loading...' || selectedValue.startsWith('Error')) {
+      setCopyStatus('No valid content to copy');
+      setTimeout(() => setCopyStatus(''), 2000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(selectedValue);
+      setCopyStatus('Copied!');
+      setTimeout(() => setCopyStatus(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      setCopyStatus('Copy failed');
+      setTimeout(() => setCopyStatus(''), 2000);
+    }
+  };
+
   const renderKeyTree = (keyList: RocksDBKey[], level: number = 0) => {
-    return keyList
-      .filter(keyObj => keyMatchesSearch(keyObj, searchQuery))
-      .map(keyObj => (
+    const filteredKeys = keyList.filter(keyObj => keyMatchesSearch(keyObj, searchQuery));
+    
+    // Debug logging for search filtering
+    if (searchQuery && level === 0) {
+      console.log(`Search query: "${searchQuery}", useRegex: ${useRegex}`);
+      console.log(`Total keys: ${keyList.length}, Filtered keys: ${filteredKeys.length}`);
+    }
+    
+    return filteredKeys.map(keyObj => (
         <div key={keyObj.key} style={{ marginLeft: `${level * 16}px` }}>
           <div
             className={`flex items-center py-1 px-2 hover:bg-gray-100 cursor-pointer rounded ${
@@ -625,7 +659,26 @@ const RocksDBPage: React.FC = () => {
             </div>
 
             <div className="border border-gray-300 rounded-md p-3 overflow-y-auto">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Value</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Value</h3>
+                {selectedKey && selectedValue && !selectedValue.startsWith('Loading') && !selectedValue.startsWith('Error') && (
+                  <div className="flex items-center space-x-2">
+                    {copyStatus && (
+                      <span className={`text-xs ${copyStatus === 'Copied!' ? 'text-green-600' : 'text-red-600'}`}>
+                        {copyStatus}
+                      </span>
+                    )}
+                    <button
+                      onClick={copyToClipboard}
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      title="Copy value to clipboard"
+                    >
+                      <ClipboardDocumentIcon className="h-3 w-3 mr-1" />
+                      Copy
+                    </button>
+                  </div>
+                )}
+              </div>
               {selectedKey ? (
                 <div>
                   <div className="text-xs text-gray-500 mb-2">Key: {selectedKey}</div>

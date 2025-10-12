@@ -1,4 +1,4 @@
-### Connection Management Wizard
+# Connection Management Wizard
 
 This wizard is used to define and save cluster connection profiles that can be reused across multiple Data Strategy configurations. Connection profiles contain all necessary information to connect to Hive clusters.
 
@@ -10,97 +10,89 @@ These saved connections are referenced by Data Strategy wizards and assigned as 
 
 ## Wizard Flow
 
-#### Screen 1: Connection Profile Definition
+The wizard consists of 4 streamlined steps:
+
+### Step 1: Basic Information
 Define basic information for the cluster connection profile.
 
-| Field | Input Type | Description/Validation |
-|-------|------------|------------------------|
-| Connection Name | Text | Required. Unique name for this connection profile |
-| Description | Text area | Optional. Description of this cluster environment |
-| Environment Type | Dropdown | Optional. Environment classification (DEV, TEST, PROD, etc.) |
+| Field | Property Mapped | Input Type | Description/Validation |
+|-------|-----------------|------------|------------------------|
+| Connection Name | `name` | Text | Required. Unique name for this connection profile |
+| Description | `description` | Text area | Optional. Description of this cluster environment |
+| Environment Type | `environment` | Dropdown | Required. Environment classification (DEV, TEST, PROD, UAT, STAGING). Default: DEV |
+| Platform Type | `platformType` | Dropdown | Required. Target platform (CDP7_1, CDP7_2, HDP2, HDP3, CDH5, CDH6, APACHE, EMR, GENERIC) |
+| HDFS Namespace | `hcfsNamespace` | Text | Required. HDFS namespace URI (e.g., hdfs://namenode:8020) |
 
-**Next**: Proceed to Basic Connection Settings.
+**Next**: Proceed to HiveServer2 Connection Settings.
 
-#### Screen 2: Basic Connection Settings
-Configure core connection parameters.
+### Step 2: HiveServer2 Connection
+Configure HiveServer2 connection parameters.
 
 | Field | Property Mapped | Input Type | Description/Validation |
 |-------|-----------------|------------|------------------------|
-| Legacy | `legacy` | Checkbox (default: false) | Use legacy Hive connection mode. Required. |
-| HDFS Namespace | `hcfsNamespace` | Text | HDFS namespace URI (e.g., hdfs://namenode:8020). Required. |
-| Hive Server 2 URI | `hs2` | Text | HiveServer2 connection URI. Required. |
-| Metastore URI | `metastoreDirectUri` | Text | Direct metastore connection URI. Optional. |
+| HiveServer2 URI | `hs2Uri` | Text | Required. HiveServer2 connection URI (e.g., jdbc:hive2://host:10000/default) |
+| Username | `hs2Username` | Text | Required. Database username for authentication |
+| Password | `hs2Password` | Password | Required. Database password for authentication |
+| Driver Class Name | `hs2DriverClassName` | Text | Optional. JDBC driver class. Auto-populated based on platform |
+| JAR File Path | `hs2JarFile` | Text | Optional. Path to JDBC driver JAR file. Recommended for production environments |
+| Disconnected Mode | `hs2Disconnected` | Checkbox | Optional. Enable disconnected mode for testing without actual database connection |
 
-**Next**: Proceed to Authentication.
+**Connection Properties** (Optional)
+Additional JDBC connection properties can be specified as key-value pairs.
 
-#### Screen 3: Authentication Settings
-Configure authentication and security.
+**Next**: Proceed to Metastore Direct (Optional).
 
-| Field | Property Mapped | Input Type | Description/Validation |
-|-------|-----------------|------------|------------------------|
-| Kerberos Enabled | `kerberosConfig.enabled` | Checkbox (default: false) | Enable Kerberos authentication. Required. |
-
-**Kerberos Settings (shown if Kerberos enabled)**
-| Field | Property Mapped | Input Type | Description/Validation |
-|-------|-----------------|------------|------------------------|
-| Principal | `kerberosConfig.principal` | Text | Kerberos principal. Required if Kerberos enabled. |
-| Keytab | `kerberosConfig.keytab` | File path | Path to keytab file. Required if Kerberos enabled. |
-
-**Next**: Proceed to Connection Pool.
-
-#### Screen 4: Connection Pool Configuration
-Configure database connection pooling settings.
+### Step 3: Metastore Direct (Optional)
+Configure optional direct metastore database connection for enhanced performance.
 
 | Field | Property Mapped | Input Type | Description/Validation |
 |-------|-----------------|------------|------------------------|
-| Pool Type | `connectionPoolLib` | Dropdown | Connection pool implementation. Options: DBCP2, HIKARI, HYBRID. Default: DBCP2. |
-| Max Pool Size | `connectionPool.max` | Number (default: 10) | Maximum connections in pool. Required; positive integer. |
-| Driver Class Name | `jarFile` | Text | JDBC driver class. Required. |
+| Enable Metastore Direct | `metastoreDirectEnabled` | Checkbox | Optional. Enable direct metastore database connection |
+| Database URI | `metastoreDirectUri` | Text | Required if enabled. Direct metastore database URI |
+| Database Type | `metastoreDirectType` | Dropdown | Required if enabled. Database type (MYSQL, POSTGRESQL, ORACLE) |
+| Username | `metastoreDirectUsername` | Text | Required if enabled. Database username |
+| Password | `metastoreDirectPassword` | Password | Required if enabled. Database password |
+| Min Connections | `metastoreDirectMinConnections` | Number | Optional. Minimum connections in pool (default: 2) |
+| Max Connections | `metastoreDirectMaxConnections` | Number | Optional. Maximum connections in pool (default: 10) |
 
-**Advanced Pool Settings (Optional)**
+**Connection Pool Settings**
 | Field | Property Mapped | Input Type | Description/Validation |
 |-------|-----------------|------------|------------------------|
-| Initial Pool Size | `connectionPool.initial` | Number (default: 3) | Initial connections created. Optional; non-negative. |
-| Min Idle | `connectionPool.minIdle` | Number (default: 3) | Minimum idle connections. Optional; non-negative. |
-| Max Idle | `connectionPool.maxIdle` | Number (default: 5) | Maximum idle connections. Optional; positive. |
+| Pool Library | `connectionPoolLib` | Dropdown | Auto-selected based on platform. Options: DBCP2, HIKARI, HYBRID |
 
-**Next**: Proceed to Environment Settings.
-
-#### Screen 5: Environment and Properties
-Configure environment-specific settings.
-
+**Advanced Settings** (Optional)
 | Field | Property Mapped | Input Type | Description/Validation |
 |-------|-----------------|------------|------------------------|
-| Environment | `environment` | Text | Environment identifier (e.g., DEV, PROD). Optional. |
-| Partition Bucket Limit | `partitionDiscovery.partitionBucketLimit` | Number (default: 100) | Limit for partition bucket discovery. Optional; positive. |
+| Auto Partition Discovery | `partitionDiscoveryAuto` | Checkbox | Default: true. Automatically discover table partitions |
+| Initialize MSCK | `partitionDiscoveryInitMSCK` | Checkbox | Default: true. Run MSCK REPAIR during partition discovery |
+| Partition Bucket Limit | `partitionBucketLimit` | Number | Default: 100. Maximum partition buckets to process |
+| Create If Not Exists | `createIfNotExists` | Checkbox | Default: false. Create databases/tables if they don't exist |
+| Enable Auto Table Stats | `enableAutoTableStats` | Checkbox | Default: false. Automatically gather table statistics |
+| Enable Auto Column Stats | `enableAutoColumnStats` | Checkbox | Default: false. Automatically gather column statistics |
 
-**Custom Properties (Optional)**
-| Field | Property Mapped | Input Type | Description/Validation |
-|-------|-----------------|------------|------------------------|
-| Hive Properties | `hiveVar` | Text area | Custom Hive variables (key=value pairs). Optional. |
-| Environment Properties | `envVar` | Text area | Environment variables (key=value pairs). Optional. |
+**Next**: Proceed to Test & Save.
 
-**Next**: Proceed to Connection Test and Save.
-
-#### Screen 6: Connection Test and Save
+### Step 4: Test & Save
 Validate connection and save the profile.
 
-**Connection Test**
-- **Test Connection**: Button to validate all connection parameters
-- **Test Results**: Display connection status and any errors
-- **Connection Summary**: Show final connection configuration
+**Connection Summary**
+- Review all configured connection parameters
+- Verify platform type, URIs, and authentication settings
 
-**Save Connection Profile**
-| Field | Input Type | Description/Validation |
-|-------|------------|------------------------|
-| Profile Name | Text (pre-filled) | Confirmation of connection profile name. Required. |
-| Make Default | Checkbox | Set as default connection profile. Optional. |
+**Connection Test** (Optional)
+- **Test Connection**: Button to validate all connection parameters
+- **Test Results**: Display connection status for each component (HDFS, HIVESERVER2, METASTORE)
+- Shows response times and connection details
+
+**Save Options**
+| Field | Input Type | Description |
+|-------|------------|-------------|
+| Save test results with connection | Checkbox | Default: true. Store test results with the connection profile |
 
 **Actions**:
-- **Save Profile**: Save connection profile to repository
-- **Save and Create Another**: Save and start new connection wizard
-- **Cancel**: Discard connection profile
-- **Back to Edit**: Return to modify settings
+- **Save Connection**: Save connection profile to repository and return to connections list
+- **Test Again**: Re-run connection validation tests
+- **Back**: Return to previous step to modify settings
 
 **Success**: Connection profile saved and available for selection in Data Strategy wizards.
 
