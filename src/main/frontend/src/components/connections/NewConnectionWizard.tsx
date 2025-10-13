@@ -32,17 +32,17 @@ const NewConnectionWizard: React.FC = () => {
   const steps = [
     { 
       id: 'basic', 
-      title: 'Basic Information',
+      title: 'Basic Info',
       component: BasicInfoStep
     },
     { 
       id: 'hiveserver2', 
-      title: 'HiveServer2 Connection',
+      title: 'HiveServer2',
       component: HiveServer2Step
     },
     { 
       id: 'metastore', 
-      title: 'Metastore Direct (Optional)',
+      title: 'Metastore',
       component: MetastoreDirectStep
     },
     { 

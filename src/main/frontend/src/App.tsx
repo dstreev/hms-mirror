@@ -17,6 +17,9 @@ import SummaryViewPage from './components/summary/SummaryViewPage';
 import ConnectionsPage from './components/connections/ConnectionsPage';
 import NewConnectionWizard from './components/connections/NewConnectionWizard';
 import RocksDBPage from './components/rocksdb/RocksDBPage';
+import DatasetsPage from './components/datasets/DatasetsPage';
+import DatasetWizard from './components/datasets/DatasetWizard';
+import ListDatasetsPage from './components/datasets/ListDatasetsPage';
 
 const App: React.FC = () => {
   return (
@@ -42,7 +45,10 @@ const App: React.FC = () => {
         <Route path="/rocksdb" element={<RocksDBPage />} />
         
         {/* Dataset management routes - always accessible */}
-        <Route path="/datasets" element={<div>Dataset Management - Coming Soon</div>} />
+        <Route path="/datasets" element={<DatasetsPage />} />
+        <Route path="/datasets/new" element={<DatasetWizard />} />
+        <Route path="/datasets/list" element={<ListDatasetsPage />} />
+        <Route path="/datasets/edit" element={<DatasetWizard />} />
         
         
         {/* Protected feature routes */}

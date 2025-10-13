@@ -5,7 +5,8 @@ import {
   DocumentTextIcon, 
   TrashIcon, 
   PencilIcon,
-  FolderIcon
+  FolderIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 import { configApi } from '../../services/api/configApi';
 
@@ -157,6 +158,33 @@ const ViewConfigurationsPage: React.FC = () => {
     }
   };
 
+  const handleCopyConfiguration = async (config: Configuration, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    try {
+      // Load the full configuration data from the backend
+      const response = await configApi.getConfiguration(config.name);
+      
+      if (response && response.status === 'SUCCESS') {
+        // Navigate to Config Wizard with copy mode - clear the name for user to provide new name
+        navigate('/wizards/config', {
+          state: {
+            configurationData: response.configuration,
+            configName: '', // Clear name for copy mode
+            dataStrategy: config.strategy,
+            isEditing: false, // Set to false since this is a copy, not an edit
+            isCopying: true // Add flag to indicate copy mode
+          }
+        });
+      } else {
+        throw new Error('Failed to load configuration data for copying');
+      }
+    } catch (error) {
+      console.error('Error loading configuration for copying:', error);
+      setError('Failed to load configuration data for copying');
+    }
+  };
+
   const handleDeleteConfiguration = async (config: Configuration, event: React.MouseEvent) => {
     event.stopPropagation();
     
@@ -231,7 +259,7 @@ const ViewConfigurationsPage: React.FC = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">View Configurations</h1>
-              <p className="text-gray-600 mt-1">Browse existing configurations organized by data strategy</p>
+              <p className="text-gray-600 mt-1">Browse existing configurations</p>
             </div>
           </div>
         </div>
@@ -261,9 +289,6 @@ const ViewConfigurationsPage: React.FC = () => {
         ) : (
           <div className="bg-white rounded-lg shadow-lg border border-gray-200">
             {configurations.map((config) => {
-              const info = strategyInfo[config.strategy as keyof typeof strategyInfo];
-              const colorClasses = getStrategyColorClasses(config.strategy);
-              
               return (
                 <div
                   key={config.name}
@@ -274,12 +299,7 @@ const ViewConfigurationsPage: React.FC = () => {
                     <div className="flex items-center space-x-4">
                       <DocumentTextIcon className="h-8 w-8 text-gray-400" />
                       <div>
-                        <div className="flex items-center space-x-3">
-                          <h4 className="text-base font-medium text-gray-900">{config.name}</h4>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClasses}`}>
-                            {info?.name || config.strategy}
-                          </span>
-                        </div>
+                        <h4 className="text-base font-medium text-gray-900">{config.name}</h4>
                         {config.description && (
                           <p className="text-sm text-gray-600 mt-1">{config.description}</p>
                         )}
@@ -299,6 +319,13 @@ const ViewConfigurationsPage: React.FC = () => {
                         title="Edit configuration"
                       >
                         <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => handleCopyConfiguration(config, e)}
+                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Copy configuration"
+                      >
+                        <DocumentDuplicateIcon className="h-4 w-4" />
                       </button>
                       <button
                         onClick={(e) => handleDeleteConfiguration(config, e)}

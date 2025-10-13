@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '@heroicons/react/24/outline';
+import WizardProgress from '../connections/wizard/WizardProgress';
 
 interface HmsMirrorConfig {
   // Migration Behavior
@@ -57,7 +58,7 @@ const ConfigWizard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [config, setConfig] = useState<HmsMirrorConfig>({
     // Default values based on spec
     databaseOnly: false,
@@ -97,7 +98,7 @@ const ConfigWizard: React.FC = () => {
   // Load existing configuration if passed via navigation state
   useEffect(() => {
     const loadExistingConfig = async () => {
-      if (location.state?.isEditing && location.state?.configurationData) {
+      if ((location.state?.isEditing || location.state?.isCopying) && location.state?.configurationData) {
         setIsLoading(true);
         try {
           const existingConfig = location.state.configurationData;
@@ -230,7 +231,7 @@ const ConfigWizard: React.FC = () => {
     const newErrors: { [key: string]: string } = {};
     
     switch (step) {
-      case 1:
+      case 0:
         // Migration Behavior - all fields are required checkboxes/numbers
         if (config.migrateACID.artificialBucketThreshold <= 0) {
           newErrors['migrateACID.artificialBucketThreshold'] = 'Must be a positive integer';
@@ -239,7 +240,7 @@ const ConfigWizard: React.FC = () => {
           newErrors['migrateACID.partitionLimit'] = 'Must be non-negative';
         }
         break;
-      case 2:
+      case 1:
         // Transfer and Warehouse Settings
         if (!config.transfer.warehouse.externalDirectory.trim()) {
           newErrors['transfer.warehouse.externalDirectory'] = 'External directory is required';
@@ -248,7 +249,7 @@ const ConfigWizard: React.FC = () => {
           newErrors['transfer.warehouse.managedDirectory'] = 'Managed directory is required';
         }
         break;
-      case 4:
+      case 3:
         // Configuration Generation
         if (!config.configName.trim()) {
           newErrors['configName'] = 'Configuration name is required';
@@ -262,12 +263,12 @@ const ConfigWizard: React.FC = () => {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep(prev => Math.min(prev + 1, 3));
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
   const saveConfiguration = async () => {
@@ -724,8 +725,13 @@ const ConfigWizard: React.FC = () => {
               id="configName"
               value={config.configName}
               onChange={(e) => updateConfig('configName', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder={`My ${config.dataStrategy} Configuration`}
+              readOnly={location.state?.isEditing}
+              className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${
+                location.state?.isEditing 
+                  ? 'bg-gray-100 text-gray-600 cursor-not-allowed' 
+                  : 'focus:ring-blue-500 focus:border-blue-500'
+              }`}
+              placeholder={location.state?.isCopying ? `Copy of ${location.state.configName || config.dataStrategy} Configuration` : `My ${config.dataStrategy} Configuration`}
             />
             {errors['configName'] && (
               <p className="mt-1 text-sm text-red-600">{errors['configName']}</p>
@@ -751,10 +757,10 @@ const ConfigWizard: React.FC = () => {
   );
 
   const steps = [
-    { number: 1, title: 'Migration Behavior', component: renderStep1 },
-    { number: 2, title: 'Transfer Settings', component: renderStep2 },
-    { number: 3, title: 'Conversions', component: renderStep3 },
-    { number: 4, title: 'Configuration', component: renderStep4 },
+    { id: 'migration', title: 'Migration', component: renderStep1 },
+    { id: 'transfer', title: 'Transfer', component: renderStep2 },
+    { id: 'conversions', title: 'Conversions', component: renderStep3 },
+    { id: 'config', title: 'Config', component: renderStep4 },
   ];
 
   if (isLoading) {
@@ -768,16 +774,19 @@ const ConfigWizard: React.FC = () => {
   }
 
   const isEditing = location.state?.isEditing;
+  const isCopying = location.state?.isCopying;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          {isEditing ? 'Edit' : 'Create'} {config.dataStrategy} Configuration
+          {isEditing ? 'Edit' : isCopying ? 'Copy' : 'Create'} {config.dataStrategy} Configuration
         </h1>
         <p className="text-gray-600 mt-2">
           {isEditing 
             ? `Editing ${config.dataStrategy} configuration: ${config.configName || 'Unknown'}`
+            : isCopying
+            ? `Creating a copy of ${config.dataStrategy} configuration. Please provide a new name.`
             : `Configure ${config.dataStrategy} migration settings for HMS-Mirror`
           }
         </p>
@@ -788,53 +797,24 @@ const ConfigWizard: React.FC = () => {
 
       {/* Progress Steps */}
       <div className="mb-8">
-        <nav aria-label="Progress">
-          <ol className="flex items-center">
-            {steps.map((step, stepIdx) => (
-              <li key={step.number} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                <div className="flex items-center">
-                  <div
-                    className={`relative w-8 h-8 flex items-center justify-center rounded-full ${
-                      step.number < currentStep
-                        ? 'bg-green-600'
-                        : step.number === currentStep
-                        ? 'bg-blue-600'
-                        : 'bg-gray-300'
-                    }`}
-                  >
-                    {step.number < currentStep ? (
-                      <CheckIcon className="w-5 h-5 text-white" />
-                    ) : (
-                      <span className="text-white text-sm font-medium">{step.number}</span>
-                    )}
-                  </div>
-                  <span className={`ml-3 text-sm font-medium ${
-                    step.number <= currentStep ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                </div>
-                {stepIdx !== steps.length - 1 && (
-                  <div className="absolute top-4 left-4 -ml-px w-full h-0.5 bg-gray-300" />
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <WizardProgress 
+          steps={steps} 
+          currentStep={currentStep} 
+        />
       </div>
 
       {/* Current Step Content */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
-        {steps[currentStep - 1].component()}
+        {steps[currentStep].component()}
       </div>
 
       {/* Navigation Buttons */}
       <div className="flex justify-between">
         <button
           onClick={prevStep}
-          disabled={currentStep === 1}
+          disabled={currentStep === 0}
           className={`flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-            currentStep === 1
+            currentStep === 0
               ? 'text-gray-400 cursor-not-allowed'
               : 'text-gray-700 bg-white hover:bg-gray-50'
           }`}
@@ -843,7 +823,7 @@ const ConfigWizard: React.FC = () => {
           Previous
         </button>
         
-        {currentStep < 4 ? (
+        {currentStep < 3 ? (
           <button
             onClick={nextStep}
             className="flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"

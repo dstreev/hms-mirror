@@ -11,7 +11,9 @@ import {
   CodeBracketIcon,
   LockClosedIcon,
   LinkIcon,
-  TableCellsIcon
+  TableCellsIcon,
+  ChevronRightIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
 import SessionInfo from './SessionInfo';
@@ -25,12 +27,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { state } = useConfiguration();
   const hasConfig = state.isConfigurationLoaded && state.config;
   const hasEncryptedPasswordsWithoutKey = state.config?.encryptedPasswords && !state.config?.passwordKey;
+  const [settingsExpanded, setSettingsExpanded] = React.useState(true);
 
   const navigation = [
-    { name: 'Create/Load', href: '/config/manage', icon: HomeIcon, requiresConfig: false, requiresPasswordKey: false },
-    { name: 'Connections', href: '/connections', icon: LinkIcon, requiresConfig: false, requiresPasswordKey: false },
+    {
+      name: 'Settings',
+      icon: CogIcon,
+      isGroup: true,
+      expanded: settingsExpanded,
+      onToggle: () => setSettingsExpanded(!settingsExpanded),
+      children: [
+        { name: 'Connections', href: '/connections', icon: LinkIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Datasets', href: '/datasets', icon: TableCellsIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Configurations', href: '/config/manage', icon: HomeIcon, requiresConfig: false, requiresPasswordKey: false },
+      ]
+    },
     { name: 'RocksDB', href: '/rocksdb', icon: CircleStackIcon, requiresConfig: false, requiresPasswordKey: false },
-    { name: 'Datasets', href: '/datasets', icon: TableCellsIcon, requiresConfig: false, requiresPasswordKey: false },
     { name: 'Configuration', href: '/config/current', icon: CogIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Password Encryption', href: '/encryption', icon: KeyIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Execution', href: '/execution', icon: PlayIcon, requiresConfig: true, requiresPasswordKey: true },
@@ -48,15 +60,82 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
         <nav className="mt-6 pb-24">
           {navigation.map((item) => {
-            // Special handling for Create/Load and Configuration routes
+            if (item.isGroup) {
+              return (
+                <div key={item.name}>
+                  <button
+                    onClick={item.onToggle}
+                    className="flex items-center w-full px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    <span className="flex-1 text-left">{item.name}</span>
+                    {item.expanded ? (
+                      <ChevronDownIcon className="w-4 h-4" />
+                    ) : (
+                      <ChevronRightIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                  {item.expanded && item.children && (
+                    <div className="bg-gray-50">
+                      {item.children.map((childItem) => {
+                        // Special handling for Configurations route
+                        const isActive = 
+                          location.pathname === childItem.href || 
+                          location.pathname.startsWith(childItem.href + '/') ||
+                          (childItem.href === '/config/manage' && (
+                            location.pathname === '/' ||
+                            location.pathname === '/config' ||
+                            location.pathname === '/config/new'
+                          ));
+                        const isDisabledNoConfig = childItem.requiresConfig && !hasConfig;
+                        const isDisabledNoKey = childItem.requiresPasswordKey && hasEncryptedPasswordsWithoutKey;
+                        const isDisabled = isDisabledNoConfig || isDisabledNoKey;
+                        
+                        if (isDisabled) {
+                          const tooltipMessage = isDisabledNoConfig 
+                            ? "Please load or create a configuration first"
+                            : "Password key required - passwords are encrypted";
+                          
+                          return (
+                            <div
+                              key={childItem.name}
+                              className="flex items-center pl-12 pr-6 py-2 text-sm font-medium text-gray-400 cursor-not-allowed relative"
+                              title={tooltipMessage}
+                            >
+                              <childItem.icon className="w-4 h-4 mr-3 opacity-50" />
+                              <span className="opacity-50">{childItem.name}</span>
+                              <LockClosedIcon className="w-3 h-3 ml-auto opacity-40" />
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <Link
+                            key={childItem.name}
+                            to={childItem.href}
+                            className={`
+                              flex items-center pl-12 pr-6 py-2 text-sm font-medium transition-colors
+                              ${isActive 
+                                ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-700' 
+                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                              }
+                            `}
+                          >
+                            <childItem.icon className="w-4 h-4 mr-3" />
+                            {childItem.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Regular navigation items
             const isActive = 
               location.pathname === item.href || 
               location.pathname.startsWith(item.href + '/') ||
-              (item.href === '/config/manage' && (
-                location.pathname === '/' ||
-                location.pathname === '/config' ||
-                location.pathname === '/config/new'
-              )) ||
               (item.href === '/config/current' && (
                 location.pathname.startsWith('/config/edit/')
               ));
