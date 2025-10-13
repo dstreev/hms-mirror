@@ -6,7 +6,8 @@ import {
   ICEBERG_LOCATION,
   STRATEGIES,
   StrategyRecommendation,
-  StrategySelectionResult
+  StrategySelectionResult,
+  strategyInfo
 } from '../../types/StrategySelection';
 import MigrationGoalSelector from './MigrationGoalSelector';
 import ClusterAccessSelector from './ClusterAccessSelector';
@@ -213,6 +214,15 @@ const StrategySelector: React.FC<StrategySelectorProps> = ({ onStrategySelected,
     }
   };
 
+  const handleDirectStrategySelection = (strategy: STRATEGIES) => {
+    onStrategySelected({
+      strategy: strategy,
+      reason: `Directly selected ${strategyInfo[strategy].name} strategy`,
+      path: ['Direct Selection'],
+      intermediateStorage: false
+    });
+  };
+
   const renderBreadcrumb = () => (
     <nav className="mb-6">
       <div className="bg-gray-50 px-4 py-2 rounded-lg">
@@ -321,6 +331,27 @@ const StrategySelector: React.FC<StrategySelectorProps> = ({ onStrategySelected,
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Migration Strategy</h2>
         <p className="text-gray-600">Answer a few questions to get the best strategy for your needs</p>
+      </div>
+      
+      {/* Direct Strategy Selection */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Skip the wizard - Select strategy directly</h3>
+        <p className="text-sm text-gray-600 mb-4">If you already know which strategy you need, click below to skip the decision wizard:</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Object.entries(strategyInfo).map(([strategyKey, info]) => (
+            <button
+              key={strategyKey}
+              onClick={() => handleDirectStrategySelection(strategyKey as STRATEGIES)}
+              className="p-3 bg-white border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+            >
+              <div className="font-medium text-sm text-gray-900">{info.name}</div>
+              <div className="text-xs text-gray-600 mt-1">{info.description}</div>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <p className="text-xs text-gray-500">Not sure which strategy to choose? Use the guided wizard below.</p>
+        </div>
       </div>
       
       {renderBreadcrumb()}

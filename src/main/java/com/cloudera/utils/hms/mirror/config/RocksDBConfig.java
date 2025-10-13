@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.config;
 
+import com.cloudera.utils.hms.mirror.domain.support.RocksDBColumnFamily;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -42,7 +43,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * This configuration provides embedded RocksDB storage with support for:
  * - Multiple concurrent sessions
  * - Multi-threaded access
- * - Column families for different data types (Configurations, Sessions, Connections)
+ * - Column families for different data types (Configurations, Sessions, Connections, Datasets)
  * - Automatic lifecycle management (startup/shutdown)
  * - Lock handling with informative error messages
  * 
@@ -81,6 +82,7 @@ public class RocksDBConfig {
     private ColumnFamilyHandle configurationsColumnFamily;
     private ColumnFamilyHandle sessionsColumnFamily;
     private ColumnFamilyHandle connectionsColumnFamily;
+    private ColumnFamilyHandle datasetsColumnFamily;
     
     // Thread-safety for cleanup
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
@@ -193,13 +195,8 @@ public class RocksDBConfig {
         log.info("  - Max write buffers: {}", maxWriteBuffers);
         log.info("  - Parallelism: {} threads", Runtime.getRuntime().availableProcessors());
 
-        // Configure column families
-        List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
-            new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY),
-            new ColumnFamilyDescriptor("configurations".getBytes()),
-            new ColumnFamilyDescriptor("sessions".getBytes()),
-            new ColumnFamilyDescriptor("connections".getBytes())
-        );
+        // Configure column families using centralized enum
+        List<ColumnFamilyDescriptor> columnFamilyDescriptors = RocksDBColumnFamily.getAllDescriptors();
 
         List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
 
@@ -222,9 +219,10 @@ public class RocksDBConfig {
         configurationsColumnFamily = columnFamilyHandles.get(1); // configurations
         sessionsColumnFamily = columnFamilyHandles.get(2); // sessions
         connectionsColumnFamily = columnFamilyHandles.get(3); // connections
+        datasetsColumnFamily = columnFamilyHandles.get(4); // datasets
 
         log.info("✓ RocksDB database opened successfully");
-        log.info("✓ Column families initialized: default, configurations, sessions, connections");
+        log.info("✓ Column families initialized: default, configurations, sessions, connections, datasets");
     }
 
     @PreDestroy
@@ -280,11 +278,13 @@ public class RocksDBConfig {
             }
             
             // Close column families in reverse order
+            closeColumnFamilyHandle("datasets", datasetsColumnFamily);
             closeColumnFamilyHandle("connections", connectionsColumnFamily);
             closeColumnFamilyHandle("sessions", sessionsColumnFamily);
             closeColumnFamilyHandle("configurations", configurationsColumnFamily);
             
             // Null out column family references before closing main DB
+            datasetsColumnFamily = null;
             connectionsColumnFamily = null;
             sessionsColumnFamily = null;
             configurationsColumnFamily = null;
@@ -430,6 +430,15 @@ public class RocksDBConfig {
             return null;
         }
         return connectionsColumnFamily;
+    }
+
+    @Bean("datasetsColumnFamily")
+    public ColumnFamilyHandle datasetsColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Datasets column family bean requested after shutdown - returning null");
+            return null;
+        }
+        return datasetsColumnFamily;
     }
 
     @Bean("rocksDBObjectMapper")

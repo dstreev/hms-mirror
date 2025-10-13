@@ -11,21 +11,7 @@ Before using this wizard, the following must be completed:
 
 ## Wizard Flow
 
-#### Screen 1: Connection and Data Selection
-Select pre-saved cluster connections and database collection for the SQL migration strategy.
-
-| Field | Property Mapped | Input Type | Description/Validation                                                                                                                                                  |
-|-------|-----------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Source Connection | `clusters.LEFT.*` (all properties) | Dropdown | Select from saved cluster connections. Required; shows connection name and summary.                                                                                     |
-| Target Connection | `clusters.RIGHT.*` (all properties) | Dropdown | Select from saved cluster connections. Required for all Data Strategies except DUMP, and STORAGE_MIGRATION; must differ from source. |
-| Database Collection | `databases`, `filter.*` | Dropdown | Select from saved database collections. Required; shows collection name and summary (DB count, table count).                                                            |
-
-**Connection Preview**: Show summary of selected connections (platform type, namespace, server details)
-**Collection Preview**: Show summary of selected collection (database names, table counts, filters applied)
-
-**Next**: Proceed to Migration Behavior.
-
-#### Screen 2: Migration Behavior
+#### Screen 1: Migration Behavior
 Configure basic migration behavior and table type handling.
 
 | Field | Property Mapped | Input Type | Description/Validation |
@@ -46,7 +32,7 @@ Configure basic migration behavior and table type handling.
 
 **Next**: Proceed to Transfer Settings.
 
-#### Screen 3: Transfer and Warehouse Settings
+#### Screen 2: Transfer and Warehouse Settings
 Core settings for data transfer paths and warehouses. Auto-derives target namespace from selected target cluster.
 
 | Field | Property Mapped | Input Type | Description/Validation |
@@ -63,25 +49,23 @@ Core settings for data transfer paths and warehouses. Auto-derives target namesp
 
 **Next**: Proceed to Conversions.
 
-#### Screen 4: Conversions (Optional)
+#### Screen 3: Conversions (Optional)
 Configure table format conversions, including Iceberg.
 
-| Field | Property Mapped | Input Type | Description/Validation |
-|-------|-----------------|------------|------------------------|
-| Enable Iceberg Conversion | `icebergConversion.enable` | Checkbox (default: false) | Activates Iceberg conversion. Required. |
-| File Type Translation | `icebergConversion.fileTypeTranslation` | Text area (default: none) | Map source formats to Iceberg (e.g., "ORC:Parquet"). Optional. |
-| Iceberg Version | `icebergConversion.version` | Dropdown ("2.0", "2.1"; default: "2.0") | Target Iceberg spec version. Required if Iceberg enabled. |
-| Table Properties | `icebergConversion.tableProperties` | Text area (default: none) | Custom props (e.g., "write.format.default=parquet"). Optional. |
-| In-Place Conversion | `icebergConversion.inplace` | Checkbox (default: false) | Convert without data copy. Required if Iceberg enabled. |
+| Field | Property Mapped | Input Type                             | Description/Validation |
+|-------|-----------------|----------------------------------------|------------------------|
+| Enable Iceberg Conversion | `icebergConversion.enable` | Checkbox (default: false)              | Activates Iceberg conversion. Required. |
+| File Type Translation | `icebergConversion.fileTypeTranslation` | Text area (default: none)              | Map source formats to Iceberg (e.g., "ORC:Parquet"). Optional. |
+| Iceberg Version | `icebergConversion.version` | Dropdown ("1", "2", "3"; default: "2") | Target Iceberg spec version. Required if Iceberg enabled. |
+| Table Properties | `icebergConversion.tableProperties` | Text area (default: none)              | Custom props (e.g., "write.format.default=parquet"). Optional. |
+| In-Place Conversion | `icebergConversion.inplace` | Checkbox (default: false)              | Convert without data copy. Required if Iceberg enabled. |
 
 **Next**: Generate configuration.
 
-#### Screen 5: Configuration Generation
+#### Screen 4: Configuration Generation
 Review and save the SQL migration configuration.
 
 **Configuration Summary**: Display comprehensive preview of all selected settings:
-- Source and target connections
-- Database collection details
 - Migration behavior settings
 - Transfer and warehouse paths
 - Conversion settings (if enabled)
@@ -99,4 +83,4 @@ Review and save the SQL migration configuration.
 
 **Note**: Configuration is ready for execution via HMS-Mirror CLI or API. If Iceberg conversion was enabled, the configuration includes Iceberg-specific settings.
 
-This streamlined 5-screen wizard focuses on configuration building with pre-defined entities. Total time: ~3-5 minutes.
+This streamlined 4-screen wizard focuses on configuration building with pre-defined entities. Total time: ~2-4 minutes.

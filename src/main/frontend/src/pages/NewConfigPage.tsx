@@ -1,33 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import DataStrategySelectionModal from '../components/config/DataStrategySelectionModal';
-import { useConfiguration } from '../contexts/ConfigurationContext';
 
 const NewConfigPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dispatch, loadConfiguration, state } = useConfiguration();
-  const [showStrategyModal, setShowStrategyModal] = useState(true);
 
-  const handleStrategySelect = async (strategy: string) => {
-    try {
-      // Create new config with selected data strategy
-      dispatch({ 
-        type: 'CREATE_NEW_CONFIG', 
-        payload: { dataStrategy: strategy } 
-      });
-      
-      // Load the actual configuration from backend with the pending data strategy
-      await loadConfiguration();
-      
-      // Navigate to current configuration overview
-      navigate('/config/current');
-    } catch (error) {
-      console.error('Failed to create new configuration:', error);
-      // Still navigate, error handling will happen in CurrentConfigurationPage
-      navigate('/config/current');
-    }
-  };
+  // Navigate directly to Config Wizard when this page loads
+  useEffect(() => {
+    navigate('/wizards/config', {
+      state: {
+        dataStrategy: 'SQL', // Default to SQL strategy
+        isEditing: false
+      }
+    });
+  }, [navigate]);
 
   const handleBack = () => {
     // Always go back to the config management page when back button is clicked
@@ -56,26 +42,12 @@ const NewConfigPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Select Data Migration Strategy</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Redirecting to Configuration Wizard</h3>
             <p className="text-gray-500 mb-4">
-              Choose the strategy that best fits your migration requirements.
-              <br />
-              <span className="text-sm font-medium text-orange-600">
-                Note: This choice cannot be changed after configuration creation.
-              </span>
+              You will be redirected to the configuration wizard shortly...
             </p>
           </div>
         </div>
-
-        <DataStrategySelectionModal
-          isOpen={showStrategyModal}
-          onClose={() => {
-            // When modal is cancelled, always go back to config management page
-            navigate('/config');
-          }}
-          onSelect={handleStrategySelect}
-          title="Select Data Migration Strategy"
-        />
       </div>
     </div>
   );

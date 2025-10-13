@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { PlusIcon, DocumentTextIcon, CogIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, DocumentTextIcon, CogIcon, DocumentArrowDownIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
 
 const ConfigurationPage: React.FC = () => {
@@ -17,14 +17,10 @@ const ConfigurationPage: React.FC = () => {
     navigate('/config/new');
   };
 
-  const handleLoadConfiguration = () => {
-    navigate('/config/load');
+  const handleViewConfigurations = () => {
+    navigate('/config/view');
   };
 
-  const handleCreateFromTemplate = () => {
-    // Show template selection with data strategy override option
-    navigate('/config/templates');
-  };
 
   const handleSaveConfiguration = async () => {
     const success = await saveToFile();
@@ -56,9 +52,9 @@ const ConfigurationPage: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create or Load Configuration</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Create Configuration</h1>
               <div className="flex items-center mt-2 space-x-4">
-                <p className="text-gray-600">Start by creating a new configuration or loading an existing one</p>
+                <p className="text-gray-600">Start by creating a new migration configuration</p>
                 {statusInfo.class && (
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.class}`}>
                     {statusInfo.label}
@@ -95,7 +91,7 @@ const ConfigurationPage: React.FC = () => {
         )}
 
         {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-4xl">
           <div 
             onClick={handleNewConfiguration}
             className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 cursor-pointer hover:shadow-xl transition-shadow"
@@ -110,29 +106,16 @@ const ConfigurationPage: React.FC = () => {
           </div>
 
           <div 
-            onClick={handleLoadConfiguration}
+            onClick={handleViewConfigurations}
             className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 cursor-pointer hover:shadow-xl transition-shadow"
           >
             <div className="flex items-center mb-4">
               <div className="bg-green-100 rounded-lg p-3">
-                <DocumentTextIcon className="h-6 w-6 text-green-600" />
+                <FolderOpenIcon className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="ml-3 text-lg font-semibold text-gray-900">Load Configuration</h3>
+              <h3 className="ml-3 text-lg font-semibold text-gray-900">View Configurations</h3>
             </div>
-            <p className="text-gray-600 text-sm">Load an existing configuration file</p>
-          </div>
-
-          <div 
-            onClick={handleCreateFromTemplate}
-            className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 cursor-pointer hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center mb-4">
-              <div className="bg-purple-100 rounded-lg p-3">
-                <CogIcon className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-semibold text-gray-900">Create from Template</h3>
-            </div>
-            <p className="text-gray-600 text-sm">Start with an existing configuration as a template</p>
+            <p className="text-gray-600 text-sm">Browse existing configurations organized by data strategy</p>
           </div>
         </div>
 

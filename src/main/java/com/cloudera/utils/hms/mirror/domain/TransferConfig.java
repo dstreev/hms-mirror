@@ -34,7 +34,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransferConfig implements Cloneable {
     @Deprecated // Moved to Application Configuration *application.yml*
-    private int concurrency = 4;
+//    private int concurrency = 4;
     private String transferPrefix = "hms_mirror_transfer_";
     private String shadowPrefix = "hms_mirror_shadow_";
     private String storageMigrationPostfix = "_storage_migration";
@@ -86,9 +86,9 @@ public class TransferConfig implements Cloneable {
         }
     }
 
-    @JsonIgnore
-    public int getConcurrency() {
-        return concurrency;
-    }
+//    @JsonIgnore
+//    public int getConcurrency() {
+//        return concurrency;
+//    }
 
 }

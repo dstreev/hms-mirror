@@ -54,7 +54,16 @@
       "Bash(pkill:*)",
       "Bash(open http://localhost:8103/hms-mirror)",
       "Bash(open http://localhost:8103/hms-mirror/connections)",
-      "Bash(/bashes)"
+      "Bash(/bashes)",
+      "Bash(open http://localhost:8090/hms-mirror)",
+      "Bash(open http://localhost:8095/hms-mirror)",
+      "Bash(open http://localhost:8108/hms-mirror)",
+      "Bash(open http://localhost:8109/hms-mirror)",
+      "Bash(open http://localhost:8110/hms-mirror)",
+      "Bash(open http://localhost:8111/hms-mirror)",
+      "Bash(open http://localhost:8113/hms-mirror)",
+      "Bash(open http://localhost:8103/hms-mirror/config/view)",
+      "Bash(sudo pkill:*)"
     ],
     "deny": [],
     "ask": [],

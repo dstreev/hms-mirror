@@ -216,7 +216,7 @@ const RocksDBPage: React.FC = () => {
     try {
       setSelectedKey(key);
       setSelectedValue('Loading...');
-      const response = await fetch(`/hms-mirror/api/v1/rocksdb/data/${selectedColumnFamily}/${encodeURIComponent(key)}`);
+      const response = await fetch(`/hms-mirror/api/v1/rocksdb/data/${selectedColumnFamily}?key=${encodeURIComponent(key)}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedValue(JSON.stringify(data.value, null, 2));

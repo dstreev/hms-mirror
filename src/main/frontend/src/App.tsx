@@ -6,18 +6,12 @@ import RequireConfiguration from './components/common/RequireConfiguration';
 import RequirePasswordKey from './components/common/RequirePasswordKey';
 import { ConfigurationProvider } from './contexts/ConfigurationContext';
 import ConfigurationPage from './components/config/ConfigurationPage';
-import LoadConfigurationPage from './components/config/LoadConfigurationPage';
-import TemplatesPage from './components/config/TemplatesPage';
-import CurrentConfigurationPage from './components/config/CurrentConfigurationPage';
-import ClusterConfigurationWrapper from './components/config/sections/ClusterConfigurationWrapper';
-import DatabaseSelectionWrapper from './components/config/sections/DatabaseSelectionWrapper';
-import MigrationSettingsWrapper from './components/config/sections/MigrationSettingsWrapper';
-import AdvancedOptionsWrapper from './components/config/sections/AdvancedOptionsWrapper';
-import DatabaseFiltersWrapper from './components/config/sections/DatabaseFiltersWrapper';
+import ViewConfigurationsPage from './components/config/ViewConfigurationsPage';
 import ReportsPage from './components/reports/ReportsPage';
 import ReportDetailsPage from './components/reports/ReportDetailsPage';
 import NewConfigPage from './pages/NewConfigPage';
 import ExecutionPage from './components/execution/ExecutionPage';
+import ConfigWizard from './components/wizards/ConfigWizard';
 import PasswordEncryptionPage from './components/encryption/PasswordEncryptionPage';
 import SummaryViewPage from './components/summary/SummaryViewPage';
 import ConnectionsPage from './components/connections/ConnectionsPage';
@@ -34,9 +28,10 @@ const App: React.FC = () => {
         <Route path="/" element={<ConfigurationPage />} />
         <Route path="/config" element={<ConfigurationPage />} />
         <Route path="/config/manage" element={<ConfigurationPage />} />
+        <Route path="/config/view" element={<ViewConfigurationsPage />} />
         <Route path="/config/new" element={<NewConfigPage />} />
-        <Route path="/config/load" element={<LoadConfigurationPage />} />
-        <Route path="/config/templates" element={<TemplatesPage />} />
+        <Route path="/wizards/config" element={<ConfigWizard />} />
+        <Route path="/wizards/sql-strategy" element={<ConfigWizard />} />
         
         {/* Connection management routes - always accessible */}
         <Route path="/connections" element={<ConnectionsPage />} />
@@ -46,19 +41,9 @@ const App: React.FC = () => {
         {/* RocksDB management routes - always accessible */}
         <Route path="/rocksdb" element={<RocksDBPage />} />
         
-        {/* Protected configuration editing routes */}
-        <Route path="/config/current" element={<RequireConfiguration><CurrentConfigurationPage /></RequireConfiguration>} />
-        <Route path="/config/edit/:id" element={<RequireConfiguration><CurrentConfigurationPage /></RequireConfiguration>} />
-        <Route path="/config/edit/:id/clusters" element={<RequireConfiguration><ClusterConfigurationWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/:id/databases" element={<RequireConfiguration><DatabaseSelectionWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/:id/migration" element={<RequireConfiguration><MigrationSettingsWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/:id/advanced" element={<RequireConfiguration><AdvancedOptionsWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/current/clusters" element={<RequireConfiguration><ClusterConfigurationWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/current/databases" element={<RequireConfiguration><DatabaseSelectionWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/current/migration" element={<RequireConfiguration><MigrationSettingsWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/current/advanced" element={<RequireConfiguration><AdvancedOptionsWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/:id/filters" element={<RequireConfiguration><DatabaseFiltersWrapper /></RequireConfiguration>} />
-        <Route path="/config/edit/current/filters" element={<RequireConfiguration><DatabaseFiltersWrapper /></RequireConfiguration>} />
+        {/* Dataset management routes - always accessible */}
+        <Route path="/datasets" element={<div>Dataset Management - Coming Soon</div>} />
+        
         
         {/* Protected feature routes */}
         <Route path="/encryption" element={<RequireConfiguration><PasswordEncryptionPage /></RequireConfiguration>} />

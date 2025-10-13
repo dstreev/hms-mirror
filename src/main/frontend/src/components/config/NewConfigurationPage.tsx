@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { configApi } from '../../services/api/configApi';
+import { configApi, ConfigurationDto } from '../../services/api/configApi';
 
 interface ConfigFormData {
   dataStrategy: string;
@@ -15,6 +15,29 @@ const NewConfigurationPage: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dataStrategies, setDataStrategies] = useState<Array<{value: string, label: string}>>([]);
+
+  useEffect(() => {
+    const loadDataStrategies = async () => {
+      try {
+        const response = await configApi.getDataStrategies();
+        if (response && response.status === 'success') {
+          setDataStrategies(response.strategies);
+        }
+      } catch (error) {
+        console.error('Failed to load data strategies:', error);
+        // Fallback to default strategies
+        setDataStrategies([
+          {value: 'HYBRID', label: 'HYBRID - Recommended for most migrations'},
+          {value: 'SQL', label: 'SQL - SQL-based migration'},
+          {value: 'EXPORT_IMPORT', label: 'EXPORT_IMPORT - Export/Import approach'},
+          {value: 'SCHEMA_ONLY', label: 'SCHEMA_ONLY - Schema migration only'}
+        ]);
+      }
+    };
+
+    loadDataStrategies();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -36,29 +59,45 @@ const NewConfigurationPage: React.FC = () => {
     setError(null);
 
     try {
-      // Create a basic configuration object
-      const newConfig = {
+      // Create configuration using the new standardized API
+      const configDto: ConfigurationDto = {
+        name: formData.configName.trim(),
         dataStrategy: formData.dataStrategy,
-        name: formData.configName,
-        // Add other default configuration properties as needed
-        clusters: {
-          LEFT: { name: 'source', legacyHive: false },
-          RIGHT: { name: 'target', legacyHive: false }
-        },
-        databases: []
+        comment: `Configuration created on ${new Date().toLocaleDateString()}`,
+        beta: false,
+        execute: false,
+        databaseOnly: false,
+        migrateNonNative: false,
+        readOnly: false,
+        noPurge: false,
+        replace: false,
+        resetRight: false,
+        sync: false,
+        quiet: false,
+        skipFeatures: false,
+        skipLegacyTranslation: false,
+        skipLinkCheck: false,
+        suppressCliWarnings: false,
+        saveWorkingTables: false,
+        copyAvroSchemaUrls: false,
+        dumpTestData: false,
+        encryptedPasswords: false,
+        databases: [],
+        dumpSource: 'LEFT'
       };
 
-      console.log('Creating configuration:', newConfig);
+      console.log('Creating configuration:', configDto);
       
-      // For now, simulate success and redirect
-      // Later we can implement actual API call: await configApi.saveConfig(newConfig);
+      const success = await configApi.saveConfiguration(configDto);
       
-      setTimeout(() => {
+      if (success) {
         setIsLoading(false);
         alert(`Configuration "${formData.configName}" created successfully!`);
-        // Navigate to the configuration editor instead of dashboard
-        navigate('/config/edit/new-config');
-      }, 1000);
+        // Navigate to the view configurations page to see the new config
+        navigate('/config/view');
+      } else {
+        throw new Error('Failed to save configuration');
+      }
 
     } catch (error) {
       console.error('Failed to create configuration:', error);

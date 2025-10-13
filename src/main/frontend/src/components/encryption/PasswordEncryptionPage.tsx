@@ -72,28 +72,9 @@ const PasswordEncryptionPage: React.FC = () => {
     setIsChecking(true);
     
     try {
-      // Try to decrypt passwords in memory to verify the key
-      const response = await fetch('/hms-mirror/api/v1/config/check-password-key', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          config: state.config,
-          passwordKey: passwordKey,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.valid) {
-          alert('✓ Password key is correct! All encrypted passwords can be decrypted successfully.');
-        } else {
-          alert('✗ Password key is incorrect. Unable to decrypt passwords with this key.');
-        }
-      } else {
-        alert('Failed to check password key. Please try again.');
-      }
+      // TODO: Replace with new password validation API
+      console.warn('Password key validation disabled: legacy API endpoint /api/v1/config/check-password-key has been removed');
+      alert('Password key validation is currently unavailable due to API migration. This feature will be restored in a future update.');
     } catch (error) {
       console.error('Error checking password key:', error);
       alert('An error occurred while checking the password key.');
@@ -111,25 +92,10 @@ const PasswordEncryptionPage: React.FC = () => {
     setIsResetting(true);
     
     try {
-      // Reset encryption by removing encrypted passwords and marking as not encrypted
-      const response = await fetch('/hms-mirror/api/v1/config/reset-encryption', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          config: state.config,
-        }),
-      });
-
-      if (response.ok) {
-        const resetConfig = await response.json();
-        updateConfig(resetConfig);
-        alert('Encryption has been reset. All encrypted passwords have been removed. Please re-enter your passwords and encrypt them again.');
-        setShowResetConfirm(false);
-      } else {
-        alert('Failed to reset encryption. Please try again.');
-      }
+      // TODO: Replace with new encryption reset API
+      console.warn('Encryption reset disabled: legacy API endpoint /api/v1/config/reset-encryption has been removed');
+      alert('Encryption reset is currently unavailable due to API migration. This feature will be restored in a future update.');
+      setShowResetConfirm(false);
     } catch (error) {
       console.error('Error resetting encryption:', error);
       alert('An error occurred while resetting encryption.');

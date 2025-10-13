@@ -17,6 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
@@ -54,6 +60,20 @@ import java.util.Map;
 public class RocksDBManagementService {
 
     private final RocksDB rocksDB;
+    private final ObjectMapper yamlMapper;
+    
+    {
+        // Configure YAML mapper for structured output
+        yamlMapper = new ObjectMapper(new YAMLFactory()
+                .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
+                .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+                .enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR));
+        
+        yamlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        yamlMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+        yamlMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        yamlMapper.findAndRegisterModules();
+    }
     
     @Value("${hms-mirror.rocksdb.path:${user.home}/.hms-mirror/data}")
     private String rocksDBPath;
@@ -729,6 +749,23 @@ public class RocksDBManagementService {
         }
     }
     
+    /**
+     * Store a key-value pair in the specified column family.
+     */
+    public void putValue(ColumnFamilyHandle columnFamily, String key, String value) throws RocksDBException {
+        if (key == null || value == null) {
+            throw new IllegalArgumentException("Key and value cannot be null");
+        }
+        
+        try {
+            rocksDB.put(columnFamily, key.getBytes(), value.getBytes());
+            log.debug("Stored key-value pair in column family: key={}, value={}", key, value);
+        } catch (RocksDBException e) {
+            log.error("Failed to store key-value pair: key={}, value={}", key, value, e);
+            throw e;
+        }
+    }
+    
     private long getDirectorySize(File directory) {
         long size = 0;
         try {
@@ -749,4 +786,5 @@ public class RocksDBManagementService {
         }
         return size;
     }
+
 }

@@ -17,6 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.RocksDBColumnFamily;
+import com.cloudera.utils.hms.mirror.service.ConfigurationManagementService;
 import com.cloudera.utils.hms.mirror.service.RocksDBManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -52,19 +55,25 @@ import java.util.Map;
 public class RocksDBManagementController {
 
     private final RocksDBManagementService managementService;
+    private final ConfigurationManagementService configurationManagementService;
     private final ColumnFamilyHandle configurationsColumnFamily;
     private final ColumnFamilyHandle sessionsColumnFamily;
     private final ColumnFamilyHandle connectionsColumnFamily;
+    private final ColumnFamilyHandle datasetsColumnFamily;
 
     @Autowired
     public RocksDBManagementController(RocksDBManagementService managementService,
+                                     ConfigurationManagementService configurationManagementService,
                                      @Qualifier("configurationsColumnFamily") ColumnFamilyHandle configurationsColumnFamily,
                                      @Qualifier("sessionsColumnFamily") ColumnFamilyHandle sessionsColumnFamily,
-                                     @Qualifier("connectionsColumnFamily") ColumnFamilyHandle connectionsColumnFamily) {
+                                     @Qualifier("connectionsColumnFamily") ColumnFamilyHandle connectionsColumnFamily,
+                                     @Qualifier("datasetsColumnFamily") ColumnFamilyHandle datasetsColumnFamily) {
         this.managementService = managementService;
+        this.configurationManagementService = configurationManagementService;
         this.configurationsColumnFamily = configurationsColumnFamily;
         this.sessionsColumnFamily = sessionsColumnFamily;
         this.connectionsColumnFamily = connectionsColumnFamily;
+        this.datasetsColumnFamily = datasetsColumnFamily;
     }
 
     @GetMapping("/health")
@@ -180,7 +189,7 @@ public class RocksDBManagementController {
         @ApiResponse(responseCode = "500", description = "Failed to trigger compaction")
     })
     public ResponseEntity<Map<String, String>> triggerColumnFamilyCompaction(
-            @Parameter(description = "Column family name (configurations, sessions, connections)")
+            @Parameter(description = "Column family name (configurations, sessions, connections, datasets)")
             @PathVariable String columnFamily) {
         try {
             ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
@@ -225,7 +234,7 @@ public class RocksDBManagementController {
         @ApiResponse(responseCode = "400", description = "Invalid column family name")
     })
     public ResponseEntity<Map<String, Object>> getColumnFamilyStatistics(
-            @Parameter(description = "Column family name (configurations, sessions, connections)")
+            @Parameter(description = "Column family name (configurations, sessions, connections, datasets)")
             @PathVariable String columnFamily) {
         try {
             ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
@@ -267,27 +276,17 @@ public class RocksDBManagementController {
     @ApiResponse(responseCode = "200", description = "Column families retrieved successfully")
     public ResponseEntity<Map<String, Object>> getColumnFamilies() {
         try {
-            // For now, return hardcoded column families list since we don't have default CF handle
+            // Use centralized enum to get column families
             Map<String, Object> result = new HashMap<>();
             List<Map<String, Object>> columnFamilies = new ArrayList<>();
             
-            // Add configurations column family
-            Map<String, Object> configInfo = new HashMap<>();
-            configInfo.put("name", "configurations");
-            configInfo.put("keysCount", 0); // Will be populated when we can actually query
-            columnFamilies.add(configInfo);
-            
-            // Add sessions column family
-            Map<String, Object> sessionsInfo = new HashMap<>();
-            sessionsInfo.put("name", "sessions");
-            sessionsInfo.put("keysCount", 0);
-            columnFamilies.add(sessionsInfo);
-            
-            // Add connections column family
-            Map<String, Object> connectionsInfo = new HashMap<>();
-            connectionsInfo.put("name", "connections");
-            connectionsInfo.put("keysCount", 0);
-            columnFamilies.add(connectionsInfo);
+            // Iterate through all column families from enum
+            for (RocksDBColumnFamily cf : RocksDBColumnFamily.getAllColumnFamilies()) {
+                Map<String, Object> cfInfo = new HashMap<>();
+                cfInfo.put("name", cf.getDisplayName());
+                cfInfo.put("keysCount", 0); // Will be populated when we can actually query
+                columnFamilies.add(cfInfo);
+            }
             
             result.put("columnFamilies", columnFamilies);
             return ResponseEntity.ok(result);
@@ -306,7 +305,7 @@ public class RocksDBManagementController {
         @ApiResponse(responseCode = "400", description = "Invalid column family name")
     })
     public ResponseEntity<Map<String, Object>> getKeys(
-            @Parameter(description = "Column family name (default, configurations, sessions, connections)")
+            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets)")
             @PathVariable String columnFamily,
             @Parameter(description = "Key prefix filter")
             @RequestParam(value = "prefix", required = false) String prefix) {
@@ -326,20 +325,25 @@ public class RocksDBManagementController {
         }
     }
 
-    @GetMapping("/data/{columnFamily}/{key}")
+    @GetMapping("/data/{columnFamily}")
     @Operation(summary = "Get value for a specific key", 
                description = "Returns the value for the specified key in the given column family")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Value retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid column family name"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family name or missing key parameter"),
         @ApiResponse(responseCode = "404", description = "Key not found")
     })
     public ResponseEntity<Map<String, Object>> getValue(
-            @Parameter(description = "Column family name (default, configurations, sessions, connections)")
+            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets)")
             @PathVariable String columnFamily,
             @Parameter(description = "The key to retrieve")
-            @PathVariable String key) {
+            @RequestParam String key) {
         try {
+            if (key == null || key.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Missing required parameter: key"));
+            }
+            
             ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
             if (handle == null) {
                 return ResponseEntity.badRequest()
@@ -469,6 +473,95 @@ public class RocksDBManagementController {
         }
     }
 
+    @PostMapping("/scan")
+    @Operation(summary = "Scan keys with optional prefix filtering", 
+               description = "Scans keys in the specified column family with optional prefix filtering and limit")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Scan completed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family or missing parameters"),
+        @ApiResponse(responseCode = "500", description = "Failed to scan keys")
+    })
+    public ResponseEntity<Map<String, Object>> scanKeys(@RequestBody Map<String, Object> request) {
+        try {
+            String columnFamily = (String) request.get("columnFamily");
+            String prefix = (String) request.get("prefix");
+            Integer limit = request.get("limit") != null ? (Integer) request.get("limit") : 100;
+            
+            if (columnFamily == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Missing required parameter: columnFamily"));
+            }
+            
+            ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
+            if (handle == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid column family: " + columnFamily));
+            }
+            
+            // For now, delegate to the existing getKeys method
+            Map<String, Object> result = managementService.getKeys(handle, prefix);
+            
+            // Limit the results if requested
+            if (result.containsKey("keys")) {
+                @SuppressWarnings("unchecked")
+                List<String> keys = (List<String>) result.get("keys");
+                if (keys.size() > limit) {
+                    keys = keys.subList(0, limit);
+                    result.put("keys", keys);
+                    result.put("truncated", true);
+                    result.put("limit", limit);
+                }
+            }
+            
+            return ResponseEntity.ok(result);
+        } catch (RocksDBException e) {
+            log.error("Error scanning keys", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to scan keys: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error processing scan request", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to process scan request: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/put")
+    @Operation(summary = "Store key-value pair", 
+               description = "Stores a key-value pair in the specified column family")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Value stored successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family or missing parameters"),
+        @ApiResponse(responseCode = "500", description = "Failed to store value")
+    })
+    public ResponseEntity<Map<String, String>> putValue(@RequestBody Map<String, String> request) {
+        try {
+            String columnFamily = request.get("columnFamily");
+            String key = request.get("key");
+            String value = request.get("value");
+            
+            if (columnFamily == null || key == null || value == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Missing required parameters: columnFamily, key, value"));
+            }
+            
+            ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
+            if (handle == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid column family: " + columnFamily));
+            }
+            
+            managementService.putValue(handle, key, value);
+            return ResponseEntity.ok(Map.of("message", "Value stored successfully"));
+        } catch (Exception e) {
+            log.error("Error storing value", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to store value: " + e.getMessage()));
+        }
+    }
+
+    // Configuration-specific endpoints for YAML-based storage
+
+
     private ColumnFamilyHandle getColumnFamilyHandle(String columnFamilyName) {
         switch (columnFamilyName.toLowerCase()) {
             case "configurations":
@@ -477,8 +570,12 @@ public class RocksDBManagementController {
                 return sessionsColumnFamily;
             case "connections":
                 return connectionsColumnFamily;
+            case "datasets":
+                return datasetsColumnFamily;
             default:
                 return null;
         }
     }
+    
+
 }

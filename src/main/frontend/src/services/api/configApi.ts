@@ -1,37 +1,158 @@
 import BaseApi from './baseApi';
 import { HmsMirrorConfig, ConfigValidationResult } from '../../types/api';
 
+export interface ConfigurationDto {
+  name: string;
+  dataStrategy: string;
+  comment?: string;
+  beta?: boolean;
+  execute?: boolean;
+  databaseOnly?: boolean;
+  migrateNonNative?: boolean;
+  readOnly?: boolean;
+  noPurge?: boolean;
+  replace?: boolean;
+  resetRight?: boolean;
+  sync?: boolean;
+  quiet?: boolean;
+  skipFeatures?: boolean;
+  skipLegacyTranslation?: boolean;
+  skipLinkCheck?: boolean;
+  suppressCliWarnings?: boolean;
+  saveWorkingTables?: boolean;
+  copyAvroSchemaUrls?: boolean;
+  dumpTestData?: boolean;
+  encryptedPasswords?: boolean;
+  databases?: string[];
+  dbPrefix?: string;
+  dbRename?: string;
+  loadTestDataFile?: string;
+  dumpSource?: string;
+  connectionPoolLib?: string;
+}
+
+export interface ConfigurationListResponse {
+  status: string;
+  data: {
+    [strategy: string]: Array<{
+      name: string;
+      yamlConfig: string;
+      createdDate: string;
+      modifiedDate: string;
+    }>;
+  };
+  totalConfigurations: number;
+  strategies: string[];
+}
+
+export interface ConfigurationResponse {
+  status: string;
+  key?: string;
+  configuration?: HmsMirrorConfig;
+  yaml?: string;
+  size?: number;
+  exists?: boolean;
+  message?: string;
+}
+
+export interface DataStrategiesResponse {
+  status: string;
+  strategies: Array<{
+    value: string;
+    label: string;
+  }>;
+}
+
 class ConfigApi extends BaseApi {
   constructor() {
     super('/hms-mirror/api/v1');
   }
 
-  async getConfig(): Promise<HmsMirrorConfig | null> {
+  async getConfigurations(): Promise<ConfigurationListResponse | null> {
     try {
-      return await this.get<HmsMirrorConfig>('/config');
+      return await this.get<ConfigurationListResponse>('/config');
     } catch (error) {
-      console.error('Failed to fetch config:', error);
+      console.error('Failed to fetch configurations:', error);
       return null;
     }
   }
 
-  async saveConfig(config: HmsMirrorConfig): Promise<boolean> {
+  async getConfiguration(configName: string): Promise<ConfigurationResponse | null> {
     try {
-      await this.post('/config', config);
-      return true;
+      return await this.get<ConfigurationResponse>(`/config/${configName}`);
     } catch (error) {
-      console.error('Failed to save config:', error);
+      console.error(`Failed to fetch configuration ${configName}:`, error);
+      return null;
+    }
+  }
+
+  async saveConfiguration(configDto: ConfigurationDto): Promise<boolean> {
+    try {
+      const response = await this.post<ConfigurationResponse>('/config', configDto);
+      return response?.status === 'SUCCESS';
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
       return false;
     }
   }
 
-  async loadConfig(filename: string): Promise<HmsMirrorConfig | null> {
+  async updateConfiguration(dataStrategy: string, configName: string, configDto: ConfigurationDto): Promise<boolean> {
     try {
-      return await this.post<HmsMirrorConfig>('/config/load', { filename });
+      const response = await this.put<ConfigurationResponse>(`/config/${dataStrategy}/${configName}`, configDto);
+      return response?.status === 'SUCCESS';
     } catch (error) {
-      console.error('Failed to load config:', error);
+      console.error(`Failed to update configuration ${dataStrategy}/${configName}:`, error);
+      return false;
+    }
+  }
+
+  async deleteConfiguration(configName: string): Promise<boolean> {
+    try {
+      const response = await this.delete<ConfigurationResponse>(`/config/${configName}`);
+      return response?.status === 'SUCCESS';
+    } catch (error) {
+      console.error(`Failed to delete configuration ${configName}:`, error);
+      return false;
+    }
+  }
+
+  async copyConfiguration(sourceDataStrategy: string, sourceConfigName: string, 
+                         targetDataStrategy: string, targetConfigName: string): Promise<boolean> {
+    try {
+      const response = await this.post<ConfigurationResponse>(`/config/copy/${sourceDataStrategy}/${sourceConfigName}`, {
+        targetDataStrategy,
+        targetConfigName
+      });
+      return response?.status === 'SUCCESS';
+    } catch (error) {
+      console.error(`Failed to copy configuration ${sourceDataStrategy}/${sourceConfigName}:`, error);
+      return false;
+    }
+  }
+
+  async getDataStrategies(): Promise<DataStrategiesResponse | null> {
+    try {
+      return await this.get<DataStrategiesResponse>('/config/strategies');
+    } catch (error) {
+      console.error('Failed to fetch data strategies:', error);
       return null;
     }
+  }
+
+  // Legacy methods (maintained for backward compatibility)
+  async getConfig(): Promise<HmsMirrorConfig | null> {
+    console.warn('getConfig() is deprecated. Configuration loading is currently unavailable due to API migration.');
+    return null;
+  }
+
+  async saveConfig(config: HmsMirrorConfig): Promise<boolean> {
+    console.warn('saveConfig() is deprecated. Use saveConfiguration() with ConfigurationDto instead.');
+    return false;
+  }
+
+  async loadConfig(filename: string): Promise<HmsMirrorConfig | null> {
+    console.warn('loadConfig() is deprecated. Configuration file loading is currently unavailable due to API migration.');
+    return null;
   }
 
   async validateConfig(config: HmsMirrorConfig): Promise<ConfigValidationResult> {

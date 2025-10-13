@@ -150,20 +150,10 @@ function configurationReducer(state: ConfigurationState, action: ConfigurationAc
 async function autoSaveToBackend(state: ConfigurationState, dispatch: React.Dispatch<ConfigurationAction>) {
   try {
     if (state.config) {
-      // Save entire config to backend
-      const response = await fetch('/hms-mirror/api/v1/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state.config),
-      });
-      
-      if (!response.ok) {
-        console.error('Auto-save to backend failed:', response.status, response.statusText);
-        return;
-      }
-
-      // Don't overwrite client state - trust that the server saved the changes correctly
-      // Client state should remain as the user expects it
+      // TODO: Replace with new configuration storage API
+      // Legacy /api/v1/config endpoint has been removed
+      console.warn('Auto-save disabled: legacy API endpoint /api/v1/config has been removed');
+      return;
     }
   } catch (error) {
     console.error('Auto-save to backend failed:', error);
@@ -205,77 +195,14 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
     
     try {
       if (filename) {
-        // Load specific file from disk and set as current config
-        const response = await fetch('/hms-mirror/api/v1/config/load', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load config file: ${response.status} ${response.statusText}`);
-        }
-        
-        const config = await response.json();
-        dispatch({ 
-          type: 'LOAD_CONFIG', 
-          payload: { config, filename } 
-        });
-        return;
+        // TODO: Replace with new configuration loading API
+        console.warn('File loading disabled: legacy API endpoint /api/v1/config/load has been removed');
+        throw new Error('Configuration file loading is currently unavailable due to API migration');
       }
       
-      // Load current configuration from backend
-      const hadPendingDataStrategy = state.pendingDataStrategy;
-      const response = await fetch('/hms-mirror/api/v1/config');
-      console.log('GET /api/v1/config response status:', response.status);
-      if (response.status === 204) {
-        // No content - no configuration loaded
-        console.log('No configuration found on backend (204)');
-        throw new Error('No configuration found on backend');
-      }
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const config = await response.json();
-          console.log('Loaded config from backend:', config);
-          console.log('Config has clusters?', config?.clusters);
-          console.log('Config has databases?', config?.databases);
-          dispatch({ 
-            type: 'LOAD_CONFIG', 
-            payload: { config, filename } 
-          });
-          
-          // If we had a pending data strategy (new config creation), auto-save after state update
-          if (hadPendingDataStrategy) {
-            // Wait for state update, then auto-save
-            setTimeout(async () => {
-              const configWithStrategy = { ...config, dataStrategy: hadPendingDataStrategy };
-              const tempState = {
-                config: configWithStrategy,
-                filename: null,
-                hasUnsavedChanges: true,
-                isNew: true,
-                pendingDataStrategy: undefined,
-                isConfigurationLoaded: true,
-                isLoading: false,
-                error: null,
-                configName: 'New Config',
-                lastSavedState: null
-              };
-              await autoSaveToBackend(tempState, dispatch);
-            }, 0);
-          }
-        } else {
-          // Not JSON response - likely an HTML error page
-          const text = await response.text();
-          console.error('Expected JSON but got:', text.substring(0, 200));
-          throw new Error('Server returned non-JSON response. Check if the application is running.');
-        }
-      } else {
-        const text = await response.text();
-        console.error('API Error:', response.status, text);
-        throw new Error(`Failed to load configuration: ${response.status} ${response.statusText}`);
-      }
+      // TODO: Replace with new configuration loading API
+      console.warn('Configuration loading disabled: legacy API endpoint /api/v1/config has been removed');
+      throw new Error('Configuration loading is currently unavailable due to API migration');
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
@@ -306,47 +233,9 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
         throw new Error('No filename provided');
       }
 
-      const response = await fetch('/hms-mirror/api/v1/config/persist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: saveFilename }),
-      });
-
-      if (response.ok) {
-        const finalFilename = saveFilename.endsWith('.yaml') || saveFilename.endsWith('.yml') 
-          ? saveFilename 
-          : `${saveFilename}.yaml`;
-          
-        dispatch({ 
-          type: 'MARK_SAVED', 
-          payload: { filename: finalFilename } 
-        });
-        return true;
-      } else {
-        const contentType = response.headers.get('content-type');
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            // Fallback to text
-            const errorText = await response.text();
-            errorMessage = errorText || errorMessage;
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Save API returned HTML:', errorText.substring(0, 200));
-          if (response.status === 404) {
-            errorMessage = 'Save endpoint not found. Check if the application is running on the correct port.';
-          } else {
-            errorMessage = `Server error: ${response.statusText}`;
-          }
-        }
-        
-        throw new Error(errorMessage);
-      }
+      // TODO: Replace with new configuration persistence API
+      console.warn('File saving disabled: legacy API endpoint /api/v1/config/persist has been removed');
+      throw new Error('Configuration file saving is currently unavailable due to API migration');
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
@@ -377,50 +266,9 @@ export function ConfigurationProvider({ children }: ConfigurationProviderProps) 
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      const response = await fetch('/hms-mirror/api/v1/config/load', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename }),
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const loadedConfig = await response.json();
-          
-          // Set as NEW configuration (not linked to original file)
-          dispatch({ 
-            type: 'LOAD_CONFIG', 
-            payload: {
-              config: loadedConfig,
-              filename: null // Clear filename to treat as new
-            }
-          });
-          
-          // Update the config name to indicate it's from a template
-          dispatch({ 
-            type: 'UPDATE_CONFIG_NAME', 
-            payload: 'New Configuration (from template)'
-          });
-          
-          // Auto-save to backend
-          const tempState = {
-            ...state,
-            config: loadedConfig,
-            configName: 'New Configuration (from template)',
-            filename: null,
-            isNew: true,
-            hasUnsavedChanges: true,
-            isConfigurationLoaded: true,
-            lastSavedState: null
-          };
-          autoSaveToBackend(tempState, dispatch);
-        } else {
-          throw new Error('Server returned non-JSON response');
-        }
-      } else {
-        throw new Error(`Failed to load template: ${response.status} ${response.statusText}`);
-      }
+      // TODO: Replace with new configuration template loading API
+      console.warn('Template loading disabled: legacy API endpoint /api/v1/config/load has been removed');
+      throw new Error('Configuration template loading is currently unavailable due to API migration');
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
