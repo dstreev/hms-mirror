@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   PlusIcon, 
   ArrowPathIcon,
@@ -14,6 +14,7 @@ import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const ConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ const ConnectionsPage: React.FC = () => {
 
   useEffect(() => {
     loadConnections();
-  }, [filters]);
+  }, [filters, location.key]);
 
   const loadConnections = async () => {
     try {

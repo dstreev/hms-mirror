@@ -115,12 +115,17 @@ class DatasetApi extends BaseApi {
   async getDataset(datasetName: string): Promise<DatasetFormData | null> {
     try {
       const response = await this.get<DatasetResponse>(`/datasets/${datasetName}`);
+      console.log(`getDataset response for ${datasetName}:`, response);
+
       if (response?.status === 'SUCCESS' && response.data) {
         return this.mapDtoToFormData(response.data);
       }
+
+      console.warn(`Dataset ${datasetName} not found or invalid response:`, response);
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to fetch dataset ${datasetName}:`, error);
+      console.error('Error details:', error.response?.data || error.message);
       return null;
     }
   }

@@ -65,10 +65,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg relative">
-        <div className="p-6">
+        <Link to="/" className="block p-6 hover:bg-gray-50 transition-colors">
           <h1 className="text-xl font-bold text-gray-900">HMS-Mirror</h1>
           <p className="text-sm text-gray-600">Migration Tool</p>
-        </div>
+        </Link>
         <nav className="mt-6 pb-24">
           {navigation.map((item) => {
             if (item.isGroup) {
@@ -90,11 +90,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div className="bg-gray-50">
                       {item.children.map((childItem) => {
                         // Special handling for Configurations route
-                        const isActive = 
-                          location.pathname === childItem.href || 
+                        const isActive =
+                          location.pathname === childItem.href ||
                           location.pathname.startsWith(childItem.href + '/') ||
                           (childItem.href === '/config/manage' && (
-                            location.pathname === '/' ||
                             location.pathname === '/config' ||
                             location.pathname === '/config/new'
                           ));

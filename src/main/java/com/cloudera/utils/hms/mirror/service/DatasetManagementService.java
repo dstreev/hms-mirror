@@ -158,7 +158,7 @@ public class DatasetManagementService {
                 try {
                     DatasetDto datasetDto = yamlMapper.readValue(value, DatasetDto.class);
                     result.put("status", "SUCCESS");
-                    result.put("dataset", datasetDto);
+                    result.put("data", datasetDto);
                     result.put("name", datasetName);
                 } catch (Exception parseException) {
                     log.error("Error parsing dataset {}", datasetName, parseException);
