@@ -85,6 +85,7 @@ public class JobManagementService {
                         Map<String, Object> jobInfo = new HashMap<>();
                         jobInfo.put("jobKey", jobKey);
                         jobInfo.put("name", jobDto.getName());
+                        jobInfo.put("description", jobDto.getDescription());
                         jobInfo.put("createdDate", jobDto.getCreatedDate());
                         jobInfo.put("modifiedDate", jobDto.getModifiedDate());
                         jobInfo.put("datasetReference", jobDto.getDatasetReference());

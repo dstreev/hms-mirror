@@ -54,8 +54,8 @@ const App: React.FC = () => {
         
         {/* Jobs management routes - always accessible */}
         <Route path="/jobs/build" element={<JobsBuildPage />} />
+        <Route path="/jobs/list" element={<JobsBuildPage />} />
         <Route path="/jobs/execute" element={<div>Execute page placeholder</div>} />
-        <Route path="/jobs/list" element={<div>Job list page placeholder</div>} />
         <Route path="/jobs/build/wizard" element={<JobBuildWizard />} />
         
         

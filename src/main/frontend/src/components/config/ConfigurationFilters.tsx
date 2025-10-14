@@ -3,7 +3,8 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 
 export interface ConfigurationListFilters {
   search: string;
-  strategy: string;
+  acidConversion: string;
+  icebergConversion: string;
 }
 
 interface ConfigurationFiltersProps {
@@ -27,11 +28,12 @@ const ConfigurationFilters: React.FC<ConfigurationFiltersProps> = ({
   const clearFilters = () => {
     onFiltersChange({
       search: filters.search,
-      strategy: ''
+      acidConversion: '',
+      icebergConversion: ''
     });
   };
 
-  const hasActiveFilters = filters.strategy !== '';
+  const hasActiveFilters = filters.acidConversion !== '' || filters.icebergConversion !== '';
 
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -46,25 +48,35 @@ const ConfigurationFilters: React.FC<ConfigurationFiltersProps> = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Strategy Filter */}
+        {/* Acid Conversion Filter */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Data Strategy
+            Acid Conversion
           </label>
           <select
-            value={filters.strategy}
-            onChange={(e) => handleFilterChange('strategy', e.target.value)}
+            value={filters.acidConversion}
+            onChange={(e) => handleFilterChange('acidConversion', e.target.value)}
             className="block w-full text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">All Strategies</option>
-            <option value="SQL">🔄 SQL</option>
-            <option value="HYBRID">🔀 Hybrid</option>
-            <option value="EXPORT_IMPORT">📊 Export/Import</option>
-            <option value="SCHEMA_ONLY">📋 Schema Only</option>
-            <option value="STORAGE_MIGRATION">📦 Storage Migration</option>
-            <option value="LINKED">🔗 Linked</option>
-            <option value="COMMON">🤝 Common</option>
-            <option value="DUMP">💾 Dump</option>
+            <option value="">All</option>
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+
+        {/* Iceberg Conversion Filter */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Iceberg Conversion
+          </label>
+          <select
+            value={filters.icebergConversion}
+            onChange={(e) => handleFilterChange('icebergConversion', e.target.value)}
+            className="block w-full text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All</option>
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
           </select>
         </div>
 
@@ -85,11 +97,22 @@ const ConfigurationFilters: React.FC<ConfigurationFiltersProps> = ({
       {hasActiveFilters && (
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="text-xs text-gray-500">Active filters:</span>
-          {filters.strategy && (
+          {filters.acidConversion && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              Strategy: {filters.strategy}
+              Acid: {filters.acidConversion}
               <button
-                onClick={() => handleFilterChange('strategy', '')}
+                onClick={() => handleFilterChange('acidConversion', '')}
+                className="ml-1 text-blue-600 hover:text-blue-700"
+              >
+                <XMarkIcon className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {filters.icebergConversion && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Iceberg: {filters.icebergConversion}
+              <button
+                onClick={() => handleFilterChange('icebergConversion', '')}
                 className="ml-1 text-blue-600 hover:text-blue-700"
               >
                 <XMarkIcon className="h-3 w-3" />

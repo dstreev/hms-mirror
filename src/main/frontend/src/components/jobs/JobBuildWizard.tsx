@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { JobDto } from '../../services/api/jobApi';
 import { 
   ChevronLeftIcon, 
   ChevronRightIcon, 
@@ -12,6 +13,7 @@ import SearchableInput from '../common/SearchableInput';
 
 interface JobFormData {
   name: string;
+  description?: string;
   datasetReference: string;
   configReference: string;
   leftConnectionReference: string;
@@ -39,9 +41,16 @@ interface Connection {
 
 const JobBuildWizard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Edit mode state
+  const editMode = location.state?.mode === 'edit';
+  const existingJob: JobDto | null = location.state?.job || null;
+  const existingJobKey: string = location.state?.jobKey || '';
+  const [jobKey, setJobKey] = useState<string>(existingJobKey);
   
   // Available data for dropdowns
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -62,14 +71,15 @@ const JobBuildWizard: React.FC = () => {
   const [rightConnectionSearchQuery, setRightConnectionSearchQuery] = useState('');
 
   const [jobData, setJobData] = useState<JobFormData>({
-    name: '',
-    datasetReference: '',
-    configReference: '',
-    leftConnectionReference: '',
-    rightConnectionReference: '',
-    strategy: '',
-    disasterRecovery: false,
-    sync: false
+    name: existingJob?.name || '',
+    description: existingJob?.description || '',
+    datasetReference: existingJob?.datasetReference || '',
+    configReference: existingJob?.configReference || '',
+    leftConnectionReference: existingJob?.leftConnectionReference || '',
+    rightConnectionReference: existingJob?.rightConnectionReference || '',
+    strategy: existingJob?.strategy || '',
+    disasterRecovery: existingJob?.disasterRecovery || false,
+    sync: existingJob?.sync || false
   });
 
   const dataStrategies = [
@@ -311,13 +321,19 @@ const JobBuildWizard: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Generate UUID for the job
-      const jobId = crypto.randomUUID();
-      const jobKey = `${jobData.name}-${jobId}`;
-      
+      let finalJobKey = jobKey;
+
+      // Generate UUID and jobKey for new jobs
+      if (!editMode) {
+        const jobId = crypto.randomUUID();
+        finalJobKey = `${jobData.name}-${jobId}`;
+        setJobKey(finalJobKey);
+      }
+
       const jobPayload = {
-        id: jobId,
+        id: editMode ? existingJob?.id : crypto.randomUUID(),
         name: jobData.name,
+        description: jobData.description,
         datasetReference: jobData.datasetReference,
         configReference: jobData.configReference,
         leftConnectionReference: jobData.leftConnectionReference,
@@ -325,11 +341,11 @@ const JobBuildWizard: React.FC = () => {
         strategy: jobData.strategy,
         disasterRecovery: jobData.disasterRecovery,
         sync: jobData.sync,
-        createdDate: new Date().toISOString(),
+        createdDate: editMode ? existingJob?.createdDate : new Date().toISOString(),
         modifiedDate: new Date().toISOString()
       };
 
-      const response = await fetch(`/hms-mirror/api/v1/jobs/${jobKey}`, {
+      const response = await fetch(`/hms-mirror/api/v1/jobs/${finalJobKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -338,19 +354,19 @@ const JobBuildWizard: React.FC = () => {
       });
 
       if (response.ok) {
-        navigate('/jobs/list', { 
-          state: { 
-            message: `Job "${jobData.name}" created successfully`,
+        navigate('/jobs/list', {
+          state: {
+            message: `Job "${jobData.name}" ${editMode ? 'updated' : 'created'} successfully`,
             type: 'success'
           }
         });
       } else {
         const errorData = await response.json();
-        setErrors({ submit: errorData.message || 'Failed to create job' });
+        setErrors({ submit: errorData.message || `Failed to ${editMode ? 'update' : 'create'} job` });
       }
     } catch (error) {
-      console.error('Error creating job:', error);
-      setErrors({ submit: 'Failed to create job. Please try again.' });
+      console.error(`Error ${editMode ? 'updating' : 'creating'} job:`, error);
+      setErrors({ submit: `Failed to ${editMode ? 'update' : 'create'} job. Please try again.` });
     } finally {
       setIsLoading(false);
     }
@@ -378,16 +394,33 @@ const JobBuildWizard: React.FC = () => {
                 type="text"
                 value={jobData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
+                disabled={editMode}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
+                } ${editMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="Enter a unique job name"
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">
-                Name cannot be changed after creation
+                {editMode ? 'Job name cannot be changed when editing' : 'Name cannot be changed after creation'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                value={jobData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter a description for this job (optional)"
+                rows={3}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Optional description to help identify the purpose of this job
               </p>
             </div>
           </div>
@@ -630,6 +663,9 @@ const JobBuildWizard: React.FC = () => {
               <div>
                 <h4 className="font-medium text-gray-900">Job Details</h4>
                 <p className="text-sm text-gray-600">Name: {jobData.name}</p>
+                {jobData.description && (
+                  <p className="text-sm text-gray-600">Description: {jobData.description}</p>
+                )}
               </div>
               
               <div>
@@ -691,9 +727,13 @@ const JobBuildWizard: React.FC = () => {
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Job</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {editMode ? 'Edit Job' : 'Create New Job'}
+          </h1>
           <p className="mt-2 text-gray-600">
-            Build a new HMS-Mirror job by configuring datasets, connections, and migration options
+            {editMode
+              ? `Update the HMS-Mirror job "${jobData.name}"`
+              : 'Build a new HMS-Mirror job by configuring datasets, connections, and migration options'}
           </p>
         </div>
 
@@ -749,12 +789,12 @@ const JobBuildWizard: React.FC = () => {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
+                      {editMode ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
                     <>
                       <CheckIcon className="w-4 h-4 mr-2" />
-                      Create Job
+                      {editMode ? 'Update Job' : 'Create Job'}
                     </>
                   )}
                 </button>

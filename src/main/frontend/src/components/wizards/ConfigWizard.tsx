@@ -229,9 +229,15 @@ const ConfigWizard: React.FC = () => {
 
   const validateStep = (step: number): boolean => {
     const newErrors: { [key: string]: string } = {};
-    
+
     switch (step) {
       case 0:
+        // Config Details - name is required
+        if (!config.configName.trim()) {
+          newErrors['configName'] = 'Configuration name is required';
+        }
+        break;
+      case 1:
         // Migration Behavior - all fields are required checkboxes/numbers
         if (config.migrateACID.artificialBucketThreshold <= 0) {
           newErrors['migrateACID.artificialBucketThreshold'] = 'Must be a positive integer';
@@ -240,7 +246,7 @@ const ConfigWizard: React.FC = () => {
           newErrors['migrateACID.partitionLimit'] = 'Must be non-negative';
         }
         break;
-      case 1:
+      case 2:
         // Transfer and Warehouse Settings
         if (!config.transfer.warehouse.externalDirectory.trim()) {
           newErrors['transfer.warehouse.externalDirectory'] = 'External directory is required';
@@ -250,20 +256,20 @@ const ConfigWizard: React.FC = () => {
         }
         break;
       case 3:
-        // Configuration Generation
-        if (!config.configName.trim()) {
-          newErrors['configName'] = 'Configuration name is required';
-        }
+        // Conversions - no required fields
+        break;
+      case 4:
+        // Review - all validation already done
         break;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(prev + 1, 4));
     }
   };
 
@@ -361,9 +367,9 @@ const ConfigWizard: React.FC = () => {
         if (result.status === 'SUCCESS') {
           const action = isEditing ? 'updated' : 'created';
           // Navigate back to configuration management
-          navigate('/config', { 
-            state: { 
-              message: `${config.dataStrategy} configuration "${config.configName}" ${action} successfully` 
+          navigate('/config', {
+            state: {
+              message: `Configuration "${config.configName}" ${action} successfully`
             }
           });
         } else {
@@ -378,6 +384,55 @@ const ConfigWizard: React.FC = () => {
     }
   };
 
+  const renderStep0 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Configuration Details</h3>
+        <p className="text-sm text-gray-600 mb-6">Review and save the migration configuration.</p>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="configName" className="block text-sm font-medium text-gray-700">
+              Configuration Name *
+            </label>
+            <input
+              type="text"
+              id="configName"
+              value={config.configName}
+              onChange={(e) => updateConfig('configName', e.target.value)}
+              readOnly={location.state?.isEditing}
+              className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${
+                location.state?.isEditing
+                  ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
+                  : 'focus:ring-blue-500 focus:border-blue-500'
+              }`}
+              placeholder={location.state?.isCopying ? `Copy of ${location.state.configName || ''} Configuration` : `My Migration Configuration`}
+            />
+            {errors['configName'] && (
+              <p className="mt-1 text-sm text-red-600">{errors['configName']}</p>
+            )}
+            {location.state?.isEditing && (
+              <p className="mt-1 text-sm text-gray-500">Configuration name cannot be changed when editing</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              id="description"
+              rows={3}
+              value={config.description}
+              onChange={(e) => updateConfig('description', e.target.value)}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Optional description of the configuration purpose"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -699,68 +754,77 @@ const ConfigWizard: React.FC = () => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Configuration Generation</h3>
-        <p className="text-sm text-gray-600 mb-6">Review and save the {config.dataStrategy} migration configuration.</p>
-        
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h4 className="text-md font-medium text-gray-900 mb-3">Configuration Summary</h4>
-          <div className="text-sm text-gray-600 space-y-2">
-            <div>• Migration behavior: {config.databaseOnly ? 'Database only' : 'Full migration'}</div>
-            <div>• ACID migration: {config.migrateACID.on ? 'Enabled' : 'Disabled'}</div>
-            <div>• External directory: {config.transfer.warehouse.externalDirectory}</div>
-            <div>• Managed directory: {config.transfer.warehouse.managedDirectory}</div>
-            {config.icebergConversion.enable && (
-              <div>• Iceberg conversion: Enabled (Version {config.icebergConversion.version})</div>
-            )}
-          </div>
-        </div>
-        
-        <div className="space-y-4">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Review Configuration</h3>
+        <p className="text-sm text-gray-600 mb-6">Review your configuration settings before saving.</p>
+
+        <div className="bg-gray-50 rounded-lg p-4 space-y-4">
           <div>
-            <label htmlFor="configName" className="block text-sm font-medium text-gray-700">
-              Configuration Name *
-            </label>
-            <input
-              type="text"
-              id="configName"
-              value={config.configName}
-              onChange={(e) => updateConfig('configName', e.target.value)}
-              readOnly={location.state?.isEditing}
-              className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${
-                location.state?.isEditing 
-                  ? 'bg-gray-100 text-gray-600 cursor-not-allowed' 
-                  : 'focus:ring-blue-500 focus:border-blue-500'
-              }`}
-              placeholder={location.state?.isCopying ? `Copy of ${location.state.configName || config.dataStrategy} Configuration` : `My ${config.dataStrategy} Configuration`}
-            />
-            {errors['configName'] && (
-              <p className="mt-1 text-sm text-red-600">{errors['configName']}</p>
-            )}
+            <h4 className="text-md font-medium text-gray-900 mb-2">Configuration Details</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• Name: {config.configName}</div>
+              {config.description && <div>• Description: {config.description}</div>}
+            </div>
           </div>
-          
+
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              id="description"
-              rows={3}
-              value={config.description}
-              onChange={(e) => updateConfig('description', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Optional description of the configuration purpose"
-            />
+            <h4 className="text-md font-medium text-gray-900 mb-2">Migration Behavior</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• Migration type: {config.databaseOnly ? 'Database only' : 'Full migration'}</div>
+              <div>• Migrate VIEWs: {config.migrateVIEW.on ? 'Yes' : 'No'}</div>
+              <div>• Migrate non-native tables: {config.migrateNonNative ? 'Yes' : 'No'}</div>
+            </div>
           </div>
+
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-2">ACID Migration</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• ACID migration: {config.migrateACID.on ? 'Enabled' : 'Disabled'}</div>
+              {config.migrateACID.on && (
+                <>
+                  <div>• ACID only: {config.migrateACID.only ? 'Yes' : 'No'}</div>
+                  <div>• Bucket threshold: {config.migrateACID.artificialBucketThreshold}</div>
+                  <div>• Partition limit: {config.migrateACID.partitionLimit}</div>
+                  <div>• Downgrade: {config.migrateACID.downgrade ? 'Yes' : 'No'}</div>
+                  <div>• In-place: {config.migrateACID.inplace ? 'Yes' : 'No'}</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-2">Warehouse Settings</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• External directory: {config.transfer.warehouse.externalDirectory}</div>
+              <div>• Managed directory: {config.transfer.warehouse.managedDirectory}</div>
+              <div>• Transfer prefix: {config.transfer.transferPrefix}</div>
+              <div>• Shadow prefix: {config.transfer.shadowPrefix}</div>
+            </div>
+          </div>
+
+          {config.icebergConversion.enable && (
+            <div>
+              <h4 className="text-md font-medium text-gray-900 mb-2">Iceberg Conversion</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>• Enabled: Yes</div>
+                <div>• Version: {config.icebergConversion.version}</div>
+                <div>• In-place: {config.icebergConversion.inplace ? 'Yes' : 'No'}</div>
+                {config.icebergConversion.fileTypeTranslation && (
+                  <div>• File type translation: {config.icebergConversion.fileTypeTranslation}</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 
   const steps = [
+    { id: 'details', title: 'Details', component: renderStep0 },
     { id: 'migration', title: 'Migration', component: renderStep1 },
     { id: 'transfer', title: 'Transfer', component: renderStep2 },
     { id: 'conversions', title: 'Conversions', component: renderStep3 },
-    { id: 'config', title: 'Config', component: renderStep4 },
+    { id: 'review', title: 'Review', component: renderStep4 },
   ];
 
   if (isLoading) {
@@ -780,14 +844,14 @@ const ConfigWizard: React.FC = () => {
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          {isEditing ? 'Edit' : isCopying ? 'Copy' : 'Create'} {config.dataStrategy} Configuration
+          {isEditing ? 'Edit' : isCopying ? 'Copy' : 'Create'} Configuration
         </h1>
         <p className="text-gray-600 mt-2">
-          {isEditing 
-            ? `Editing ${config.dataStrategy} configuration: ${config.configName || 'Unknown'}`
+          {isEditing
+            ? `Editing configuration: ${config.configName || 'Unknown'}`
             : isCopying
-            ? `Creating a copy of ${config.dataStrategy} configuration. Please provide a new name.`
-            : `Configure ${config.dataStrategy} migration settings for HMS-Mirror`
+            ? `Creating a copy of configuration. Please provide a new name.`
+            : `Configure migration settings for HMS-Mirror`
           }
         </p>
         {errors.general && (
@@ -823,7 +887,7 @@ const ConfigWizard: React.FC = () => {
           Previous
         </button>
         
-        {currentStep < 3 ? (
+        {currentStep < 4 ? (
           <button
             onClick={nextStep}
             className="flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"

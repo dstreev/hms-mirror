@@ -32,65 +32,14 @@ const ViewConfigurationsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ConfigurationListFilters>({
     search: '',
-    strategy: ''
+    acidConversion: '',
+    icebergConversion: ''
   });
   const [showFilters, setShowFilters] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     configuration: Configuration | null;
   }>({ isOpen: false, configuration: null });
-
-  // Strategy display information
-  const strategyInfo = {
-    SQL: {
-      name: 'SQL',
-      description: 'SQL-based data migration strategy',
-      color: 'blue',
-      icon: '🔄'
-    },
-    HYBRID: {
-      name: 'HYBRID',
-      description: 'Mixed SQL and Export/Import approach',
-      color: 'purple',
-      icon: '🔀'
-    },
-    EXPORT_IMPORT: {
-      name: 'EXPORT_IMPORT',
-      description: 'Hive Export/Import mechanism',
-      color: 'green',
-      icon: '📊'
-    },
-    SCHEMA_ONLY: {
-      name: 'SCHEMA_ONLY',
-      description: 'Metadata migration only',
-      color: 'yellow',
-      icon: '📋'
-    },
-    STORAGE_MIGRATION: {
-      name: 'STORAGE_MIGRATION',
-      description: 'In-cluster storage migration',
-      color: 'indigo',
-      icon: '📦'
-    },
-    LINKED: {
-      name: 'LINKED',
-      description: 'Read-only testing access',
-      color: 'gray',
-      icon: '🔗'
-    },
-    COMMON: {
-      name: 'COMMON',
-      description: 'Shared storage metadata migration',
-      color: 'teal',
-      icon: '🤝'
-    },
-    DUMP: {
-      name: 'DUMP',
-      description: 'Schema extraction only',
-      color: 'orange',
-      icon: '💾'
-    }
-  };
 
   useEffect(() => {
     // Reset state and fetch configurations whenever we navigate to this page
@@ -138,13 +87,13 @@ const ViewConfigurationsPage: React.FC = () => {
       Object.entries(configurationsByStrategy).forEach(([strategy, configList]) => {
         if (Array.isArray(configList) && configList.length > 0) {
           const configurations: Configuration[] = configList.map((configData: any) => {
-            // configData contains: name, yamlConfig, createdDate, modifiedDate
+            // configData contains: name, yamlConfig, createdDate, modifiedDate, description
             return {
               name: configData.name || 'unknown',
               strategy: strategy,
               createdDate: configData.createdDate || new Date().toISOString().split('T')[0],
               modifiedDate: configData.modifiedDate || new Date().toISOString().split('T')[0],
-              description: `${strategy} configuration loaded via REST API`
+              description: configData.description
             };
           });
           
@@ -250,24 +199,6 @@ const ViewConfigurationsPage: React.FC = () => {
     setDeleteDialog({ isOpen: false, configuration: null });
   };
 
-  const getStrategyColorClasses = (strategy: string) => {
-    const info = strategyInfo[strategy as keyof typeof strategyInfo];
-    if (!info) return 'bg-gray-100 text-gray-800 border-gray-200';
-    
-    const colorMap = {
-      blue: 'bg-blue-100 text-blue-800 border-blue-200',
-      purple: 'bg-purple-100 text-purple-800 border-purple-200',
-      green: 'bg-green-100 text-green-800 border-green-200',
-      yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      indigo: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      gray: 'bg-gray-100 text-gray-800 border-gray-200',
-      teal: 'bg-teal-100 text-teal-800 border-teal-200',
-      orange: 'bg-orange-100 text-orange-800 border-orange-200'
-    };
-    
-    return colorMap[info.color as keyof typeof colorMap] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -283,9 +214,19 @@ const ViewConfigurationsPage: React.FC = () => {
       return false;
     }
 
-    if (filters.strategy && config.strategy !== filters.strategy) {
-      return false;
-    }
+    // TODO: Add acid/iceberg conversion filtering when backend provides this data
+    // if (filters.acidConversion === 'enabled' && !config.acidConversionEnabled) {
+    //   return false;
+    // }
+    // if (filters.acidConversion === 'disabled' && config.acidConversionEnabled) {
+    //   return false;
+    // }
+    // if (filters.icebergConversion === 'enabled' && !config.icebergConversionEnabled) {
+    //   return false;
+    // }
+    // if (filters.icebergConversion === 'disabled' && config.icebergConversionEnabled) {
+    //   return false;
+    // }
 
     return true;
   });
@@ -436,9 +377,6 @@ const ViewConfigurationsPage: React.FC = () => {
                         <h3 className="text-lg font-medium text-gray-900 truncate">
                           {config.name}
                         </h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStrategyColorClasses(config.strategy)}`}>
-                          {strategyInfo[config.strategy as keyof typeof strategyInfo]?.icon || '⚙️'} {config.strategy}
-                        </span>
                       </div>
                       {config.description && (
                         <p className="text-sm text-gray-500 mt-1">{config.description}</p>

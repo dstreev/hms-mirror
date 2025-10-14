@@ -19,6 +19,9 @@ public class JobDto {
     @Schema(description = "Unique identifier for the job", example = "job-12345")
     private String name;
 
+    @Schema(description = "Description of the job", example = "Migration job for production tables")
+    private String description;
+
     @Schema(description = "Creation timestamp")
     private String createdDate;
 

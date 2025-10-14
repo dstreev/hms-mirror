@@ -85,7 +85,8 @@ public class ConfigurationManagementService {
                         configInfo.put("yamlConfig", new String(configValue)); // Include the YAML content
                         configInfo.put("createdDate", java.time.LocalDate.now().toString());
                         configInfo.put("modifiedDate", java.time.LocalDate.now().toString());
-                        
+                        configInfo.put("description", configData.get("comment")); // Add description from comment field
+
                         strategiesMap.computeIfAbsent(strategy, k -> new ArrayList<>()).add(configInfo);
                     } catch (Exception e) {
                         log.warn("Failed to parse configuration {}, skipping", configName, e);

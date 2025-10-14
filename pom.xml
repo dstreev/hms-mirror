@@ -41,7 +41,7 @@
         <!-- DB Support -->
         <mariadb.client.version>3.5.1</mariadb.client.version>
         <postgresql.client.version>42.7.2</postgresql.client.version>
-        <oracle.client.version>23.4.0.24.05</oracle.client.version>
+        <oracle.client.version>23.9.0.25.07</oracle.client.version>
 
         <jaxb-api.version>2.3.1</jaxb-api.version>
 
@@ -194,7 +194,7 @@
         </dependency>
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
-            <artifactId>ojdbc8</artifactId>
+            <artifactId>ojdbc11</artifactId>
             <version>${oracle.client.version}</version>
             <scope>provided</scope>
         </dependency>
