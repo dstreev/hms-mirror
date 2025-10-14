@@ -40,6 +40,7 @@
 
         <!-- DB Support -->
         <mariadb.client.version>3.5.1</mariadb.client.version>
+        <mysql.client.version>8.0.33</mysql.client.version>
         <postgresql.client.version>42.7.2</postgresql.client.version>
         <oracle.client.version>23.9.0.25.07</oracle.client.version>
 
@@ -184,6 +185,13 @@
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${mariadb.client.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

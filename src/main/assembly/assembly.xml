@@ -64,11 +64,23 @@
         </fileSet>
     </fileSets>
 
-<!--    <dependencySets>-->
-<!--        <dependencySet>-->
-<!--            <useProjectArtifact>true</useProjectArtifact>-->
-<!--            <outputDirectory>hms-mirror-install-${project.version}/lib</outputDirectory>-->
-<!--            <unpack>false</unpack>-->
-<!--        </dependencySet>-->
-<!--    </dependencySets>-->
+    <dependencySets>
+        <!-- JDBC Drivers for aux_libs directory -->
+        <dependencySet>
+            <useProjectArtifact>false</useProjectArtifact>
+            <outputDirectory>hms-mirror-install-${project.version}/aux_libs</outputDirectory>
+            <unpack>false</unpack>
+            <scope>provided</scope>
+            <includes>
+                <!-- MySQL JDBC Driver -->
+                <include>com.mysql:mysql-connector-j</include>
+                <!-- MariaDB JDBC Driver -->
+                <include>org.mariadb.jdbc:mariadb-java-client</include>
+                <!-- PostgreSQL JDBC Driver -->
+                <include>org.postgresql:postgresql</include>
+                <!-- Oracle JDBC Driver -->
+                <include>com.oracle.database.jdbc:ojdbc11</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
 </assembly>
