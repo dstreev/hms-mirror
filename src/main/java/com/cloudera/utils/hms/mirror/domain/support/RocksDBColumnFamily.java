@@ -45,7 +45,10 @@ public enum RocksDBColumnFamily {
     CONNECTIONS("connections", "connections".getBytes()),
     
     @Schema(description = "Dataset configuration storage")
-    DATASETS("datasets", "datasets".getBytes());
+    DATASETS("datasets", "datasets".getBytes()),
+    
+    @Schema(description = "Job configuration storage")
+    JOBS("jobs", "jobs".getBytes());
 
     private final String displayName;
     private final byte[] keyBytes;

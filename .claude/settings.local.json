@@ -63,7 +63,11 @@
       "Bash(open http://localhost:8111/hms-mirror)",
       "Bash(open http://localhost:8113/hms-mirror)",
       "Bash(open http://localhost:8103/hms-mirror/config/view)",
-      "Bash(sudo pkill:*)"
+      "Bash(sudo pkill:*)",
+      "Bash(open http://localhost:8117/hms-mirror/jobs/build/wizard)",
+      "Bash(open http://localhost:8121/hms-mirror)",
+      "Bash(open http://localhost:8123/hms-mirror)",
+      "Bash(open http://localhost:8125/hms-mirror/jobs/build/wizard)"
     ],
     "deny": [],
     "ask": [],

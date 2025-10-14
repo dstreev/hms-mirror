@@ -83,6 +83,7 @@ public class RocksDBConfig {
     private ColumnFamilyHandle sessionsColumnFamily;
     private ColumnFamilyHandle connectionsColumnFamily;
     private ColumnFamilyHandle datasetsColumnFamily;
+    private ColumnFamilyHandle jobsColumnFamily;
     
     // Thread-safety for cleanup
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
@@ -220,9 +221,10 @@ public class RocksDBConfig {
         sessionsColumnFamily = columnFamilyHandles.get(2); // sessions
         connectionsColumnFamily = columnFamilyHandles.get(3); // connections
         datasetsColumnFamily = columnFamilyHandles.get(4); // datasets
+        jobsColumnFamily = columnFamilyHandles.get(5); // jobs
 
         log.info("✓ RocksDB database opened successfully");
-        log.info("✓ Column families initialized: default, configurations, sessions, connections, datasets");
+        log.info("✓ Column families initialized: default, configurations, sessions, connections, datasets, jobs");
     }
 
     @PreDestroy
@@ -278,12 +280,14 @@ public class RocksDBConfig {
             }
             
             // Close column families in reverse order
+            closeColumnFamilyHandle("jobs", jobsColumnFamily);
             closeColumnFamilyHandle("datasets", datasetsColumnFamily);
             closeColumnFamilyHandle("connections", connectionsColumnFamily);
             closeColumnFamilyHandle("sessions", sessionsColumnFamily);
             closeColumnFamilyHandle("configurations", configurationsColumnFamily);
             
             // Null out column family references before closing main DB
+            jobsColumnFamily = null;
             datasetsColumnFamily = null;
             connectionsColumnFamily = null;
             sessionsColumnFamily = null;
@@ -439,6 +443,15 @@ public class RocksDBConfig {
             return null;
         }
         return datasetsColumnFamily;
+    }
+
+    @Bean("jobsColumnFamily")
+    public ColumnFamilyHandle jobsColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Jobs column family bean requested after shutdown - returning null");
+            return null;
+        }
+        return jobsColumnFamily;
     }
 
     @Bean("rocksDBObjectMapper")

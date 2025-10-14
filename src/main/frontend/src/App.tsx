@@ -20,6 +20,8 @@ import RocksDBPage from './components/rocksdb/RocksDBPage';
 import DatasetsPage from './components/datasets/DatasetsPage';
 import DatasetWizard from './components/datasets/DatasetWizard';
 import ListDatasetsPage from './components/datasets/ListDatasetsPage';
+import JobsBuildPage from './components/jobs/JobsBuildPage';
+import JobBuildWizard from './components/jobs/JobBuildWizard';
 
 const App: React.FC = () => {
   return (
@@ -49,6 +51,12 @@ const App: React.FC = () => {
         <Route path="/datasets/new" element={<DatasetWizard />} />
         <Route path="/datasets/list" element={<ListDatasetsPage />} />
         <Route path="/datasets/edit" element={<DatasetWizard />} />
+        
+        {/* Jobs management routes - always accessible */}
+        <Route path="/jobs/build" element={<JobsBuildPage />} />
+        <Route path="/jobs/execute" element={<div>Execute page placeholder</div>} />
+        <Route path="/jobs/list" element={<div>Job list page placeholder</div>} />
+        <Route path="/jobs/build/wizard" element={<JobBuildWizard />} />
         
         
         {/* Protected feature routes */}

@@ -62,23 +62,11 @@ public class ConfigLiteDto {
             "Note that the implications are additional tables in the target database.")
     private boolean saveWorkingTables = Boolean.FALSE;
 
-//    // Database and naming configuration
-//    private Set<String> databases = new TreeSet<>();
-//    private String dbPrefix = null;
-//    private String dbRename = null;
-//    private Environment dumpSource = Environment.LEFT;
-
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
     private boolean dumpTestData = Boolean.FALSE;
-//    private String loadTestDataFile = null;
-//    private boolean encryptedPasswords = Boolean.FALSE;
-
-    // Connection configuration
-//    private ConnectionPoolType connectionPoolLib;
 
     // Sub-configuration objects (preserved as they don't cause flattening issues)
-//    private Filter filter = new Filter();
     private HybridConfig hybrid = new HybridConfig();
     private IcebergConversion icebergConversion = new IcebergConversion();
     private MigrateACID migrateACID = new MigrateACID();
@@ -86,8 +74,6 @@ public class ConfigLiteDto {
     private Optimization optimization = new Optimization();
     private TransferConfig transfer = new TransferConfig();
     private TransferOwnership ownershipTransfer = new TransferOwnership();
-    // This needs to be a part of the Dataset or the Job Object
-//    private Map<String, Map<TableType, String>> userGlobalLocationMap = null;
 
     // Constructor
     public ConfigLiteDto() {

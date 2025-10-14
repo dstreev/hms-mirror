@@ -42,6 +42,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { name: 'Configurations', href: '/config/manage', icon: HomeIcon, requiresConfig: false, requiresPasswordKey: false },
       ]
     },
+    {
+      name: 'Jobs',
+      icon: PlayIcon,
+      isGroup: true,
+      expanded: true,
+      onToggle: () => {},
+      children: [
+        { name: 'Build', href: '/jobs/build', icon: CogIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Execute', href: '/jobs/execute', icon: PlayIcon, requiresConfig: false, requiresPasswordKey: false },
+      ]
+    },
     { name: 'RocksDB', href: '/rocksdb', icon: CircleStackIcon, requiresConfig: false, requiresPasswordKey: false },
     { name: 'Configuration', href: '/config/current', icon: CogIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Password Encryption', href: '/encryption', icon: KeyIcon, requiresConfig: true, requiresPasswordKey: false },

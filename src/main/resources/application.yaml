@@ -45,6 +45,9 @@ hms-mirror:
       enabled: true
       interval: 10m     # How often to perform keep-alive for running sessions
       cleanup-interval: 30m  # How often to cleanup stale keep-alive sessions
+  data:
+    sample:
+      create: true      # Set to true to create sample connections, datasets, and configurations
   config:
     beta: "false"
     testing: "false"

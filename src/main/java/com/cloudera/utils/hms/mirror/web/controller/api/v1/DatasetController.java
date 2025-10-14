@@ -66,7 +66,7 @@ public class DatasetController {
         try {
             Map<String, Object> result = datasetManagementService.listDatasets();
             
-            if ("success".equals(result.get("status"))) {
+            if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
             } else {
                 log.error("Failed to list datasets: {}", result.get("message"));

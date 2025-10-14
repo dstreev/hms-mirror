@@ -114,9 +114,23 @@ public class DatasetManagementService {
             // Sort datasets by name
             datasetsList.sort(Comparator.comparing(dataset -> (String) dataset.get("name")));
             
-            result.put("status", "success");
-            result.put("datasets", datasetsList);
-            result.put("totalCount", datasetsList.size());
+            // Convert to the format expected by frontend: {name: DatasetDto}
+            Map<String, DatasetDto> dataMap = new HashMap<>();
+            for (Map<String, Object> datasetInfo : datasetsList) {
+                String name = (String) datasetInfo.get("name");
+                try (RocksIterator iterator = rocksDB.newIterator(datasetsColumnFamily)) {
+                    iterator.seek(name.getBytes());
+                    if (iterator.isValid() && name.equals(new String(iterator.key()))) {
+                        DatasetDto datasetDto = yamlMapper.readValue(iterator.value(), DatasetDto.class);
+                        dataMap.put(name, datasetDto);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to load full dataset data for {}", name, e);
+                }
+            }
+            
+            result.put("status", "SUCCESS");
+            result.put("data", dataMap);
             return result;
             
         } catch (Exception e) {
