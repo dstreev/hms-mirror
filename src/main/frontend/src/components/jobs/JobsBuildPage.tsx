@@ -131,19 +131,25 @@ const JobsBuildPage: React.FC = () => {
   const handleCopyJob = async (job: Job, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    const targetName = prompt(`Enter new name for the copied job:`, `${job.name}_copy`);
-    if (!targetName) return;
-
     try {
-      const result = await jobApi.copyJob(job.name, targetName);
-      if (result.success) {
-        await fetchJobs();
+      // Load the full job data from the backend
+      const result = await jobApi.getJob(job.jobKey);
+
+      if (result) {
+        // Navigate to Job Wizard with copy mode - clear the name for user to provide new name
+        navigate('/jobs/build/wizard', {
+          state: {
+            job: result.job,
+            jobKey: '', // Clear jobKey for copy mode
+            mode: 'copy'
+          }
+        });
       } else {
-        setError(result.message || 'Failed to copy job');
+        setError('Failed to load job data for copying');
       }
     } catch (error) {
-      console.error('Error copying job:', error);
-      setError('Failed to copy job');
+      console.error('Error loading job for copying:', error);
+      setError('Failed to load job data for copying');
     }
   };
 

@@ -259,68 +259,6 @@ public class DatasetController {
         }
     }
 
-    @PostMapping(value = "/copy/{sourceDatasetName}", produces = "application/json")
-    @Operation(summary = "Copy dataset", 
-               description = "Creates a copy of an existing dataset with a new name")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Dataset copied successfully"),
-        @ApiResponse(responseCode = "404", description = "Source dataset not found"),
-        @ApiResponse(responseCode = "409", description = "Target dataset already exists"),
-        @ApiResponse(responseCode = "500", description = "Failed to copy dataset")
-    })
-    public ResponseEntity<Map<String, Object>> copyDataset(
-            @Parameter(description = "Source dataset name", required = true)
-            @PathVariable String sourceDatasetName,
-            @Parameter(description = "Target dataset name", required = true)
-            @RequestBody Map<String, String> copyRequest) {
-        
-        String targetDatasetName = copyRequest.get("targetDatasetName");
-        
-        log.info("DatasetController.copyDataset() called - source: {}, target: {}",
-                sourceDatasetName, targetDatasetName);
-        
-        try {
-            if (targetDatasetName == null || targetDatasetName.trim().isEmpty()) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("status", "error");
-                errorResponse.put("message", "targetDatasetName is required");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            // Check if target already exists
-            boolean targetExists = datasetManagementService.datasetExists(targetDatasetName);
-            
-            if (targetExists) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("status", "error");
-                errorResponse.put("message", "Target dataset already exists");
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-            }
-            
-            // Use the service's copy functionality
-            Map<String, Object> result = datasetManagementService.copyDataset(
-                sourceDatasetName, targetDatasetName);
-            
-            if ("SUCCESS".equals(result.get("status"))) {
-                result.put("operation", "copied");
-                result.put("source", sourceDatasetName);
-                return ResponseEntity.status(HttpStatus.CREATED).body(result);
-            } else if ("NOT_FOUND".equals(result.get("status"))) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
-            } else {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
-            }
-            
-        } catch (Exception e) {
-            log.error("Error copying dataset {} to {}",
-                     sourceDatasetName, targetDatasetName, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
-            errorResponse.put("message", "Failed to copy dataset: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
-
     @PostMapping(value = "/validate", consumes = "application/json", produces = "application/json")
     @Operation(summary = "Validate dataset", 
                description = "Validates a dataset configuration without saving it")

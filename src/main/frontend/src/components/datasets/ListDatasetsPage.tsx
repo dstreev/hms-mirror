@@ -131,20 +131,28 @@ const ListDatasetsPage: React.FC = () => {
   };
 
   const handleCopyDataset = async (datasetName: string) => {
-    const newName = prompt(`Enter a name for the copy of "${datasetName}":`, `${datasetName}_copy`);
-    if (!newName || newName.trim() === '') return;
-
     try {
       setActionLoading(datasetName);
-      const result = await datasetApi.copyDataset(datasetName, newName.trim());
-      if (result.success) {
-        await loadDatasets(); // Refresh the list
+      // Load the full dataset data from the backend
+      const dataset = await datasetApi.getDataset(datasetName);
+
+      if (dataset) {
+        // Navigate to Dataset Wizard with copy mode - clear the name for user to provide new name
+        navigate('/datasets/edit', {
+          state: {
+            dataset: {
+              ...dataset,
+              name: '' // Clear name for copy mode
+            },
+            mode: 'copy'
+          }
+        });
       } else {
-        setError(result.message || `Failed to copy dataset: ${datasetName}`);
+        setError(`Failed to load dataset: ${datasetName}`);
       }
     } catch (err: any) {
-      console.error(`Failed to copy dataset ${datasetName}:`, err);
-      setError(err.message || `Failed to copy dataset: ${datasetName}`);
+      console.error(`Failed to load dataset ${datasetName} for copying:`, err);
+      setError(err.message || `Failed to load dataset for copying: ${datasetName}`);
     } finally {
       setActionLoading(null);
     }

@@ -46,8 +46,9 @@ const JobBuildWizard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Edit mode state
+  // Edit and copy mode state
   const editMode = location.state?.mode === 'edit';
+  const copyMode = location.state?.mode === 'copy';
   const existingJob: JobDto | null = location.state?.job || null;
   const existingJobKey: string = location.state?.jobKey || '';
   const [jobKey, setJobKey] = useState<string>(existingJobKey);
@@ -71,7 +72,7 @@ const JobBuildWizard: React.FC = () => {
   const [rightConnectionSearchQuery, setRightConnectionSearchQuery] = useState('');
 
   const [jobData, setJobData] = useState<JobFormData>({
-    name: existingJob?.name || '',
+    name: copyMode ? '' : (existingJob?.name || ''),
     description: existingJob?.description || '',
     datasetReference: existingJob?.datasetReference || '',
     configReference: existingJob?.configReference || '',
@@ -323,15 +324,15 @@ const JobBuildWizard: React.FC = () => {
     try {
       let finalJobKey = jobKey;
 
-      // Generate UUID and jobKey for new jobs
-      if (!editMode) {
+      // Generate UUID and jobKey for new jobs and copies
+      if (!editMode || copyMode) {
         const jobId = crypto.randomUUID();
         finalJobKey = `${jobData.name}-${jobId}`;
         setJobKey(finalJobKey);
       }
 
       const jobPayload = {
-        id: editMode ? existingJob?.id : crypto.randomUUID(),
+        id: (editMode && !copyMode) ? existingJob?.id : crypto.randomUUID(),
         name: jobData.name,
         description: jobData.description,
         datasetReference: jobData.datasetReference,
@@ -341,7 +342,7 @@ const JobBuildWizard: React.FC = () => {
         strategy: jobData.strategy,
         disasterRecovery: jobData.disasterRecovery,
         sync: jobData.sync,
-        createdDate: editMode ? existingJob?.createdDate : new Date().toISOString(),
+        createdDate: (editMode && !copyMode) ? existingJob?.createdDate : new Date().toISOString(),
         modifiedDate: new Date().toISOString()
       };
 
@@ -354,19 +355,22 @@ const JobBuildWizard: React.FC = () => {
       });
 
       if (response.ok) {
+        const action = editMode && !copyMode ? 'updated' : copyMode ? 'copied' : 'created';
         navigate('/jobs/list', {
           state: {
-            message: `Job "${jobData.name}" ${editMode ? 'updated' : 'created'} successfully`,
+            message: `Job "${jobData.name}" ${action} successfully`,
             type: 'success'
           }
         });
       } else {
         const errorData = await response.json();
-        setErrors({ submit: errorData.message || `Failed to ${editMode ? 'update' : 'create'} job` });
+        const action = editMode && !copyMode ? 'update' : 'create';
+        setErrors({ submit: errorData.message || `Failed to ${action} job` });
       }
     } catch (error) {
-      console.error(`Error ${editMode ? 'updating' : 'creating'} job:`, error);
-      setErrors({ submit: `Failed to ${editMode ? 'update' : 'create'} job. Please try again.` });
+      const action = editMode && !copyMode ? 'updating' : 'creating';
+      console.error(`Error ${action} job:`, error);
+      setErrors({ submit: `Failed to ${action} job. Please try again.` });
     } finally {
       setIsLoading(false);
     }
@@ -398,13 +402,17 @@ const JobBuildWizard: React.FC = () => {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.name ? 'border-red-500' : 'border-gray-300'
                 } ${editMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                placeholder="Enter a unique job name"
+                placeholder={copyMode ? "Enter a new name for the copied job" : "Enter a unique job name"}
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">
-                {editMode ? 'Job name cannot be changed when editing' : 'Name cannot be changed after creation'}
+                {editMode
+                  ? 'Job name cannot be changed when editing'
+                  : copyMode
+                    ? 'Provide a unique name for this copy'
+                    : 'Name cannot be changed after creation'}
               </p>
             </div>
 
@@ -728,12 +736,14 @@ const JobBuildWizard: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            {editMode ? 'Edit Job' : 'Create New Job'}
+            {editMode ? 'Edit Job' : copyMode ? 'Copy Job' : 'Create New Job'}
           </h1>
           <p className="mt-2 text-gray-600">
             {editMode
-              ? `Update the HMS-Mirror job "${jobData.name}"`
-              : 'Build a new HMS-Mirror job by configuring datasets, connections, and migration options'}
+              ? `Update the HMS-Mirror job "${existingJob?.name}"`
+              : copyMode
+                ? `Create a copy of "${existingJob?.name}" with a new name`
+                : 'Build a new HMS-Mirror job by configuring datasets, connections, and migration options'}
           </p>
         </div>
 
@@ -789,12 +799,12 @@ const JobBuildWizard: React.FC = () => {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {editMode ? 'Updating...' : 'Creating...'}
+                      {editMode && !copyMode ? 'Updating...' : copyMode ? 'Copying...' : 'Creating...'}
                     </>
                   ) : (
                     <>
                       <CheckIcon className="w-4 h-4 mr-2" />
-                      {editMode ? 'Update Job' : 'Create Job'}
+                      {editMode && !copyMode ? 'Update Job' : copyMode ? 'Copy Job' : 'Create Job'}
                     </>
                   )}
                 </button>

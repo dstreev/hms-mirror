@@ -443,38 +443,6 @@ public class ConnectionController {
         }
     }
 
-    @PostMapping(value = "/{id}/duplicate", produces = "application/json")
-    public ResponseEntity<Map<String, Object>> duplicateConnection(
-            @PathVariable("id") String id,
-            @RequestParam("newName") String newName) {
-        try {
-            log.info("Duplicating connection {} with new name: {}", id, newName);
-            
-            Connection duplicatedConnection = connectionService.duplicateConnection(id, newName);
-            Map<String, Object> response = new HashMap<>();
-            response.put("connection", convertConnectionToMap(duplicatedConnection));
-            response.put("message", "Connection duplicated successfully");
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (RocksDBException e) {
-            log.error("Error duplicating connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to duplicate connection: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            log.error("Unexpected error duplicating connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-                errorResponse.put("error", "Source connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-            } else {
-                errorResponse.put("error", "Unexpected error: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-            }
-        }
-    }
-
     @GetMapping(value = "/default", produces = "application/json")
     public ResponseEntity<Connection> getDefaultConnection() {
         try {

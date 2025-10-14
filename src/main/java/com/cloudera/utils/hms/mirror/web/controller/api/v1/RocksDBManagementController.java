@@ -60,6 +60,7 @@ public class RocksDBManagementController {
     private final ColumnFamilyHandle sessionsColumnFamily;
     private final ColumnFamilyHandle connectionsColumnFamily;
     private final ColumnFamilyHandle datasetsColumnFamily;
+    private final ColumnFamilyHandle jobsColumnFamily;
 
     @Autowired
     public RocksDBManagementController(RocksDBManagementService managementService,
@@ -67,13 +68,15 @@ public class RocksDBManagementController {
                                      @Qualifier("configurationsColumnFamily") ColumnFamilyHandle configurationsColumnFamily,
                                      @Qualifier("sessionsColumnFamily") ColumnFamilyHandle sessionsColumnFamily,
                                      @Qualifier("connectionsColumnFamily") ColumnFamilyHandle connectionsColumnFamily,
-                                     @Qualifier("datasetsColumnFamily") ColumnFamilyHandle datasetsColumnFamily) {
+                                     @Qualifier("datasetsColumnFamily") ColumnFamilyHandle datasetsColumnFamily,
+                                     @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily) {
         this.managementService = managementService;
         this.configurationManagementService = configurationManagementService;
         this.configurationsColumnFamily = configurationsColumnFamily;
         this.sessionsColumnFamily = sessionsColumnFamily;
         this.connectionsColumnFamily = connectionsColumnFamily;
         this.datasetsColumnFamily = datasetsColumnFamily;
+        this.jobsColumnFamily = jobsColumnFamily;
     }
 
     @GetMapping("/health")
@@ -181,7 +184,7 @@ public class RocksDBManagementController {
     }
 
     @PostMapping("/compaction/{columnFamily}")
-    @Operation(summary = "Trigger compaction for specific column family", 
+    @Operation(summary = "Trigger compaction for specific column family",
                description = "Triggers a manual compaction for a specific column family")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Column family compaction triggered successfully"),
@@ -189,7 +192,7 @@ public class RocksDBManagementController {
         @ApiResponse(responseCode = "500", description = "Failed to trigger compaction")
     })
     public ResponseEntity<Map<String, String>> triggerColumnFamilyCompaction(
-            @Parameter(description = "Column family name (configurations, sessions, connections, datasets)")
+            @Parameter(description = "Column family name (configurations, sessions, connections, datasets, jobs)")
             @PathVariable String columnFamily) {
         try {
             ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
@@ -227,14 +230,14 @@ public class RocksDBManagementController {
     }
 
     @GetMapping("/column-family/{columnFamily}/statistics")
-    @Operation(summary = "Get column family specific statistics", 
+    @Operation(summary = "Get column family specific statistics",
                description = "Returns statistics for a specific column family")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Column family statistics retrieved successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid column family name")
     })
     public ResponseEntity<Map<String, Object>> getColumnFamilyStatistics(
-            @Parameter(description = "Column family name (configurations, sessions, connections, datasets)")
+            @Parameter(description = "Column family name (configurations, sessions, connections, datasets, jobs)")
             @PathVariable String columnFamily) {
         try {
             ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
@@ -298,14 +301,14 @@ public class RocksDBManagementController {
     }
 
     @GetMapping("/data/{columnFamily}/keys")
-    @Operation(summary = "Get keys for a column family", 
+    @Operation(summary = "Get keys for a column family",
                description = "Returns keys for the specified column family, optionally filtered by prefix")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Keys retrieved successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid column family name")
     })
     public ResponseEntity<Map<String, Object>> getKeys(
-            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets)")
+            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets, jobs)")
             @PathVariable String columnFamily,
             @Parameter(description = "Key prefix filter")
             @RequestParam(value = "prefix", required = false) String prefix) {
@@ -326,7 +329,7 @@ public class RocksDBManagementController {
     }
 
     @GetMapping("/data/{columnFamily}")
-    @Operation(summary = "Get value for a specific key", 
+    @Operation(summary = "Get value for a specific key",
                description = "Returns the value for the specified key in the given column family")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Value retrieved successfully"),
@@ -334,7 +337,7 @@ public class RocksDBManagementController {
         @ApiResponse(responseCode = "404", description = "Key not found")
     })
     public ResponseEntity<Map<String, Object>> getValue(
-            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets)")
+            @Parameter(description = "Column family name (default, configurations, sessions, connections, datasets, jobs)")
             @PathVariable String columnFamily,
             @Parameter(description = "The key to retrieve")
             @RequestParam String key) {
@@ -572,6 +575,8 @@ public class RocksDBManagementController {
                 return connectionsColumnFamily;
             case "datasets":
                 return datasetsColumnFamily;
+            case "jobs":
+                return jobsColumnFamily;
             default:
                 return null;
         }

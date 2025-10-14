@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  ConnectionFormData, 
-  METASTORE_DB_TYPE_OPTIONS, 
-  METASTORE_CONNECTION_EXAMPLES 
+import {
+  ConnectionFormData,
+  METASTORE_CONNECTION_EXAMPLES
 } from '../../../types/Connection';
 import { InformationCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
@@ -27,8 +26,31 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
     navigator.clipboard.writeText(text);
   };
 
+  // Auto-detect database type from JDBC URL
+  const detectDatabaseType = (uri: string): string => {
+    if (!uri || !uri.startsWith('jdbc:')) return '';
+
+    const lowerUri = uri.toLowerCase();
+
+    if (lowerUri.startsWith('jdbc:mysql:')) return 'MYSQL';
+    if (lowerUri.startsWith('jdbc:mariadb:')) return 'MARIADB';
+    if (lowerUri.startsWith('jdbc:postgresql:')) return 'POSTGRES';
+    if (lowerUri.startsWith('jdbc:oracle:')) return 'ORACLE';
+    if (lowerUri.startsWith('jdbc:sqlserver:')) return 'MSSQL';
+
+    return '';
+  };
+
+  const handleUriChange = (uri: string) => {
+    const detectedType = detectDatabaseType(uri);
+    onChange({
+      metastoreDirectUri: uri,
+      metastoreDirectType: detectedType
+    });
+  };
+
   const useExample = (example: { uri: string; description: string }) => {
-    onChange({ metastoreDirectUri: example.uri });
+    handleUriChange(example.uri);
   };
 
   return (
@@ -61,32 +83,6 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
 
       {formData.metastoreDirectEnabled && (
         <>
-          {/* Database Type */}
-          <div>
-            <label htmlFor="metastoreDirectType" className="block text-sm font-medium text-gray-700 mb-2">
-              Database Type *
-            </label>
-            <select
-              id="metastoreDirectType"
-              value={formData.metastoreDirectType}
-              onChange={(e) => onChange({ metastoreDirectType: e.target.value as any })}
-              className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                errors.metastoreDirectType ? 'border-red-300' : 'border-gray-300'
-              }`}
-              required
-            >
-              <option value="">Select database type...</option>
-              {METASTORE_DB_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.metastoreDirectType && (
-              <p className="mt-1 text-sm text-red-600">{errors.metastoreDirectType}</p>
-            )}
-          </div>
-
           {/* Database URI */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -106,7 +102,7 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
               type="text"
               id="metastoreDirectUri"
               value={formData.metastoreDirectUri}
-              onChange={(e) => onChange({ metastoreDirectUri: e.target.value })}
+              onChange={(e) => handleUriChange(e.target.value)}
               className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
                 errors.metastoreDirectUri ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -149,6 +145,28 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Database Type (Auto-detected, Read-only) */}
+          <div>
+            <label htmlFor="metastoreDirectType" className="block text-sm font-medium text-gray-700 mb-2">
+              Database Type (Auto-detected)
+            </label>
+            <input
+              type="text"
+              id="metastoreDirectType"
+              value={formData.metastoreDirectType || 'Not detected - please enter a valid JDBC URL'}
+              readOnly
+              disabled
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-700 cursor-not-allowed"
+              placeholder="Auto-detected from URI"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              The database type is automatically detected from your JDBC URI (e.g., jdbc:mysql://, jdbc:postgresql://, etc.)
+            </p>
+            {errors.metastoreDirectType && (
+              <p className="mt-1 text-sm text-red-600">{errors.metastoreDirectType}</p>
             )}
           </div>
 

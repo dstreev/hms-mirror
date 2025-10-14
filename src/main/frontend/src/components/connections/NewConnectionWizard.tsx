@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { 
-  ConnectionFormData, 
+import {
+  ConnectionFormData,
   DEFAULT_CONNECTION_FORM,
   validateBasicInfoStep,
-  validateConnectionSettingsStep,
+  validateHiveServer2Step,
+  validateMetastoreDirectStep,
   validateConnectionPoolStep,
   validateConnectionForm
 } from '../../types/Connection';
@@ -20,7 +21,9 @@ import ErrorDialog from '../common/ErrorDialog';
 const NewConnectionWizard: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const isEditMode = Boolean(id);
+  const isCopyMode = location.state?.mode === 'copy';
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<ConnectionFormData>(DEFAULT_CONNECTION_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,20 +55,53 @@ const NewConnectionWizard: React.FC = () => {
     }
   ];
 
-  // Load existing connection data in edit mode
+  // Load existing connection data in edit mode or copy mode
   useEffect(() => {
-    if (isEditMode && id) {
+    if (isCopyMode && location.state?.connectionData) {
+      // Copy mode: load data from navigation state and clear name
+      const connectionData = location.state.connectionData;
+      const convertedFormData: ConnectionFormData = {
+        name: '', // Clear name for copy mode
+        description: connectionData.description || '',
+        environment: connectionData.environment || 'DEV',
+        platformType: connectionData.config?.platformType || '',
+        hcfsNamespace: connectionData.config?.hcfsNamespace || '',
+        hs2Uri: connectionData.config?.hiveServer2?.uri || '',
+        hs2Username: connectionData.config?.hiveServer2?.connectionProperties?.user || '',
+        hs2Password: connectionData.config?.hiveServer2?.connectionProperties?.password || '',
+        hs2DriverClassName: connectionData.config?.hiveServer2?.driverClassName || '',
+        hs2JarFile: connectionData.config?.hiveServer2?.jarFile || '',
+        hs2Disconnected: connectionData.config?.hiveServer2?.disconnected || false,
+        hs2ConnectionProperties: connectionData.config?.hiveServer2?.connectionProperties || {},
+        metastoreDirectEnabled: Boolean(connectionData.config?.metastoreDirect?.uri),
+        metastoreDirectUri: connectionData.config?.metastoreDirect?.uri || '',
+        metastoreDirectType: connectionData.config?.metastoreDirect?.type || '',
+        metastoreDirectUsername: connectionData.config?.metastoreDirect?.connectionProperties?.user || '',
+        metastoreDirectPassword: connectionData.config?.metastoreDirect?.connectionProperties?.password || '',
+        metastoreDirectMinConnections: connectionData.config?.metastoreDirect?.connectionPool?.min || 2,
+        metastoreDirectMaxConnections: connectionData.config?.metastoreDirect?.connectionPool?.max || 10,
+        connectionPoolLib: connectionData.config?.connectionPoolLib || 'HYBRID',
+        partitionDiscoveryAuto: connectionData.config?.partitionDiscovery?.auto ?? true,
+        partitionDiscoveryInitMSCK: connectionData.config?.partitionDiscovery?.initMSCK ?? true,
+        partitionBucketLimit: connectionData.config?.partitionDiscovery?.partitionBucketLimit || 100,
+        createIfNotExists: connectionData.config?.createIfNotExists || false,
+        enableAutoTableStats: connectionData.config?.enableAutoTableStats || false,
+        enableAutoColumnStats: connectionData.config?.enableAutoColumnStats || false
+      };
+      setFormData(convertedFormData);
+      setLoading(false);
+    } else if (isEditMode && id) {
       const loadConnection = async () => {
         try {
           setLoading(true);
           const response = await fetch(`/hms-mirror/api/v1/connections/${id}`);
-          
+
           if (!response.ok) {
             throw new Error('Failed to load connection');
           }
-          
+
           const connectionData = await response.json();
-          
+
           // Convert the flattened connection data back to form format
           const convertedFormData: ConnectionFormData = {
             name: connectionData.name || '',
@@ -95,7 +131,7 @@ const NewConnectionWizard: React.FC = () => {
             enableAutoTableStats: connectionData.config?.enableAutoTableStats || false,
             enableAutoColumnStats: connectionData.config?.enableAutoColumnStats || false
           };
-          
+
           setFormData(convertedFormData);
         } catch (error) {
           console.error('Error loading connection:', error);
@@ -124,24 +160,24 @@ const NewConnectionWizard: React.FC = () => {
       case 0: // Basic Info
         validation = validateBasicInfoStep(formData);
         break;
-      case 1: // HiveServer2 Connection
-        validation = validateConnectionSettingsStep(formData);
+      case 1: // HiveServer2 Connection (only validate HiveServer2, not Metastore)
+        validation = validateHiveServer2Step(formData);
         break;
-      case 2: // Metastore Direct (Optional)
-        validation = { isValid: true, errors: {} }; // Optional step
+      case 2: // Metastore Direct (Optional - only validate if enabled)
+        validation = validateMetastoreDirectStep(formData);
         break;
       default:
         validation = { isValid: true, errors: {} };
     }
-    
+
     if (!validation.isValid) {
       setErrors(validation.errors);
       setShowErrorDialog(true);
       return;
     }
-    
+
     setErrors({});
-    
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }

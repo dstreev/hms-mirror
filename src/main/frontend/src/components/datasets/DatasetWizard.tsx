@@ -17,6 +17,7 @@ const DatasetWizard: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isCopyMode, setIsCopyMode] = useState(false);
   const [originalDatasetName, setOriginalDatasetName] = useState<string | null>(null);
 
   const steps = [
@@ -37,13 +38,23 @@ const DatasetWizard: React.FC = () => {
     }
   ];
 
-  // Initialize form data for edit mode
+  // Initialize form data for edit or copy mode
   useEffect(() => {
     const state = location.state as { dataset?: DatasetFormData; mode?: string } | null;
-    if (state?.dataset && state?.mode === 'edit') {
-      setFormData(state.dataset);
-      setIsEditMode(true);
-      setOriginalDatasetName(state.dataset.name);
+    if (state?.dataset) {
+      if (state.mode === 'edit') {
+        setFormData(state.dataset);
+        setIsEditMode(true);
+        setOriginalDatasetName(state.dataset.name);
+      } else if (state.mode === 'copy') {
+        // Copy mode: load data but clear the name
+        setFormData({
+          ...state.dataset,
+          name: '' // Clear name for copy mode
+        });
+        setIsCopyMode(true);
+        setOriginalDatasetName(null);
+      }
     }
   }, [location.state]);
 
@@ -103,9 +114,11 @@ const DatasetWizard: React.FC = () => {
     setSaving(true);
     try {
       let result;
-      if (isEditMode && originalDatasetName) {
+      // Edit mode: update existing dataset
+      if (isEditMode && originalDatasetName && !isCopyMode) {
         result = await datasetApi.updateDataset(originalDatasetName, formData);
       } else {
+        // Create mode or copy mode: create new dataset
         result = await datasetApi.saveDataset(formData);
       }
 
@@ -115,10 +128,12 @@ const DatasetWizard: React.FC = () => {
           navigate('/datasets');
         }, 2000);
       } else {
-        setErrors({ save: result.message || `Failed to ${isEditMode ? 'update' : 'save'} dataset` });
+        const action = (isEditMode && !isCopyMode) ? 'update' : isCopyMode ? 'copy' : 'save';
+        setErrors({ save: result.message || `Failed to ${action} dataset` });
       }
     } catch (error: any) {
-      setErrors({ save: error.message || `Network error occurred while ${isEditMode ? 'updating' : 'saving'} dataset` });
+      const action = (isEditMode && !isCopyMode) ? 'updating' : isCopyMode ? 'copying' : 'saving';
+      setErrors({ save: error.message || `Network error occurred while ${action} dataset` });
     } finally {
       setSaving(false);
     }

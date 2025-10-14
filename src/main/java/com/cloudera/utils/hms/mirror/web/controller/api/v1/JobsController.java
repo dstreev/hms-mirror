@@ -139,23 +139,23 @@ public class JobsController {
     }
     
     @GetMapping(produces = "application/json")
-    @Operation(summary = "List all jobs", 
+    @Operation(summary = "List all jobs",
                description = "Returns all HMS Mirror jobs")
     @ApiResponse(responseCode = "200", description = "Jobs retrieved successfully",
                  content = @Content(schema = @Schema(implementation = Map.class)))
     public ResponseEntity<Map<String, Object>> getJobs() {
         log.info("JobsController.getJobs() called");
-        
+
         try {
             Map<String, Object> result = jobManagementService.listJobs();
-            
+
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
             } else {
                 log.error("Failed to list jobs: {}", result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
             log.error("Error listing jobs", e);
             Map<String, Object> errorResponse = new HashMap<>();
@@ -164,4 +164,40 @@ public class JobsController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
+    @DeleteMapping(value = "/{jobKey}", produces = "application/json")
+    @Operation(summary = "Delete job",
+               description = "Deletes an HMS Mirror job by key")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Job deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "Job not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to delete job")
+    })
+    public ResponseEntity<Map<String, Object>> deleteJob(
+            @Parameter(description = "Job key", required = true)
+            @PathVariable String jobKey) {
+
+        log.info("JobsController.deleteJob() called - key: {}", jobKey);
+
+        try {
+            Map<String, Object> result = jobManagementService.deleteJob(jobKey);
+
+            if ("SUCCESS".equals(result.get("status"))) {
+                return ResponseEntity.ok(result);
+            } else if ("NOT_FOUND".equals(result.get("status"))) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+            } else {
+                log.error("Failed to delete job {}: {}", jobKey, result.get("message"));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+            }
+
+        } catch (Exception e) {
+            log.error("Error deleting job {}", jobKey, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", "Failed to delete job: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
 }

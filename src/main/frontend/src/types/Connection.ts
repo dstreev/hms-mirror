@@ -393,14 +393,15 @@ export const validateBasicInfoStep = (data: Partial<ConnectionFormData>): Valida
   };
 };
 
-export const validateConnectionSettingsStep = (data: Partial<ConnectionFormData>): ValidationResult => {
+// Validate HiveServer2 step only (Step 1)
+export const validateHiveServer2Step = (data: Partial<ConnectionFormData>): ValidationResult => {
   const errors: Record<string, string> = {};
-  
+
   // HDFS Namespace validation (optional, but if provided must be valid)
   if (data.hcfsNamespace?.trim() && !data.hcfsNamespace.match(/^(hdfs|s3a?|adls|wasb|ofs|gf|viewfs|maprfs|gs):\/\//)) {
     errors.hcfsNamespace = 'HDFS namespace must start with a valid filesystem protocol (hdfs://, s3a://, etc.)';
   }
-  
+
   // HiveServer2 validation
   if (!data.hs2Disconnected) {
     if (!data.hs2Uri?.trim()) {
@@ -408,17 +409,27 @@ export const validateConnectionSettingsStep = (data: Partial<ConnectionFormData>
     } else if (!data.hs2Uri.startsWith('jdbc:hive2://')) {
       errors.hs2Uri = 'HiveServer2 URI must start with jdbc:hive2://';
     }
-    
+
     if (!data.hs2DriverClassName?.trim()) {
       errors.hs2DriverClassName = 'Driver class name is required';
     }
-    
+
     // JAR file is optional for testing but recommended for production
     // if (!data.hs2JarFile?.trim()) {
     //   errors.hs2JarFile = 'JAR file path is required';
     // }
   }
-  
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
+// Validate Metastore Direct step only (Step 2)
+export const validateMetastoreDirectStep = (data: Partial<ConnectionFormData>): ValidationResult => {
+  const errors: Record<string, string> = {};
+
   // Metastore Direct validation (if enabled)
   if (data.metastoreDirectEnabled) {
     if (!data.metastoreDirectUri?.trim()) {
@@ -426,23 +437,34 @@ export const validateConnectionSettingsStep = (data: Partial<ConnectionFormData>
     } else if (!data.metastoreDirectUri.startsWith('jdbc:')) {
       errors.metastoreDirectUri = 'Metastore URI must be a valid JDBC URL (jdbc:mysql://, jdbc:postgresql://, etc.)';
     }
-    
+
     if (!data.metastoreDirectType?.trim()) {
       errors.metastoreDirectType = 'Database type is required';
     }
-    
+
     if (!data.metastoreDirectUsername?.trim()) {
       errors.metastoreDirectUsername = 'Database username is required';
     }
-    
+
     if (!data.metastoreDirectPassword?.trim()) {
       errors.metastoreDirectPassword = 'Database password is required';
     }
   }
-  
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors
+  };
+};
+
+// Validate both HiveServer2 and Metastore settings together (used in final validation)
+export const validateConnectionSettingsStep = (data: Partial<ConnectionFormData>): ValidationResult => {
+  const hs2Validation = validateHiveServer2Step(data);
+  const metastoreValidation = validateMetastoreDirectStep(data);
+
+  return {
+    isValid: hs2Validation.isValid && metastoreValidation.isValid,
+    errors: { ...hs2Validation.errors, ...metastoreValidation.errors }
   };
 };
 

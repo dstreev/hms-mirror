@@ -29,11 +29,6 @@ const ConnectionsPage: React.FC = () => {
     isOpen: boolean;
     connection: Connection | null;
   }>({ isOpen: false, connection: null });
-  const [duplicateDialog, setDuplicateDialog] = useState<{
-    isOpen: boolean;
-    connection: Connection | null;
-    newName: string;
-  }>({ isOpen: false, connection: null, newName: '' });
 
   useEffect(() => {
     loadConnections();
@@ -147,54 +142,28 @@ const ConnectionsPage: React.FC = () => {
     setDeleteDialog({ isOpen: false, connection: null });
   };
 
-  const handleDuplicateClick = (connection: Connection) => {
-    setDuplicateDialog({ 
-      isOpen: true, 
-      connection, 
-      newName: `${connection.name} Copy` 
-    });
-  };
-
-  const handleDuplicateConfirm = async () => {
-    if (!duplicateDialog.connection || !duplicateDialog.newName.trim()) {
-      return;
-    }
-
+  const handleDuplicateClick = async (connection: Connection) => {
     try {
-      const params = new URLSearchParams();
-      params.append('newName', duplicateDialog.newName.trim());
-      
-      const response = await fetch(`/hms-mirror/api/v1/connections/${duplicateDialog.connection.id}/duplicate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString()
-      });
+      // Load the full connection data from the backend
+      const response = await fetch(`/hms-mirror/api/v1/connections/${connection.id}`);
 
       if (!response.ok) {
-        throw new Error('Failed to duplicate connection');
+        throw new Error('Failed to load connection');
       }
 
-      const result = await response.json();
-      
-      // Close dialog and refresh connections list
-      setDuplicateDialog({ isOpen: false, connection: null, newName: '' });
-      await loadConnections();
-      
-      // Navigate to the connection wizard for the new connection
-      if (result.connection && result.connection.id) {
-        navigate(`/connections/edit/${result.connection.id}`);
-      }
+      const connectionData = await response.json();
+
+      // Navigate to Connection Wizard with copy mode - clear the name for user to provide new name
+      navigate('/connections/new', {
+        state: {
+          connectionData: connectionData,
+          mode: 'copy'
+        }
+      });
     } catch (err) {
-      console.error('Error duplicating connection:', err);
-      setError(err instanceof Error ? err.message : 'Failed to duplicate connection');
-      setDuplicateDialog({ isOpen: false, connection: null, newName: '' });
+      console.error('Error loading connection for copying:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load connection for copying');
     }
-  };
-
-  const handleDuplicateCancel = () => {
-    setDuplicateDialog({ isOpen: false, connection: null, newName: '' });
   };
 
   const filteredConnections = connections.filter(connection => {
@@ -398,45 +367,6 @@ const ConnectionsPage: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
-
-      {/* Duplicate Connection Dialog */}
-      {duplicateDialog.isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Duplicate Connection
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Enter a name for the duplicated connection:
-              </p>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={duplicateDialog.newName}
-                onChange={(e) => setDuplicateDialog(prev => ({ ...prev, newName: e.target.value }))}
-                placeholder="Connection name"
-                autoFocus
-              />
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={handleDuplicateCancel}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDuplicateConfirm}
-                  disabled={!duplicateDialog.newName.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Duplicate
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
