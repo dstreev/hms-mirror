@@ -19,8 +19,8 @@ package com.cloudera.utils.hms.mirror.core.api;
 
 import com.cloudera.utils.hms.mirror.core.impl.LocationTranslatorImpl;
 import com.cloudera.utils.hms.mirror.core.model.GlobalLocationMapResult;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.Translator;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import org.junit.jupiter.api.Test;

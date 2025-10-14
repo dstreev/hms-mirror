@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.core.api;
 
 import com.cloudera.utils.hms.mirror.core.model.*;
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 
 /**
  * Core business interface for location translation operations.

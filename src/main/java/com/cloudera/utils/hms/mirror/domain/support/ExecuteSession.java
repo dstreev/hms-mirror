@@ -18,13 +18,12 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.jcabi.manifests.Manifests;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.xbill.DNS.dnssec.R;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;

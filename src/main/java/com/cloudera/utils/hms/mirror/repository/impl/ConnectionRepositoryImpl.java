@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.repository.impl;
 
-import com.cloudera.utils.hms.mirror.domain.Connection;
+import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

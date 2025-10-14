@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.domain.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

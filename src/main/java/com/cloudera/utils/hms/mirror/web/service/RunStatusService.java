@@ -17,7 +17,7 @@
 package com.cloudera.utils.hms.mirror.web.service;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;

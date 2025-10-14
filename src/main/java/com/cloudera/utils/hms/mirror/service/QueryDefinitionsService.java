@@ -19,8 +19,8 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hive.config.QueryDefinitions;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Cluster;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

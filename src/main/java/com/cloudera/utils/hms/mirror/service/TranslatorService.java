@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
 import com.cloudera.utils.hms.mirror.core.model.LocationTranslationRequest;
 import com.cloudera.utils.hms.mirror.core.model.LocationTranslationResult;
 import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
-import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;

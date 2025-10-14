@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
 import com.cloudera.utils.hms.mirror.service.DatasetManagementService;
-import com.cloudera.utils.hms.mirror.web.model.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

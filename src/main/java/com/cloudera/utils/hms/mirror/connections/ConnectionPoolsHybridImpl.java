@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.connections;
 
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
@@ -43,7 +43,6 @@ import java.util.Properties;
 import java.util.Set;
 
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Slf4j
 public class ConnectionPoolsHybridImpl extends ConnectionPoolsBase implements ConnectionPools {

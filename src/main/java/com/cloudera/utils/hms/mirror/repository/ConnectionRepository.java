@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.repository;
 
-import com.cloudera.utils.hms.mirror.domain.Connection;
+import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import org.rocksdb.RocksDBException;
 
 import java.util.List;

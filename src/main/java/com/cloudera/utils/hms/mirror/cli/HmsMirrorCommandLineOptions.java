@@ -17,8 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;

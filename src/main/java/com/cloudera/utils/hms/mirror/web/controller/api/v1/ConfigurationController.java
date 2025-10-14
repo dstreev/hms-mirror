@@ -17,8 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ConfigurationManagementService;
-import com.cloudera.utils.hms.mirror.web.model.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -315,10 +316,10 @@ public class ConfigurationController {
             
             // Get the configuration object and modify for copy
             Object configObject = sourceResult.get("configuration");
-            if (configObject instanceof com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig) {
+            if (configObject instanceof HmsMirrorConfig) {
                 // Convert to DTO for copying
-                com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig sourceConfig = 
-                    (com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig) configObject;
+                HmsMirrorConfig sourceConfig =
+                    (HmsMirrorConfig) configObject;
                 
                 ConfigLiteDto targetConfigDto = new ConfigLiteDto();
                 targetConfigDto.setName(targetConfigName);

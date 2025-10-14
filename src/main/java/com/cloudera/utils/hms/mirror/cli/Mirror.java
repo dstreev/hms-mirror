@@ -36,6 +36,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.datastrategy")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.domain")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.reporting")
+        , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.repository")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.service")
         , @ComponentScan(basePackages = "com.cloudera.utils.hms.mirror.util")
 })

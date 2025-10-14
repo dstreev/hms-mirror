@@ -18,15 +18,10 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.config.SampleDataProperties;
-import com.cloudera.utils.hms.mirror.domain.Connection;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.HybridConfig;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
-import com.cloudera.utils.hms.mirror.web.model.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.web.model.DatasetDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,7 +30,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
 @Service

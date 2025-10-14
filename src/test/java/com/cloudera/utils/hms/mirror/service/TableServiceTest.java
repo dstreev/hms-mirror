@@ -20,15 +20,11 @@ package com.cloudera.utils.hms.mirror.service;
 
 
 import com.cloudera.utils.hms.mirror.core.api.TableOperations;
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 

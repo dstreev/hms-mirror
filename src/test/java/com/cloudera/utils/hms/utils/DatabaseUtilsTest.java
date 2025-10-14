@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.utils;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.DatabaseService;
 import com.cloudera.utils.hms.util.DatabaseUtils;
 import org.junit.jupiter.api.BeforeEach;

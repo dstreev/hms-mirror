@@ -15,9 +15,9 @@
  */
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;

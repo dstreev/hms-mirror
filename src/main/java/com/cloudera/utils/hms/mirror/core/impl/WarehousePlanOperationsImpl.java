@@ -19,13 +19,12 @@ package com.cloudera.utils.hms.mirror.core.impl;
 
 import com.cloudera.utils.hms.mirror.core.api.WarehousePlanOperations;
 import com.cloudera.utils.hms.mirror.core.model.*;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.WarehouseMapBuilder;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.isNull;

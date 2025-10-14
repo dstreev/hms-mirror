@@ -17,10 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hms.mirror.domain.Connection;
+import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import com.cloudera.utils.hms.mirror.service.ConnectionService;
-import com.cloudera.utils.hms.mirror.web.dto.ConnectionRequest;
-import com.cloudera.utils.hms.mirror.web.dto.ConnectionSummary;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.RocksDBException;

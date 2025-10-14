@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain;
 
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.utils.ConfigTest;
 import lombok.extern.slf4j.Slf4j;

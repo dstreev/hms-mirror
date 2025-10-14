@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
-import com.cloudera.utils.hms.mirror.domain.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;

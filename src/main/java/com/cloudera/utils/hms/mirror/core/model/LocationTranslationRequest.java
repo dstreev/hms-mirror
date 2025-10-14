@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.core.model;
 
-import com.cloudera.utils.hms.mirror.domain.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 
 /**
  * Request object for location translation operations.

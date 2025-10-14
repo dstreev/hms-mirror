@@ -47,7 +47,7 @@
     <logger name="com.cloudera.utils.hms.mirror.cli.CliReporter" level="info" additivity="true">
         <appender-ref ref="Console" />
     </logger>
-    <logger name="com.cloudera.utils.hms.mirror.domain.DBMirror" level="info" additivity="true">
+    <logger name="com.cloudera.utils.hms.mirror.domain.core.DBMirror" level="info" additivity="true">
         <appender-ref ref="Console" />
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.password" level="info" additivity="true">

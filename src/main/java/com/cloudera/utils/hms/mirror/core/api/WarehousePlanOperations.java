@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.core.api;
 
 import com.cloudera.utils.hms.mirror.core.model.*;
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 
 import java.util.Map;

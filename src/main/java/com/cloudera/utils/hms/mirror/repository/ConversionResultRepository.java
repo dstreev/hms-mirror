@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.repository;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import org.rocksdb.RocksDBException;
 
 import java.util.List;

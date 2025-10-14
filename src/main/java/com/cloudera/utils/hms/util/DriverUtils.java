@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.util;
 
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import lombok.extern.slf4j.Slf4j;

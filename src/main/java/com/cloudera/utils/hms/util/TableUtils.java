@@ -17,10 +17,10 @@
 
 package com.cloudera.utils.hms.util;
 
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.TablePropertyVars;
-import com.cloudera.utils.hms.mirror.domain.Cluster;
+import com.cloudera.utils.hms.mirror.domain.core.Cluster;
 import com.cloudera.utils.hms.mirror.domain.support.SerdeType;
 import com.cloudera.utils.hms.mirror.feature.IcebergState;
 import lombok.extern.slf4j.Slf4j;

@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.feature;
 
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 
 import java.util.List;
 

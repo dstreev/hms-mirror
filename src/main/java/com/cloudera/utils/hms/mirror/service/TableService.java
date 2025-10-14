@@ -25,7 +25,7 @@ import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.*;
+import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -50,12 +50,9 @@ import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.METASTORE_PARTITION_LOCATIONS_NOT_FETCHED;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
-import static com.cloudera.utils.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG;
 import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.DUMP;
-import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 
 @Service
 @Getter

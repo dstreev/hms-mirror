@@ -17,11 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.connections;
 
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
-import com.cloudera.utils.hms.mirror.domain.support.HiveDriverPoolEnum;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
@@ -37,10 +36,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.domain.HiveServer2Config.APACHE_HIVE_DRIVER;
-import static com.cloudera.utils.hms.mirror.domain.HiveServer2Config.CLOUDERA_HIVE_DRIVER;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Slf4j
 public class ConnectionPoolsHikariImpl extends ConnectionPoolsBase implements ConnectionPools {

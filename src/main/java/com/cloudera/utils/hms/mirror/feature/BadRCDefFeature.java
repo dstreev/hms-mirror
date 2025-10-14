@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.feature;
 
-import com.cloudera.utils.hms.mirror.domain.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;

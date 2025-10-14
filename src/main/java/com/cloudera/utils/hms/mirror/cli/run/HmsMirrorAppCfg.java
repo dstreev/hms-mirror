@@ -18,9 +18,6 @@ package com.cloudera.utils.hms.mirror.cli.run;
 
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
-import com.cloudera.utils.hms.mirror.domain.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.*;
@@ -34,7 +31,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 /*
 Using the config, go through the databases and tables and collect the current states.

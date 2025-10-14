@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.core.model;
 
-import com.cloudera.utils.hms.mirror.domain.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 
 import java.util.List;
 

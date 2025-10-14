@@ -18,15 +18,14 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.domain.HiveServer2Config;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-import static com.cloudera.utils.hms.mirror.domain.HiveServer2Config.APACHE_HIVE_DRIVER;
-import static com.cloudera.utils.hms.mirror.domain.HiveServer2Config.CLOUDERA_HIVE_DRIVER;
+import static com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config.APACHE_HIVE_DRIVER;
+import static com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config.CLOUDERA_HIVE_DRIVER;
 
 @Slf4j
 public enum HiveDriverEnum {

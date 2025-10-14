@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.Connection;
+import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
