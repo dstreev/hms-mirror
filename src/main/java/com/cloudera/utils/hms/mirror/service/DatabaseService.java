@@ -710,8 +710,7 @@ public class DatabaseService {
             }
 
             if (config.isResetRight() && buildRight) {
-                // Add DROP db to the RIGHT sql.
-
+                // TODO: Add DROP db to the RIGHT sql.
             }
 
             switch (config.getDataStrategy()) {

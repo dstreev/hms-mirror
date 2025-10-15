@@ -28,7 +28,7 @@ clusters:
       # NOTE: Hive 3 jars will NOT work against Hive 1.  The protocol isn't compatible.
       jarFile: "/Users/dstreev/.hms-mirror/aux_libs/ext/hive-jdbc-1.2.1000.2.6.5.1175-1-standalone.jar"
     metastore_direct:
-        # The HMS connection information for the LEFT cluster.
+        # The HMS connectionDto information for the LEFT cluster.
         # This is used to directly connect to the HMS to get metadata information.
         # This is used to get the metadata information for the LEFT cluster.
         uri: "thrift://k02.streever.local:9083"

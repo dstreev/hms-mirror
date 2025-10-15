@@ -5,10 +5,24 @@ import WizardProgress from '../connections/wizard/WizardProgress';
 
 interface HmsMirrorConfig {
   // Migration Behavior
-  databaseOnly: boolean;
   migrateVIEW: { on: boolean };
   migrateNonNative: boolean;
-  
+
+  // Table Behavior
+  createIfNotExists: boolean;
+  enableAutoTableStats: boolean;
+  enableAutoColumnStats: boolean;
+  saveWorkingTables: boolean;
+
+  // File and Data Handling
+  copyAvroSchemaUrls: boolean;
+
+  // Ownership Transfer
+  ownershipTransfer: {
+    database: boolean;
+    table: boolean;
+  };
+
   // ACID Migration Settings
   migrateACID: {
     on: boolean;
@@ -18,7 +32,7 @@ interface HmsMirrorConfig {
     downgrade: boolean;
     inplace: boolean;
   };
-  
+
   // Transfer and Warehouse Settings
   transfer: {
     warehouse: {
@@ -28,7 +42,7 @@ interface HmsMirrorConfig {
     transferPrefix: string;
     shadowPrefix: string;
   };
-  
+
   // Conversions (Optional)
   icebergConversion: {
     enable: boolean;
@@ -37,7 +51,7 @@ interface HmsMirrorConfig {
     tableProperties: string;
     inplace: boolean;
   };
-  
+
   // Optimization Settings
   optimization?: {
     skip: boolean;
@@ -47,7 +61,7 @@ interface HmsMirrorConfig {
     skipStatsCollection: boolean;
     autoTune: boolean;
   };
-  
+
   // Configuration metadata
   configName: string;
   description: string;
@@ -61,14 +75,22 @@ const ConfigWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [config, setConfig] = useState<HmsMirrorConfig>({
     // Default values based on spec
-    databaseOnly: false,
     migrateVIEW: { on: true },
-    migrateNonNative: true,
+    migrateNonNative: false,
+    createIfNotExists: true,
+    enableAutoTableStats: false,
+    enableAutoColumnStats: false,
+    saveWorkingTables: false,
+    copyAvroSchemaUrls: false,
+    ownershipTransfer: {
+      database: false,
+      table: false,
+    },
     migrateACID: {
-      on: true,
+      on: false,
       only: false,
-      artificialBucketThreshold: 100000,
-      partitionLimit: 1000,
+      artificialBucketThreshold: 2,
+      partitionLimit: 500,
       downgrade: false,
       inplace: false,
     },
@@ -111,24 +133,38 @@ const ConfigWizard: React.FC = () => {
             configName: location.state.configName || '',
             description: existingConfig.comment || '',
             dataStrategy: existingConfig.dataStrategy || prev.dataStrategy,
-            databaseOnly: existingConfig.databaseOnly || false,
-            migrateNonNative: existingConfig.migrateNonNative || true,
-            
+            migrateNonNative: existingConfig.migrateNonNative !== undefined ? existingConfig.migrateNonNative : false,
+
+            // Table Behavior settings
+            createIfNotExists: existingConfig.createIfNotExists !== undefined ? existingConfig.createIfNotExists : true,
+            enableAutoTableStats: existingConfig.enableAutoTableStats || false,
+            enableAutoColumnStats: existingConfig.enableAutoColumnStats || false,
+            saveWorkingTables: existingConfig.saveWorkingTables || false,
+
+            // File and Data Handling
+            copyAvroSchemaUrls: existingConfig.copyAvroSchemaUrls || false,
+
+            // Ownership Transfer
+            ownershipTransfer: {
+              database: existingConfig.ownershipTransfer?.database || false,
+              table: existingConfig.ownershipTransfer?.table || false,
+            },
+
             // ACID Migration settings
             migrateACID: {
               on: existingConfig.migrateACID?.on || false,
               only: existingConfig.migrateACID?.only || false,
-              artificialBucketThreshold: existingConfig.migrateACID?.artificialBucketThreshold || 100000,
-              partitionLimit: existingConfig.migrateACID?.partitionLimit || 1000,
+              artificialBucketThreshold: existingConfig.migrateACID?.artificialBucketThreshold || 2,
+              partitionLimit: existingConfig.migrateACID?.partitionLimit || 500,
               downgrade: existingConfig.migrateACID?.downgrade || false,
               inplace: existingConfig.migrateACID?.inplace || false,
             },
-            
+
             // View migration settings
             migrateVIEW: {
               on: existingConfig.migrateVIEW?.on || true,
             },
-            
+
             // Transfer settings
             transfer: {
               warehouse: {
@@ -138,8 +174,7 @@ const ConfigWizard: React.FC = () => {
               transferPrefix: existingConfig.transfer?.transferPrefix || "mig_",
               shadowPrefix: existingConfig.transfer?.shadowPrefix || "_shadow",
             },
-            
-            
+
             // Iceberg conversion settings
             icebergConversion: {
               enable: existingConfig.icebergConversion?.enable || false,
@@ -148,7 +183,7 @@ const ConfigWizard: React.FC = () => {
               tableProperties: formatTableProperties(existingConfig.icebergConversion?.tableProperties),
               inplace: existingConfig.icebergConversion?.inplace || false,
             },
-            
+
             // Add optimization settings if they exist in the saved config
             optimization: {
               skip: existingConfig.optimization?.skip || false,
@@ -238,15 +273,20 @@ const ConfigWizard: React.FC = () => {
         }
         break;
       case 1:
-        // Migration Behavior - all fields are required checkboxes/numbers
-        if (config.migrateACID.artificialBucketThreshold <= 0) {
-          newErrors['migrateACID.artificialBucketThreshold'] = 'Must be a positive integer';
-        }
-        if (config.migrateACID.partitionLimit < 0) {
-          newErrors['migrateACID.partitionLimit'] = 'Must be non-negative';
-        }
+        // Migration Behavior - no required validation
         break;
       case 2:
+        // ACID Migration Settings - validate only if ACID is enabled
+        if (config.migrateACID.on) {
+          if (config.migrateACID.artificialBucketThreshold <= 0) {
+            newErrors['migrateACID.artificialBucketThreshold'] = 'Must be a positive integer';
+          }
+          if (config.migrateACID.partitionLimit < 0) {
+            newErrors['migrateACID.partitionLimit'] = 'Must be non-negative';
+          }
+        }
+        break;
+      case 3:
         // Transfer and Warehouse Settings
         if (!config.transfer.warehouse.externalDirectory.trim()) {
           newErrors['transfer.warehouse.externalDirectory'] = 'External directory is required';
@@ -255,10 +295,10 @@ const ConfigWizard: React.FC = () => {
           newErrors['transfer.warehouse.managedDirectory'] = 'Managed directory is required';
         }
         break;
-      case 3:
+      case 4:
         // Conversions - no required fields
         break;
-      case 4:
+      case 5:
         // Review - all validation already done
         break;
     }
@@ -269,7 +309,7 @@ const ConfigWizard: React.FC = () => {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep(prev => Math.min(prev + 1, 5));
     }
   };
 
@@ -288,24 +328,38 @@ const ConfigWizard: React.FC = () => {
         name: config.configName,
         dataStrategy: config.dataStrategy,
         comment: config.description || '',
-        databaseOnly: config.databaseOnly,
         migrateNonNative: config.migrateNonNative,
-        
+
+        // Table Behavior settings
+        createIfNotExists: config.createIfNotExists,
+        enableAutoTableStats: config.enableAutoTableStats,
+        enableAutoColumnStats: config.enableAutoColumnStats,
+        saveWorkingTables: config.saveWorkingTables,
+
+        // File and Data Handling
+        copyAvroSchemaUrls: config.copyAvroSchemaUrls,
+
+        // Ownership Transfer
+        ownershipTransfer: {
+          database: config.ownershipTransfer?.database || false,
+          table: config.ownershipTransfer?.table || false,
+        },
+
         // Map ACID migration settings
         migrateACID: {
           on: config.migrateACID?.on || false,
           only: config.migrateACID?.only || false,
           artificialBucketThreshold: config.migrateACID?.artificialBucketThreshold || 2,
-          partitionLimit: config.migrateACID?.partitionLimit || 100,
+          partitionLimit: config.migrateACID?.partitionLimit || 500,
           downgrade: config.migrateACID?.downgrade || false,
           inplace: config.migrateACID?.inplace || false,
         },
-        
+
         // Map view migration settings
         migrateVIEW: {
           on: config.migrateVIEW?.on || false,
         },
-        
+
         // Map transfer settings
         transfer: {
           warehouse: {
@@ -315,8 +369,7 @@ const ConfigWizard: React.FC = () => {
           transferPrefix: config.transfer?.transferPrefix || '',
           shadowPrefix: config.transfer?.shadowPrefix || '',
         },
-        
-        
+
         // Map Iceberg conversion settings
         icebergConversion: {
           enable: config.icebergConversion?.enable || false,
@@ -325,7 +378,7 @@ const ConfigWizard: React.FC = () => {
           tableProperties: parseTableProperties(config.icebergConversion?.tableProperties || ''),
           inplace: config.icebergConversion?.inplace || false,
         },
-        
+
         // Map optimization settings
         optimization: {
           skip: config.optimization?.skip || false,
@@ -439,22 +492,8 @@ const ConfigWizard: React.FC = () => {
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Migration Behavior</h3>
         <p className="text-sm text-gray-600 mb-6">Configure basic migration behavior and table type handling.</p>
-        
+
         <div className="space-y-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="databaseOnly"
-              checked={config.databaseOnly}
-              onChange={(e) => updateConfig('databaseOnly', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="databaseOnly" className="ml-2 block text-sm text-gray-900">
-              Database Only Mode
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Migrate only database schemas (no tables/data)</p>
-          
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -468,7 +507,7 @@ const ConfigWizard: React.FC = () => {
             </label>
           </div>
           <p className="text-xs text-gray-500 ml-6">Include view migration</p>
-          
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -486,8 +525,133 @@ const ConfigWizard: React.FC = () => {
       </div>
 
       <div>
-        <h4 className="text-md font-medium text-gray-900 mb-4">ACID Migration Settings</h4>
-        
+        <h4 className="text-md font-medium text-gray-900 mb-4">Table Behavior</h4>
+        <p className="text-sm text-gray-600 mb-4">Configure how tables are created and managed during migration.</p>
+
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="createIfNotExists"
+              checked={config.createIfNotExists}
+              onChange={(e) => updateConfig('createIfNotExists', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="createIfNotExists" className="ml-2 block text-sm text-gray-900">
+              Create If Not Exists
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Use CREATE IF NOT EXISTS when creating tables</p>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="enableAutoTableStats"
+              checked={config.enableAutoTableStats}
+              onChange={(e) => updateConfig('enableAutoTableStats', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="enableAutoTableStats" className="ml-2 block text-sm text-gray-900">
+              Enable Auto Table Stats
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Automatically compute table statistics after migration</p>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="enableAutoColumnStats"
+              checked={config.enableAutoColumnStats}
+              onChange={(e) => updateConfig('enableAutoColumnStats', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="enableAutoColumnStats" className="ml-2 block text-sm text-gray-900">
+              Enable Auto Column Stats
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Automatically compute column statistics after migration</p>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="saveWorkingTables"
+              checked={config.saveWorkingTables}
+              onChange={(e) => updateConfig('saveWorkingTables', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="saveWorkingTables" className="ml-2 block text-sm text-gray-900">
+              Save Working Tables
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Keep intermediate working tables created during migration</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-md font-medium text-gray-900 mb-4">File and Data Handling</h4>
+        <p className="text-sm text-gray-600 mb-4">Configure file and schema handling options.</p>
+
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="copyAvroSchemaUrls"
+              checked={config.copyAvroSchemaUrls}
+              onChange={(e) => updateConfig('copyAvroSchemaUrls', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="copyAvroSchemaUrls" className="ml-2 block text-sm text-gray-900">
+              Copy Avro Schema URLs
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Copy Avro schema URLs during migration</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-md font-medium text-gray-900 mb-4">Ownership Transfer</h4>
+        <p className="text-sm text-gray-600 mb-4">Configure ownership transfer settings for databases and tables.</p>
+
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="ownershipTransferDatabase"
+              checked={config.ownershipTransfer.database}
+              onChange={(e) => updateConfig('ownershipTransfer.database', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="ownershipTransferDatabase" className="ml-2 block text-sm text-gray-900">
+              Transfer Database Ownership
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Transfer database ownership during migration</p>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="ownershipTransferTable"
+              checked={config.ownershipTransfer.table}
+              onChange={(e) => updateConfig('ownershipTransfer.table', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="ownershipTransferTable" className="ml-2 block text-sm text-gray-900">
+              Transfer Table Ownership
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-6">Transfer table ownership during migration</p>
+        </div>
+      </div>
+
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">ACID Migration Settings</h3>
+        <p className="text-sm text-gray-600 mb-6">Configure ACID table migration behavior and limits.</p>
+
         <div className="space-y-4">
           <div className="flex items-center">
             <input
@@ -497,87 +661,99 @@ const ConfigWizard: React.FC = () => {
               onChange={(e) => updateConfig('migrateACID.on', e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor="migrateACID" className="ml-2 block text-sm text-gray-900">
-              Enable ACID Migration
+            <label htmlFor="migrateACID" className="ml-2 block text-sm text-gray-900 font-medium">
+              Enable ACID Migrations
             </label>
           </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="migrateACIDOnly"
-              checked={config.migrateACID.only}
-              onChange={(e) => updateConfig('migrateACID.only', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="migrateACIDOnly" className="ml-2 block text-sm text-gray-900">
-              ACID-Only Mode
-            </label>
-          </div>
-          
-          <div>
-            <label htmlFor="artificialBucketThreshold" className="block text-sm font-medium text-gray-700">
-              Artificial Bucket Threshold
-            </label>
-            <input
-              type="number"
-              id="artificialBucketThreshold"
-              value={config.migrateACID.artificialBucketThreshold}
-              onChange={(e) => updateConfig('migrateACID.artificialBucketThreshold', parseInt(e.target.value) || 0)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            />
-            {errors['migrateACID.artificialBucketThreshold'] && (
-              <p className="mt-1 text-sm text-red-600">{errors['migrateACID.artificialBucketThreshold']}</p>
-            )}
-          </div>
-          
-          <div>
-            <label htmlFor="partitionLimit" className="block text-sm font-medium text-gray-700">
-              ACID Partition Limit
-            </label>
-            <input
-              type="number"
-              id="partitionLimit"
-              value={config.migrateACID.partitionLimit}
-              onChange={(e) => updateConfig('migrateACID.partitionLimit', parseInt(e.target.value) || 0)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            />
-            {errors['migrateACID.partitionLimit'] && (
-              <p className="mt-1 text-sm text-red-600">{errors['migrateACID.partitionLimit']}</p>
-            )}
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="downgrade"
-              checked={config.migrateACID.downgrade}
-              onChange={(e) => updateConfig('migrateACID.downgrade', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="downgrade" className="ml-2 block text-sm text-gray-900">
-              Downgrade ACID Tables
-            </label>
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="inplace"
-              checked={config.migrateACID.inplace}
-              onChange={(e) => updateConfig('migrateACID.inplace', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="inplace" className="ml-2 block text-sm text-gray-900">
-              In-Place ACID Migration
-            </label>
-          </div>
+          <p className="text-xs text-gray-500 ml-6">Enable migration of ACID (transactional) tables</p>
+
+          {config.migrateACID.on && (
+            <>
+              <div className="ml-6 space-y-4 mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="migrateACIDOnly"
+                    checked={config.migrateACID.only}
+                    onChange={(e) => updateConfig('migrateACID.only', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="migrateACIDOnly" className="ml-2 block text-sm text-gray-900">
+                    ACID-Only Mode
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">Migrate only ACID tables (skip non-ACID tables)</p>
+
+                <div>
+                  <label htmlFor="artificialBucketThreshold" className="block text-sm font-medium text-gray-700">
+                    Artificial Bucket Threshold
+                  </label>
+                  <input
+                    type="number"
+                    id="artificialBucketThreshold"
+                    value={config.migrateACID.artificialBucketThreshold}
+                    onChange={(e) => updateConfig('migrateACID.artificialBucketThreshold', parseInt(e.target.value) || 0)}
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {errors['migrateACID.artificialBucketThreshold'] && (
+                    <p className="mt-1 text-sm text-red-600">{errors['migrateACID.artificialBucketThreshold']}</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">Threshold for artificial bucketing (default: 100000)</p>
+                </div>
+
+                <div>
+                  <label htmlFor="partitionLimit" className="block text-sm font-medium text-gray-700">
+                    ACID Partition Limit
+                  </label>
+                  <input
+                    type="number"
+                    id="partitionLimit"
+                    value={config.migrateACID.partitionLimit}
+                    onChange={(e) => updateConfig('migrateACID.partitionLimit', parseInt(e.target.value) || 0)}
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {errors['migrateACID.partitionLimit'] && (
+                    <p className="mt-1 text-sm text-red-600">{errors['migrateACID.partitionLimit']}</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">Maximum number of partitions for ACID migration (default: 1000)</p>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="downgrade"
+                    checked={config.migrateACID.downgrade}
+                    onChange={(e) => updateConfig('migrateACID.downgrade', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="downgrade" className="ml-2 block text-sm text-gray-900">
+                    Downgrade ACID Tables
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">Convert ACID tables to non-ACID tables during migration</p>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="inplace"
+                    checked={config.migrateACID.inplace}
+                    onChange={(e) => updateConfig('migrateACID.inplace', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="inplace" className="ml-2 block text-sm text-gray-900">
+                    In-Place ACID Migration
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">Migrate ACID tables in-place without data copy</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 
-  const renderStep2 = () => (
+  const renderStep3 = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Transfer and Warehouse Settings</h3>
@@ -661,7 +837,7 @@ const ConfigWizard: React.FC = () => {
     </div>
   );
 
-  const renderStep3 = () => (
+  const renderStep4 = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Conversions (Optional)</h3>
@@ -751,7 +927,7 @@ const ConfigWizard: React.FC = () => {
     </div>
   );
 
-  const renderStep4 = () => (
+  const renderStep5 = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Review Configuration</h3>
@@ -769,9 +945,33 @@ const ConfigWizard: React.FC = () => {
           <div>
             <h4 className="text-md font-medium text-gray-900 mb-2">Migration Behavior</h4>
             <div className="text-sm text-gray-600 space-y-1">
-              <div>• Migration type: {config.databaseOnly ? 'Database only' : 'Full migration'}</div>
               <div>• Migrate VIEWs: {config.migrateVIEW.on ? 'Yes' : 'No'}</div>
               <div>• Migrate non-native tables: {config.migrateNonNative ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-2">Table Behavior</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• Create if not exists: {config.createIfNotExists ? 'Yes' : 'No'}</div>
+              <div>• Auto table stats: {config.enableAutoTableStats ? 'Yes' : 'No'}</div>
+              <div>• Auto column stats: {config.enableAutoColumnStats ? 'Yes' : 'No'}</div>
+              <div>• Save working tables: {config.saveWorkingTables ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-2">File and Data Handling</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• Copy Avro schema URLs: {config.copyAvroSchemaUrls ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-2">Ownership Transfer</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>• Database ownership: {config.ownershipTransfer.database ? 'Yes' : 'No'}</div>
+              <div>• Table ownership: {config.ownershipTransfer.table ? 'Yes' : 'No'}</div>
             </div>
           </div>
 
@@ -822,9 +1022,10 @@ const ConfigWizard: React.FC = () => {
   const steps = [
     { id: 'details', title: 'Details', component: renderStep0 },
     { id: 'migration', title: 'Migration', component: renderStep1 },
-    { id: 'transfer', title: 'Transfer', component: renderStep2 },
-    { id: 'conversions', title: 'Conversions', component: renderStep3 },
-    { id: 'review', title: 'Review', component: renderStep4 },
+    { id: 'acid', title: 'ACID', component: renderStep2 },
+    { id: 'transfer', title: 'Transfer', component: renderStep3 },
+    { id: 'conversions', title: 'Conversions', component: renderStep4 },
+    { id: 'review', title: 'Review', component: renderStep5 },
   ];
 
   if (isLoading) {
@@ -887,7 +1088,7 @@ const ConfigWizard: React.FC = () => {
           Previous
         </button>
         
-        {currentStep < 4 ? (
+        {currentStep < 5 ? (
           <button
             onClick={nextStep}
             className="flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"

@@ -166,9 +166,9 @@ Each step should allow going back to revise previous answers.
 
 ### Strategy Validation
 Before proceeding to configuration:
-- Validate that required connections exist for the selected strategy
+- Validate that required connectionDtos exist for the selected strategy
 - Show warnings for any missing prerequisites
-- Provide links to create missing connection profiles
+- Provide links to create missing connectionDto profiles
 
 ### Help Integration
 Each question should have:

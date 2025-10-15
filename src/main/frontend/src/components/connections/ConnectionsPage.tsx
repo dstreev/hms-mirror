@@ -45,11 +45,11 @@ const ConnectionsPage: React.FC = () => {
       if (filters.status && filters.status !== 'all') params.append('status', filters.status);
       
       const response = await fetch('/hms-mirror/api/v1/connections?' + params.toString());
-      
+
       if (!response.ok) {
         throw new Error('Failed to load connections');
       }
-      
+
       const data = await response.json();
       setConnections(data.connections || []);
     } catch (err) {
@@ -295,7 +295,7 @@ const ConnectionsPage: React.FC = () => {
             {connections.length === 0 ? 'No connection profiles found' : 'No connections match your filters'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {connections.length === 0 
+            {connections.length === 0
               ? 'Create your first cluster connection profile to get started with HMS-Mirror'
               : 'Try adjusting your search or filter criteria'
             }

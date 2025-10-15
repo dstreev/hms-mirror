@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,15 +36,15 @@ public class ConnectionService {
 
     private final ConnectionRepository connectionRepository;
 
-    public List<Connection> getAllConnections() throws RocksDBException {
-        Map<String, Connection> connectionMap = connectionRepository.findAll();
+    public List<ConnectionDto> getAllConnections() throws RocksDBException {
+        Map<String, ConnectionDto> connectionMap = connectionRepository.findAll();
         return new ArrayList<>(connectionMap.values());
     }
 
-    public List<Connection> getFilteredConnections(String search, String environment, String status) throws RocksDBException {
-        List<Connection> connections = getAllConnections();
+    public List<ConnectionDto> getFilteredConnections(String search, String environment, String status) throws RocksDBException {
+        List<ConnectionDto> connectionDtos = getAllConnections();
         
-        return connections.stream()
+        return connectionDtos.stream()
                 .filter(conn -> matchesSearch(conn, search))
                 .filter(conn -> matchesEnvironment(conn, environment))
                 .filter(conn -> matchesStatus(conn, status))
@@ -52,55 +52,55 @@ public class ConnectionService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<Connection> getConnectionById(String id) throws RocksDBException {
+    public Optional<ConnectionDto> getConnectionById(String id) throws RocksDBException {
         return connectionRepository.findById(id);
     }
 
-    public Connection createConnection(Connection connection) throws RocksDBException {
+    public ConnectionDto createConnection(ConnectionDto connectionDto) throws RocksDBException {
         // Use the connection name as the key in RocksDB
-        String id = connection.getName();
+        String id = connectionDto.getName();
         
         // Check if a connection with this name already exists
         if (connectionRepository.existsById(id)) {
             throw new RuntimeException("Connection with name '" + id + "' already exists");
         }
         
-        connection.setId(id);
+        connectionDto.setId(id);
         
         // If this is the first connection, make it default
         if (getAllConnections().isEmpty()) {
-            connection.setDefault(true);
+            connectionDto.setDefault(true);
         }
         
         log.info("Saving connection to RocksDB with key: {}", id);
-        return connectionRepository.save(id, connection);
+        return connectionRepository.save(id, connectionDto);
     }
 
-    public Connection updateConnection(String id, Connection connection) throws RocksDBException {
-        Optional<Connection> existingOpt = connectionRepository.findById(id);
+    public ConnectionDto updateConnection(String id, ConnectionDto connectionDto) throws RocksDBException {
+        Optional<ConnectionDto> existingOpt = connectionRepository.findById(id);
         if (existingOpt.isEmpty()) {
             throw new RuntimeException("Connection not found: " + id);
         }
         
-        Connection existing = existingOpt.get();
-        connection.setId(id);
-        connection.setCreated(existing.getCreated());
+        ConnectionDto existing = existingOpt.get();
+        connectionDto.setId(id);
+        connectionDto.setCreated(existing.getCreated());
         
-        return connectionRepository.save(id, connection);
+        return connectionRepository.save(id, connectionDto);
     }
 
     public boolean deleteConnection(String id) throws RocksDBException {
-        Optional<Connection> connectionOpt = connectionRepository.findById(id);
+        Optional<ConnectionDto> connectionOpt = connectionRepository.findById(id);
         if (connectionOpt.isEmpty()) {
             return false;
         }
         
-        Connection connection = connectionOpt.get();
+        ConnectionDto connectionDto = connectionOpt.get();
         boolean wasDeleted = connectionRepository.deleteById(id);
         
         // If we deleted the default connection, set another one as default
-        if (wasDeleted && connection.isDefault()) {
-            List<Connection> remaining = getAllConnections();
+        if (wasDeleted && connectionDto.isDefault()) {
+            List<ConnectionDto> remaining = getAllConnections();
             if (!remaining.isEmpty()) {
                 connectionRepository.setAsDefault(remaining.get(0).getId());
             }
@@ -109,7 +109,7 @@ public class ConnectionService {
         return wasDeleted;
     }
 
-    public Optional<Connection> getDefaultConnection() throws RocksDBException {
+    public Optional<ConnectionDto> getDefaultConnection() throws RocksDBException {
         return connectionRepository.findDefaultConnection();
     }
 
@@ -121,18 +121,18 @@ public class ConnectionService {
         return connectionRepository.testConnection(id);
     }
 
-    public List<Connection> getConnectionsByEnvironment(Connection.Environment environment) throws RocksDBException {
+    public List<ConnectionDto> getConnectionsByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
         return connectionRepository.findByEnvironment(environment);
     }
 
-    public Connection duplicateConnection(String sourceId, String newName) throws RocksDBException {
-        Optional<Connection> sourceOpt = connectionRepository.findById(sourceId);
+    public ConnectionDto duplicateConnection(String sourceId, String newName) throws RocksDBException {
+        Optional<ConnectionDto> sourceOpt = connectionRepository.findById(sourceId);
         if (sourceOpt.isEmpty()) {
             throw new RuntimeException("Source connection not found: " + sourceId);
         }
         
-        Connection source = sourceOpt.get();
-        Connection duplicate = Connection.builder()
+        ConnectionDto source = sourceOpt.get();
+        ConnectionDto duplicate = ConnectionDto.builder()
                 .name(newName)
                 .description(source.getDescription() + " (Copy)")
                 .environment(source.getEnvironment())
@@ -165,7 +165,7 @@ public class ConnectionService {
         return createConnection(duplicate);
     }
 
-    private boolean matchesSearch(Connection conn, String search) {
+    private boolean matchesSearch(ConnectionDto conn, String search) {
         if (search == null || search.trim().isEmpty()) {
             return true;
         }
@@ -174,35 +174,35 @@ public class ConnectionService {
                (conn.getDescription() != null && conn.getDescription().toLowerCase().contains(searchLower));
     }
 
-    private boolean matchesEnvironment(Connection conn, String environment) {
+    private boolean matchesEnvironment(ConnectionDto conn, String environment) {
         if (environment == null || environment.trim().isEmpty()) {
             return true;
         }
         return conn.getEnvironment() != null && conn.getEnvironment().name().equals(environment);
     }
 
-    private boolean matchesStatus(Connection conn, String status) {
+    private boolean matchesStatus(ConnectionDto conn, String status) {
         if (status == null || status.trim().isEmpty() || "all".equals(status)) {
             return true;
         }
         
-        Connection.ConnectionTestResults.TestStatus testStatus = 
+        ConnectionDto.ConnectionTestResults.TestStatus testStatus =
                 conn.getTestResults() != null ? conn.getTestResults().getStatus() : 
-                Connection.ConnectionTestResults.TestStatus.NEVER_TESTED;
+                ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
         
         switch (status) {
             case "success":
-                return testStatus == Connection.ConnectionTestResults.TestStatus.SUCCESS;
+                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS;
             case "failed":
-                return testStatus == Connection.ConnectionTestResults.TestStatus.FAILED;
+                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.FAILED;
             case "never_tested":
-                return testStatus == Connection.ConnectionTestResults.TestStatus.NEVER_TESTED;
+                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
             default:
                 return true;
         }
     }
 
-    private int compareConnections(Connection a, Connection b) {
+    private int compareConnections(ConnectionDto a, ConnectionDto b) {
         // Default connections first
         if (a.isDefault() && !b.isDefault()) return -1;
         if (!a.isDefault() && b.isDefault()) return 1;

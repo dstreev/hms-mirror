@@ -40,16 +40,21 @@ public class ConfigLiteDto {
     private String comment;
 
     // Feature flags
-    private boolean databaseOnly = Boolean.FALSE;
     private boolean migrateNonNative = Boolean.FALSE;
-    private boolean readOnly = Boolean.FALSE;
-    private boolean noPurge = Boolean.FALSE;
-    private boolean replace = Boolean.FALSE;
-    private boolean resetRight = Boolean.FALSE;
-    private boolean sync = Boolean.FALSE;
-    private boolean quiet = Boolean.FALSE;
-    private boolean skipFeatures = Boolean.FALSE;
-    private boolean skipLegacyTranslation = Boolean.FALSE;
+    // Handled by the Job 'Disaster Recovery' feature.'
+//    private boolean databaseOnly = Boolean.FALSE;
+//    private boolean readOnly = Boolean.FALSE;
+//    private boolean sync = Boolean.FALSE;
+
+//    private boolean quiet = Boolean.FALSE;
+    // These features don't make sense.  May add back later.
+//    private boolean skipFeatures = Boolean.FALSE;
+//    private boolean skipLegacyTranslation = Boolean.FALSE;
+
+    // Additional cluster settings
+    private boolean createIfNotExists = Boolean.TRUE;
+    private boolean enableAutoTableStats = Boolean.FALSE;
+    private boolean enableAutoColumnStats = Boolean.FALSE;
 
     @Schema(description = "When we are migrating, some intermediate tables may be created to facilitate the migration. " +
             "These table are removed by default. If you want to keep them, set this to true. " +
@@ -58,10 +63,9 @@ public class ConfigLiteDto {
 
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
-    private boolean dumpTestData = Boolean.FALSE;
+//    private boolean dumpTestData = Boolean.FALSE;
 
     // Sub-configuration objects (preserved as they don't cause flattening issues)
-    private HybridConfig hybrid = new HybridConfig();
     private IcebergConversion icebergConversion = new IcebergConversion();
     private MigrateACID migrateACID = new MigrateACID();
     private MigrateVIEW migrateVIEW = new MigrateVIEW();

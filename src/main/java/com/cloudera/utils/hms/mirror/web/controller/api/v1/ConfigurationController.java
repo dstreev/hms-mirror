@@ -330,10 +330,8 @@ public class ConfigurationController {
                 }
                 
                 // Copy basic boolean flags
-                targetConfigDto.setDatabaseOnly(sourceConfig.isDatabaseOnly());
                 targetConfigDto.setMigrateNonNative(sourceConfig.isMigrateNonNative());
-                targetConfigDto.setReadOnly(sourceConfig.isReadOnly());
-                
+
                 // Save the copied configuration
                 Map<String, Object> saveResult = configurationManagementService.saveConfiguration(
                     targetConfigName, targetConfigDto);

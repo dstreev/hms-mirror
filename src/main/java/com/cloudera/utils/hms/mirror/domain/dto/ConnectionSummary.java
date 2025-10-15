@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
@@ -41,22 +40,22 @@ public class ConnectionSummary {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 
-    public static ConnectionSummary fromConnection(Connection connection) {
+    public static ConnectionSummary fromConnection(ConnectionDto connectionDto) {
         String testStatus = "never_tested";
-        if (connection.getTestResults() != null && connection.getTestResults().getStatus() != null) {
-            testStatus = connection.getTestResults().getStatus().name().toLowerCase();
+        if (connectionDto.getTestResults() != null && connectionDto.getTestResults().getStatus() != null) {
+            testStatus = connectionDto.getTestResults().getStatus().name().toLowerCase();
         }
 
         return ConnectionSummary.builder()
-                .id(connection.getId())
-                .name(connection.getName())
-                .description(connection.getDescription())
-                .environment(connection.getEnvironment() != null ? connection.getEnvironment().name() : null)
-                .platformType(connection.getPlatformType())
-                .isDefault(connection.isDefault())
+                .id(connectionDto.getId())
+                .name(connectionDto.getName())
+                .description(connectionDto.getDescription())
+                .environment(connectionDto.getEnvironment() != null ? connectionDto.getEnvironment().name() : null)
+                .platformType(connectionDto.getPlatformType())
+                .isDefault(connectionDto.isDefault())
                 .testStatus(testStatus)
-                .created(connection.getCreated())
-                .modified(connection.getModified())
+                .created(connectionDto.getCreated())
+                .modified(connectionDto.getModified())
                 .build();
     }
 }

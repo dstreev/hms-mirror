@@ -1,11 +1,11 @@
 ### SQL Data Strategy Configuration Wizard
 
-This wizard focuses on configuring the **SQL** data strategy for HMS-Mirror. It assumes that **cluster connections** and **database collections** have been pre-defined and saved as separate entities before starting the wizard.
+This wizard focuses on configuring the **SQL** data strategy for HMS-Mirror. It assumes that **cluster connectionDtos** and **database collections** have been pre-defined and saved as separate entities before starting the wizard.
 
 ## Prerequisites
 
 Before using this wizard, the following must be completed:
-1. **Cluster Connections**: Define and save source (LEFT) and target (RIGHT) cluster connection profiles
+1. **Cluster Connections**: Define and save source (LEFT) and target (RIGHT) cluster connectionDto profiles
 2. **Database Collections**: Create and save collections of databases and tables to be migrated
 3. The wizard will only reference these pre-saved entities and will not execute migrations - it only builds the configuration
 

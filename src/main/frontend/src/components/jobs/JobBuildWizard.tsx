@@ -21,6 +21,11 @@ interface JobFormData {
   strategy: string;
   disasterRecovery: boolean;
   sync: boolean;
+  hybrid: {
+    exportImportPartitionLimit: number;
+    sqlPartitionLimit: number;
+    sqlSizeLimit: number;
+  };
 }
 
 interface Dataset {
@@ -56,7 +61,7 @@ const JobBuildWizard: React.FC = () => {
   // Available data for dropdowns
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [configurations, setConfigurations] = useState<Configuration[]>([]);
-  const [connections, setConnections] = useState<Connection[]>([]);
+  const [connectionDtos, setConnections] = useState<Connection[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   
   // Dataset search functionality
@@ -80,7 +85,12 @@ const JobBuildWizard: React.FC = () => {
     rightConnectionReference: existingJob?.rightConnectionReference || '',
     strategy: existingJob?.strategy || '',
     disasterRecovery: existingJob?.disasterRecovery || false,
-    sync: existingJob?.sync || false
+    sync: existingJob?.sync || false,
+    hybrid: {
+      exportImportPartitionLimit: existingJob?.hybrid?.exportImportPartitionLimit || 100,
+      sqlPartitionLimit: existingJob?.hybrid?.sqlPartitionLimit || 500,
+      sqlSizeLimit: existingJob?.hybrid?.sqlSizeLimit || 1073741824, // 1GB
+    }
   });
 
   const dataStrategies = [
@@ -98,7 +108,7 @@ const JobBuildWizard: React.FC = () => {
     { id: 'basic', title: 'Job Details', description: 'Basic information' },
     { id: 'dataset', title: 'Dataset', description: 'Select dataset' },
     { id: 'config', title: 'Configuration', description: 'Select configuration' },
-    { id: 'connections', title: 'Connections', description: 'Select connections' },
+    { id: 'connectionDtos', title: 'Connections', description: 'Select connectionDtos' },
     { id: 'strategy', title: 'Data Strategy', description: 'Choose strategy' },
     { id: 'options', title: 'Options', description: 'Additional settings' },
     { id: 'summary', title: 'Summary', description: 'Review and create' }
@@ -113,7 +123,7 @@ const JobBuildWizard: React.FC = () => {
     }
   };
 
-  // Load available datasets, configurations, and connections
+  // Load available datasets, configurations, and connectionDtos
   useEffect(() => {
     const loadData = async () => {
       setLoadingData(true);
@@ -225,30 +235,30 @@ const JobBuildWizard: React.FC = () => {
   }, [configurations, configSearchQuery]);
 
   // Connection filtering helper
-  const connectionMatchesSearch = (connection: any, query: string): boolean => {
+  const connectionMatchesSearch = (connectionDto: any, query: string): boolean => {
     if (query === '') return true;
-    return connection.name.toLowerCase().includes(query.toLowerCase()) ||
-           (connection.uri && connection.uri.toLowerCase().includes(query.toLowerCase()));
+    return connectionDto.name.toLowerCase().includes(query.toLowerCase()) ||
+           (connectionDto.uri && connectionDto.uri.toLowerCase().includes(query.toLowerCase()));
   };
 
-  // Filtered connections for SearchableInput components
+  // Filtered connectionDtos for SearchableInput components
   const filteredLeftConnections = useMemo(() => {
     if (!leftConnectionSearchQuery.trim()) {
-      return connections;
+      return connectionDtos;
     }
-    return connections.filter(conn => 
+    return connectionDtos.filter(conn =>
       connectionMatchesSearch(conn, leftConnectionSearchQuery)
     );
-  }, [connections, leftConnectionSearchQuery]);
+  }, [connectionDtos, leftConnectionSearchQuery]);
 
   const filteredRightConnections = useMemo(() => {
     if (!rightConnectionSearchQuery.trim()) {
-      return connections;
+      return connectionDtos;
     }
-    return connections.filter(conn => 
+    return connectionDtos.filter(conn =>
       connectionMatchesSearch(conn, rightConnectionSearchQuery)
     );
-  }, [connections, rightConnectionSearchQuery]);
+  }, [connectionDtos, rightConnectionSearchQuery]);
 
 
 
@@ -275,13 +285,13 @@ const JobBuildWizard: React.FC = () => {
         break;
       case 3: // Connections selection
         if (!jobData.leftConnectionReference) {
-          newErrors.leftConnectionReference = 'Left connection is required';
+          newErrors.leftConnectionReference = 'Left connectionDto is required';
         }
         if (!jobData.rightConnectionReference) {
-          newErrors.rightConnectionReference = 'Right connection is required';
+          newErrors.rightConnectionReference = 'Right connectionDto is required';
         }
         if (jobData.leftConnectionReference === jobData.rightConnectionReference) {
-          newErrors.rightConnectionReference = 'Left and right connections must be different';
+          newErrors.rightConnectionReference = 'Left and right connectionDtos must be different';
         }
         break;
       case 4: // Data strategy
@@ -342,6 +352,11 @@ const JobBuildWizard: React.FC = () => {
         strategy: jobData.strategy,
         disasterRecovery: jobData.disasterRecovery,
         sync: jobData.sync,
+        hybrid: {
+          exportImportPartitionLimit: jobData.hybrid.exportImportPartitionLimit,
+          sqlPartitionLimit: jobData.hybrid.sqlPartitionLimit,
+          sqlSizeLimit: jobData.hybrid.sqlSizeLimit
+        },
         createdDate: (editMode && !copyMode) ? existingJob?.createdDate : new Date().toISOString(),
         modifiedDate: new Date().toISOString()
       };
@@ -522,12 +537,12 @@ const JobBuildWizard: React.FC = () => {
               <SearchableInput
                 value={jobData.leftConnectionReference}
                 onSearch={setLeftConnectionSearchQuery}
-                onSelect={(connection: any) => handleInputChange('leftConnectionReference', connection.name)}
+                onSelect={(connectionDto: any) => handleInputChange('leftConnectionReference', connectionDto.name)}
                 onClear={() => handleInputChange('leftConnectionReference', '')}
                 options={filteredLeftConnections}
                 getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
                 getOptionKey={(conn: any) => conn.name}
-                placeholder="Type to search connections..."
+                placeholder="Type to search connectionDtos..."
                 label="Left Connection *"
                 error={errors.leftConnectionReference}
               />
@@ -537,21 +552,21 @@ const JobBuildWizard: React.FC = () => {
               <SearchableInput
                 value={jobData.rightConnectionReference}
                 onSearch={setRightConnectionSearchQuery}
-                onSelect={(connection: any) => handleInputChange('rightConnectionReference', connection.name)}
+                onSelect={(connectionDto: any) => handleInputChange('rightConnectionReference', connectionDto.name)}
                 onClear={() => handleInputChange('rightConnectionReference', '')}
                 options={filteredRightConnections}
                 getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
                 getOptionKey={(conn: any) => conn.name}
-                placeholder="Type to search connections..."
+                placeholder="Type to search connectionDtos..."
                 label="Right Connection *"
                 error={errors.rightConnectionReference}
               />
             </div>
 
-            {connections.length === 0 && (
+            {connectionDtos.length === 0 && (
               <p className="mt-1 text-sm text-amber-600">
                 <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
-                No connections found. Please create connections first.
+                No connectionDtos found. Please create connectionDtos first.
               </p>
             )}
           </div>
@@ -653,14 +668,104 @@ const JobBuildWizard: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Hybrid Strategy Settings - only show for SQL, EXPORT_IMPORT, or HYBRID strategies */}
+            {(jobData.strategy === 'SQL' || jobData.strategy === 'EXPORT_IMPORT' || jobData.strategy === 'HYBRID') && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-md font-medium text-gray-900 mb-4">Hybrid Strategy Settings</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Configure partition and size limits for hybrid data migration strategies.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="exportImportPartitionLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                      Export/Import Partition Limit
+                    </label>
+                    <input
+                      type="number"
+                      id="exportImportPartitionLimit"
+                      value={jobData.hybrid.exportImportPartitionLimit}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setJobData(prev => ({
+                          ...prev,
+                          hybrid: {
+                            ...prev.hybrid,
+                            exportImportPartitionLimit: value
+                          }
+                        }));
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Maximum number of partitions to use EXPORT_IMPORT strategy (default: 100)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="sqlPartitionLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                      SQL Partition Limit
+                    </label>
+                    <input
+                      type="number"
+                      id="sqlPartitionLimit"
+                      value={jobData.hybrid.sqlPartitionLimit}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setJobData(prev => ({
+                          ...prev,
+                          hybrid: {
+                            ...prev.hybrid,
+                            sqlPartitionLimit: value
+                          }
+                        }));
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Maximum number of partitions to use SQL strategy (default: 500)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="sqlSizeLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                      SQL Size Limit (bytes)
+                    </label>
+                    <input
+                      type="number"
+                      id="sqlSizeLimit"
+                      value={jobData.hybrid.sqlSizeLimit}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setJobData(prev => ({
+                          ...prev,
+                          hybrid: {
+                            ...prev.hybrid,
+                            sqlSizeLimit: value
+                          }
+                        }));
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Maximum table size in bytes for SQL strategy (default: 1073741824 = 1GB, current: {(jobData.hybrid.sqlSizeLimit / (1024 * 1024 * 1024)).toFixed(2)} GB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
 
       case 6: // Summary
         const selectedDataset = datasets.find(d => d.name === jobData.datasetReference);
         const selectedConfig = configurations.find(c => c.name === jobData.configReference);
-        const selectedLeftConn = connections.find(c => c.name === jobData.leftConnectionReference);
-        const selectedRightConn = connections.find(c => c.name === jobData.rightConnectionReference);
+        const selectedLeftConn = connectionDtos.find(c => c.name === jobData.leftConnectionReference);
+        const selectedRightConn = connectionDtos.find(c => c.name === jobData.rightConnectionReference);
         const selectedStrategy = dataStrategies.find(s => s.value === jobData.strategy);
 
         return (
@@ -715,6 +820,18 @@ const JobBuildWizard: React.FC = () => {
                   </p>
                 )}
               </div>
+
+              {/* Show Hybrid Strategy Settings only for SQL, EXPORT_IMPORT, or HYBRID strategies */}
+              {(jobData.strategy === 'SQL' || jobData.strategy === 'EXPORT_IMPORT' || jobData.strategy === 'HYBRID') && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Hybrid Strategy Settings</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>• Export/Import partition limit: {jobData.hybrid.exportImportPartitionLimit}</div>
+                    <div>• SQL partition limit: {jobData.hybrid.sqlPartitionLimit}</div>
+                    <div>• SQL size limit: {jobData.hybrid.sqlSizeLimit} bytes ({(jobData.hybrid.sqlSizeLimit / (1024 * 1024 * 1024)).toFixed(2)} GB)</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {errors.submit && (
@@ -743,7 +860,7 @@ const JobBuildWizard: React.FC = () => {
               ? `Update the HMS-Mirror job "${existingJob?.name}"`
               : copyMode
                 ? `Create a copy of "${existingJob?.name}" with a new name`
-                : 'Build a new HMS-Mirror job by configuring datasets, connections, and migration options'}
+                : 'Build a new HMS-Mirror job by configuring datasets, connectionDtos, and migration options'}
           </p>
         </div>
 

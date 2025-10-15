@@ -17,17 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.repository;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import org.rocksdb.RocksDBException;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface ConnectionRepository extends RocksDBRepository<Connection, String> {
+public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, String> {
     
-    Optional<Connection> findDefaultConnection() throws RocksDBException;
+    Optional<ConnectionDto> findDefaultConnection() throws RocksDBException;
     
-    List<Connection> findByEnvironment(Connection.Environment environment) throws RocksDBException;
+    List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RocksDBException;
     
     void setAsDefault(String connectionId) throws RocksDBException;
     

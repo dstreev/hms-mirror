@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.web.controller;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.service.ConnectionService;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class ConnectionController {
 
     private final ConnectionService connectionService;
 
-    private Map<String, Object> convertConnectionToMap(Connection conn) {
+    private Map<String, Object> convertConnectionToMap(ConnectionDto conn) {
         Map<String, Object> connData = new HashMap<>();
         connData.put("id", conn.getId());
         connData.put("name", conn.getName());
@@ -150,12 +150,12 @@ public class ConnectionController {
                      search, environment, status);
             
             // Step 1: Try to retrieve connections from service
-            List<Connection> connections = connectionService.getFilteredConnections(search, environment, status);
-            log.info("Successfully retrieved {} connections from service", connections.size());
+            List<ConnectionDto> connectionDtos = connectionService.getFilteredConnections(search, environment, status);
+            log.info("Successfully retrieved {} connections from service", connectionDtos.size());
             
             // Step 2: Try to create a minimal response with just count first
             Map<String, Object> response = new HashMap<>();
-            response.put("count", connections.size());
+            response.put("count", connectionDtos.size());
             response.put("filters", Map.of(
                     "search", search != null ? search : "",
                     "environment", environment != null ? environment : "",
@@ -163,7 +163,7 @@ public class ConnectionController {
             ));
             
             // Step 3: Build connection data with config object that UI expects
-            List<Map<String, Object>> detailedConnections = connections.stream()
+            List<Map<String, Object>> detailedConnections = connectionDtos.stream()
                     .map(conn -> {
                         Map<String, Object> connData = new HashMap<>();
                         connData.put("id", conn.getId());
@@ -292,7 +292,7 @@ public class ConnectionController {
         try {
             log.info("Getting connection by ID: {}", id);
             
-            Optional<Connection> connection = connectionService.getConnectionById(id);
+            Optional<ConnectionDto> connection = connectionService.getConnectionById(id);
             if (connection.isPresent()) {
                 Map<String, Object> connectionData = convertConnectionToMap(connection.get());
                 return ResponseEntity.ok(connectionData);
@@ -315,11 +315,11 @@ public class ConnectionController {
         try {
             log.info("Creating new connection: {}", request.getName());
             
-            Connection connection = request.toConnection();
-            Connection savedConnection = connectionService.createConnection(connection);
+            ConnectionDto connectionDto = request.toConnection();
+            ConnectionDto savedConnectionDto = connectionService.createConnection(connectionDto);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("connection", savedConnection);
+            response.put("connection", savedConnectionDto);
             response.put("message", "Connection created successfully");
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -342,11 +342,11 @@ public class ConnectionController {
         try {
             log.info("Updating connection: {}", id);
             
-            Connection connection = request.toConnection();
-            Connection updatedConnection = connectionService.updateConnection(id, connection);
+            ConnectionDto connectionDto = request.toConnection();
+            ConnectionDto updatedConnectionDto = connectionService.updateConnection(id, connectionDto);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("connection", updatedConnection);
+            response.put("connection", updatedConnectionDto);
             response.put("message", "Connection updated successfully");
             
             return ResponseEntity.ok(response);
@@ -443,11 +443,11 @@ public class ConnectionController {
     }
 
     @GetMapping(value = "/default", produces = "application/json")
-    public ResponseEntity<Connection> getDefaultConnection() {
+    public ResponseEntity<ConnectionDto> getDefaultConnection() {
         try {
             log.info("Getting default connection");
             
-            Optional<Connection> defaultConnection = connectionService.getDefaultConnection();
+            Optional<ConnectionDto> defaultConnection = connectionService.getDefaultConnection();
             if (defaultConnection.isPresent()) {
                 return ResponseEntity.ok(defaultConnection.get());
             } else {

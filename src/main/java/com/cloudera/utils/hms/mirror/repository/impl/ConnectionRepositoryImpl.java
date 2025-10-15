@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.repository.impl;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,37 +38,37 @@ import java.util.stream.Collectors;
 @Repository
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
-public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connection, String> implements ConnectionRepository {
+public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<ConnectionDto, String> implements ConnectionRepository {
 
     public ConnectionRepositoryImpl(RocksDB rocksDB,
                                    @Qualifier("connectionsColumnFamily") ColumnFamilyHandle columnFamily,
                                    @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<Connection>() {});
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConnectionDto>() {});
     }
 
     @Override
-    public Connection save(String id, Connection connection) throws RocksDBException {
-        connection.setId(id);
-        connection.setModified(LocalDateTime.now());
+    public ConnectionDto save(String id, ConnectionDto connectionDto) throws RocksDBException {
+        connectionDto.setId(id);
+        connectionDto.setModified(LocalDateTime.now());
         
-        if (connection.getCreated() == null) {
-            connection.setCreated(LocalDateTime.now());
+        if (connectionDto.getCreated() == null) {
+            connectionDto.setCreated(LocalDateTime.now());
         }
         
-        return super.save(id, connection);
+        return super.save(id, connectionDto);
     }
 
     @Override
-    public Optional<Connection> findDefaultConnection() throws RocksDBException {
-        Map<String, Connection> all = findAll();
+    public Optional<ConnectionDto> findDefaultConnection() throws RocksDBException {
+        Map<String, ConnectionDto> all = findAll();
         return all.values().stream()
-                .filter(Connection::isDefault)
+                .filter(ConnectionDto::isDefault)
                 .findFirst();
     }
 
     @Override
-    public List<Connection> findByEnvironment(Connection.Environment environment) throws RocksDBException {
-        Map<String, Connection> all = findAll();
+    public List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
+        Map<String, ConnectionDto> all = findAll();
         return all.values().stream()
                 .filter(conn -> environment.equals(conn.getEnvironment()))
                 .collect(Collectors.toList());
@@ -77,9 +77,9 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     @Override
     public void setAsDefault(String connectionId) throws RocksDBException {
         // First, unset all other defaults
-        Map<String, Connection> all = findAll();
-        for (Map.Entry<String, Connection> entry : all.entrySet()) {
-            Connection conn = entry.getValue();
+        Map<String, ConnectionDto> all = findAll();
+        for (Map.Entry<String, ConnectionDto> entry : all.entrySet()) {
+            ConnectionDto conn = entry.getValue();
             if (conn.isDefault()) {
                 conn.setDefault(false);
                 save(entry.getKey(), conn);
@@ -87,9 +87,9 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
         }
         
         // Set the specified connection as default
-        Optional<Connection> targetConnection = findById(connectionId);
+        Optional<ConnectionDto> targetConnection = findById(connectionId);
         if (targetConnection.isPresent()) {
-            Connection conn = targetConnection.get();
+            ConnectionDto conn = targetConnection.get();
             conn.setDefault(true);
             save(connectionId, conn);
         } else {
@@ -99,28 +99,28 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
 
     @Override
     public boolean testConnection(String connectionId) throws RocksDBException {
-        Optional<Connection> connectionOpt = findById(connectionId);
+        Optional<ConnectionDto> connectionOpt = findById(connectionId);
         if (connectionOpt.isEmpty()) {
             throw new RocksDBException("Connection not found: " + connectionId);
         }
         
-        Connection connection = connectionOpt.get();
+        ConnectionDto connectionDto = connectionOpt.get();
         
         // TODO: Implement actual connection testing logic
         // For now, return a basic validation
-        boolean isValid = connection.getHs2Uri() != null 
-                && !connection.getHs2Uri().trim().isEmpty();
+        boolean isValid = connectionDto.getHs2Uri() != null
+                && !connectionDto.getHs2Uri().trim().isEmpty();
         
         // Update test results
-        Connection.ConnectionTestResults testResults = Connection.ConnectionTestResults.builder()
-                .status(isValid ? Connection.ConnectionTestResults.TestStatus.SUCCESS : Connection.ConnectionTestResults.TestStatus.FAILED)
+        ConnectionDto.ConnectionTestResults testResults = ConnectionDto.ConnectionTestResults.builder()
+                .status(isValid ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS : ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
                 .lastTested(LocalDateTime.now())
                 .duration(isValid ? 1.5 : 0.0)
                 .errorMessage(isValid ? null : "Invalid configuration")
                 .build();
         
-        connection.setTestResults(testResults);
-        save(connectionId, connection);
+        connectionDto.setTestResults(testResults);
+        save(connectionId, connectionDto);
         
         log.info("Connection test completed for {}: {}", connectionId, testResults.getStatus());
         return isValid;

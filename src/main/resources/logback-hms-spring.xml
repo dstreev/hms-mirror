@@ -35,7 +35,7 @@
     <logger name="com.cloudera.utils" level="${logging.threshold:-debug}" additivity="false">
         <appender-ref ref="RollingFile" />
     </logger>
-    <logger name="com.cloudera.utils.hms.mirror.connections" level="info" additivity="true">
+    <logger name="com.cloudera.utils.hms.mirror.connectionDtos" level="info" additivity="true">
         <appender-ref ref="Console" />
     </logger>
     <logger name="com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions" level="info" additivity="true">

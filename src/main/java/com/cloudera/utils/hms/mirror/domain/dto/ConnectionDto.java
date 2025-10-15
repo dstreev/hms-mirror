@@ -15,7 +15,7 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain.core;
+package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -32,7 +32,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Connection {
+public class ConnectionDto {
 
     private String id;
     private String name;
@@ -70,12 +70,12 @@ public class Connection {
     private boolean partitionDiscoveryAuto;
     private boolean partitionDiscoveryInitMSCK;
     private Integer partitionBucketLimit;
-    
+
     // Additional cluster settings
     private boolean createIfNotExists;
     private boolean enableAutoTableStats;
     private boolean enableAutoColumnStats;
-    
+
     // System fields
     private ConnectionTestResults testResults;
     

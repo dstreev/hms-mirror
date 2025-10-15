@@ -383,7 +383,7 @@ export const ConnectCard: React.FC<ConnectCardProps> = ({
   return (
     <BaseCard
       title="Cluster Connections"
-      description={bothConnected ? 'Both clusters connected' : 'Configure and validate cluster connections'}
+      description={bothConnected ? 'Both clusters connected' : 'Configure and validate cluster connectionDtos'}
       icon={<LinkIcon className="w-6 h-6" />}
       expandable
       expanded={expanded}
@@ -685,7 +685,7 @@ interface DashboardState {
     hasConfig: boolean;
     configName?: string;
   };
-  connections: {
+  connectionDtos: {
     leftStatus: 'idle' | 'connected' | 'error' | 'validating';
     rightStatus: 'idle' | 'connected' | 'error' | 'validating';
   };
@@ -714,7 +714,7 @@ interface DashboardState {
 export const Dashboard: React.FC = () => {
   const [state, setState] = useState<DashboardState>({
     config: { hasConfig: false },
-    connections: { leftStatus: 'idle', rightStatus: 'idle' },
+    connectionDtos: { leftStatus: 'idle', rightStatus: 'idle' },
     databases: { list: [], totalSelected: 0 },
     execution: { status: 'idle', progress: 0, canExecute: false },
     reports: []
@@ -735,7 +735,7 @@ export const Dashboard: React.FC = () => {
   const handleValidateConnections = () => {
     setState(prev => ({
       ...prev,
-      connections: {
+      connectionDtos: {
         leftStatus: 'validating',
         rightStatus: 'validating'
       }
@@ -744,7 +744,7 @@ export const Dashboard: React.FC = () => {
     setTimeout(() => {
       setState(prev => ({
         ...prev,
-        connections: {
+        connectionDtos: {
           leftStatus: 'connected',
           rightStatus: 'connected'
         }
@@ -838,15 +838,15 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const canExecute = state.config.hasConfig && 
-                      state.connections.leftStatus === 'connected' && 
-                      state.connections.rightStatus === 'connected' &&
+                      state.connectionDtos.leftStatus === 'connected' &&
+                      state.connectionDtos.rightStatus === 'connected' &&
                       state.databases.totalSelected > 0;
     
     setState(prev => ({
       ...prev,
       execution: { ...prev.execution, canExecute }
     }));
-  }, [state.config.hasConfig, state.connections, state.databases.totalSelected]);
+  }, [state.config.hasConfig, state.connectionDtos, state.databases.totalSelected]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -866,8 +866,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <ConnectCard
-            leftClusterStatus={state.connections.leftStatus}
-            rightClusterStatus={state.connections.rightStatus}
+            leftClusterStatus={state.connectionDtos.leftStatus}
+            rightClusterStatus={state.connectionDtos.rightStatus}
             onValidateConnections={handleValidateConnections}
             onConfigureConnections={handleConfigureConnections}
           />

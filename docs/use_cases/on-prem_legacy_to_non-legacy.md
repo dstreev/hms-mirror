@@ -18,7 +18,7 @@ RIGHT clusters are the NON-LEGACY clusters (hive3).
 - No ACID tables (HDP)
 - No VIEWs
 - No Non-Native tables (Hive tables backed by HBase, JDBC, Kafka)
-- The HiveServer2's on each cluster have enough concurrency to support the configured connections `transfer->concurrency`.  If not specified, the default is 4.
+- The HiveServer2's on each cluster have enough concurrency to support the configured connectionDtos `transfer->concurrency`.  If not specified, the default is 4.
 
 [Configuration Example](./cfg/basic_legacy_non-legacy.yaml)
 

@@ -14,7 +14,7 @@
     - The edgenode has network access to the Cloud HS2 endpoint
     - The LOWER environment also has access to the Storage systems used in `intermediate` or `common` storage.  So you'll need to ensure the proper configurations have been added to the lower environment and the libraries to communicate with the cloud storage environments is available.
 - No Non-Native tables (Hive tables backed by HBase, JDBC, Kafka)
-- The HiveServer2's on each cluster have enough concurrency to support the configured connections `transfer->concurrency`.  If not specified, the default is 4.
+- The HiveServer2's on each cluster have enough concurrency to support the configured connectionDtos `transfer->concurrency`.  If not specified, the default is 4.
 
 [Configuration Example](./cfg/hybrid_legacy_non-legacy.yaml)
 

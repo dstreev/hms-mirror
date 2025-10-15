@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.config.SampleDataProperties;
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
@@ -65,11 +65,11 @@ public class SampleDataInitializationService {
     private void createSampleConnections() {
         log.info("Creating 4 demo connections");
         
-        Connection[] connections = {
-            Connection.builder()
+        ConnectionDto[] connectionDtos = {
+            ConnectionDto.builder()
                 .name("CDP-Dev-Cluster")
                 .description("Development CDP cluster for testing and prototyping")
-                .environment(Connection.Environment.DEV)
+                .environment(ConnectionDto.Environment.DEV)
                 .platformType("CDP")
                 .hcfsNamespace("hdfs://dev-cluster")
                 .hs2Uri("jdbc:hive2://dev-hiveserver:10000/default")
@@ -85,10 +85,10 @@ public class SampleDataInitializationService {
                 .isDefault(true)
                 .build(),
                 
-            Connection.builder()
+            ConnectionDto.builder()
                 .name("CDP-Prod-Cluster")
                 .description("Production CDP cluster for live workloads")
-                .environment(Connection.Environment.PROD)
+                .environment(ConnectionDto.Environment.PROD)
                 .platformType("CDP")
                 .hcfsNamespace("hdfs://prod-cluster")
                 .hs2Uri("jdbc:hive2://prod-hiveserver:10000/default")
@@ -104,10 +104,10 @@ public class SampleDataInitializationService {
                 .modified(LocalDateTime.now())
                 .build(),
                 
-            Connection.builder()
+            ConnectionDto.builder()
                 .name("Legacy-HDP-Cluster")
                 .description("Legacy HDP cluster for migration source")
-                .environment(Connection.Environment.PROD)
+                .environment(ConnectionDto.Environment.PROD)
                 .platformType("HDP")
                 .hcfsNamespace("hdfs://legacy-cluster")
                 .hs2Uri("jdbc:hive2://legacy-hiveserver:10000/default")
@@ -119,10 +119,10 @@ public class SampleDataInitializationService {
                 .modified(LocalDateTime.now())
                 .build(),
                 
-            Connection.builder()
+            ConnectionDto.builder()
                 .name("Test-Environment")
                 .description("Testing environment for validation and QA")
-                .environment(Connection.Environment.TEST)
+                .environment(ConnectionDto.Environment.TEST)
                 .platformType("CDP")
                 .hcfsNamespace("hdfs://test-cluster")
                 .hs2Uri("jdbc:hive2://test-hiveserver:10000/default")
@@ -137,15 +137,15 @@ public class SampleDataInitializationService {
                 .build()
         };
 
-        for (Connection connection : connections) {
+        for (ConnectionDto connectionDto : connectionDtos) {
             try {
-                connectionService.createConnection(connection);
-                log.debug("Created sample connection: {}", connection.getName());
+                connectionService.createConnection(connectionDto);
+                log.debug("Created sample connection: {}", connectionDto.getName());
             } catch (Exception e) {
                 if (e.getMessage().contains("already exists")) {
-                    log.debug("Connection {} already exists, skipping", connection.getName());
+                    log.debug("Connection {} already exists, skipping", connectionDto.getName());
                 } else {
-                    log.warn("Failed to create connection: {}", connection.getName(), e);
+                    log.warn("Failed to create connection: {}", connectionDto.getName(), e);
                 }
             }
         }
@@ -251,15 +251,8 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createSchemaOnlyConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("Schema-Only-Migration");
         config.setComment("Schema Only Migration Configuration - metadata only transfer");
-        config.setDatabaseOnly(true);
         config.setMigrateNonNative(true);
-        
-        // Configure hybrid settings for partition limits
-        HybridConfig hybrid = new HybridConfig();
-        hybrid.setExportImportPartitionLimit(100);
-        hybrid.setSqlPartitionLimit(500);
-        config.setHybrid(hybrid);
-        
+
         return config;
     }
 
@@ -267,14 +260,7 @@ public class SampleDataInitializationService {
         ConfigLiteDto config = new ConfigLiteDto("Hybrid-Data-Migration");
         config.setComment("Hybrid Data Migration Configuration - combines schema and limited data movement");
         config.setMigrateNonNative(true);
-        
-        // Configure hybrid settings
-        HybridConfig hybrid = new HybridConfig();
-        hybrid.setExportImportPartitionLimit(100);
-        hybrid.setSqlPartitionLimit(500);
-        hybrid.setSqlSizeLimit(1073741824L); // 1GB
-        config.setHybrid(hybrid);
-        
+
         return config;
     }
 
@@ -289,9 +275,8 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createLinkedConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("Linked-Tables-Setup");
         config.setComment("Linked Tables Configuration - creates external tables pointing to original data");
-        config.setReadOnly(true);
         config.setMigrateNonNative(false);
-        
+
         return config;
     }
 
@@ -299,8 +284,7 @@ public class SampleDataInitializationService {
         ConfigLiteDto config = new ConfigLiteDto("Storage-Migration-Plan");
         config.setComment("Storage Migration Configuration - in-place storage format migrations");
         config.setMigrateNonNative(true);
-        config.setReplace(true);
-        
+
         return config;
     }
 }

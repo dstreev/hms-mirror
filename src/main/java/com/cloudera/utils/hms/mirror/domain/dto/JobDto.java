@@ -1,5 +1,6 @@
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -41,8 +42,23 @@ public class JobDto {
     @Schema(description = "The data strategy for this job")
     private DataStrategyEnum strategy;
 
+    private HybridConfig hybrid = new HybridConfig();
+
+    @Schema(description = "Flag to indicate if this job is for a database only migration")
+    private boolean databaseOnly = Boolean.FALSE;
+
+//    private boolean replace = Boolean.FALSE;
+
+//    @Schema(description = "Flag to indicate if this job should reset the right table")
+//    private boolean resetRight = Boolean.FALSE;
+
+
     @Schema(description = "Flag to indicate if this job is for disaster recovery purposes")
     private Boolean disasterRecovery = Boolean.FALSE;
+
+    // Set by disasterRecovery.
+    //    @Schema(description = "When set, the table purge option will be removed.")
+//    private boolean noPurge = Boolean.FALSE;
 
     @Schema(description = "Flag to indicate if this job should perform a sync operation, only available if" +
             "the disasterRecovery flag is set to true")

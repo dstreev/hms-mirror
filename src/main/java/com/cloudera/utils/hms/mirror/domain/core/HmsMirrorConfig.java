@@ -151,6 +151,7 @@ public class HmsMirrorConfig implements Cloneable {
      */
     private boolean noPurge = Boolean.FALSE;
     /*
+    TODO: Not implemented.
     When Common Storage is used with the SQL Data Strategy, this will 'replace' the original table
     with a table by the same name but who's data lives in the common storage location.
      */

@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
-import com.cloudera.utils.hms.mirror.domain.core.Connection;
 import lombok.Data;
 
 import java.util.Map;
@@ -75,75 +74,75 @@ public class ConnectionRequest {
     /**
      * Convert this request DTO to a flattened Connection entity
      */
-    public Connection toConnection() {
-        Connection connection = new Connection();
+    public ConnectionDto toConnection() {
+        ConnectionDto connectionDto = new ConnectionDto();
         
         // Basic information
-        connection.setName(this.name);
-        connection.setDescription(this.description);
+        connectionDto.setName(this.name);
+        connectionDto.setDescription(this.description);
         if (this.environment != null) {
-            connection.setEnvironment(Connection.Environment.valueOf(this.environment));
+            connectionDto.setEnvironment(ConnectionDto.Environment.valueOf(this.environment));
         }
         
         if (this.config != null) {
             // Platform configuration
-            connection.setPlatformType(this.config.platformType);
-            connection.setHcfsNamespace(this.config.hcfsNamespace);
-            connection.setConnectionPoolLib(this.config.connectionPoolLib);
-            connection.setCreateIfNotExists(this.config.createIfNotExists);
-            connection.setEnableAutoTableStats(this.config.enableAutoTableStats);
-            connection.setEnableAutoColumnStats(this.config.enableAutoColumnStats);
+            connectionDto.setPlatformType(this.config.platformType);
+            connectionDto.setHcfsNamespace(this.config.hcfsNamespace);
+            connectionDto.setConnectionPoolLib(this.config.connectionPoolLib);
+            connectionDto.setCreateIfNotExists(this.config.createIfNotExists);
+            connectionDto.setEnableAutoTableStats(this.config.enableAutoTableStats);
+            connectionDto.setEnableAutoColumnStats(this.config.enableAutoColumnStats);
             
             // HiveServer2 configuration (flattened)
             if (this.config.hiveServer2 != null) {
                 HiveServer2Request hs2 = this.config.hiveServer2;
-                connection.setHs2Uri(hs2.uri);
-                connection.setHs2DriverClassName(hs2.driverClassName);
-                connection.setHs2JarFile(hs2.jarFile);
-                connection.setHs2Disconnected(hs2.disconnected);
-                connection.setHs2ConnectionProperties(hs2.connectionProperties);
+                connectionDto.setHs2Uri(hs2.uri);
+                connectionDto.setHs2DriverClassName(hs2.driverClassName);
+                connectionDto.setHs2JarFile(hs2.jarFile);
+                connectionDto.setHs2Disconnected(hs2.disconnected);
+                connectionDto.setHs2ConnectionProperties(hs2.connectionProperties);
                 
                 // Extract username and password from connection properties
                 if (hs2.connectionProperties != null) {
-                    connection.setHs2Username(hs2.connectionProperties.get("user"));
-                    connection.setHs2Password(hs2.connectionProperties.get("password"));
+                    connectionDto.setHs2Username(hs2.connectionProperties.get("user"));
+                    connectionDto.setHs2Password(hs2.connectionProperties.get("password"));
                 }
             }
             
             // Metastore Direct configuration (flattened)
             if (this.config.metastoreDirect != null) {
                 MetastoreDirectRequest msd = this.config.metastoreDirect;
-                connection.setMetastoreDirectEnabled(true);
-                connection.setMetastoreDirectUri(msd.uri);
-                connection.setMetastoreDirectType(msd.type);
+                connectionDto.setMetastoreDirectEnabled(true);
+                connectionDto.setMetastoreDirectUri(msd.uri);
+                connectionDto.setMetastoreDirectType(msd.type);
                 
                 if (msd.connectionProperties != null) {
-                    connection.setMetastoreDirectUsername(msd.connectionProperties.get("user"));
-                    connection.setMetastoreDirectPassword(msd.connectionProperties.get("password"));
+                    connectionDto.setMetastoreDirectUsername(msd.connectionProperties.get("user"));
+                    connectionDto.setMetastoreDirectPassword(msd.connectionProperties.get("password"));
                 }
                 
                 if (msd.connectionPool != null) {
-                    connection.setMetastoreDirectMinConnections(msd.connectionPool.min);
-                    connection.setMetastoreDirectMaxConnections(msd.connectionPool.max);
+                    connectionDto.setMetastoreDirectMinConnections(msd.connectionPool.min);
+                    connectionDto.setMetastoreDirectMaxConnections(msd.connectionPool.max);
                 }
             } else {
-                connection.setMetastoreDirectEnabled(false);
+                connectionDto.setMetastoreDirectEnabled(false);
             }
             
             // Partition discovery configuration (flattened)
             if (this.config.partitionDiscovery != null) {
                 PartitionDiscoveryRequest pd = this.config.partitionDiscovery;
-                connection.setPartitionDiscoveryAuto(pd.auto);
-                connection.setPartitionDiscoveryInitMSCK(pd.initMSCK);
-                connection.setPartitionBucketLimit(pd.partitionBucketLimit);
+                connectionDto.setPartitionDiscoveryAuto(pd.auto);
+                connectionDto.setPartitionDiscoveryInitMSCK(pd.initMSCK);
+                connectionDto.setPartitionBucketLimit(pd.partitionBucketLimit);
             } else {
                 // Set defaults
-                connection.setPartitionDiscoveryAuto(true);
-                connection.setPartitionDiscoveryInitMSCK(true);
-                connection.setPartitionBucketLimit(100);
+                connectionDto.setPartitionDiscoveryAuto(true);
+                connectionDto.setPartitionDiscoveryInitMSCK(true);
+                connectionDto.setPartitionBucketLimit(100);
             }
         }
         
-        return connection;
+        return connectionDto;
     }
 }
