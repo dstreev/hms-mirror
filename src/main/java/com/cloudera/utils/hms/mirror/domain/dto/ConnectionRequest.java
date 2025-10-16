@@ -88,7 +88,6 @@ public class ConnectionRequest {
             // Platform configuration
             connectionDto.setPlatformType(this.config.platformType);
             connectionDto.setHcfsNamespace(this.config.hcfsNamespace);
-            connectionDto.setConnectionPoolLib(this.config.connectionPoolLib);
             connectionDto.setCreateIfNotExists(this.config.createIfNotExists);
             connectionDto.setEnableAutoTableStats(this.config.enableAutoTableStats);
             connectionDto.setEnableAutoColumnStats(this.config.enableAutoColumnStats);
@@ -97,9 +96,9 @@ public class ConnectionRequest {
             if (this.config.hiveServer2 != null) {
                 HiveServer2Request hs2 = this.config.hiveServer2;
                 connectionDto.setHs2Uri(hs2.uri);
-                connectionDto.setHs2DriverClassName(hs2.driverClassName);
-                connectionDto.setHs2JarFile(hs2.jarFile);
-                connectionDto.setHs2Disconnected(hs2.disconnected);
+//                connectionDto.setHs2DriverClassName(hs2.driverClassName);
+//                connectionDto.setHs2JarFile(hs2.jarFile);
+//                connectionDto.setHs2Disconnected(hs2.disconnected);
                 connectionDto.setHs2ConnectionProperties(hs2.connectionProperties);
                 
                 // Extract username and password from connection properties

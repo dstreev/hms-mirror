@@ -38,6 +38,7 @@ hadoop:
   cli:
     api: "true"
 hms-mirror:
+  version: "@project.version@"
   rocksdb:
     enabled: true
   session:
@@ -47,7 +48,7 @@ hms-mirror:
       cleanup-interval: 30m  # How often to cleanup stale keep-alive sessions
   data:
     sample:
-      create: true      # Set to true to create sample connections, datasets, and configurations
+      create: false      # Set to true to create sample connections, datasets, and configurations
   config:
     beta: "false"
     testing: "false"

@@ -98,9 +98,6 @@ export interface ConnectionFormData {
   hs2Uri: string;
   hs2Username: string;
   hs2Password: string;
-  hs2DriverClassName: string;
-  hs2JarFile: string;
-  hs2Disconnected: boolean;
   hs2ConnectionProperties: { [key: string]: string };
   
   // Metastore Direct Configuration (optional)
@@ -171,17 +168,9 @@ export const ENVIRONMENT_OPTIONS = [
   { value: 'STAGING', label: 'Staging' }
 ];
 
-export const PLATFORM_TYPE_OPTIONS = [
-  { value: 'HDP2', label: 'Hortonworks HDP 2.x' },
-  { value: 'HDP3', label: 'Hortonworks HDP 3.x' },
-  { value: 'CDP7_1', label: 'Cloudera CDP 7.1' },
-  { value: 'CDP7_2', label: 'Cloudera CDP 7.2+' },
-  { value: 'CDH5', label: 'Cloudera CDH 5.x' },
-  { value: 'CDH6', label: 'Cloudera CDH 6.x' },
-  { value: 'APACHE', label: 'Apache Hive' },
-  { value: 'EMR', label: 'Amazon EMR' },
-  { value: 'GENERIC', label: 'Generic/Other' }
-];
+// Platform types are now fetched dynamically from the API endpoint:
+// /hms-mirror/api/v1/app/platform-types
+// This ensures they match the PlatformType enum in the backend
 
 export const POOL_TYPE_OPTIONS = [
   { value: 'DBCP2', label: 'DBCP2 (Default)' },
@@ -193,11 +182,6 @@ export const METASTORE_DB_TYPE_OPTIONS = [
   { value: 'MYSQL', label: 'MySQL / MariaDB' },
   { value: 'POSTGRES', label: 'PostgreSQL' },
   { value: 'ORACLE', label: 'Oracle Database' }
-];
-
-export const HIVE_DRIVER_OPTIONS = [
-  { value: 'org.apache.hive.jdbc.HiveDriver', label: 'Apache Hive JDBC Driver (org.apache.hive.jdbc.HiveDriver)' },
-  { value: 'com.cloudera.hive.jdbc.HS2Driver', label: 'Cloudera Hive JDBC Driver (com.cloudera.hive.jdbc.HS2Driver)' }
 ];
 
 // Connection Examples
@@ -249,9 +233,6 @@ export const DEFAULT_CONNECTION_FORM: ConnectionFormData = {
   hs2Uri: '',
   hs2Username: '',
   hs2Password: '',
-  hs2DriverClassName: 'org.apache.hive.jdbc.HiveDriver',
-  hs2JarFile: '',
-  hs2Disconnected: false,
   hs2ConnectionProperties: {},
   
   // Metastore Direct Configuration (optional)
@@ -330,22 +311,11 @@ export const validateConnectionForm = (data: Partial<ConnectionFormData>): Valid
     errors.platformType = 'Platform type is required';
   }
   
-  // HiveServer2 validation (unless disconnected)
-  if (!data.hs2Disconnected) {
-    if (!data.hs2Uri?.trim()) {
-      errors.hs2Uri = 'HiveServer2 URI is required';
-    } else if (!data.hs2Uri.startsWith('jdbc:hive2://')) {
-      errors.hs2Uri = 'HiveServer2 URI must start with jdbc:hive2://';
-    }
-    
-    if (!data.hs2DriverClassName?.trim()) {
-      errors.hs2DriverClassName = 'Driver class name is required';
-    }
-    
-    // JAR file is optional for testing but recommended for production
-    // if (!data.hs2JarFile?.trim()) {
-    //   errors.hs2JarFile = 'JAR file path is required';
-    // }
+  // HiveServer2 validation
+  if (!data.hs2Uri?.trim()) {
+    errors.hs2Uri = 'HiveServer2 URI is required';
+  } else if (!data.hs2Uri.startsWith('jdbc:hive2://')) {
+    errors.hs2Uri = 'HiveServer2 URI must start with jdbc:hive2://';
   }
   
   // Metastore Direct validation (if enabled)
@@ -403,21 +373,10 @@ export const validateHiveServer2Step = (data: Partial<ConnectionFormData>): Vali
   }
 
   // HiveServer2 validation
-  if (!data.hs2Disconnected) {
-    if (!data.hs2Uri?.trim()) {
-      errors.hs2Uri = 'HiveServer2 URI is required';
-    } else if (!data.hs2Uri.startsWith('jdbc:hive2://')) {
-      errors.hs2Uri = 'HiveServer2 URI must start with jdbc:hive2://';
-    }
-
-    if (!data.hs2DriverClassName?.trim()) {
-      errors.hs2DriverClassName = 'Driver class name is required';
-    }
-
-    // JAR file is optional for testing but recommended for production
-    // if (!data.hs2JarFile?.trim()) {
-    //   errors.hs2JarFile = 'JAR file path is required';
-    // }
+  if (!data.hs2Uri?.trim()) {
+    errors.hs2Uri = 'HiveServer2 URI is required';
+  } else if (!data.hs2Uri.startsWith('jdbc:hive2://')) {
+    errors.hs2Uri = 'HiveServer2 URI must start with jdbc:hive2://';
   }
 
   return {

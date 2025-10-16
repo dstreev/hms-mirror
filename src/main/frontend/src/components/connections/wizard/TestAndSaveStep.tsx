@@ -171,9 +171,6 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
             <div><strong>Metastore Direct:</strong> {formData.metastoreDirectUri}</div>
           )}
           <div><strong>Pool:</strong> {formData.connectionPoolLib}</div>
-          {formData.hs2Disconnected && (
-            <div className="text-orange-600"><strong>Disconnected Mode:</strong> Enabled</div>
-          )}
         </div>
       </div>
 

@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -49,11 +50,8 @@ public class ConnectionDto {
     private String hs2Uri;
     private String hs2Username;
     private String hs2Password;
-    private String hs2DriverClassName;
-    private String hs2JarFile;
-    private boolean hs2Disconnected;
     private Map<String, String> hs2ConnectionProperties;
-    
+
     // Metastore Direct configuration (flattened, optional)
     private boolean metastoreDirectEnabled;
     private String metastoreDirectUri;
@@ -62,9 +60,6 @@ public class ConnectionDto {
     private String metastoreDirectPassword;
     private Integer metastoreDirectMinConnections;
     private Integer metastoreDirectMaxConnections;
-    
-    // Connection pool library preference
-    private String connectionPoolLib;
     
     // Partition discovery settings (flattened)
     private boolean partitionDiscoveryAuto;

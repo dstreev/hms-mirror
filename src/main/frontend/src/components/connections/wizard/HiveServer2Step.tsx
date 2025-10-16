@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  ConnectionFormData, 
-  HIVE_DRIVER_OPTIONS, 
-  HIVESERVER2_CONNECTION_EXAMPLES 
+import {
+  ConnectionFormData,
+  HIVESERVER2_CONNECTION_EXAMPLES
 } from '../../../types/Connection';
 import { InformationCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 import ConnectionPropertiesEditor from './ConnectionPropertiesEditor';
@@ -57,22 +56,6 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
         </p>
       </div>
 
-      {/* Disconnected Mode Toggle */}
-      <div className="flex items-center">
-        <input
-          id="hs2Disconnected"
-          type="checkbox"
-          checked={formData.hs2Disconnected}
-          onChange={(e) => onChange({ hs2Disconnected: e.target.checked })}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-        />
-        <label htmlFor="hs2Disconnected" className="ml-2 block text-sm text-gray-900">
-          Disconnected Mode (Schema-only operations)
-        </label>
-      </div>
-
-      {!formData.hs2Disconnected && (
-        <>
           {/* HiveServer2 URI */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -138,55 +121,6 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
             )}
           </div>
 
-          {/* Driver Selection */}
-          <div>
-            <label htmlFor="hs2DriverClassName" className="block text-sm font-medium text-gray-700 mb-2">
-              JDBC Driver *
-            </label>
-            <select
-              id="hs2DriverClassName"
-              value={formData.hs2DriverClassName}
-              onChange={(e) => onChange({ hs2DriverClassName: e.target.value })}
-              className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                errors.hs2DriverClassName ? 'border-red-300' : 'border-gray-300'
-              }`}
-              required
-            >
-              <option value="">Select JDBC driver...</option>
-              {HIVE_DRIVER_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.hs2DriverClassName && (
-              <p className="mt-1 text-sm text-red-600">{errors.hs2DriverClassName}</p>
-            )}
-          </div>
-
-          {/* JAR File */}
-          <div>
-            <label htmlFor="hs2JarFile" className="block text-sm font-medium text-gray-700 mb-2">
-              JAR File Path (Optional)
-            </label>
-            <input
-              type="text"
-              id="hs2JarFile"
-              value={formData.hs2JarFile}
-              onChange={(e) => onChange({ hs2JarFile: e.target.value })}
-              className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                errors.hs2JarFile ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="/path/to/hive-jdbc-standalone.jar"
-            />
-            {errors.hs2JarFile && (
-              <p className="mt-1 text-sm text-red-600">{errors.hs2JarFile}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              Path to the JDBC driver JAR file. Can specify multiple JARs separated by colons. Optional for testing but recommended for production.
-            </p>
-          </div>
-
           {/* Authentication */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -236,8 +170,6 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
               onChange={(properties) => onChange({ hs2ConnectionProperties: properties })}
             />
           </div>
-        </>
-      )}
 
       {/* Help Section */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -247,7 +179,6 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
           <li>• Username/password fields are optional for Kerberos authentication</li>
           <li>• Knox connections require SSL and specific HTTP transport settings</li>
           <li>• ZooKeeper discovery is useful for highly available HiveServer2</li>
-          <li>• Disconnected mode is useful for schema-only migrations</li>
         </ul>
       </div>
     </div>

@@ -69,9 +69,6 @@ const NewConnectionWizard: React.FC = () => {
         hs2Uri: connectionData.config?.hiveServer2?.uri || '',
         hs2Username: connectionData.config?.hiveServer2?.connectionProperties?.user || '',
         hs2Password: connectionData.config?.hiveServer2?.connectionProperties?.password || '',
-        hs2DriverClassName: connectionData.config?.hiveServer2?.driverClassName || '',
-        hs2JarFile: connectionData.config?.hiveServer2?.jarFile || '',
-        hs2Disconnected: connectionData.config?.hiveServer2?.disconnected || false,
         hs2ConnectionProperties: connectionData.config?.hiveServer2?.connectionProperties || {},
         metastoreDirectEnabled: Boolean(connectionData.config?.metastoreDirect?.uri),
         metastoreDirectUri: connectionData.config?.metastoreDirect?.uri || '',
@@ -112,9 +109,6 @@ const NewConnectionWizard: React.FC = () => {
             hs2Uri: connectionData.config?.hiveServer2?.uri || '',
             hs2Username: connectionData.config?.hiveServer2?.connectionProperties?.user || '',
             hs2Password: connectionData.config?.hiveServer2?.connectionProperties?.password || '',
-            hs2DriverClassName: connectionData.config?.hiveServer2?.driverClassName || '',
-            hs2JarFile: connectionData.config?.hiveServer2?.jarFile || '',
-            hs2Disconnected: connectionData.config?.hiveServer2?.disconnected || false,
             hs2ConnectionProperties: connectionData.config?.hiveServer2?.connectionProperties || {},
             metastoreDirectEnabled: Boolean(connectionData.config?.metastoreDirect?.uri),
             metastoreDirectUri: connectionData.config?.metastoreDirect?.uri || '',
@@ -247,10 +241,7 @@ const NewConnectionWizard: React.FC = () => {
             user: formData.hs2Username,
             password: formData.hs2Password,
             ...formData.hs2ConnectionProperties
-          },
-          driverClassName: formData.hs2DriverClassName,
-          jarFile: formData.hs2JarFile,
-          disconnected: formData.hs2Disconnected
+          }
         },
         metastoreDirect: formData.metastoreDirectEnabled ? {
           uri: formData.metastoreDirectUri,
@@ -397,6 +388,7 @@ const NewConnectionWizard: React.FC = () => {
             isLastStep={currentStep === steps.length - 1}
             saving={saving}
             saveSuccess={saveSuccess}
+            isEditMode={isEditMode && !isCopyMode}
           />
         </div>
       </div>

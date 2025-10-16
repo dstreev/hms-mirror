@@ -62,6 +62,14 @@
             <outputDirectory>hms-mirror-install-${project.version}/lib</outputDirectory>
             <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>
+        <!-- Include the extra version from the copied directory -->
+        <fileSet>
+            <directory>${project.build.directory}/drivers</directory>
+            <outputDirectory>hms-mirror-install-${project.version}/drivers</outputDirectory>
+            <includes>
+                <include>**/*.jar</include>
+            </includes>
+        </fileSet>
     </fileSets>
 
     <dependencySets>
@@ -80,6 +88,7 @@
                 <include>org.postgresql:postgresql</include>
                 <!-- Oracle JDBC Driver -->
                 <include>com.oracle.database.jdbc:ojdbc11</include>
+<!--                <include>org.apache.hive:hive-jdbc:1.2.1000.2.6.5.0-292</include>-->
             </includes>
         </dependencySet>
     </dependencySets>

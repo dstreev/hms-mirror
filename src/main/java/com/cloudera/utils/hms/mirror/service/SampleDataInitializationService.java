@@ -55,7 +55,6 @@ public class SampleDataInitializationService {
         try {
             createSampleConnections();
             createSampleDatasets();
-            createSampleConfigurations();
             log.info("Sample data initialization completed successfully");
         } catch (Exception e) {
             log.error("Failed to initialize sample data", e);
@@ -64,77 +63,138 @@ public class SampleDataInitializationService {
 
     private void createSampleConnections() {
         log.info("Creating 4 demo connections");
-        
+
         ConnectionDto[] connectionDtos = {
-            ConnectionDto.builder()
-                .name("CDP-Dev-Cluster")
-                .description("Development CDP cluster for testing and prototyping")
-                .environment(ConnectionDto.Environment.DEV)
-                .platformType("CDP")
-                .hcfsNamespace("hdfs://dev-cluster")
-                .hs2Uri("jdbc:hive2://dev-hiveserver:10000/default")
-                .hs2Username("hive")
-                .hs2DriverClassName("org.apache.hive.jdbc.HiveDriver")
-                .metastoreDirectEnabled(true)
-                .metastoreDirectUri("thrift://dev-metastore:9083")
-                .metastoreDirectType("MYSQL")
-                .partitionDiscoveryAuto(true)
-                .enableAutoTableStats(true)
-                .created(LocalDateTime.now())
-                .modified(LocalDateTime.now())
-                .isDefault(true)
-                .build(),
-                
-            ConnectionDto.builder()
-                .name("CDP-Prod-Cluster")
-                .description("Production CDP cluster for live workloads")
-                .environment(ConnectionDto.Environment.PROD)
-                .platformType("CDP")
-                .hcfsNamespace("hdfs://prod-cluster")
-                .hs2Uri("jdbc:hive2://prod-hiveserver:10000/default")
-                .hs2Username("hive")
-                .hs2DriverClassName("org.apache.hive.jdbc.HiveDriver")
-                .metastoreDirectEnabled(true)
-                .metastoreDirectUri("thrift://prod-metastore:9083")
-                .metastoreDirectType("POSTGRESQL")
-                .partitionDiscoveryAuto(true)
-                .enableAutoTableStats(true)
-                .enableAutoColumnStats(true)
-                .created(LocalDateTime.now())
-                .modified(LocalDateTime.now())
-                .build(),
-                
-            ConnectionDto.builder()
-                .name("Legacy-HDP-Cluster")
-                .description("Legacy HDP cluster for migration source")
-                .environment(ConnectionDto.Environment.PROD)
-                .platformType("HDP")
-                .hcfsNamespace("hdfs://legacy-cluster")
-                .hs2Uri("jdbc:hive2://legacy-hiveserver:10000/default")
-                .hs2Username("hive")
-                .hs2DriverClassName("org.apache.hive.jdbc.HiveDriver")
-                .metastoreDirectEnabled(false)
-                .partitionDiscoveryAuto(false)
-                .created(LocalDateTime.now())
-                .modified(LocalDateTime.now())
-                .build(),
-                
-            ConnectionDto.builder()
-                .name("Test-Environment")
-                .description("Testing environment for validation and QA")
-                .environment(ConnectionDto.Environment.TEST)
-                .platformType("CDP")
-                .hcfsNamespace("hdfs://test-cluster")
-                .hs2Uri("jdbc:hive2://test-hiveserver:10000/default")
-                .hs2Username("hive")
-                .hs2DriverClassName("org.apache.hive.jdbc.HiveDriver")
-                .metastoreDirectEnabled(true)
-                .metastoreDirectUri("thrift://test-metastore:9083")
-                .metastoreDirectType("MYSQL")
-                .partitionDiscoveryAuto(true)
-                .created(LocalDateTime.now())
-                .modified(LocalDateTime.now())
-                .build()
+                // 1. Legacy HDP2 Production Cluster
+                ConnectionDto.builder()
+                        .name("DEMO HDP2-Production")
+                        .description("Legacy HDP 2.6.5 production cluster - source for migration")
+                        .environment(ConnectionDto.Environment.PROD)
+                        .platformType("HDP2")
+                        .hcfsNamespace("hdfs://hdp2-prod-nn:8020")
+                        .hs2Uri("jdbc:hive2://hdp2-prod-hs2:10000/default")
+                        .hs2Username("hive")
+                        .hs2Password("")
+                        .hs2ConnectionProperties(Map.of(
+                                "transportMode", "binary",
+                                "ssl", "false"
+                        ))
+                        .metastoreDirectEnabled(true)
+                        .metastoreDirectUri("jdbc:mysql://hdp2-mysql:3306/hive")
+                        .metastoreDirectType("MYSQL")
+                        .metastoreDirectUsername("hive")
+                        .metastoreDirectPassword("hive_password")
+                        .metastoreDirectMinConnections(2)
+                        .metastoreDirectMaxConnections(10)
+                        .partitionDiscoveryAuto(true)
+                        .partitionDiscoveryInitMSCK(false)
+                        .partitionBucketLimit(100)
+                        .createIfNotExists(false)
+                        .enableAutoTableStats(false)
+                        .enableAutoColumnStats(false)
+                        .created(LocalDateTime.now())
+                        .isDefault(false)
+                        .build(),
+
+                // 2. CDH6 Production Cluster
+                ConnectionDto.builder()
+                        .name("DEMO CDH6-Production")
+                        .description("CDH 6.3.4 production cluster with Kerberos")
+                        .environment(ConnectionDto.Environment.PROD)
+                        .platformType("CDH6")
+                        .hcfsNamespace("hdfs://cdh6-prod-nameservice")
+                        .hs2Uri("jdbc:hive2://cdh6-prod-hs2:10000/default;principal=hive/_HOST@REALM.COM")
+                        .hs2Username("")
+                        .hs2Password("")
+                        .hs2ConnectionProperties(Map.of(
+                                "transportMode", "http",
+                                "httpPath", "cliservice",
+                                "ssl", "true",
+                                "sslTrustStore", "/opt/cloudera/security/jks/truststore.jks"
+                        ))
+                        .metastoreDirectEnabled(true)
+                        .metastoreDirectUri("jdbc:postgresql://cdh6-postgres:5432/metastore")
+                        .metastoreDirectType("POSTGRES")
+                        .metastoreDirectUsername("hive")
+                        .metastoreDirectPassword("hive_password")
+                        .metastoreDirectMinConnections(3)
+                        .metastoreDirectMaxConnections(15)
+                        .partitionDiscoveryAuto(true)
+                        .partitionDiscoveryInitMSCK(true)
+                        .partitionBucketLimit(200)
+                        .createIfNotExists(true)
+                        .enableAutoTableStats(true)
+                        .enableAutoColumnStats(false)
+                        .created(LocalDateTime.now())
+                        .isDefault(false)
+                        .build(),
+
+                // 3. CDP Private Cloud Base 7.1.9 (Default)
+                ConnectionDto.builder()
+                        .name("DEMO CDP-Base-7.1.9")
+                        .description("CDP Private Cloud Base 7.1.9 target cluster - default connection")
+                        .environment(ConnectionDto.Environment.PROD)
+                        .platformType("CDP7_1_9_SP1")
+                        .hcfsNamespace("hdfs://cdp7-nameservice")
+                        .hs2Uri("jdbc:hive2://cdp7-hs2-lb:10000/default;principal=hive/_HOST@REALM.COM;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2")
+                        .hs2Username("")
+                        .hs2Password("")
+                        .hs2ConnectionProperties(Map.of(
+                                "transportMode", "http",
+                                "httpPath", "cliservice",
+                                "ssl", "true",
+                                "sslTrustStore", "/opt/cloudera/security/jks/truststore.jks",
+                                "retries", "3"
+                        ))
+                        .metastoreDirectEnabled(true)
+                        .metastoreDirectUri("jdbc:postgresql://cdp7-rds.aws.com:5432/hive_metastore")
+                        .metastoreDirectType("POSTGRES")
+                        .metastoreDirectUsername("hive_admin")
+                        .metastoreDirectPassword("secure_password")
+                        .metastoreDirectMinConnections(5)
+                        .metastoreDirectMaxConnections(20)
+                        .partitionDiscoveryAuto(true)
+                        .partitionDiscoveryInitMSCK(true)
+                        .partitionBucketLimit(500)
+                        .createIfNotExists(true)
+                        .enableAutoTableStats(true)
+                        .enableAutoColumnStats(true)
+                        .created(LocalDateTime.now())
+                        .isDefault(true)
+                        .build(),
+
+                // 4. CDP Public Cloud Development
+                ConnectionDto.builder()
+                        .name("CDP-DataHub-Dev")
+                        .description("CDP Public Cloud DataHub development environment with S3")
+                        .environment(ConnectionDto.Environment.DEV)
+                        .platformType("CDP7_2")
+                        .hcfsNamespace("s3a://cdp-dev-bucket")
+                        .hs2Uri("jdbc:hive2://dev-gateway.cloudera.site:443/default;transportMode=http;httpPath=cdp-proxy-api/hive;ssl=true")
+                        .hs2Username("dev_user")
+                        .hs2Password("dev_token")
+                        .hs2ConnectionProperties(Map.of(
+                                "transportMode", "http",
+                                "httpPath", "cdp-proxy-api/hive",
+                                "ssl", "true",
+                                "retries", "5"
+                        ))
+                        .metastoreDirectEnabled(false)
+                        .metastoreDirectUri(null)
+                        .metastoreDirectType(null)
+                        .metastoreDirectUsername(null)
+                        .metastoreDirectPassword(null)
+                        .metastoreDirectMinConnections(2)
+                        .metastoreDirectMaxConnections(10)
+                        .partitionDiscoveryAuto(true)
+                        .partitionDiscoveryInitMSCK(false)
+                        .partitionBucketLimit(100)
+                        .createIfNotExists(true)
+                        .enableAutoTableStats(false)
+                        .enableAutoColumnStats(false)
+                        .created(LocalDateTime.now())
+                        .isDefault(false)
+                        .build()
         };
 
         for (ConnectionDto connectionDto : connectionDtos) {
@@ -155,22 +215,22 @@ public class SampleDataInitializationService {
         log.info("Creating 6 demo datasets");
         
         DatasetDto[] datasets = {
-            createDataset("Analytics-Warehouse", "Production analytics warehouse tables",
+            createDataset("DEMO Analytics-Warehouse", "Production analytics warehouse tables",
                 new String[]{"analytics_db"}, new String[]{"fact_sales", "fact_orders", "dim_customer", "dim_product"}),
                 
-            createDataset("Financial-Reports", "Financial reporting databases",
+            createDataset("DEMO Financial-Reports", "Financial reporting databases",
                 new String[]{"finance_db", "reporting_db"}, new String[]{"monthly_reports", "quarterly_reports"}),
                 
-            createDataset("Customer-360", "Customer 360 view databases with filters",
+            createDataset("DEMO Customer-360", "Customer 360 view databases with filters",
                 new String[]{"customer_db"}, null, "customer_.*", ".*_temp"),
                 
-            createDataset("Operational-Data", "Operational data sources",
+            createDataset("DEMO Operational-Data", "Operational data sources",
                 new String[]{"operations_db", "logs_db"}, new String[]{"system_logs", "audit_logs", "metrics"}),
                 
-            createDataset("Marketing-Analytics", "Marketing and campaign data",
+            createDataset("DEMO Marketing-Analytics", "Marketing and campaign data",
                 new String[]{"marketing_db"}, null, "campaign_.*|email_.*", ".*_staging"),
                 
-            createDataset("Data-Lake-Raw", "Raw data lake ingestion",
+            createDataset("DEMO Data-Lake-Raw", "Raw data lake ingestion",
                 new String[]{"raw_db", "staging_db"}, null, ".*", ".*_backup|.*_archive")
         };
 
@@ -188,17 +248,12 @@ public class SampleDataInitializationService {
         }
     }
 
-    private void createSampleConfigurations() {
+    private void createSystemConfigurations() {
         log.info("Creating 5 demo configurations");
         
         try {
             // Create 5 sample configurations using ConfigLiteDto
             ConfigLiteDto[] configurations = {
-                createSchemaOnlyConfiguration(),
-                createHybridConfiguration(),
-                createSqlConfiguration(),
-                createLinkedConfiguration(),
-                createStorageMigrationConfiguration()
             };
 
             for (ConfigLiteDto config : configurations) {
@@ -248,43 +303,4 @@ public class SampleDataInitializationService {
         return dataset;
     }
 
-    private ConfigLiteDto createSchemaOnlyConfiguration() {
-        ConfigLiteDto config = new ConfigLiteDto("Schema-Only-Migration");
-        config.setComment("Schema Only Migration Configuration - metadata only transfer");
-        config.setMigrateNonNative(true);
-
-        return config;
-    }
-
-    private ConfigLiteDto createHybridConfiguration() {
-        ConfigLiteDto config = new ConfigLiteDto("Hybrid-Data-Migration");
-        config.setComment("Hybrid Data Migration Configuration - combines schema and limited data movement");
-        config.setMigrateNonNative(true);
-
-        return config;
-    }
-
-    private ConfigLiteDto createSqlConfiguration() {
-        ConfigLiteDto config = new ConfigLiteDto("SQL-Export-Import");
-        config.setComment("SQL Export Import Configuration - uses SQL-based data transfer");
-        config.setMigrateNonNative(true);
-        
-        return config;
-    }
-
-    private ConfigLiteDto createLinkedConfiguration() {
-        ConfigLiteDto config = new ConfigLiteDto("Linked-Tables-Setup");
-        config.setComment("Linked Tables Configuration - creates external tables pointing to original data");
-        config.setMigrateNonNative(false);
-
-        return config;
-    }
-
-    private ConfigLiteDto createStorageMigrationConfiguration() {
-        ConfigLiteDto config = new ConfigLiteDto("Storage-Migration-Plan");
-        config.setComment("Storage Migration Configuration - in-place storage format migrations");
-        config.setMigrateNonNative(true);
-
-        return config;
-    }
 }

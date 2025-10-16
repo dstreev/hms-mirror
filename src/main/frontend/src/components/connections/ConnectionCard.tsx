@@ -91,6 +91,10 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
 
               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                 <div className="flex items-center">
+                  <span className="mr-1">🖥️</span>
+                  Platform: {connection.config.platformType || 'Not specified'}
+                </div>
+                <div className="flex items-center">
                   <span className="mr-1">📍</span>
                   Environment: {connection.environment || 'Not specified'}
                 </div>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { ConnectionFormData, ENVIRONMENT_OPTIONS, PLATFORM_TYPE_OPTIONS } from '../../../types/Connection';
+import React, { useEffect, useState } from 'react';
+import { ConnectionFormData, ENVIRONMENT_OPTIONS } from '../../../types/Connection';
 
 interface BasicInfoStepProps {
   formData: ConnectionFormData;
@@ -7,6 +7,7 @@ interface BasicInfoStepProps {
   onChange: (updates: Partial<ConnectionFormData>) => void;
   onNext: () => void;
   onBack: () => void;
+  isEditMode?: boolean;
 }
 
 const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
@@ -14,8 +15,35 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
   errors,
   onChange,
   onNext,
-  onBack
+  onBack,
+  isEditMode = false
 }) => {
+  const [platformTypes, setPlatformTypes] = useState<string[]>([]);
+  const [loadingPlatformTypes, setLoadingPlatformTypes] = useState(true);
+
+  useEffect(() => {
+    // Fetch platform types from the API
+    const fetchPlatformTypes = async () => {
+      try {
+        const response = await fetch('/hms-mirror/api/v1/app/platform-types');
+        if (response.ok) {
+          const types = await response.json();
+          setPlatformTypes(types);
+        } else {
+          console.error('Failed to fetch platform types:', response.statusText);
+          // Fallback to empty array if API fails
+          setPlatformTypes([]);
+        }
+      } catch (error) {
+        console.error('Error fetching platform types:', error);
+        setPlatformTypes([]);
+      } finally {
+        setLoadingPlatformTypes(false);
+      }
+    };
+
+    fetchPlatformTypes();
+  }, []);
   return (
     <div className="space-y-6">
       {/* Connection Name */}
@@ -30,15 +58,17 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
           onChange={(e) => onChange({ name: e.target.value })}
           className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
             errors.name ? 'border-red-300' : 'border-gray-300'
-          }`}
+          } ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           placeholder="e.g., Production CDP Cluster"
           required
+          readOnly={isEditMode}
+          disabled={isEditMode}
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-600">{errors.name}</p>
         )}
         <p className="mt-1 text-xs text-gray-500">
-          ⚠️ Must be unique across all connections
+          {isEditMode ? '🔒 Connection name cannot be changed after creation' : '⚠️ Must be unique across all connections'}
         </p>
       </div>
 
@@ -70,11 +100,14 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             errors.platformType ? 'border-red-300' : 'border-gray-300'
           }`}
           required
+          disabled={loadingPlatformTypes}
         >
-          <option value="">Select platform type...</option>
-          {PLATFORM_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          <option value="">
+            {loadingPlatformTypes ? 'Loading platform types...' : 'Select platform type...'}
+          </option>
+          {platformTypes.map((platformType) => (
+            <option key={platformType} value={platformType}>
+              {platformType}
             </option>
           ))}
         </select>

@@ -93,7 +93,10 @@ mkdir -p $BASE_DIR/bin
 mkdir -p $BASE_DIR/lib
 
 mkdir -p $HOME/.hms-mirror/cfg
+# Host jars that will be added to application classpath
 mkdir -p $HOME/.hms-mirror/aux_libs
+# Host jdbc drivers for Hive that will be loaded dynamically
+mkdir -p $HOME/.hms-mirror/drivers
 
 # Cleanup previous installation
 rm -f $BASE_DIR/lib/*.jar
@@ -105,6 +108,12 @@ cp -f hms-mirror-cli $BASE_DIR/bin
 for jar in `ls lib/*.jar`; do
     cp -f $jar $BASE_DIR/lib
 done
+
+for jdbc in `ls aux_libs/*.jar`; do
+    cp -f $jdbc $BASE_DIR/aux_libs
+done
+
+cp -r drivers/* $BASE_DIR/drivers
 
 chmod -R +r $BASE_DIR
 chmod +x $BASE_DIR/bin/hms-mirror

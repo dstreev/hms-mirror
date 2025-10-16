@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CogIcon,
@@ -11,6 +11,22 @@ import {
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    // Fetch application version from the API
+    fetch('/hms-mirror/api/v1/app/version')
+      .then(response => response.json())
+      .then(data => {
+        if (data.version) {
+          setVersion(data.version);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to fetch application version:', error);
+        setVersion('4.0.0.0'); // Fallback to default version
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -21,7 +37,7 @@ const HomePage: React.FC = () => {
             Welcome to HMS-Mirror
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            A powerful Hadoop Hive Metastore migration utility that helps transfer data and metadata
+            A powerful Hive Metastore migration utility that helps transfer data and metadata
             between different Hive environments with ease and reliability.
           </p>
         </div>
@@ -35,13 +51,9 @@ const HomePage: React.FC = () => {
           <div className="text-gray-700 space-y-4">
             <p className="text-lg">
               HMS-Mirror is a specialized tool designed to simplify and automate the process of migrating
-              Hive metastore data between different Hadoop clusters. Whether you're upgrading to a new
+              Hive metastore data between different compute clusters. Whether you're upgrading to a new
               platform, consolidating environments, or migrating to the cloud, HMS-Mirror provides the
               flexibility and control you need.
-            </p>
-            <p className="text-lg">
-              Built with Java 17+ and Spring Boot, HMS-Mirror offers both command-line and web interfaces,
-              making it accessible for different use cases and user preferences.
             </p>
           </div>
         </div>
@@ -137,7 +149,7 @@ const HomePage: React.FC = () => {
                 2
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Define Datasets (Optional)</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Define Datasets</h3>
                 <p className="text-gray-700">
                   Create dataset definitions to organize your databases and tables. Use filters to include/exclude
                   specific tables based on patterns, size, or partition counts.
@@ -208,7 +220,7 @@ const HomePage: React.FC = () => {
 
         {/* Version Info */}
         <div className="mt-16 text-center text-sm text-gray-500">
-          <p>HMS-Mirror v4.0.0.0 - Built with Java 17+ and Spring Boot</p>
+          <p>HMS-Mirror v{version || 'unknown'} - Built with Java 17+ and Spring Boot</p>
           <p className="mt-2">
             For documentation and support, visit the{' '}
             <a

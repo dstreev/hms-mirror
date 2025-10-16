@@ -56,14 +56,13 @@ public class ConnectionController {
         config.put("createIfNotExists", conn.isCreateIfNotExists());
         config.put("enableAutoTableStats", conn.isEnableAutoTableStats());
         config.put("enableAutoColumnStats", conn.isEnableAutoColumnStats());
-        config.put("connectionPoolLib", conn.getConnectionPoolLib() != null ? conn.getConnectionPoolLib() : "");
-        
+
         // Add HiveServer2 config
         Map<String, Object> hiveServer2 = new HashMap<>();
         hiveServer2.put("uri", conn.getHs2Uri() != null ? conn.getHs2Uri() : "");
-        hiveServer2.put("driverClassName", conn.getHs2DriverClassName() != null ? conn.getHs2DriverClassName() : "");
-        hiveServer2.put("jarFile", conn.getHs2JarFile() != null ? conn.getHs2JarFile() : "");
-        hiveServer2.put("disconnected", conn.isHs2Disconnected());
+//        hiveServer2.put("driverClassName", conn.getHs2DriverClassName() != null ? conn.getHs2DriverClassName() : "");
+//        hiveServer2.put("jarFile", conn.getHs2JarFile() != null ? conn.getHs2JarFile() : "");
+//        hiveServer2.put("disconnected", conn.isHs2Disconnected());
         // Always include connectionProperties
         Map<String, Object> hs2ConnectionProps = new HashMap<>();
         if (conn.getHs2ConnectionProperties() != null) {
@@ -178,14 +177,13 @@ public class ConnectionController {
                         config.put("createIfNotExists", conn.isCreateIfNotExists());
                         config.put("enableAutoTableStats", conn.isEnableAutoTableStats());
                         config.put("enableAutoColumnStats", conn.isEnableAutoColumnStats());
-                        config.put("connectionPoolLib", conn.getConnectionPoolLib() != null ? conn.getConnectionPoolLib() : "");
-                        
+
                         // Add HiveServer2 config
                         Map<String, Object> hiveServer2 = new HashMap<>();
                         hiveServer2.put("uri", conn.getHs2Uri() != null ? conn.getHs2Uri() : "");
-                        hiveServer2.put("driverClassName", conn.getHs2DriverClassName() != null ? conn.getHs2DriverClassName() : "");
-                        hiveServer2.put("jarFile", conn.getHs2JarFile() != null ? conn.getHs2JarFile() : "");
-                        hiveServer2.put("disconnected", conn.isHs2Disconnected());
+//                        hiveServer2.put("driverClassName", conn.getHs2DriverClassName() != null ? conn.getHs2DriverClassName() : "");
+//                        hiveServer2.put("jarFile", conn.getHs2JarFile() != null ? conn.getHs2JarFile() : "");
+//                        hiveServer2.put("disconnected", conn.isHs2Disconnected());
                         // Always include connectionProperties
                         Map<String, Object> hs2ConnectionProps = new HashMap<>();
                         if (conn.getHs2ConnectionProperties() != null) {
