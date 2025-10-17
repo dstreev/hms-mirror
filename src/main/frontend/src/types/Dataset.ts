@@ -9,6 +9,9 @@ export interface DatabaseSpec {
   tables: string[];
   filter?: TableFilter;
   warehouse: Warehouse;
+  userGlobalLocationMap?: Record<string, Record<string, string>>; // source path -> { TableType -> target location }
+  dbPrefix?: string;
+  dbRename?: string;
 }
 
 export interface TableFilter {

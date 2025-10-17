@@ -52,7 +52,10 @@ public class JobDto {
 //    @Schema(description = "Flag to indicate if this job should reset the right table")
 //    private boolean resetRight = Boolean.FALSE;
 
-
+    /*
+    When True, this will set the 'readOnly' and 'noPurge' legacy flags where appropriate.
+    TODO: WIP
+     */
     @Schema(description = "Flag to indicate if this job is for disaster recovery purposes")
     private Boolean disasterRecovery = Boolean.FALSE;
 

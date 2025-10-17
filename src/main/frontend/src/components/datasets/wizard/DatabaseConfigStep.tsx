@@ -307,6 +307,22 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                   {/* Warehouse Configuration */}
                   <div className="border-t border-gray-200 pt-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Warehouse Configuration</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-4 w-4 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs text-blue-800 font-medium">Object Storage Migration</p>
+                          <p className="text-xs text-blue-700 mt-1">
+                            If migrating to object storage systems like <strong>Ozone</strong> or <strong>S3</strong>,
+                            define specific Managed and External directories that map to your usage strategies for these storage systems.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -335,6 +351,192 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           placeholder="/warehouse/external"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location Mappings Configuration (Advanced/Optional) */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700">
+                          Location Mappings <span className="text-xs text-gray-500 font-normal">(Optional - Advanced)</span>
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1">
+                          User set of mappings that get applied to location translations when converting storage location during migrations.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMap = { ...database.userGlobalLocationMap };
+                          let newKey = '';
+                          let counter = 1;
+                          // Generate unique key
+                          while (newMap[newKey] || newKey === '') {
+                            newKey = `/warehouse/tablespace/external/hive/path${counter}`;
+                            counter++;
+                          }
+                          newMap[newKey] = { EXTERNAL_TABLE: '', MANAGED_TABLE: '' };
+                          updateDatabase(dbIndex, { userGlobalLocationMap: newMap });
+                        }}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                      >
+                        + Add Source Path Mapping
+                      </button>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs text-amber-800 font-medium">Advanced Configuration</p>
+                          <p className="text-xs text-amber-700 mt-1">
+                            These mappings are applied <strong>before</strong> system-level translations and should only be used with precision and understanding.
+                            They override default location translation behavior during migration.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Source Path Mappings */}
+                    {database.userGlobalLocationMap && Object.keys(database.userGlobalLocationMap).length > 0 ? (
+                      <div className="space-y-4">
+                        {Object.entries(database.userGlobalLocationMap).map(([sourcePath, tableTypeMappings]) => (
+                          <div key={sourcePath} className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1 mr-2">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Source Path
+                                </label>
+                                <input
+                                  type="text"
+                                  value={sourcePath}
+                                  onChange={(e) => {
+                                    const newMap = { ...database.userGlobalLocationMap };
+                                    const mappings = newMap[sourcePath];
+                                    delete newMap[sourcePath];
+                                    newMap[e.target.value] = mappings;
+                                    updateDatabase(dbIndex, { userGlobalLocationMap: newMap });
+                                  }}
+                                  className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
+                                  placeholder="/warehouse/tablespace/external/hive"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newMap = { ...database.userGlobalLocationMap };
+                                  delete newMap[sourcePath];
+                                  updateDatabase(dbIndex, {
+                                    userGlobalLocationMap: Object.keys(newMap).length > 0 ? newMap : undefined
+                                  });
+                                }}
+                                className="p-1 text-red-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-md mt-5"
+                                title="Remove mapping"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  External Table Location
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tableTypeMappings?.['EXTERNAL_TABLE'] || ''}
+                                  onChange={(e) => {
+                                    const newMap = { ...database.userGlobalLocationMap };
+                                    newMap[sourcePath] = {
+                                      ...newMap[sourcePath],
+                                      EXTERNAL_TABLE: e.target.value
+                                    };
+                                    updateDatabase(dbIndex, { userGlobalLocationMap: newMap });
+                                  }}
+                                  className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
+                                  placeholder="/warehouse/tablespace/external/hive"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Managed Table Location
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tableTypeMappings?.['MANAGED_TABLE'] || ''}
+                                  onChange={(e) => {
+                                    const newMap = { ...database.userGlobalLocationMap };
+                                    newMap[sourcePath] = {
+                                      ...newMap[sourcePath],
+                                      MANAGED_TABLE: e.target.value
+                                    };
+                                    updateDatabase(dbIndex, { userGlobalLocationMap: newMap });
+                                  }}
+                                  className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
+                                  placeholder="/warehouse/tablespace/managed/hive"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <p className="text-xs text-gray-500">No location mappings configured</p>
+                        <p className="text-xs text-gray-400 mt-1">Click "Add Source Path Mapping" to create your first mapping</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Database Rename Options (Testing Only) */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-4 w-4 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs text-yellow-800 font-medium">Testing Only - Not Recommended for Production</p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            These options modify database naming during migration. Use only for testing purposes.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Database Naming <span className="text-xs text-gray-500 font-normal">(Optional - Testing)</span></h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Database Prefix
+                        </label>
+                        <input
+                          type="text"
+                          value={database.dbPrefix || ''}
+                          onChange={(e) => updateDatabase(dbIndex, { dbPrefix: e.target.value || undefined })}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          placeholder="test_"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">Prefix to append to database name during migration</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Database Rename
+                        </label>
+                        <input
+                          type="text"
+                          value={database.dbRename || ''}
+                          onChange={(e) => updateDatabase(dbIndex, { dbRename: e.target.value || undefined })}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          placeholder="new_database_name"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">Completely rename the database during migration</p>
                       </div>
                     </div>
                   </div>
@@ -372,6 +574,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                 </ul>
               </div>
               <p className="mt-2"><strong>Warehouse paths:</strong> Configure managed and external directory locations for each database.</p>
+              <p className="mt-2"><strong>Location mappings:</strong> Advanced feature to override default location translations during migration. Use with caution.</p>
               <p className="mt-1">Click the settings icon next to each database to configure these options.</p>
             </div>
           </div>

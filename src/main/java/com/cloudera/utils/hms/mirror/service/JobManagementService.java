@@ -17,7 +17,19 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hive.config.DBStore;
+import com.cloudera.utils.hms.mirror.domain.core.Cluster;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.PartitionDiscovery;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -50,13 +62,22 @@ public class JobManagementService {
     private final ColumnFamilyHandle jobsColumnFamily;
     private final ObjectMapper yamlMapper;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private final ConnectionService connectionService;
+    private final DatasetManagementService datasetManagementService;
+    private final ConfigurationManagementService configurationManagementService;
 
     @Autowired
     public JobManagementService(RocksDB rocksDB,
-                               @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily) {
+                               @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily,
+                               ConnectionService connectionService,
+                               DatasetManagementService datasetManagementService,
+                               ConfigurationManagementService configurationManagementService) {
         this.rocksDB = rocksDB;
         this.jobsColumnFamily = jobsColumnFamily;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
+        this.connectionService = connectionService;
+        this.datasetManagementService = datasetManagementService;
+        this.configurationManagementService = configurationManagementService;
     }
 
     /**
@@ -339,12 +360,263 @@ public class JobManagementService {
             }
             
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error validating job", e);
             result.put("status", "error");
             result.put("message", "Validation failed: " + e.getMessage());
             return result;
+        }
+    }
+
+    /**
+     * Creates a ConversionRequest from a DatasetDto by mapping databases to their tables.
+     *
+     * @param datasetDto The dataset DTO containing database and table specifications
+     * @return ConversionRequest with database-to-tables mapping
+     */
+    public ConversionRequest createConversionRequestFromDataset(DatasetDto datasetDto) {
+        log.debug("Creating ConversionRequest from dataset: {}", datasetDto.getName());
+        ConversionRequest conversionRequest = new ConversionRequest();
+
+        // Iterate through each database specification in the dataset
+        for (DatasetDto.DatabaseSpec dbSpec : datasetDto.getDatabases()) {
+            String databaseName = dbSpec.getDatabaseName();
+            List<String> tables = new ArrayList<>();
+
+            // If tables are explicitly specified, use them
+            if (dbSpec.getTables() != null && !dbSpec.getTables().isEmpty()) {
+                tables.addAll(dbSpec.getTables());
+            }
+            // Note: If using filters (includePattern, excludePattern), those would be
+            // applied during actual table discovery, not during ConversionRequest creation
+
+            conversionRequest.getDatabases().put(databaseName, tables);
+        }
+
+        return conversionRequest;
+    }
+
+    /**
+     * Converts a ConnectionDto to a Cluster object for use in HmsMirrorConfig.
+     *
+     * @param connectionDto The connection DTO to convert
+     * @param environment The environment (LEFT or RIGHT) for this cluster
+     * @return Cluster object configured from the connection DTO
+     */
+    private Cluster convertConnectionDtoToCluster(ConnectionDto connectionDto, Environment environment) {
+        log.debug("Converting ConnectionDto {} to Cluster for environment {}",
+                connectionDto.getName(), environment);
+
+        Cluster cluster = new Cluster();
+        cluster.setEnvironment(environment);
+
+        // Set platform type
+        if (connectionDto.getPlatformType() != null) {
+            cluster.setPlatformType(PlatformType.valueOf(connectionDto.getPlatformType()));
+        }
+
+        // Set HCFS namespace
+        cluster.setHcfsNamespace(connectionDto.getHcfsNamespace());
+
+        // Configure HiveServer2
+        HiveServer2Config hs2Config = new HiveServer2Config();
+        hs2Config.setUri(connectionDto.getHs2Uri());
+
+        // Set connection properties
+        if (connectionDto.getHs2ConnectionProperties() != null) {
+            Properties props = new Properties();
+            props.putAll(connectionDto.getHs2ConnectionProperties());
+            // Add username and password if provided
+            if (connectionDto.getHs2Username() != null) {
+                props.setProperty("user", connectionDto.getHs2Username());
+            }
+            if (connectionDto.getHs2Password() != null) {
+                props.setProperty("password", connectionDto.getHs2Password());
+            }
+            hs2Config.setConnectionProperties(props);
+        }
+
+        cluster.setHiveServer2(hs2Config);
+
+        // Configure Metastore Direct if enabled
+        if (connectionDto.isMetastoreDirectEnabled() &&
+            connectionDto.getMetastoreDirectUri() != null) {
+            DBStore metastoreDirect = new DBStore();
+            metastoreDirect.setUri(connectionDto.getMetastoreDirectUri());
+
+            // Convert string type to DBStore.DB_TYPE enum
+            if (connectionDto.getMetastoreDirectType() != null) {
+                try {
+                    metastoreDirect.setType(DBStore.DB_TYPE.valueOf(connectionDto.getMetastoreDirectType()));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid metastore direct type: {}. Using default.", connectionDto.getMetastoreDirectType());
+                }
+            }
+
+            // Set connection properties for metastore
+            Properties metastoreProps = new Properties();
+            if (connectionDto.getMetastoreDirectUsername() != null) {
+                metastoreProps.setProperty("user", connectionDto.getMetastoreDirectUsername());
+            }
+            if (connectionDto.getMetastoreDirectPassword() != null) {
+                metastoreProps.setProperty("password", connectionDto.getMetastoreDirectPassword());
+            }
+            metastoreDirect.setConnectionProperties(metastoreProps);
+
+            // Note: Connection pool min/max settings are not directly set on DBStore
+            // They are managed by the connection pooling infrastructure
+
+            cluster.setMetastoreDirect(metastoreDirect);
+        }
+
+        // Configure partition discovery
+        PartitionDiscovery partitionDiscovery = new PartitionDiscovery();
+        partitionDiscovery.setAuto(connectionDto.isPartitionDiscoveryAuto());
+        partitionDiscovery.setInitMSCK(connectionDto.isPartitionDiscoveryInitMSCK());
+        // Note: partitionBucketLimit is not part of PartitionDiscovery - it's stored in ConnectionDto only
+        cluster.setPartitionDiscovery(partitionDiscovery);
+
+        // Set additional cluster settings
+        cluster.setCreateIfNotExists(connectionDto.isCreateIfNotExists());
+        cluster.setEnableAutoTableStats(connectionDto.isEnableAutoTableStats());
+        cluster.setEnableAutoColumnStats(connectionDto.isEnableAutoColumnStats());
+
+        return cluster;
+    }
+
+    /**
+     * Builds an HmsMirrorConfig from a JobDto and its referenced DTOs.
+     * This method fetches the referenced connections, dataset, and configuration,
+     * then assembles them into a complete HmsMirrorConfig object.
+     *
+     * @param jobDto The job DTO containing references to connections, dataset, and configuration
+     * @return Map containing the build results with HmsMirrorConfig and ConversionRequest
+     */
+    public Map<String, Object> buildHmsMirrorConfigFromJob(JobDto jobDto) {
+        log.debug("Building HmsMirrorConfig from job: {}", jobDto.getName());
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            // Fetch referenced DTOs
+            ConnectionDto leftConnection = connectionService.getConnectionById(jobDto.getLeftConnectionReference()).orElse(null);
+            if (leftConnection == null) {
+                result.put("status", "ERROR");
+                result.put("message", "Left connection not found: " + jobDto.getLeftConnectionReference());
+                return result;
+            }
+
+            ConnectionDto rightConnection = connectionService.getConnectionById(jobDto.getRightConnectionReference()).orElse(null);
+            if (rightConnection == null) {
+                result.put("status", "ERROR");
+                result.put("message", "Right connection not found: " + jobDto.getRightConnectionReference());
+                return result;
+            }
+
+            Map<String, Object> datasetResult = datasetManagementService.loadDataset(jobDto.getDatasetReference());
+            if (!"SUCCESS".equals(datasetResult.get("status"))) {
+                result.put("status", "ERROR");
+                result.put("message", "Dataset not found: " + jobDto.getDatasetReference());
+                return result;
+            }
+            DatasetDto datasetDto = (DatasetDto) datasetResult.get("dataset");
+
+            Map<String, Object> configResult = configurationManagementService.loadConfiguration(jobDto.getConfigReference());
+            if (!"SUCCESS".equals(configResult.get("status"))) {
+                result.put("status", "ERROR");
+                result.put("message", "Configuration not found: " + jobDto.getConfigReference());
+                return result;
+            }
+            ConfigLiteDto configLiteDto = (ConfigLiteDto) configResult.get("configuration");
+
+            // Create ConversionRequest from dataset
+            ConversionRequest conversionRequest = createConversionRequestFromDataset(datasetDto);
+
+            // Build HmsMirrorConfig
+            HmsMirrorConfig config = new HmsMirrorConfig();
+
+            // Set clusters (LEFT and RIGHT)
+            Map<Environment, Cluster> clusters = new TreeMap<>();
+            clusters.put(Environment.LEFT, convertConnectionDtoToCluster(leftConnection, Environment.LEFT));
+            clusters.put(Environment.RIGHT, convertConnectionDtoToCluster(rightConnection, Environment.RIGHT));
+            config.setClusters(clusters);
+
+            // Set data strategy from job
+            if (jobDto.getStrategy() != null) {
+                config.setDataStrategy(jobDto.getStrategy());
+            }
+
+            // Set hybrid configuration from job
+            if (jobDto.getHybrid() != null) {
+                config.setHybrid(jobDto.getHybrid());
+            }
+
+            // Set job-level flags
+            config.setDatabaseOnly(jobDto.isDatabaseOnly());
+            config.setSync(jobDto.getSync() != null ? jobDto.getSync() : Boolean.FALSE);
+
+            // Apply ConfigLiteDto settings
+            config.setMigrateNonNative(configLiteDto.isMigrateNonNative());
+            config.setIcebergConversion(configLiteDto.getIcebergConversion());
+            config.setMigrateACID(configLiteDto.getMigrateACID());
+            config.setMigrateVIEW(configLiteDto.getMigrateVIEW());
+            config.setOptimization(configLiteDto.getOptimization());
+            config.setTransfer(configLiteDto.getTransfer());
+            config.setOwnershipTransfer(configLiteDto.getOwnershipTransfer());
+            config.setCopyAvroSchemaUrls(configLiteDto.isCopyAvroSchemaUrls());
+            config.setSaveWorkingTables(configLiteDto.isSaveWorkingTables());
+
+            // Populate databases set from ConversionRequest
+            config.setDatabases(new TreeSet<>(conversionRequest.getDatabases().keySet()));
+
+            // Determine connection pool type based on platform type
+            PlatformType platformType = clusters.get(Environment.RIGHT).getPlatformType();
+            if (platformType != null) {
+                ConnectionPoolType poolType = determineConnectionPoolType(platformType);
+                config.setConnectionPoolLib(poolType);
+            }
+
+            result.put("status", "SUCCESS");
+            result.put("hmsMirrorConfig", config);
+            result.put("conversionRequest", conversionRequest);
+            result.put("message", "HmsMirrorConfig built successfully");
+
+        } catch (Exception e) {
+            log.error("Error building HmsMirrorConfig from job {}", jobDto.getName(), e);
+            result.put("status", "ERROR");
+            result.put("message", "Failed to build HmsMirrorConfig: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * Determines the appropriate connection pool type based on platform type.
+     *
+     * @param platformType The platform type
+     * @return The recommended connection pool type
+     */
+    private ConnectionPoolType determineConnectionPoolType(PlatformType platformType) {
+        switch (platformType) {
+            case CDP7_0:
+            case CDP7_1:
+            case CDP7_1_9_SP1:
+            case CDP7_2:
+            case CDP7_3:
+                return ConnectionPoolType.HIKARICP;
+            case HDP2:
+            case HDP3:
+            case CDH5:
+            case CDH6:
+                return ConnectionPoolType.DBCP2;
+            case APACHE_HIVE1:
+            case APACHE_HIVE2:
+            case APACHE_HIVE3:
+            case APACHE_HIVE4:
+            case EMR:
+            case MAPR:
+            default:
+                return ConnectionPoolType.HYBRID;
         }
     }
 }

@@ -18,10 +18,13 @@
 package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.Map;
 
 /**
  * Lightweight DTO for HMS Mirror Configuration storage in RocksDB.
@@ -64,6 +67,12 @@ public class ConfigLiteDto {
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
 //    private boolean dumpTestData = Boolean.FALSE;
+
+    /**
+     * Force external location in table DDLs.
+     * If true, table create statements will explicitly set location rather than rely on the database directory.
+     */
+    private boolean forceExternalLocation = Boolean.FALSE;
 
     // Sub-configuration objects (preserved as they don't cause flattening issues)
     private IcebergConversion icebergConversion = new IcebergConversion();

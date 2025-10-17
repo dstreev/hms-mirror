@@ -17,7 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hms.mirror.domain.core.Filter;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +28,7 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Dataset DTO for HMS Mirror Dataset management.
@@ -44,7 +47,7 @@ public class DatasetDto {
     
     @Schema(description = "Optional description of the dataset", example = "Production analytics databases for migration")
     private String description;
-    
+
     @Schema(description = "List of databases included in this dataset")
     private List<DatabaseSpec> databases = new ArrayList<>();
     
@@ -65,7 +68,21 @@ public class DatasetDto {
         
         @Schema(description = "Database name", required = true, example = "analytics_db")
         private String databaseName;
-        
+
+        /**
+         * User-provided global location map for custom translations.
+         * Key: source path.
+         * Value: Map from TableType to target location.
+         */
+        @Schema(description = "User-provided global location map for custom translations")
+        private Map<String, Map<TableType, String>> userGlobalLocationMap = null;
+
+        @Schema(description = "Optional database prefix to use for the database name that will be appended during migration.")
+        private String dbPrefix = null;
+
+        @Schema(description = "Optional database rename to use when migrating the database.")
+        private String dbRename = null;
+
         @Schema(description = "Specific list of tables to include (if not using filters)")
         private List<String> tables = new ArrayList<>();
         

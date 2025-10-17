@@ -206,6 +206,7 @@ const DatasetWizard: React.FC = () => {
             formData={formData}
             errors={errors}
             updateFormData={updateFormData}
+            isEditMode={isEditMode && !isCopyMode}
           />
 
           {/* Navigation Buttons */}

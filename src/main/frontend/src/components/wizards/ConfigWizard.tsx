@@ -43,6 +43,9 @@ interface HmsMirrorConfig {
     shadowPrefix: string;
   };
 
+  // Force external location in table DDLs
+  forceExternalLocation: boolean;
+
   // Conversions (Optional)
   icebergConversion: {
     enable: boolean;
@@ -102,6 +105,7 @@ const ConfigWizard: React.FC = () => {
       transferPrefix: "mig_",
       shadowPrefix: "_shadow",
     },
+    forceExternalLocation: false,
     icebergConversion: {
       enable: false,
       fileTypeTranslation: "",
@@ -174,6 +178,9 @@ const ConfigWizard: React.FC = () => {
               transferPrefix: existingConfig.transfer?.transferPrefix || "mig_",
               shadowPrefix: existingConfig.transfer?.shadowPrefix || "_shadow",
             },
+
+            // Force external location setting
+            forceExternalLocation: existingConfig.forceExternalLocation || false,
 
             // Iceberg conversion settings
             icebergConversion: {
@@ -369,6 +376,9 @@ const ConfigWizard: React.FC = () => {
           transferPrefix: config.transfer?.transferPrefix || '',
           shadowPrefix: config.transfer?.shadowPrefix || '',
         },
+
+        // Force external location setting
+        forceExternalLocation: config.forceExternalLocation || false,
 
         // Map Iceberg conversion settings
         icebergConversion: {
@@ -795,7 +805,29 @@ const ConfigWizard: React.FC = () => {
             )}
             <p className="mt-1 text-xs text-gray-500">Managed table base path</p>
           </div>
-          
+
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
+            <div className="flex items-start">
+              <input
+                type="checkbox"
+                id="forceExternalLocation"
+                checked={config.forceExternalLocation}
+                onChange={(e) => updateConfig('forceExternalLocation', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+              />
+              <div className="ml-3">
+                <label htmlFor="forceExternalLocation" className="block text-sm font-medium text-gray-900">
+                  Force External Location
+                </label>
+                <p className="text-xs text-gray-700 mt-1">
+                  The default behaviour is to use the location established by the database. Enabling this feature
+                  will explicitly set the location as calculated through the migration for external tables.
+                  <strong className="text-amber-800"> Recommend not enabling this feature.</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { DatasetWizardStepProps } from '../../../types/Dataset';
 
-const BasicInfoStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, updateFormData }) => {
+const BasicInfoStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, updateFormData, isEditMode = false }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
@@ -17,14 +17,18 @@ const BasicInfoStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, upd
             onChange={(e) => updateFormData({ name: e.target.value })}
             className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
               errors.name ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
-            }`}
+            } ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
             placeholder="Enter a unique name for your dataset"
+            readOnly={isEditMode}
+            disabled={isEditMode}
           />
           {errors.name && (
             <p className="mt-2 text-sm text-red-600">{errors.name}</p>
           )}
           <p className="mt-2 text-sm text-gray-500">
-            The dataset name will be used as the key when saving to RocksDB. Choose a descriptive, unique name.
+            {isEditMode
+              ? 'Dataset name cannot be changed after creation'
+              : 'The dataset name will be used as the key when saving to RocksDB. Choose a descriptive, unique name.'}
           </p>
         </div>
 
