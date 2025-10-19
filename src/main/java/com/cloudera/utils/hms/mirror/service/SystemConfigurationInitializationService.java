@@ -89,7 +89,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createExternalTableConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) External Table");
-        config.setComment("(DO NOT CHANGE) System default for external table migrations. Creates external tables that reference data in " +
+        config.setDescription("(DO NOT CHANGE) System default for external table migrations. Creates external tables that reference data in " +
                 "external storage systems. Metadata is transferred but data remains in original location.");
         config.setMigrateNonNative(false);
         config.getMigrateACID().setOn(false);
@@ -104,7 +104,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createAcidTablesConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) ACID Tables");
-        config.setComment("(DO NOT CHANGE) System default for ACID (transactional) table migrations. Handles full ACID tables with " +
+        config.setDescription("(DO NOT CHANGE) System default for ACID (transactional) table migrations. Handles full ACID tables with " +
                 "insert, update, delete capabilities. Preserves transactional properties and compaction settings.");
         config.setMigrateNonNative(true);
         config.getMigrateACID().setOn(true);
@@ -119,7 +119,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createViewsConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) Views");
-        config.setComment("(DO NOT CHANGE) System default for view migrations. Transfers Hive views including their SQL definitions " +
+        config.setDescription("(DO NOT CHANGE) System default for view migrations. Transfers Hive views including their SQL definitions " +
                 "and dependencies. Handles view rewriting when underlying table references change.");
         config.setMigrateNonNative(false);
         config.getMigrateACID().setOn(false);
@@ -134,7 +134,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createIcebergConversionConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) Iceberg Conversion");
-        config.setComment("(DO NOT CHANGE) System default for converting traditional Hive tables to Apache Iceberg format. " +
+        config.setDescription("(DO NOT CHANGE) System default for converting traditional Hive tables to Apache Iceberg format. " +
                 "Includes data migration and metadata conversion to leverage Iceberg features like time travel, " +
                 "schema evolution, and partition evolution.");
         config.setMigrateNonNative(false);
@@ -152,7 +152,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createAcidToIcebergConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) ACID to Iceberg Conversion");
-        config.setComment("(DO NOT CHANGE) System default for converting ACID tables to Apache Iceberg format. Migrates transactional " +
+        config.setDescription("(DO NOT CHANGE) System default for converting ACID tables to Apache Iceberg format. Migrates transactional " +
                 "tables to Iceberg while preserving ACID guarantees. Includes data conversion and compaction.");
         config.setMigrateNonNative(false);
         config.getMigrateACID().setOn(true);
@@ -169,7 +169,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createAcidDowngradeConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) ACID Downgrade");
-        config.setComment("(DO NOT CHANGE) System default for downgrading ACID tables to non-ACID external tables. Creates new " +
+        config.setDescription("(DO NOT CHANGE) System default for downgrading ACID tables to non-ACID external tables. Creates new " +
                 "external tables with data from ACID tables, removing transactional properties. Useful for moving " +
                 "to non-ACID environments or simplifying table management.");
         config.setMigrateNonNative(false);
@@ -186,7 +186,7 @@ public class SystemConfigurationInitializationService {
      */
     private ConfigLiteDto createAcidDowngradeInplaceConfiguration() {
         ConfigLiteDto config = new ConfigLiteDto("(System) ACID Downgrade In-place");
-        config.setComment("(DO NOT CHANGE) System default for in-place ACID table downgrade. Converts ACID tables to non-ACID format " +
+        config.setDescription("(DO NOT CHANGE) System default for in-place ACID table downgrade. Converts ACID tables to non-ACID format " +
                 "without moving data. Removes transaction metadata and ORC ACID properties while preserving data location. " +
                 "Requires careful planning as it modifies tables in place.");
         config.setMigrateNonNative(false);

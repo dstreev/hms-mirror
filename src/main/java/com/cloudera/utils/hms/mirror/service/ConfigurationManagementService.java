@@ -20,39 +20,28 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.repository.ConfigurationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.RocksIterator;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing HMS Mirror Configuration persistence and retrieval.
  * This service acts as a dedicated layer for configuration CRUD operations,
- * abstracting the underlying storage mechanism (RocksDB) from the web controllers.
+ * delegating persistence to the ConfigurationRepository.
  */
 @Service
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
+@RequiredArgsConstructor
 @Slf4j
 public class ConfigurationManagementService {
 
-    private final RocksDB rocksDB;
-    private final ColumnFamilyHandle configurationsColumnFamily;
-
-    @Autowired
-    public ConfigurationManagementService(RocksDB rocksDB,
-                                        @Qualifier("configurationsColumnFamily") ColumnFamilyHandle configurationsColumnFamily) {
-        this.rocksDB = rocksDB;
-        this.configurationsColumnFamily = configurationsColumnFamily;
-    }
+    private final ConfigurationRepository configurationRepository;
 
     /**
      * Lists all configurations grouped by data strategy.
@@ -62,44 +51,36 @@ public class ConfigurationManagementService {
     public Map<String, Object> listConfigurations() {
         log.debug("Listing all configurations");
         try {
-            Map<String, Object> result = new HashMap<>();
-            Map<String, List<Map<String, Object>>> strategiesMap = new HashMap<>();
-            
-            // Iterate through all keys in the configurations column family
-            try (RocksIterator iterator = rocksDB.newIterator(configurationsColumnFamily)) {
-                iterator.seekToFirst();
-                while (iterator.isValid()) {
-                    String configName = new String(iterator.key());
-                    byte[] configValue = iterator.value();
-                    
-                    try {
-                        // Parse the YAML to extract data strategy
-                        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> configData = yamlMapper.readValue(configValue, Map.class);
-                        String strategy = (String) configData.getOrDefault("dataStrategy", "UNKNOWN");
-                        
-                        // Create configuration metadata object
-                        Map<String, Object> configInfo = new HashMap<>();
-                        configInfo.put("name", configName);
-                        configInfo.put("yamlConfig", new String(configValue)); // Include the YAML content
-                        configInfo.put("createdDate", java.time.LocalDate.now().toString());
-                        configInfo.put("modifiedDate", java.time.LocalDate.now().toString());
-                        configInfo.put("description", configData.get("comment")); // Add description from comment field
+            List<ConfigLiteDto> configurations = configurationRepository.findAllSortedByName();
 
-                        strategiesMap.computeIfAbsent(strategy, k -> new ArrayList<>()).add(configInfo);
-                    } catch (Exception e) {
-                        log.warn("Failed to parse configuration {}, skipping", configName, e);
-                    }
-                    iterator.next();
-                }
+            Map<String, Object> result = new HashMap<>();
+            Map<String, List<Map<String, Object>>> dataByStrategy = new HashMap<>();
+
+            // Group configurations by type (System Defaults vs Custom)
+            for (ConfigLiteDto config : configurations) {
+                String strategy = config.getName().startsWith("(System)")
+                    ? "System Defaults"
+                    : "Custom";
+
+                Map<String, Object> configInfo = new HashMap<>();
+                configInfo.put("name", config.getName());
+                configInfo.put("createdDate", config.getCreatedDate());
+                configInfo.put("modifiedDate", config.getModifiedDate());
+                configInfo.put("description", config.getDescription());
+                configInfo.put("yamlConfig", ""); // Empty for now, can be populated if needed
+
+                dataByStrategy.computeIfAbsent(strategy, k -> new ArrayList<>()).add(configInfo);
             }
-            
+
+            // Build strategies list
+            List<String> strategies = new ArrayList<>(dataByStrategy.keySet());
+
             result.put("status", "success");
-            result.put("data", strategiesMap);
-            result.put("strategies", strategiesMap);
+            result.put("data", dataByStrategy);
+            result.put("totalConfigurations", configurations.size());
+            result.put("strategies", strategies);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error listing configurations", e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -118,32 +99,20 @@ public class ConfigurationManagementService {
     public Map<String, Object> loadConfiguration(String configName) {
         log.debug("Loading configuration: {}", configName);
         try {
-            byte[] value = rocksDB.get(configurationsColumnFamily, configName.getBytes());
-            
+            Optional<ConfigLiteDto> configOpt = configurationRepository.findById(configName);
+
             Map<String, Object> result = new HashMap<>();
-            if (value != null) {
-                String configData = new String(value);
-                
-                // Parse the YAML/JSON configuration data
-                ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> configMap = mapper.readValue(configData, Map.class);
-                    result.put("status", "SUCCESS");
-                    result.put("configuration", configMap);
-                } catch (Exception parseException) {
-                    // Fallback to treating as plain string
-                    result.put("status", "SUCCESS");
-                    result.put("configuration", configData);
-                }
+            if (configOpt.isPresent()) {
+                result.put("status", "SUCCESS");
+                result.put("configuration", configOpt.get());
             } else {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Configuration not found: " + configName);
             }
-            
+
             return result;
-            
-        } catch (RocksDBException e) {
+
+        } catch (Exception e) {
             log.error("Error loading configuration {}", configName, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "error");
@@ -156,7 +125,6 @@ public class ConfigurationManagementService {
      * Saves a configuration using the ConfigLiteDto format.
      * This preserves the lightweight structure without converting to full config objects.
      *
-     * @param dataStrategy The data strategy name
      * @param configName   The configuration name
      * @param configDto    The configuration DTO to save
      * @return Map containing the save operation results
@@ -164,18 +132,15 @@ public class ConfigurationManagementService {
     public Map<String, Object> saveConfiguration(String configName, ConfigLiteDto configDto) {
         log.debug("Saving configuration: {}", configName);
         try {
-            // Convert ConfigLiteDto to YAML for storage
-            ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-            String yamlConfig = yamlMapper.writeValueAsString(configDto);
-            
-            rocksDB.put(configurationsColumnFamily, configName.getBytes(), yamlConfig.getBytes());
-            
+            // Save using repository (timestamps and name are handled by repository layer)
+            configurationRepository.save(configName, configDto);
+
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Configuration saved successfully");
             result.put("key", configName);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error saving configuration {}", configName, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -194,13 +159,11 @@ public class ConfigurationManagementService {
     public Map<String, Object> deleteConfiguration(String configName) {
         log.debug("Deleting configuration: {}", configName);
         try {
-            // Check if the configuration exists first
-            byte[] existingValue = rocksDB.get(configurationsColumnFamily, configName.getBytes());
             Map<String, Object> result = new HashMap<>();
-            
-            if (existingValue != null) {
+
+            if (configurationRepository.existsById(configName)) {
                 // Delete the configuration
-                rocksDB.delete(configurationsColumnFamily, configName.getBytes());
+                configurationRepository.deleteById(configName);
                 result.put("status", "SUCCESS");
                 result.put("message", "Configuration deleted successfully");
                 result.put("key", configName);
@@ -208,10 +171,10 @@ public class ConfigurationManagementService {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Configuration not found: " + configName);
             }
-            
+
             return result;
-            
-        } catch (RocksDBException e) {
+
+        } catch (Exception e) {
             log.error("Error deleting configuration {}", configName, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -223,15 +186,13 @@ public class ConfigurationManagementService {
     /**
      * Checks if a configuration exists.
      *
-     * @param dataStrategy The data strategy name
      * @param configName   The configuration name
      * @return true if the configuration exists, false otherwise
      */
     public boolean configurationExists(String configName) {
         log.debug("Checking if configuration exists: {}", configName);
         try {
-            Map<String, Object> result = loadConfiguration(configName);
-            return "SUCCESS".equals(result.get("status"));
+            return configurationRepository.existsById(configName);
         } catch (Exception e) {
             log.warn("Error checking configuration existence {}", configName, e);
             return false;
@@ -283,73 +244,6 @@ public class ConfigurationManagementService {
             result.put("status", "error");
             result.put("message", "Validation failed: " + e.getMessage());
             return result;
-        }
-    }
-
-    /**
-     * Saves a configuration using HmsMirrorConfig objects (full configuration support).
-     * This method is used by the RocksDBManagementController for YAML-based configuration storage.
-     *
-     * @param dataStrategy The data strategy name
-     * @param configName   The configuration name
-     * @param configDto    The full HmsMirrorConfig object to save
-     * @return Map containing the save operation results
-     */
-    public Map<String, Object> saveConfiguration(String dataStrategy, String configName, HmsMirrorConfig configDto) {
-        log.debug("Saving full configuration: {}", configName);
-        try {
-            // Use RocksDB to store the configuration as YAML
-            ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-            String yamlConfig = yamlMapper.writeValueAsString(configDto);
-            
-            rocksDB.put(configurationsColumnFamily, configName.getBytes(), yamlConfig.getBytes());
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("status", "SUCCESS");
-            result.put("message", "Configuration saved successfully");
-            result.put("key", configName);
-            return result;
-            
-        } catch (Exception e) {
-            log.error("Error saving full configuration {}", configName, e);
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("status", "ERROR");
-            errorResult.put("message", "Failed to save configuration: " + e.getMessage());
-            return errorResult;
-        }
-    }
-
-    /**
-     * Converts a map-based configuration to HmsMirrorConfig DTO.
-     * This is used when configurations are provided as generic maps.
-     *
-     * @param configData   The configuration data as a map
-     * @param dataStrategy The data strategy name
-     * @param configName   The configuration name
-     * @return HmsMirrorConfig object
-     */
-    public HmsMirrorConfig convertMapToDto(Map<String, Object> configData, String dataStrategy, String configName) {
-        log.debug("Converting map to DTO for configuration: {}", configName);
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            
-            // Convert the map to JSON and then to HmsMirrorConfig
-            String jsonString = mapper.writeValueAsString(configData);
-            HmsMirrorConfig config = mapper.readValue(jsonString, HmsMirrorConfig.class);
-            
-            // Ensure data strategy is set correctly if not already present
-            if (config.getDataStrategy() == null) {
-                config.setDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
-            }
-            
-            return config;
-            
-        } catch (Exception e) {
-            log.error("Error converting map to DTO for {}", configName, e);
-            // Return a minimal config object if conversion fails
-            HmsMirrorConfig config = new HmsMirrorConfig();
-            config.setDataStrategy(DataStrategyEnum.valueOf(dataStrategy));
-            return config;
         }
     }
 

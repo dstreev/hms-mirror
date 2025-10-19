@@ -220,6 +220,9 @@ public class CliReporter {
         int completed = 0;
         int errors = 0;
         int skipped = 0;
+        /*
+        TODO: Fix.
+
         for (String database : conversionResult.getDatabases().keySet()) {
             DBMirror dbMirror = conversionResult.getDatabase(database);
             for (String tbl : dbMirror.getTableMirrors().keySet()) {
@@ -249,6 +252,8 @@ public class CliReporter {
                 }
             }
         }
+
+         */
         varMap.put("started.tbls", Integer.toString(started));
         varMap.put("completed.tbls", Integer.toString(completed));
         varMap.put("error.tbls", Integer.toString(errors));

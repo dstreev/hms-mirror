@@ -460,11 +460,12 @@ public class TableService {
 
         if (addTable) {
             // Add to DBMirror for processing.
-            TableMirror tableMirror = dbMirror.addTable(tableName);
-            String uniqueStr = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
-            tableMirror.setUnique(uniqueStr);
-            tableMirror.setMigrationStageMessage("Added to evaluation inventory");
-            log.info("{}.{} added to processing list.", database, tableName);
+            // TODO: Fix
+//            TableMirror tableMirror = dbMirror.addTable(tableName);
+//            String uniqueStr = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
+//            tableMirror.setUnique(uniqueStr);
+//            tableMirror.setMigrationStageMessage("Added to evaluation inventory");
+//            log.info("{}.{} added to processing list.", database, tableName);
         } else {
             log.info("{}.{} did not match filter and will NOT be added.", database, tableName);
         }
@@ -482,10 +483,11 @@ public class TableService {
     }
 
     private void markTableForRemoval(DBMirror dbMirror, String tableName, String database, String reason) {
-        TableMirror tableMirror = dbMirror.addTable(tableName);
-        tableMirror.setRemove(true);
-        tableMirror.setRemoveReason(reason);
-        log.info("{}.{} was NOT added to list. Reason: {}", database, tableName, reason);
+        // TODO: Fix
+//        TableMirror tableMirror = dbMirror.addTable(tableName);
+//        tableMirror.setRemove(true);
+//        tableMirror.setRemoveReason(reason);
+//        log.info("{}.{} was NOT added to list. Reason: {}", database, tableName, reason);
     }
 
     private String getRemovalReason(String tableName, HmsMirrorConfig config) {

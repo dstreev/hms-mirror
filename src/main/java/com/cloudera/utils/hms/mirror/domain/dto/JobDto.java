@@ -66,4 +66,38 @@ public class JobDto {
     @Schema(description = "Flag to indicate if this job should perform a sync operation, only available if" +
             "the disasterRecovery flag is set to true")
     private Boolean sync = Boolean.FALSE;
+
+    /**
+     * Create a deep clone of this JobDto.
+     * All nested objects are cloned to avoid shared references.
+     *
+     * @return A deep clone of this JobDto
+     */
+    public JobDto deepClone() {
+        JobDto clone = new JobDto();
+
+        // Copy immutable and primitive fields
+        clone.id = (this.id != null) ? UUID.fromString(this.id.toString()) : UUID.randomUUID();
+        clone.name = this.name;
+        clone.description = this.description;
+        clone.createdDate = this.createdDate;
+        clone.modifiedDate = this.modifiedDate;
+        clone.datasetReference = this.datasetReference;
+        clone.configReference = this.configReference;
+        clone.leftConnectionReference = this.leftConnectionReference;
+        clone.rightConnectionReference = this.rightConnectionReference;
+        clone.strategy = this.strategy; // enum is immutable
+        clone.databaseOnly = this.databaseOnly;
+        clone.disasterRecovery = this.disasterRecovery;
+        clone.sync = this.sync;
+
+        // Deep clone hybrid config
+        if (this.hybrid != null) {
+            clone.hybrid = this.hybrid.clone();
+        } else {
+            clone.hybrid = new HybridConfig();
+        }
+
+        return clone;
+    }
 }

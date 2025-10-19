@@ -25,13 +25,13 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.nonNull;
@@ -53,11 +53,11 @@ public class HmsMirrorConfigConverter {
     public static ConversionResult convert(HmsMirrorConfig config, String configName, String datasetName, String jobName) {
         ConversionResult result = new ConversionResult();
 
-        result.setConfigLiteDto(toConfigLiteDto(config, configName));
-        result.setDatasetDto(toDatasetDto(config, datasetName));
-        result.setLeftConnectionDto(toConnectionDto(config, Environment.LEFT));
-        result.setRightConnectionDto(toConnectionDto(config, Environment.RIGHT));
-        result.setJobDto(toJobDto(config, jobName, configName, datasetName));
+        result.setConfigLite(toConfigLiteDto(config, configName));
+        result.setDataset(toDatasetDto(config, datasetName));
+        result.setLeftConnection(toConnectionDto(config, Environment.LEFT));
+        result.setRightConnection(toConnectionDto(config, Environment.RIGHT));
+        result.setJob(toJobDto(config, jobName, configName, datasetName));
 
         return result;
     }
@@ -70,7 +70,7 @@ public class HmsMirrorConfigConverter {
 
         // Basic configuration
         dto.setName(name);
-        dto.setComment(config.getComment());
+        dto.setDescription(config.getComment());
 
         // Feature flags
         dto.setMigrateNonNative(config.isMigrateNonNative());
@@ -100,8 +100,19 @@ public class HmsMirrorConfigConverter {
             dto.setOptimization(config.getOptimization());
         }
 
+        // Transfer configuration - includes all TransferConfig fields:
+        // - transferPrefix, shadowPrefix, storageMigrationPostfix
+        // - exportBaseDirPrefix, remoteWorkingDirectory
+        // - intermediateStorage, targetNamespace
+        // - storageMigration, warehouse
         if (nonNull(config.getTransfer())) {
-            dto.setTransfer(config.getTransfer());
+            try {
+                // Clone to avoid sharing the same object reference
+                dto.setTransfer(config.getTransfer().clone());
+            } catch (Exception e) {
+                log.warn("Failed to clone TransferConfig, using direct assignment", e);
+                dto.setTransfer(config.getTransfer());
+            }
         }
 
         if (nonNull(config.getOwnershipTransfer())) {
@@ -399,67 +410,5 @@ public class HmsMirrorConfigConverter {
         }
 
         return false;
-    }
-
-    /**
-     * Result class containing all converted DTOs
-     */
-    public static class ConversionResult {
-        private ConfigLiteDto configLiteDto;
-        private DatasetDto datasetDto;
-        private ConnectionDto leftConnectionDto;
-        private ConnectionDto rightConnectionDto;
-        private JobDto jobDto;
-
-        // List of fields that couldn't be translated
-        private List<String> untranslatedFields = new ArrayList<>();
-
-        public ConfigLiteDto getConfigLiteDto() {
-            return configLiteDto;
-        }
-
-        public void setConfigLiteDto(ConfigLiteDto configLiteDto) {
-            this.configLiteDto = configLiteDto;
-        }
-
-        public DatasetDto getDatasetDto() {
-            return datasetDto;
-        }
-
-        public void setDatasetDto(DatasetDto datasetDto) {
-            this.datasetDto = datasetDto;
-        }
-
-        public ConnectionDto getLeftConnectionDto() {
-            return leftConnectionDto;
-        }
-
-        public void setLeftConnectionDto(ConnectionDto leftConnectionDto) {
-            this.leftConnectionDto = leftConnectionDto;
-        }
-
-        public ConnectionDto getRightConnectionDto() {
-            return rightConnectionDto;
-        }
-
-        public void setRightConnectionDto(ConnectionDto rightConnectionDto) {
-            this.rightConnectionDto = rightConnectionDto;
-        }
-
-        public JobDto getJobDto() {
-            return jobDto;
-        }
-
-        public void setJobDto(JobDto jobDto) {
-            this.jobDto = jobDto;
-        }
-
-        public List<String> getUntranslatedFields() {
-            return untranslatedFields;
-        }
-
-        public void setUntranslatedFields(List<String> untranslatedFields) {
-            this.untranslatedFields = untranslatedFields;
-        }
     }
 }

@@ -18,47 +18,30 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.cloudera.utils.hms.mirror.repository.DatasetRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.RocksIterator;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
  * Service for managing HMS Mirror Dataset persistence and retrieval.
  * This service acts as a dedicated layer for dataset CRUD operations,
- * abstracting the underlying storage mechanism (RocksDB) from the web controllers.
- * 
+ * delegating persistence to the DatasetRepository.
+ *
  * Datasets define collections of databases and their associated tables/filters
  * for processing by HMS Mirror.
  */
 @Service
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
+@RequiredArgsConstructor
 @Slf4j
 public class DatasetManagementService {
 
-    private final RocksDB rocksDB;
-    private final ColumnFamilyHandle datasetsColumnFamily;
-    private final ObjectMapper yamlMapper;
-    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-
-    @Autowired
-    public DatasetManagementService(RocksDB rocksDB,
-                                  @Qualifier("datasetsColumnFamily") ColumnFamilyHandle datasetsColumnFamily) {
-        this.rocksDB = rocksDB;
-        this.datasetsColumnFamily = datasetsColumnFamily;
-        this.yamlMapper = new ObjectMapper(new YAMLFactory());
-    }
+    private final DatasetRepository datasetRepository;
 
     /**
      * Lists all datasets with their metadata.
@@ -68,71 +51,19 @@ public class DatasetManagementService {
     public Map<String, Object> listDatasets() {
         log.debug("Listing all datasets");
         try {
-            Map<String, Object> result = new HashMap<>();
-            List<Map<String, Object>> datasetsList = new ArrayList<>();
-            
-            // Iterate through all keys in the datasets column family
-            try (RocksIterator iterator = rocksDB.newIterator(datasetsColumnFamily)) {
-                iterator.seekToFirst();
-                while (iterator.isValid()) {
-                    String datasetName = new String(iterator.key());
-                    byte[] datasetValue = iterator.value();
-                    
-                    try {
-                        // Parse the YAML to extract dataset information
-                        DatasetDto datasetDto = yamlMapper.readValue(datasetValue, DatasetDto.class);
-                        
-                        // Create dataset metadata object
-                        Map<String, Object> datasetInfo = new HashMap<>();
-                        datasetInfo.put("name", datasetName);
-                        datasetInfo.put("description", datasetDto.getDescription());
-                        datasetInfo.put("createdDate", datasetDto.getCreatedDate());
-                        datasetInfo.put("modifiedDate", datasetDto.getModifiedDate());
-                        datasetInfo.put("databaseCount", datasetDto.getDatabases().size());
-                        
-                        // Count total tables across all databases
-                        int totalTables = datasetDto.getDatabases().stream()
-                            .mapToInt(db -> db.getTables().size())
-                            .sum();
-                        datasetInfo.put("totalTables", totalTables);
-                        
-                        // Count databases with filters vs explicit table lists
-                        long databasesWithFilters = datasetDto.getDatabases().stream()
-                            .filter(db -> db.getFilter() != null)
-                            .count();
-                        datasetInfo.put("databasesWithFilters", databasesWithFilters);
-                        datasetInfo.put("databasesWithTables", datasetDto.getDatabases().size() - databasesWithFilters);
-                        
-                        datasetsList.add(datasetInfo);
-                    } catch (Exception e) {
-                        log.warn("Failed to parse dataset {}, skipping", datasetName, e);
-                    }
-                    iterator.next();
-                }
-            }
-            
-            // Sort datasets by name
-            datasetsList.sort(Comparator.comparing(dataset -> (String) dataset.get("name")));
-            
+            List<DatasetDto> datasets = datasetRepository.findAllSortedByName();
+
             // Convert to the format expected by frontend: {name: DatasetDto}
             Map<String, DatasetDto> dataMap = new HashMap<>();
-            for (Map<String, Object> datasetInfo : datasetsList) {
-                String name = (String) datasetInfo.get("name");
-                try (RocksIterator iterator = rocksDB.newIterator(datasetsColumnFamily)) {
-                    iterator.seek(name.getBytes());
-                    if (iterator.isValid() && name.equals(new String(iterator.key()))) {
-                        DatasetDto datasetDto = yamlMapper.readValue(iterator.value(), DatasetDto.class);
-                        dataMap.put(name, datasetDto);
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to load full dataset data for {}", name, e);
-                }
+            for (DatasetDto datasetDto : datasets) {
+                dataMap.put(datasetDto.getName(), datasetDto);
             }
-            
+
+            Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("data", dataMap);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error listing datasets", e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -151,28 +82,21 @@ public class DatasetManagementService {
     public Map<String, Object> loadDataset(String datasetName) {
         log.debug("Loading dataset: {}", datasetName);
         try {
-            byte[] value = rocksDB.get(datasetsColumnFamily, datasetName.getBytes());
-            
+            Optional<DatasetDto> datasetOpt = datasetRepository.findById(datasetName);
+
             Map<String, Object> result = new HashMap<>();
-            if (value != null) {
-                try {
-                    DatasetDto datasetDto = yamlMapper.readValue(value, DatasetDto.class);
-                    result.put("status", "SUCCESS");
-                    result.put("data", datasetDto);
-                    result.put("name", datasetName);
-                } catch (Exception parseException) {
-                    log.error("Error parsing dataset {}", datasetName, parseException);
-                    result.put("status", "ERROR");
-                    result.put("message", "Failed to parse dataset data: " + parseException.getMessage());
-                }
+            if (datasetOpt.isPresent()) {
+                result.put("status", "SUCCESS");
+                result.put("data", datasetOpt.get());
+                result.put("name", datasetName);
             } else {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Dataset not found: " + datasetName);
             }
-            
+
             return result;
-            
-        } catch (RocksDBException e) {
+
+        } catch (Exception e) {
             log.error("Error loading dataset {}", datasetName, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -191,27 +115,15 @@ public class DatasetManagementService {
     public Map<String, Object> saveDataset(String datasetName, DatasetDto datasetDto) {
         log.debug("Saving dataset: {}", datasetName);
         try {
-            // Set timestamps
-            String currentTime = LocalDateTime.now().format(dateFormatter);
-            if (datasetDto.getCreatedDate() == null) {
-                datasetDto.setCreatedDate(currentTime);
-            }
-            datasetDto.setModifiedDate(currentTime);
-            
-            // Ensure dataset name matches
-            datasetDto.setName(datasetName);
-            
-            // Convert DatasetDto to YAML for storage
-            String yamlDataset = yamlMapper.writeValueAsString(datasetDto);
-            
-            rocksDB.put(datasetsColumnFamily, datasetName.getBytes(), yamlDataset.getBytes());
-            
+            // Save using repository (timestamps and name are handled by repository layer)
+            datasetRepository.save(datasetName, datasetDto);
+
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Dataset saved successfully");
             result.put("name", datasetName);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error saving dataset {}", datasetName, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -232,20 +144,16 @@ public class DatasetManagementService {
         log.debug("Updating dataset: {}", datasetName);
         try {
             // Check if dataset exists first
-            byte[] existingValue = rocksDB.get(datasetsColumnFamily, datasetName.getBytes());
+            Optional<DatasetDto> existingDatasetOpt = datasetRepository.findById(datasetName);
             Map<String, Object> result = new HashMap<>();
-            
-            if (existingValue != null) {
+
+            if (existingDatasetOpt.isPresent()) {
                 // Preserve original creation date if it exists
-                try {
-                    DatasetDto existingDataset = yamlMapper.readValue(existingValue, DatasetDto.class);
-                    if (existingDataset.getCreatedDate() != null) {
-                        datasetDto.setCreatedDate(existingDataset.getCreatedDate());
-                    }
-                } catch (Exception e) {
-                    log.warn("Could not parse existing dataset for timestamp preservation: {}", e.getMessage());
+                DatasetDto existingDataset = existingDatasetOpt.get();
+                if (existingDataset.getCreatedDate() != null) {
+                    datasetDto.setCreatedDate(existingDataset.getCreatedDate());
                 }
-                
+
                 // Save the updated dataset
                 return saveDataset(datasetName, datasetDto);
             } else {
@@ -253,8 +161,8 @@ public class DatasetManagementService {
                 result.put("message", "Dataset not found: " + datasetName);
                 return result;
             }
-            
-        } catch (RocksDBException e) {
+
+        } catch (Exception e) {
             log.error("Error updating dataset {}", datasetName, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -273,12 +181,11 @@ public class DatasetManagementService {
         log.debug("Deleting dataset: {}", datasetName);
         try {
             // Check if the dataset exists first
-            byte[] existingValue = rocksDB.get(datasetsColumnFamily, datasetName.getBytes());
             Map<String, Object> result = new HashMap<>();
-            
-            if (existingValue != null) {
+
+            if (datasetRepository.existsById(datasetName)) {
                 // Delete the dataset
-                rocksDB.delete(datasetsColumnFamily, datasetName.getBytes());
+                datasetRepository.deleteById(datasetName);
                 result.put("status", "SUCCESS");
                 result.put("message", "Dataset deleted successfully");
                 result.put("name", datasetName);
@@ -286,10 +193,10 @@ public class DatasetManagementService {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Dataset not found: " + datasetName);
             }
-            
+
             return result;
-            
-        } catch (RocksDBException e) {
+
+        } catch (Exception e) {
             log.error("Error deleting dataset {}", datasetName, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -316,20 +223,18 @@ public class DatasetManagementService {
             }
             
             // Get the source dataset and create a copy
-            DatasetDto sourceDataset = (DatasetDto) loadResult.get("dataset");
-            DatasetDto targetDataset = yamlMapper.readValue(
-                yamlMapper.writeValueAsString(sourceDataset), 
-                DatasetDto.class
-            );
-            
-            // Update the target dataset properties
+            DatasetDto sourceDataset = (DatasetDto) loadResult.get("data");
+
+            // Create a deep copy of the dataset
+            DatasetDto targetDataset = new DatasetDto();
             targetDataset.setName(targetDatasetName);
             targetDataset.setDescription(
-                (sourceDataset.getDescription() != null ? sourceDataset.getDescription() : "") + 
+                (sourceDataset.getDescription() != null ? sourceDataset.getDescription() : "") +
                 " (Copy of " + sourceDatasetName + ")"
             );
-            targetDataset.setCreatedDate(null); // Will be set by saveDataset
-            targetDataset.setModifiedDate(null); // Will be set by saveDataset
+            targetDataset.setDatabases(sourceDataset.getDatabases());
+            targetDataset.setCreatedDate(null); // Will be set by repository
+            targetDataset.setModifiedDate(null); // Will be set by repository
             
             // Save the copied dataset
             return saveDataset(targetDatasetName, targetDataset);
@@ -352,8 +257,7 @@ public class DatasetManagementService {
     public boolean datasetExists(String datasetName) {
         log.debug("Checking if dataset exists: {}", datasetName);
         try {
-            Map<String, Object> result = loadDataset(datasetName);
-            return "SUCCESS".equals(result.get("status"));
+            return datasetRepository.existsById(datasetName);
         } catch (Exception e) {
             log.warn("Error checking dataset existence {}", datasetName, e);
             return false;

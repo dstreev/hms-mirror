@@ -73,23 +73,10 @@ public class RuntimeService {
         RunStatus runStatus = new RunStatus();
         session.addSubRunStatus(runStatus);
         // NOTE: The transitionToActive process happens in another bean....
-        CompletableFuture<Boolean> result = hmsMirrorAppService.run(runStatus, conversionRequest, conversionResult, config, session);
-        runStatus.setRunningTask(result);
+        // TODO: Fix
+//        CompletableFuture<Boolean> result = hmsMirrorAppService.run(runStatus, conversionRequest, conversionResult, config, session);
+//        runStatus.setRunningTask(result);
 
-//        session = executeSessionService.getSession();
-//        runStatus = session.getRunStatus();
-////            if (configService.validate(session, executeSessionService.getCliEnvironment())) {
-//        if (runStatus.reset()) {
-//            executeSessionService.getSession().getConfig().setExecute(!dryrun);
-//            // Start job in a separate thread.
-//            CompletableFuture<Boolean> runningTask = hmsMirrorAppService.run();
-//            // Set the running task reference in the RunStatus.
-//            runStatus.setRunningTask(runningTask);
-//        }
-////            } else {
-////                runStatus.addError(MessageCode.CONFIG_INVALID);
-////                runStatus.setProgress(ProgressEnum.FAILED);
-////            }
         return runStatus;
     }
 }

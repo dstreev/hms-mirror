@@ -74,7 +74,8 @@
       "Bash(open http://localhost:8090/hms-mirror/connections/new)",
       "Bash(tar:*)",
       "Bash(open http://localhost:8090/hms-mirror/wizards/config)",
-      "Bash(open http://localhost:8090/hms-mirror/jobs/build/wizard)"
+      "Bash(open http://localhost:8090/hms-mirror/jobs/build/wizard)",
+      "Bash(open http://localhost:8090/hms-mirror/config/view)"
     ],
     "deny": [],
     "ask": [],

@@ -135,7 +135,7 @@ const ConfigWizard: React.FC = () => {
             ...prev,
             // Basic configuration
             configName: location.state.configName || '',
-            description: existingConfig.comment || '',
+            description: existingConfig.description || '',
             dataStrategy: existingConfig.dataStrategy || prev.dataStrategy,
             migrateNonNative: existingConfig.migrateNonNative !== undefined ? existingConfig.migrateNonNative : false,
 

@@ -56,6 +56,7 @@ public class ReportWriterService {
     private final ExecuteSessionService executeSessionService;
     private final TranslatorService translatorService;
     private final DatabaseService databaseService;
+    private final ConversionResultService conversionResultService;
 
     public ReportWriterService(
             DistCpService distCpService,
@@ -63,13 +64,15 @@ public class ReportWriterService {
             ConfigService configService,
             ExecuteSessionService executeSessionService,
             TranslatorService translatorService,
-            DatabaseService databaseService) {
+            DatabaseService databaseService,
+            ConversionResultService conversionResultService) {
         this.distCpService = distCpService;
         this.yamlMapper = yamlMapper;
         this.configService = configService;
         this.executeSessionService = executeSessionService;
         this.translatorService = translatorService;
         this.databaseService = databaseService;
+        this.conversionResultService = conversionResultService;
     }
 
     public void wrapup() {
@@ -210,7 +213,7 @@ public class ReportWriterService {
                 }
                 int step = 1;
                 FileWriter reportFile = new FileWriter(dbReportOutputFile + ".md");
-                String mdReportStr = conversionResult.toReport(originalDatabase, getExecuteSessionService());
+                String mdReportStr = conversionResultService.toReport(conversionResult, originalDatabase, getExecuteSessionService());
 
                 File dbYamlFile = new File(dbReportOutputFile + ".yaml");
                 FileWriter dbYamlFileWriter = new FileWriter(dbYamlFile);
@@ -249,7 +252,7 @@ public class ReportWriterService {
 
                 log.info("Status Report of 'hms-mirror' is here: {}.md|html", dbReportOutputFile);
 
-                String les = conversionResult.executeSql(Environment.LEFT, originalDatabase);
+                String les = conversionResultService.executeSql(conversionResult, Environment.LEFT, originalDatabase);
                 if (les != null) {
                     FileWriter leftExecOutput = new FileWriter(dbLeftExecuteFile);
                     leftExecOutput.write(les);
@@ -269,7 +272,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String res = conversionResult.executeSql(Environment.RIGHT, originalDatabase);
+                String res = conversionResultService.executeSql(conversionResult, Environment.RIGHT, originalDatabase);
                 if (res != null) {
                     FileWriter rightExecOutput = new FileWriter(dbRightExecuteFile);
                     rightExecOutput.write(res);
@@ -293,7 +296,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String lcu = conversionResult.executeCleanUpSql(Environment.LEFT, originalDatabase);
+                String lcu = conversionResultService.executeCleanUpSql(conversionResult, Environment.LEFT, originalDatabase);
                 if (lcu != null) {
                     FileWriter leftCleanUpOutput = new FileWriter(dbLeftCleanUpFile);
                     leftCleanUpOutput.write(lcu);
@@ -304,7 +307,7 @@ public class ReportWriterService {
                     runbookFile.write("\n");
                 }
 
-                String rcu = conversionResult.executeCleanUpSql(Environment.RIGHT, originalDatabase);
+                String rcu = conversionResultService.executeCleanUpSql(conversionResult, Environment.RIGHT, originalDatabase);
                 if (rcu != null) {
                     FileWriter rightCleanUpOutput = new FileWriter(dbRightCleanUpFile);
                     rightCleanUpOutput.write(rcu);

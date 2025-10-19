@@ -326,7 +326,7 @@ public class ConfigurationController {
 
                 // Copy relevant fields from source (basic implementation)
                 if (sourceConfig.getComment() != null) {
-                    targetConfigDto.setComment("Copy of " + sourceConfig.getComment());
+                    targetConfigDto.setDescription("Copy of " + sourceConfig.getComment());
                 }
                 
                 // Copy basic boolean flags

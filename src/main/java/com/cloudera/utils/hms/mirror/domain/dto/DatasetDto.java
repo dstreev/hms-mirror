@@ -27,6 +27,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +57,36 @@ public class DatasetDto {
     
     @Schema(description = "Last modification timestamp")
     private String modifiedDate;
+
+    /**
+     * Create a deep clone of this DatasetDto.
+     * All nested objects and collections are cloned to avoid shared references.
+     *
+     * @return A deep clone of this DatasetDto
+     */
+    public DatasetDto deepClone() {
+        DatasetDto clone = new DatasetDto();
+
+        // Copy primitive and immutable fields
+        clone.name = this.name;
+        clone.description = this.description;
+        clone.createdDate = this.createdDate;
+        clone.modifiedDate = this.modifiedDate;
+
+        // Deep clone databases list
+        if (this.databases != null) {
+            clone.databases = new ArrayList<>();
+            for (DatabaseSpec dbSpec : this.databases) {
+                if (dbSpec != null) {
+                    clone.databases.add(dbSpec.deepClone());
+                }
+            }
+        } else {
+            clone.databases = new ArrayList<>();
+        }
+
+        return clone;
+    }
 
     /**
      * Specification for a database within a dataset.
@@ -91,6 +122,56 @@ public class DatasetDto {
         
         @Schema(description = "Warehouse configuration for the database with managed and external directories")
         private Warehouse warehouse = new Warehouse(WarehouseSource.PLAN, null, null);
+
+        /**
+         * Create a deep clone of this DatabaseSpec.
+         * All nested objects and collections are cloned to avoid shared references.
+         *
+         * @return A deep clone of this DatabaseSpec
+         */
+        public DatabaseSpec deepClone() {
+            DatabaseSpec clone = new DatabaseSpec();
+
+            // Copy primitive and immutable fields
+            clone.databaseName = this.databaseName;
+            clone.dbPrefix = this.dbPrefix;
+            clone.dbRename = this.dbRename;
+
+            // Deep clone userGlobalLocationMap (nested maps)
+            if (this.userGlobalLocationMap != null) {
+                clone.userGlobalLocationMap = new HashMap<>();
+                for (Map.Entry<String, Map<TableType, String>> entry : this.userGlobalLocationMap.entrySet()) {
+                    if (entry.getValue() != null) {
+                        clone.userGlobalLocationMap.put(entry.getKey(), new HashMap<>(entry.getValue()));
+                    }
+                }
+            }
+
+            // Deep clone tables list
+            if (this.tables != null) {
+                clone.tables = new ArrayList<>(this.tables);
+            } else {
+                clone.tables = new ArrayList<>();
+            }
+
+            // Deep clone filter
+            if (this.filter != null) {
+                clone.filter = this.filter.deepClone();
+            }
+
+            // Deep clone warehouse
+            try {
+                if (this.warehouse != null) {
+                    clone.warehouse = this.warehouse.clone();
+                } else {
+                    clone.warehouse = new Warehouse(WarehouseSource.PLAN, null, null);
+                }
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException("Failed to clone Warehouse", e);
+            }
+
+            return clone;
+        }
     }
 
     /**
@@ -125,5 +206,32 @@ public class DatasetDto {
         
         @Schema(description = "Maximum table size in bytes (0 = no maximum)", example = "0")
         private long maxSizeBytes = 0L;
+
+        /**
+         * Create a deep clone of this TableFilter.
+         * All nested objects and collections are cloned to avoid shared references.
+         *
+         * @return A deep clone of this TableFilter
+         */
+        public TableFilter deepClone() {
+            TableFilter clone = new TableFilter();
+
+            // Copy primitive and immutable fields
+            clone.includePattern = this.includePattern;
+            clone.excludePattern = this.excludePattern;
+            clone.minPartitions = this.minPartitions;
+            clone.maxPartitions = this.maxPartitions;
+            clone.minSizeBytes = this.minSizeBytes;
+            clone.maxSizeBytes = this.maxSizeBytes;
+
+            // Deep clone tableTypes list
+            if (this.tableTypes != null) {
+                clone.tableTypes = new ArrayList<>(this.tableTypes);
+            } else {
+                clone.tableTypes = new ArrayList<>();
+            }
+
+            return clone;
+        }
     }
 }

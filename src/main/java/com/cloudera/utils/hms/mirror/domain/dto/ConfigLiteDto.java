@@ -18,13 +18,10 @@
 package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.core.*;
-import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Map;
 
 /**
  * Lightweight DTO for HMS Mirror Configuration storage in RocksDB.
@@ -40,7 +37,9 @@ public class ConfigLiteDto {
 
     // Basic configuration
     private String name;
-    private String comment;
+    private String description;
+    private String createdDate;
+    private String modifiedDate;
 
     // Feature flags
     private boolean migrateNonNative = Boolean.FALSE;
@@ -89,5 +88,65 @@ public class ConfigLiteDto {
     // Constructor with name and dataStrategy
     public ConfigLiteDto(String name) {
         this.name = name;
+    }
+
+    /**
+     * Create a deep clone of this ConfigLiteDto.
+     * All nested objects are cloned to avoid shared references.
+     *
+     * @return A deep clone of this ConfigLiteDto
+     */
+    public ConfigLiteDto deepClone() {
+        ConfigLiteDto clone = new ConfigLiteDto();
+
+        // Copy primitive and immutable fields
+        clone.name = this.name;
+        clone.description = this.description;
+        clone.migrateNonNative = this.migrateNonNative;
+        clone.createIfNotExists = this.createIfNotExists;
+        clone.enableAutoTableStats = this.enableAutoTableStats;
+        clone.enableAutoColumnStats = this.enableAutoColumnStats;
+        clone.saveWorkingTables = this.saveWorkingTables;
+        clone.copyAvroSchemaUrls = this.copyAvroSchemaUrls;
+        clone.forceExternalLocation = this.forceExternalLocation;
+
+        // Deep clone sub-configuration objects using their existing clone() methods
+        if (this.icebergConversion != null) {
+            clone.icebergConversion = this.icebergConversion.clone();
+        } else {
+            clone.icebergConversion = new IcebergConversion();
+        }
+
+        if (this.migrateACID != null) {
+            clone.migrateACID = this.migrateACID.clone();
+        } else {
+            clone.migrateACID = new MigrateACID();
+        }
+
+        if (this.migrateVIEW != null) {
+            clone.migrateVIEW = this.migrateVIEW.clone();
+        } else {
+            clone.migrateVIEW = new MigrateVIEW();
+        }
+
+        if (this.optimization != null) {
+            clone.optimization = this.optimization.clone();
+        } else {
+            clone.optimization = new Optimization();
+        }
+
+        if (this.transfer != null) {
+            clone.transfer = this.transfer.clone();
+        } else {
+            clone.transfer = new TransferConfig();
+        }
+
+        if (this.ownershipTransfer != null) {
+            clone.ownershipTransfer = this.ownershipTransfer.clone();
+        } else {
+            clone.ownershipTransfer = new TransferOwnership();
+        }
+
+        return clone;
     }
 }

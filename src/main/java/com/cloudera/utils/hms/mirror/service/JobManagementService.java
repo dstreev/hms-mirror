@@ -30,55 +30,32 @@ import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.cloudera.utils.hms.mirror.repository.JobRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.RocksIterator;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
  * Service for managing HMS Mirror Job persistence and retrieval.
  * This service acts as a dedicated layer for job CRUD operations,
- * abstracting the underlying storage mechanism (RocksDB) from the web controllers.
- * 
+ * delegating persistence to the JobRepository.
+ *
  * Jobs define migration tasks with their dataset, configuration, and connection references.
  */
 @Service
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
+@RequiredArgsConstructor
 @Slf4j
 public class JobManagementService {
 
-    private final RocksDB rocksDB;
-    private final ColumnFamilyHandle jobsColumnFamily;
-    private final ObjectMapper yamlMapper;
-    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private final JobRepository jobRepository;
     private final ConnectionService connectionService;
     private final DatasetManagementService datasetManagementService;
     private final ConfigurationManagementService configurationManagementService;
-
-    @Autowired
-    public JobManagementService(RocksDB rocksDB,
-                               @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily,
-                               ConnectionService connectionService,
-                               DatasetManagementService datasetManagementService,
-                               ConfigurationManagementService configurationManagementService) {
-        this.rocksDB = rocksDB;
-        this.jobsColumnFamily = jobsColumnFamily;
-        this.yamlMapper = new ObjectMapper(new YAMLFactory());
-        this.connectionService = connectionService;
-        this.datasetManagementService = datasetManagementService;
-        this.configurationManagementService = configurationManagementService;
-    }
 
     /**
      * Lists all jobs with their metadata.
@@ -88,51 +65,33 @@ public class JobManagementService {
     public Map<String, Object> listJobs() {
         log.debug("Listing all jobs");
         try {
-            Map<String, Object> result = new HashMap<>();
+            List<JobDto> jobs = jobRepository.findAllSortedByName();
             List<Map<String, Object>> jobsList = new ArrayList<>();
-            
-            // Iterate through all keys in the jobs column family
-            try (RocksIterator iterator = rocksDB.newIterator(jobsColumnFamily)) {
-                iterator.seekToFirst();
-                while (iterator.isValid()) {
-                    String jobKey = new String(iterator.key());
-                    byte[] jobValue = iterator.value();
-                    
-                    try {
-                        // Parse the YAML to extract job information
-                        JobDto jobDto = yamlMapper.readValue(jobValue, JobDto.class);
-                        
-                        // Create job metadata object
-                        Map<String, Object> jobInfo = new HashMap<>();
-                        jobInfo.put("jobKey", jobKey);
-                        jobInfo.put("name", jobDto.getName());
-                        jobInfo.put("description", jobDto.getDescription());
-                        jobInfo.put("createdDate", jobDto.getCreatedDate());
-                        jobInfo.put("modifiedDate", jobDto.getModifiedDate());
-                        jobInfo.put("datasetReference", jobDto.getDatasetReference());
-                        jobInfo.put("configReference", jobDto.getConfigReference());
-                        jobInfo.put("leftConnectionReference", jobDto.getLeftConnectionReference());
-                        jobInfo.put("rightConnectionReference", jobDto.getRightConnectionReference());
-                        jobInfo.put("strategy", jobDto.getStrategy());
-                        jobInfo.put("disasterRecovery", jobDto.getDisasterRecovery());
-                        jobInfo.put("sync", jobDto.getSync());
-                        
-                        jobsList.add(jobInfo);
-                    } catch (Exception e) {
-                        log.warn("Failed to parse job {}, skipping", jobKey, e);
-                    }
-                    iterator.next();
-                }
+
+            for (JobDto jobDto : jobs) {
+                Map<String, Object> jobInfo = new HashMap<>();
+                jobInfo.put("jobKey", jobDto.getName());
+                jobInfo.put("name", jobDto.getName());
+                jobInfo.put("description", jobDto.getDescription());
+                jobInfo.put("createdDate", jobDto.getCreatedDate());
+                jobInfo.put("modifiedDate", jobDto.getModifiedDate());
+                jobInfo.put("datasetReference", jobDto.getDatasetReference());
+                jobInfo.put("configReference", jobDto.getConfigReference());
+                jobInfo.put("leftConnectionReference", jobDto.getLeftConnectionReference());
+                jobInfo.put("rightConnectionReference", jobDto.getRightConnectionReference());
+                jobInfo.put("strategy", jobDto.getStrategy());
+                jobInfo.put("disasterRecovery", jobDto.getDisasterRecovery());
+                jobInfo.put("sync", jobDto.getSync());
+
+                jobsList.add(jobInfo);
             }
-            
-            // Sort jobs by name
-            jobsList.sort(Comparator.comparing(job -> (String) job.get("name")));
-            
+
+            Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("jobs", jobsList);
             result.put("count", jobsList.size());
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error listing jobs", e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -151,27 +110,20 @@ public class JobManagementService {
     public Map<String, Object> loadJob(String jobKey) {
         log.debug("Loading job: {}", jobKey);
         try {
-            byte[] value = rocksDB.get(jobsColumnFamily, jobKey.getBytes());
-            
+            Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
+
             Map<String, Object> result = new HashMap<>();
-            if (value != null) {
-                try {
-                    JobDto jobDto = yamlMapper.readValue(value, JobDto.class);
-                    result.put("status", "SUCCESS");
-                    result.put("job", jobDto);
-                    result.put("jobKey", jobKey);
-                } catch (Exception parseException) {
-                    log.error("Error parsing job {}", jobKey, parseException);
-                    result.put("status", "ERROR");
-                    result.put("message", "Failed to parse job data: " + parseException.getMessage());
-                }
+            if (jobOpt.isPresent()) {
+                result.put("status", "SUCCESS");
+                result.put("job", jobOpt.get());
+                result.put("jobKey", jobKey);
             } else {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Job not found: " + jobKey);
             }
-            
+
             return result;
-            
+
         } catch (RocksDBException e) {
             log.error("Error loading job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -191,25 +143,15 @@ public class JobManagementService {
     public Map<String, Object> saveJob(String jobKey, JobDto jobDto) {
         log.debug("Saving job: {}", jobKey);
         try {
-            // Set timestamps
-            String currentTime = LocalDateTime.now().format(dateFormatter);
-            if (jobDto.getCreatedDate() == null) {
-                jobDto.setCreatedDate(currentTime);
-            }
-            jobDto.setModifiedDate(currentTime);
-            
-            // Convert JobDto to YAML for storage
-            String yamlJob = yamlMapper.writeValueAsString(jobDto);
-            
-            rocksDB.put(jobsColumnFamily, jobKey.getBytes(), yamlJob.getBytes());
-            
+            JobDto savedJob = jobRepository.save(jobKey, jobDto);
+
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Job saved successfully");
             result.put("jobKey", jobKey);
-            result.put("job", jobDto);
+            result.put("job", savedJob);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Error saving job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -229,21 +171,16 @@ public class JobManagementService {
     public Map<String, Object> updateJob(String jobKey, JobDto jobDto) {
         log.debug("Updating job: {}", jobKey);
         try {
-            // Check if job exists first
-            byte[] existingValue = rocksDB.get(jobsColumnFamily, jobKey.getBytes());
+            Optional<JobDto> existingJobOpt = jobRepository.findById(jobKey);
             Map<String, Object> result = new HashMap<>();
-            
-            if (existingValue != null) {
-                // Preserve original creation date if it exists
-                try {
-                    JobDto existingJob = yamlMapper.readValue(existingValue, JobDto.class);
-                    if (existingJob.getCreatedDate() != null) {
-                        jobDto.setCreatedDate(existingJob.getCreatedDate());
-                    }
-                } catch (Exception e) {
-                    log.warn("Could not parse existing job for timestamp preservation: {}", e.getMessage());
+
+            if (existingJobOpt.isPresent()) {
+                // Preserve original creation date
+                JobDto existingJob = existingJobOpt.get();
+                if (existingJob.getCreatedDate() != null) {
+                    jobDto.setCreatedDate(existingJob.getCreatedDate());
                 }
-                
+
                 // Save the updated job
                 return saveJob(jobKey, jobDto);
             } else {
@@ -251,7 +188,7 @@ public class JobManagementService {
                 result.put("message", "Job not found: " + jobKey);
                 return result;
             }
-            
+
         } catch (RocksDBException e) {
             log.error("Error updating job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -270,13 +207,10 @@ public class JobManagementService {
     public Map<String, Object> deleteJob(String jobKey) {
         log.debug("Deleting job: {}", jobKey);
         try {
-            // Check if the job exists first
-            byte[] existingValue = rocksDB.get(jobsColumnFamily, jobKey.getBytes());
+            boolean existed = jobRepository.deleteById(jobKey);
             Map<String, Object> result = new HashMap<>();
-            
-            if (existingValue != null) {
-                // Delete the job
-                rocksDB.delete(jobsColumnFamily, jobKey.getBytes());
+
+            if (existed) {
                 result.put("status", "SUCCESS");
                 result.put("message", "Job deleted successfully");
                 result.put("jobKey", jobKey);
@@ -284,9 +218,9 @@ public class JobManagementService {
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Job not found: " + jobKey);
             }
-            
+
             return result;
-            
+
         } catch (RocksDBException e) {
             log.error("Error deleting job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
@@ -305,8 +239,7 @@ public class JobManagementService {
     public boolean jobExists(String jobKey) {
         log.debug("Checking if job exists: {}", jobKey);
         try {
-            Map<String, Object> result = loadJob(jobKey);
-            return "SUCCESS".equals(result.get("status"));
+            return jobRepository.existsById(jobKey);
         } catch (Exception e) {
             log.warn("Error checking job existence {}", jobKey, e);
             return false;

@@ -73,6 +73,7 @@ public class HMSMirrorAppService {
 
     private final ConfigService configService;
     private final ConnectionPoolService connectionPoolService;
+    private final ConversionResultService conversionResultService;
     private final DatabaseService databaseService;
     private final EnvironmentService environmentService;
     private final ExecuteSessionService executeSessionService;
@@ -84,6 +85,7 @@ public class HMSMirrorAppService {
 
     public HMSMirrorAppService(ExecuteSessionService executeSessionService,
                                ConnectionPoolService connectionPoolService,
+                               ConversionResultService conversionResultService,
                                DatabaseService databaseService,
                                ReportWriterService reportWriterService,
                                SessionManager sessionManager,
@@ -94,6 +96,7 @@ public class HMSMirrorAppService {
                                EnvironmentService environmentService) {
         this.executeSessionService = executeSessionService;
         this.connectionPoolService = connectionPoolService;
+        this.conversionResultService = conversionResultService;
         this.databaseService = databaseService;
         this.reportWriterService = reportWriterService;
         this.sessionManager = sessionManager;
@@ -111,7 +114,7 @@ public class HMSMirrorAppService {
         rtn = runStatus.getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
-            rtn = conversionResult.getUnsuccessfullTableCount();
+            rtn = conversionResultService.getUnsuccessfullTableCount(conversionResult);
         }
         return rtn;
     }
@@ -146,22 +149,23 @@ public class HMSMirrorAppService {
     session and add 'clones' to the new session.
      */
     @Async("executionThreadPool")
-    public CompletableFuture<Boolean> run(RunStatus runStatus, ConversionRequest conversionRequest,
-                                          ConversionResult conversionResult, HmsMirrorConfig config, ExecuteSession masterSession) {
+    public CompletableFuture<Boolean> run(RunStatus runStatus, String jobId, ExecuteSession masterSession) {
         Boolean rtn = Boolean.TRUE;
         // Now that we're in a new Thread, create a New Session for this thread and set the id to the masterSession id + subId.
-        ExecuteSession session = sessionManager.createSession(masterSession.getNextSubSessionId(), config);
-        config.reset();
-        session.setRunStatus(runStatus);
+        // TODO: Fix.
+//        ExecuteSession session = sessionManager.createSession(masterSession.getNextSubSessionId(), config);
+//        config.reset();
+//        session.setRunStatus(runStatus);
 
         // Set cloned ConversionRequest and ConversionResult if not null.
-        if (conversionRequest != null) {
-            session.setConversionRequest(conversionRequest.clone());
-        }
-        if (conversionResult != null) {
-            session.setConversionResult(conversionResult.clone());
-        }
-        rtn = theWork(session);
+//        if (conversionRequest != null) {
+//            session.setConversionRequest(conversionRequest.clone());
+//        }
+//        if (conversionResult != null) {
+//            session.setConversionResult(conversionResult.clone());
+//        }
+//        rtn = theWork(session);
+
         return CompletableFuture.completedFuture(rtn);
 
     }
