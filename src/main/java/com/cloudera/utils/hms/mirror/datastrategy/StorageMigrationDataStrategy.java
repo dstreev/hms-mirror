@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -76,7 +77,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
@@ -97,7 +98,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         // Get the Warehouse for the database
         Warehouse dbWarehouse = null;
         try {
-            dbWarehouse = warehouseService.getWarehousePlan(tableMirror.getParent().getName());
+            dbWarehouse = warehouseService.getWarehousePlan(dbMirror.getName());
             assert dbWarehouse != null;
         } catch (MissingDataPointException e) {
             log.error(MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getDesc(), e);
@@ -140,13 +141,13 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         }
 
         // Build Final from Source.
-        rtn = buildTableSchema(copySpec);
+        rtn = buildTableSchema(copySpec, dbMirror);
 
         return rtn;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -160,10 +161,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         let.getSql().clear();
         ret.getSql().clear();
 
-        String database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
-        String originalDatabase = tableMirror.getParent().getName();
+        String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+        String originalDatabase = dbMirror.getName();
 
-//        database = tableMirror.getParent().getName();
+//        database = dbMirror.getName();
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         let.addSql(TableUtils.USE_DESC, useDb);
@@ -202,7 +203,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -224,7 +225,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
             if (config.getTransfer().getStorageMigration().isDistcp()) {
                 if (!config.getTransfer().getStorageMigration().isCreateArchive()) {
                     // No Archive, just adjust the table/partition locations and build distcp.
-                    String database = tableMirror.getParent().getName();
+                    String database = dbMirror.getName();
                     String useDb = MessageFormat.format(MirrorConf.USE, database);
 
                     let.addSql(TableUtils.USE_DESC, useDb);
@@ -233,18 +234,18 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                     String origLocation = TableUtils.getLocation(tableMirror.getName(), tableMirror.getTableDefinition(Environment.LEFT));
                     try {
                         String newLocation = getTranslatorService().
-                                translateTableLocation(tableMirror, origLocation, 1, null);
+                                translateTableLocation(dbMirror, tableMirror, origLocation, 1, null);
 
                         // Build Alter Statement for Table to change location.
                         String alterTable = MessageFormat.format(MirrorConf.ALTER_TABLE_LOCATION, tableMirror.getEnvironmentTable(Environment.LEFT).getName(), newLocation);
                         Pair alterTablePair = new Pair(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterTable);
                         let.addSql(alterTablePair);
                         // Get the Warehouse from the Database Service.
-//                    Warehouse warehouse = databaseService.getWarehousePlan(tableMirror.getParent().getName());
+//                    Warehouse warehouse = databaseService.getWarehousePlan(dbMirror.getName());
 //                    if (nonNull(warehouse)) {
                         if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                             // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                            String lclLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                            String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                             if (!isBlank(lclLoc) && !newLocation.startsWith(lclLoc)) {
                                 // Set warning that even though you've specified to warehouse directories, the current configuration
                                 // will NOT place it in that directory.
@@ -257,9 +258,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             String location = null;
                             // Need to make adjustments for hdp3 hive 3.
                             if (config.getCluster(Environment.LEFT).isHdpHive3()) {
-                                location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                                location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                             } else {
-                                location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                             }
                             if (!isBlank(location) && !newLocation.startsWith(location)) {
                                 // Set warning that even though you've specified to warehouse directories, the current configuration
@@ -337,7 +338,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             }
                             try {
                                 String newPartLocation = getTranslatorService().
-                                        translateTableLocation(tableMirror, partLocation, ++level, entry.getKey());
+                                        translateTableLocation(dbMirror, tableMirror, partLocation, ++level, entry.getKey());
                                 String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION, let.getName(), partSpec, newPartLocation);
                                 String partSpecDesc = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_LOCATION_DESC, partSpec);
                                 let.addSql(partSpecDesc, addPartSql);
@@ -346,7 +347,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 //                                    hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
                                 if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                                     // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                                    String lclLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                                    String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                     if (!isBlank(lclLoc) && !newPartLocation.startsWith(lclLoc)) {
                                         // Set warning that even though you've specified to warehouse directories, the current configuration
                                         // will NOT place it in that directory.
@@ -359,9 +360,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                     String location = null;
                                     // Need to make adjustments for hdp3 hive 3.
                                     if (config.getCluster(Environment.LEFT).isHdpHive3()) {
-                                        location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                                        location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                     } else {
-                                        location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                        location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                                     }
                                     if (nonNull(location) && !newPartLocation.startsWith(location)) {
                                         // Set warning that even though you've specified to warehouse directories, the current configuration
@@ -406,10 +407,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                     //   even under the distcp movement strategy.  This allows the user access to the original
                     //   'data' under the archived table, which can be used for comparison or other purposes.
                     // Create new table
-                    rtn = buildOutDefinition(tableMirror);
+                    rtn = buildOutDefinition(dbMirror, tableMirror);
 
                     // Rename the table
-                    rtn = buildOutSql(tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
 
                     // Need to build out SQL to recreate partitions (with new locations).
                     // Build Alter Statement for Partitions to change location.
@@ -474,7 +475,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
                             if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                                 // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                                String lclLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                                String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                 if (!isBlank(lclLoc) && !partLocation.startsWith(lclLoc)) {
                                     // Set warning that even though you've specified to warehouse directories, the current configuration
                                     // will NOT place it in that directory.
@@ -487,9 +488,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                 String location = null;
                                 // Need to make adjustments for hdp3 hive 3.
                                 if (config.getCluster(Environment.LEFT).isHdpHive3()) {
-                                    location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                                    location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                 } else {
-                                    location = tableMirror.getParent().getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                    location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                                 }
                                 if (nonNull(location) && !partLocation.startsWith(location)) {
                                     // Set warning that even though you've specified to warehouse directories, the current configuration
@@ -524,13 +525,13 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                 }
             } else {
                 // No Distcp (SQL)
-                rtn = buildOutDefinition(tableMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);
 
                 if (rtn)
                     rtn = AVROCheck(tableMirror);
 
                 if (rtn)
-                    rtn = buildOutSql(tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
 
                 if (rtn) {
                     // Construct Transfer SQL
@@ -548,8 +549,8 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
                     // Set the LEFT and RIGHT table names.  When the table migration is NOT to the same database, we need to
                     //  prefix the table name with the database name.
-                    String database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
-                    String originalDatabase = tableMirror.getParent().getName();
+                    String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                    String originalDatabase = dbMirror.getName();
                     String leftTable = let.getName();
                     String rightTable = ret.getName();
                     if (!database.equals(originalDatabase)) {
@@ -643,7 +644,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.LEFT);
     }
 

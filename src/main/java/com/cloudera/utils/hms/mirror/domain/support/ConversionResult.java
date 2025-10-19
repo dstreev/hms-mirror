@@ -93,6 +93,11 @@ public class ConversionResult implements Cloneable {
      */
     private Map<String, DBMirror> databases = new TreeMap<>();
 
+    /**
+     * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#addDatabase(ConversionResult, String)} instead.
+     * This method will be removed in a future release. Business logic should not reside in domain objects.
+     */
+    @Deprecated(since = "4.0", forRemoval = true)
     public DBMirror addDatabase(String database) {
         if (databases.containsKey(database)) {
             return databases.get(database);
@@ -104,7 +109,11 @@ public class ConversionResult implements Cloneable {
         }
     }
 
-
+    /**
+     * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#getDatabase(ConversionResult, String)} instead.
+     * This method will be removed in a future release. Business logic should not reside in domain objects.
+     */
+    @Deprecated(since = "4.0", forRemoval = true)
     public DBMirror getDatabase(String database) {
         return databases.get(database);
     }

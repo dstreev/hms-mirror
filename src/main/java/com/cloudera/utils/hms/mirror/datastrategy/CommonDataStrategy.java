@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -57,7 +58,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
@@ -96,7 +97,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                             ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                             ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                             ret.setCreateStrategy(CreateStrategy.LEAVE);
-                            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                     SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                             log.error(msg);
                         } else {
@@ -104,7 +105,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                                 ret.addIssue(SCHEMA_EXISTS_NOT_MATCH_WITH_PURGE.getDesc());
                                 ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NOT_MATCH_WITH_PURGE.getDesc());
                                 ret.setCreateStrategy(CreateStrategy.LEAVE);
-                                String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                                String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                         SCHEMA_EXISTS_NOT_MATCH_WITH_PURGE.getDesc());
                                 log.error(msg);
                                 return Boolean.FALSE;
@@ -122,7 +123,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                         ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                         ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                         ret.setCreateStrategy(CreateStrategy.LEAVE);
-                        String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                        String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                 SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                         log.error(msg);
                         return Boolean.FALSE;
@@ -132,7 +133,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                     }
                 }
                 // Rebuild Target from Source.
-                rtn = buildTableSchema(copySpec);
+                rtn = buildTableSchema(copySpec, dbMirror);
             } else {
                 let.addIssue("Can't use COMMON for ACID tables");
                 ret.setCreateStrategy(CreateStrategy.NOTHING);
@@ -146,7 +147,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
@@ -160,7 +161,7 @@ public class CommonDataStrategy extends DataStrategyBase {
 
         //ret.getSql().clear();
 
-        database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -232,7 +233,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
@@ -242,7 +243,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                     "Can't transfer SCHEMA reference on COMMON storage for ACID tables.");
         } else {
             try {
-                rtn = buildOutDefinition(tableMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -251,7 +252,7 @@ public class CommonDataStrategy extends DataStrategyBase {
 
         if (rtn) {
             try {
-                rtn = buildOutSql(tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -262,7 +263,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

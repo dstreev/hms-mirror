@@ -160,13 +160,13 @@ public class TranslatorService {
      * @throws MissingDataPointException      If required data points needed for location translation are absent.
      * @throws MismatchException              If there is any mismatch between expected and actual data during the translation process.
      */
-    public Boolean translatePartitionLocations(TableMirror tblMirror) throws RequiredConfigurationException, MissingDataPointException, MismatchException {
-        
+    public Boolean translatePartitionLocations(DBMirror dbMirror, TableMirror tblMirror) throws RequiredConfigurationException, MissingDataPointException, MismatchException {
+
         log.debug("Translating partition locations for table: {}", tblMirror.getName());
-        
+
         try {
             // NEW: Delegate to core business logic instead of doing it inline
-            ValidationResult result = locationTranslator.translatePartitionLocations(tblMirror);
+            ValidationResult result = locationTranslator.translatePartitionLocations(dbMirror, tblMirror);
             
             // Handle the result in Spring-specific way (side effects, metrics, etc.)
             if (!result.isValid()) {
@@ -207,14 +207,14 @@ public class TranslatorService {
      * @throws MissingDataPointException      if required data points for determining the translation are missing or incomplete.
      * @throws RequiredConfigurationException if configurations required for translating the location are not provided or invalid.
      */
-    public String translateTableLocation(TableMirror tableMirror, String originalLocation,
+    public String translateTableLocation(DBMirror dbMirror, TableMirror tableMirror, String originalLocation,
                                          int level, String partitionSpec)
             throws MismatchException, MissingDataPointException, RequiredConfigurationException {
 
         log.debug("Translating table location for table: {} from: {}", tableMirror.getName(), originalLocation);
-        
+
         // NEW: Delegate to core business logic instead of doing it inline
-        LocationTranslationRequest request = new LocationTranslationRequest(tableMirror, originalLocation, level, partitionSpec);
+        LocationTranslationRequest request = new LocationTranslationRequest(dbMirror, tableMirror, originalLocation, level, partitionSpec);
         LocationTranslationResult result = locationTranslator.translateTableLocation(request);
         
         // Handle the result in Spring-specific way (side effects, metrics, etc.)
@@ -258,7 +258,7 @@ public class TranslatorService {
 
         // Handle storage migration distcp consolidation if needed
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        addTranslationIfRequired(config, tableMirror.getParent().getName(), originalLocation,
+        addTranslationIfRequired(config, dbMirror.getName(), originalLocation,
                 result.getTranslatedLocation(), level, config.getTransfer().getStorageMigration().isConsolidateTablesForDistcp(), tableMirror);
 
         return result.getTranslatedLocation();
@@ -303,7 +303,7 @@ public class TranslatorService {
      * @param tableMirror      Object representing the mirrored table, where phase state can be updated in case of errors.
      * @throws MissingDataPointException If the location mapping cannot be determined due to a missing or invalid GLM entry.
      */
-    private void handleStorageMigrationWithoutGlm(String originalLocation, HmsMirrorConfig config, TableMirror tableMirror)
+    private void handleStorageMigrationWithoutGlm(String originalLocation, HmsMirrorConfig config, DBMirror dbMirror, TableMirror tableMirror)
             throws MissingDataPointException {
 
         String origNamespace = NamespaceUtils.getNamespace(originalLocation);
@@ -335,6 +335,7 @@ public class TranslatorService {
      * @throws MissingDataPointException If a required data point for computing the location is missing.
      */
     private String computeNewLocation(
+            DBMirror dbMirror,
             GLMResult glmMapping,
             String targetNamespace,
             String partitionSpec,
@@ -349,7 +350,7 @@ public class TranslatorService {
             EnvironmentTable checkEnvTbl
     ) throws MissingDataPointException {
         StringBuilder sbDir = new StringBuilder();
-        Warehouse warehouse = warehouseService.getWarehousePlan(tableMirror.getParent().getName());
+        Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
         if (glmMapping.isMapped()) {
             sbDir.append(targetNamespace).append(glmMapping.getMappedDir());
         } else if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.ALIGNED) {
@@ -357,7 +358,7 @@ public class TranslatorService {
                 checkEnvTbl = tableMirror.getEnvironmentTable(Environment.LEFT);
             }
             if (TableUtils.isManaged(checkEnvTbl)) {
-                String managedLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                String managedLoc = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                 if (managedLoc != null) {
                     sbDir.append(managedLoc);
                 } else {
@@ -367,7 +368,7 @@ public class TranslatorService {
                             .append(targetDatabaseManagedDir);
                 }
             } else if (TableUtils.isExternal(checkEnvTbl)) {
-                String dbLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+                String dbLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                 if (dbLoc != null) {
                     sbDir.append(dbLoc);
                 } else {
@@ -426,11 +427,11 @@ public class TranslatorService {
      * @param partitionSpec   the partition specification (if applicable) being validated
      * @param checkEnvTbl     the environment table metadata to determine environment type (external or managed)
      */
-    private void warnIfLocationMismatch(TableMirror tableMirror, String testRelativeDir,
+    private void warnIfLocationMismatch(DBMirror dbMirror, TableMirror tableMirror, String testRelativeDir,
                                         String checkType, String newLocation, String partitionSpec, EnvironmentTable checkEnvTbl) {
 
         if (TableUtils.isExternal(checkEnvTbl)) {
-            String dbExtDir = tableMirror.getParent().getProperty(Environment.RIGHT, DB_LOCATION);
+            String dbExtDir = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
             if (!isBlank(dbExtDir)) {
                 dbExtDir = NamespaceUtils.stripNamespace(dbExtDir);
                 if (!testRelativeDir.startsWith(dbExtDir)) {
@@ -440,7 +441,7 @@ public class TranslatorService {
                 }
             }
         } else {
-            String managedLoc = tableMirror.getParent().getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+            String managedLoc = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
             if (!isBlank(managedLoc) && !newLocation.startsWith(managedLoc)) {
                 String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), checkType,
                         managedLoc, newLocation);

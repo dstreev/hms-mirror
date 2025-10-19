@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -49,17 +50,17 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         /*
@@ -75,27 +76,27 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
             too many partitions.
          */
         if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
-            rtn = sqlAcidInPlaceDataStrategy.build(tableMirror);
+            rtn = sqlAcidInPlaceDataStrategy.build(dbMirror, tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             if (let.getPartitioned()) {
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
                 if (let.getPartitions().size() < hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() ||
                         hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() <= 0) {
-                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(tableMirror);
+                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror);
                 } else {
-                    rtn = sqlAcidInPlaceDataStrategy.build(tableMirror);
+                    rtn = sqlAcidInPlaceDataStrategy.build(dbMirror, tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-                rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(tableMirror);
+                rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror);
             }
         }
         return rtn;
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         /*
@@ -111,20 +112,20 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
             too many partitions.
          */
         if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
-            rtn = sqlAcidInPlaceDataStrategy.execute(tableMirror);
+            rtn = sqlAcidInPlaceDataStrategy.execute(dbMirror, tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             if (let.getPartitioned()) {
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
                 if (let.getPartitions().size() < hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() ||
                         hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() <= 0) {
-                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
+                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror);
                 } else {
-                    rtn = sqlAcidInPlaceDataStrategy.execute(tableMirror);
+                    rtn = sqlAcidInPlaceDataStrategy.execute(dbMirror, tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-                rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(tableMirror);
+                rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror);
             }
         }
         return rtn;

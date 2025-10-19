@@ -47,11 +47,9 @@ public class TableMirror implements Cloneable {
     /*
     Use to indicate the tblMirror should be removed from processing, post setup.
      */
-    @JsonIgnore
-    private String unique = UUID.randomUUID().toString().replaceAll("-", "");
+//    @JsonIgnore
+//    private String key;// = UUID.randomUUID().toString().replaceAll("-", "");
     private String name;
-    @JsonIgnore
-    private DBMirror parent;
     private Date start = new Date();
     @JsonIgnore
     private boolean remove = Boolean.FALSE;
@@ -147,10 +145,6 @@ public class TableMirror implements Cloneable {
 
     public void setEnvironments(Map<Environment, EnvironmentTable> environments) {
         this.environments = environments;
-        // Need to connect after deserialization.
-        for (EnvironmentTable environmentTable : environments.values()) {
-            environmentTable.setParent(this);
-        }
     }
 
     public List<String> getIssues(Environment environment) {
@@ -179,8 +173,8 @@ public class TableMirror implements Cloneable {
     public String getProgressIndicator(int width) {
         StringBuilder sb = new StringBuilder();
         int progressLength = Math.floorDiv(Math.multiplyExact(width, currentPhase.get()), totalPhaseCount.get());
-        log.debug("{}:{} CurrentPhase: {} -> TotalPhaseCount: {}", this.getParent().getName(), this.getName(), currentPhase.get(), totalPhaseCount.get());
-        log.debug("{}:{} Progress: {} of {}", this.getParent().getName(), this.getName(), progressLength, width);
+//        log.debug("{}:{} CurrentPhase: {} -> TotalPhaseCount: {}", this.getParent().getName(), this.getName(), currentPhase.get(), totalPhaseCount.get());
+//        log.debug("{}:{} Progress: {} of {}", this.getParent().getName(), this.getName(), progressLength, width);
         sb.append("\u001B[32m");
         sb.append(StringUtils.rightPad("=", progressLength - 1, "="));
         sb.append("\u001B[33m");
@@ -338,13 +332,13 @@ public class TableMirror implements Cloneable {
         if (o == null || getClass() != o.getClass()) return false;
 
         TableMirror that = (TableMirror) o;
-        return Objects.equals(name, that.name) && Objects.equals(parent.getName(), that.parent.getName());
+        return Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hashCode(name);
-        result = 31 * result + Objects.hashCode(parent.getName());
+        result = 31 * result;
         return result;
     }
 
@@ -375,7 +369,6 @@ public class TableMirror implements Cloneable {
                     if (entry.getValue() != null) {
                         try {
                             EnvironmentTable clonedEnvTable = entry.getValue().clone();
-                            clonedEnvTable.setParent(clone);  // Set the cloned table's parent to the clone
                             clone.environments.put(entry.getKey(), clonedEnvTable);
                         } catch (CloneNotSupportedException e) {
                             throw new RuntimeException("Failed to clone EnvironmentTable", e);
@@ -385,10 +378,7 @@ public class TableMirror implements Cloneable {
                     }
                 }
             }
-            
-            // Note: parent reference intentionally not cloned to avoid circular references
-            clone.parent = null;
-            
+
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("Clone not supported for TableMirror", e);

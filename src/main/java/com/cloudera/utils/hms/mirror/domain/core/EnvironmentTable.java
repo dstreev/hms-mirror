@@ -49,14 +49,12 @@ public class EnvironmentTable implements Cloneable {
     private Map<String, Object> statistics = new HashMap<>();
     private List<String> issues = new ArrayList<>();
     private List<String> errors = new ArrayList<>();
-    @JsonIgnore
-    private TableMirror parent = null;
 
     public EnvironmentTable() {
     }
 
-    public EnvironmentTable(TableMirror parent) {
-        this.parent = parent;
+    public EnvironmentTable(TableMirror tableMirror) {
+        // Constructor kept for compatibility, but no longer stores parent reference
     }
 
 //    public void addAction(String action) {
@@ -86,7 +84,7 @@ public class EnvironmentTable implements Cloneable {
 
     public void addSql(Pair sqlPair) {
         getSql().add(sqlPair);
-        parent.incTotalPhaseCount();
+        // Note: Phase count management should be handled externally by the calling code
     }
 
     public void addSql(String desc, String sql) {
@@ -147,9 +145,6 @@ public class EnvironmentTable implements Cloneable {
         // Clone other collections
         clone.setDefinition(new ArrayList<>(definition));
         clone.setPartitions(new HashMap<>(partitions));
-        
-        // Note: parent reference intentionally not cloned to avoid circular references
-        clone.setParent(null);
 
         return clone;
     }

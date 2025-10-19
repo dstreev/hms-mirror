@@ -64,16 +64,16 @@ public class TestTranslator01 extends TranslatorTestBase {
         
         TableMirror tableMirror = new TableMirror();
         tableMirror.setName(TEST_TABLE_NAME);
-        tableMirror.setParent(dbMirror);
+//        tableMirror.setParent(dbMirror);
         tableMirror.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
         return tableMirror;
     }
 
     private void assertLocationTranslation(String originalLoc, String expectedLoc, 
-                                         TableMirror tableMirror) {
+                                         DBMirror dbMirror, TableMirror tableMirror) {
         try {
             String translatedLocation = translatorService.translateTableLocation(
-                tableMirror, originalLoc, 1, null);
+               dbMirror,  tableMirror, originalLoc, 1, null);
             assertEquals(expectedLoc, translatedLocation, "Table Location Failed");
         } catch (Throwable t) {
             fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " +
@@ -114,6 +114,7 @@ public class TestTranslator01 extends TranslatorTestBase {
      */
     @Test
     public void testBasicTableLocationTranslation() throws IOException {
+        DBMirror dbMirror = new DBMirror();
         TableMirror tableMirror = createTestTableMirror();
         assertTrue("Couldn't validate translator configuration", translator.validate());
     
@@ -121,13 +122,15 @@ public class TestTranslator01 extends TranslatorTestBase {
         assertLocationTranslation(
             LEFT_HDFS + "/tpcds_base_dir",
             RIGHT_HDFS + "/alt/ext/location/new_location",
-            tableMirror
+                dbMirror,
+                tableMirror
         );
     
         assertLocationTranslation(
             LEFT_HDFS + "/tpcds_base_dir2",
             RIGHT_HDFS + "/myspace/alt/ext/call_center",
-            tableMirror
+                dbMirror,
+                tableMirror
         );
     }
     
@@ -136,6 +139,7 @@ public class TestTranslator01 extends TranslatorTestBase {
      */
     @Test
     public void testStandardHdfsNamespaceTranslation() throws IOException {
+        DBMirror dbMirror = new DBMirror();
         // Create table mirror with LEFT location definition
         TableMirror tableMirror = createTestTableMirror();
         tableMirror.getTableDefinition(Environment.LEFT).add("mytable");
@@ -148,7 +152,8 @@ public class TestTranslator01 extends TranslatorTestBase {
         assertLocationTranslation(
             "hdfs://LEFT/apps/hive/warehouse/tpcds_09.db",
             "hdfs://RIGHT/apps/hive/warehouse/tpcds_09.db",
-            tableMirror
+                dbMirror,
+                tableMirror
         );
     }
     
@@ -157,6 +162,7 @@ public class TestTranslator01 extends TranslatorTestBase {
      */
     @Test
     public void testTableLocationConsolidation() throws IOException {
+        DBMirror dbMirror = new DBMirror();
         // Create test table mirror
         TableMirror tableMirror = createTestTableMirror();
         assertTrue("Couldn't validate translator configuration", translator.validate());
@@ -165,14 +171,16 @@ public class TestTranslator01 extends TranslatorTestBase {
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir",
             "hdfs://RIGHT/alt/ext/location/new_location",
-            tableMirror
+                dbMirror,
+                tableMirror
         );
         
         // Test when db translation defined with consolidation but table is NOT listed
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir3",
             "hdfs://RIGHT/alt/ext/location/web_sales",
-            tableMirror
+                dbMirror,
+                tableMirror
         );
     }
     
@@ -186,7 +194,7 @@ public class TestTranslator01 extends TranslatorTestBase {
         dbMirror.setName(TEST_DB_NAME);
         TableMirror callCenterTable = new TableMirror();
         callCenterTable.setName("call_center");
-        callCenterTable.setParent(dbMirror);
+//        callCenterTable.setParent(dbMirror);
         callCenterTable.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
         
         assertTrue("Couldn't validate translator configuration", translator.validate());
@@ -195,6 +203,7 @@ public class TestTranslator01 extends TranslatorTestBase {
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir5/web_sales",
             "hdfs://RIGHT/warehouse/tablespace/external/hive/tpcds_10.db/web_sales",
+            dbMirror,
             callCenterTable
         );
         
@@ -202,33 +211,37 @@ public class TestTranslator01 extends TranslatorTestBase {
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir4/call_center2",
             "hdfs://RIGHT/warehouse/tablespace/external/hive/tpcds_10.db/call_center2",
-            callCenterTable
+                dbMirror,
+                callCenterTable
         );
         
         // Test nested paths with web_returns
         TableMirror webReturnsTable = new TableMirror();
         webReturnsTable.setName("web_returns");
-        webReturnsTable.setParent(dbMirror);
+//        webReturnsTable.setParent(dbMirror);
         webReturnsTable.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
         
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir4/web/web_returns",
             "hdfs://RIGHT/warehouse/tablespace/external/hive/tpcds_10.db/web_returns",
-            webReturnsTable
+                dbMirror,
+                webReturnsTable
         );
         
         // Test web returns path with user directory
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir/web/web_returns2",
             "hdfs://RIGHT/user/dstreev/datasets/tpcds_11.db/web_returns",
-            webReturnsTable
+                dbMirror,
+                webReturnsTable
         );
         
         // Test call_center path with different database
         assertLocationTranslation(
             "hdfs://LEFT/tpcds_base_dir/web/call_center",
             "hdfs://RIGHT/warehouse/tablespace/external/hive/tpcds_11.db/call_center",
-            callCenterTable
+                dbMirror,
+                callCenterTable
         );
     }
 }

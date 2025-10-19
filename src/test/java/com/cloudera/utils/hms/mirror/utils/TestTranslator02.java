@@ -65,7 +65,7 @@ public class TestTranslator02 extends TranslatorTestBase {
         TableMirror tableMirror = new TableMirror();
         tableMirror.setName("web_sales");
         tableMirror.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
-        tableMirror.setParent(dbMirror);
+//        tableMirror.setParent(dbMirror);
 
         assertTrue("Couldn't validate translator configuration", translator.validate());
 
@@ -73,7 +73,7 @@ public class TestTranslator02 extends TranslatorTestBase {
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/web_sales";
         try {
             String translatedLocation =
-                    translatorService.translateTableLocation(tableMirror, originalLoc, 1, null);
+                    translatorService.translateTableLocation(dbMirror, tableMirror, originalLoc, 1, null);
             assertEquals(expectedLoc, translatedLocation, "Table Location Failed: ");
         } catch (Throwable t) {
             fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " + t.getMessage());
@@ -89,14 +89,14 @@ public class TestTranslator02 extends TranslatorTestBase {
 
         TableMirror tableMirror1 = new TableMirror();
         tableMirror1.setName("call_center");
-        tableMirror1.setParent(dbMirror);
+//        tableMirror1.setParent(dbMirror);
         tableMirror1.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
 
         String originalLoc = "hdfs://LEFT/tpcds_base_dir/call_center2";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/call_center2";
         try {
             String translatedLocation =
-                    translatorService.translateTableLocation(tableMirror1, originalLoc, 1, null);
+                    translatorService.translateTableLocation(dbMirror, tableMirror1, originalLoc, 1, null);
             assertEquals(expectedLoc, translatedLocation, "Table Location Failed: ");
         } catch (Throwable t) {
             fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " + t.getMessage());
@@ -112,14 +112,14 @@ public class TestTranslator02 extends TranslatorTestBase {
 
         TableMirror tableMirror2 = new TableMirror();
         tableMirror2.setName("web_returns");
-        tableMirror2.setParent(dbMirror);
+//        tableMirror2.setParent(dbMirror);
         tableMirror2.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
 
         String originalLoc = "hdfs://LEFT/tpcds_base_dir2/web/web_returns";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/web_returns";
         try {
             String translatedLocation =
-                    translatorService.translateTableLocation(tableMirror2, originalLoc, 1, null);
+                    translatorService.translateTableLocation(dbMirror, tableMirror2, originalLoc, 1, null);
             assertEquals(expectedLoc, translatedLocation, "Table Location Failed: ");
         } catch (Throwable t) {
             fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " + t.getMessage());
@@ -135,14 +135,14 @@ public class TestTranslator02 extends TranslatorTestBase {
 
         TableMirror tableMirror3 = new TableMirror();
         tableMirror3.setName("web_returns");
-        tableMirror3.setParent(dbMirror);
+//        tableMirror3.setParent(dbMirror);
         tableMirror3.getTableDefinition(Environment.RIGHT).add("CREATE EXTERNAL TABLE");
 
         String originalLoc = "hdfs://LEFT/tpcds_base_dir2/web/web_returns";
         String expectedLoc = "hdfs://RIGHT/alt/ext/location/web_returns";
         try {
             String translatedLocation =
-                    translatorService.translateTableLocation(tableMirror3, originalLoc, 1, null);
+                    translatorService.translateTableLocation(dbMirror, tableMirror3, originalLoc, 1, null);
             assertEquals(expectedLoc, translatedLocation, "Table Location Failed: ");
         } catch (Throwable t) {
             fail("Table Location Failed: " + originalLoc + " : " + expectedLoc + " : " + t.getMessage());

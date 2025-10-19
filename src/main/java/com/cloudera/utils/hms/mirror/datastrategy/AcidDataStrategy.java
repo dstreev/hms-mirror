@@ -16,6 +16,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
@@ -56,7 +57,7 @@ public class AcidDataStrategy extends DataStrategyBase {
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
@@ -68,7 +69,7 @@ public class AcidDataStrategy extends DataStrategyBase {
      * @throws MissingDataPointException if required data points are missing
      */
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
@@ -79,7 +80,7 @@ public class AcidDataStrategy extends DataStrategyBase {
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
@@ -90,7 +91,7 @@ public class AcidDataStrategy extends DataStrategyBase {
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 }

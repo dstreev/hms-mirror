@@ -61,7 +61,7 @@ public class ConversionResultRepositoryImpl implements ConversionResultRepositor
     private static final String DATABASES_PREFIX = "/databases";
     private static final String TABLES_PREFIX = "/tables";
     private static final String SEPARATOR = "/";
-    
+
     // Table-level keys
     private static final String STEPS_KEY = "/steps";
     private static final String START_KEY = "/start";
@@ -70,7 +70,7 @@ public class ConversionResultRepositoryImpl implements ConversionResultRepositor
     private static final String CURRENT_PHASE_KEY = "/currentPhase";
     private static final String TOTAL_PHASE_COUNT_KEY = "/totalPhaseCount";
     private static final String STAGE_DURATION_KEY = "/stageDuration";
-    
+
     // Environment-level keys
     private static final String SQLS_KEY = "/sqls";
     private static final String CLEANUP_SQLS_KEY = "/cleanupSqls";
@@ -90,7 +90,7 @@ public class ConversionResultRepositoryImpl implements ConversionResultRepositor
     private final ObjectMapper yamlMapper;
 
     public ConversionResultRepositoryImpl(RocksDB rocksDB,
-                                         @Qualifier("sessionsColumnFamily") ColumnFamilyHandle sessionsColumnFamily,
+                                         @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle sessionsColumnFamily,
                                          ObjectMapper objectMapper) {
         this.rocksDB = rocksDB;
         this.sessionsColumnFamily = sessionsColumnFamily;
@@ -937,8 +937,7 @@ public class ConversionResultRepositoryImpl implements ConversionResultRepositor
                 String table = tableEntry.getKey();
                 TableMirror tableMirror = new TableMirror();
                 tableMirror.setName(table);
-                tableMirror.setParent(dbMirror);
-                
+
                 // Reconstruct table mirror from flattened data
                 reconstructTableMirror(tableMirror, tableEntry.getValue(), database, table);
                 tableMirrors.put(table, tableMirror);

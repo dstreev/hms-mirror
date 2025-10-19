@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -57,7 +58,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY Definition", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -116,7 +117,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                         ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
                         ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION.getDesc());
                         ret.setCreateStrategy(CreateStrategy.LEAVE);
-                        String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                        String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                 SCHEMA_EXISTS_NO_ACTION.getDesc());
                         log.error(msg);
                         return Boolean.FALSE;
@@ -142,7 +143,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                     // The warning is that no action will be taken and we'll only warning that they aren't in sync.
                     ret.addIssue(SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
                     ret.setCreateStrategy(CreateStrategy.LEAVE);
-                    String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                    String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                             SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
                     log.warn(msg);
                     return Boolean.TRUE;
@@ -160,7 +161,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                             ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
                             ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION.getDesc());
                             ret.setCreateStrategy(CreateStrategy.LEAVE);
-                            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                     SCHEMA_EXISTS_NO_ACTION.getDesc());
                             log.error(msg);
                             return Boolean.FALSE;
@@ -184,7 +185,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 || (TableUtils.isACID(let)
                 && config.getMigrateACID().isOn())) {
             if (!(!let.isExists() & ret.isExists() && config.isSync())) {
-                rtn = buildTableSchema(copySpec);
+                rtn = buildTableSchema(copySpec, dbMirror);
             } else {
                 rtn = Boolean.TRUE;
             }
@@ -203,7 +204,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -217,7 +218,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
 
         //ret.getSql().clear();
 
-        database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
         useDb = MessageFormat.format(MirrorConf.USE, database);
 
         switch (ret.getCreateStrategy()) {
@@ -290,13 +291,13 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         try {
-            rtn = this.buildOutDefinition(tableMirror);
+            rtn = this.buildOutDefinition(dbMirror, tableMirror);
         } catch (RequiredConfigurationException e) {
             let.addError("Failed to build out definition: " + e.getMessage());
             rtn = Boolean.FALSE;
@@ -307,7 +308,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         }
         if (rtn) {
             try {
-                rtn = this.buildOutSql(tableMirror);
+                rtn = this.buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -320,7 +321,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return getTableService().runTableSql(tableMirror, Environment.RIGHT);
     }
 }

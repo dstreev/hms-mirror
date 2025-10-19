@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -60,17 +61,17 @@ public class HybridDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -81,7 +82,7 @@ public class HybridDataStrategy extends DataStrategyBase {
         if (TableUtils.isACID(let) && configService.legacyMigration(config)) {
             tableMirror.setStrategy(DataStrategyEnum.ACID);
             if (config.getMigrateACID().isOn()) {
-                rtn = intermediateDataStrategy.build(tableMirror);
+                rtn = intermediateDataStrategy.build(dbMirror, tableMirror);
             } else {
                 let.addError(TableUtils.ACID_NOT_ON);
                 rtn = Boolean.FALSE;
@@ -100,19 +101,19 @@ public class HybridDataStrategy extends DataStrategyBase {
                     tableMirror.setStrategy(DataStrategyEnum.SQL);
                     if (!isBlank(config.getTransfer().getIntermediateStorage())
                             || !isBlank(config.getTransfer().getTargetNamespace())) {
-                        rtn = intermediateDataStrategy.build(tableMirror);
+                        rtn = intermediateDataStrategy.build(dbMirror, tableMirror);
                     } else {
-                        rtn = sqlDataStrategy.build(tableMirror);
+                        rtn = sqlDataStrategy.build(dbMirror, tableMirror);
                     }
                 } else {
                     // EXPORT
                     tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
-                    rtn = exportImportDataStrategy.build(tableMirror);
+                    rtn = exportImportDataStrategy.build(dbMirror, tableMirror);
                 }
             } else {
                 // EXPORT
                 tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
-                rtn = exportImportDataStrategy.build(tableMirror);
+                rtn = exportImportDataStrategy.build(dbMirror, tableMirror);
             }
         }
         return rtn;
@@ -120,7 +121,7 @@ public class HybridDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -128,7 +129,7 @@ public class HybridDataStrategy extends DataStrategyBase {
         if (TableUtils.isACID(let) && configService.legacyMigration(config)) {
             tableMirror.setStrategy(DataStrategyEnum.ACID);
             if (config.getMigrateACID().isOn()) {
-                rtn = intermediateDataStrategy.execute(tableMirror);
+                rtn = intermediateDataStrategy.execute(dbMirror, tableMirror);
             } else {
                 rtn = Boolean.FALSE;
             }
@@ -138,17 +139,17 @@ public class HybridDataStrategy extends DataStrategyBase {
                         config.getHybrid().getExportImportPartitionLimit() > 0) {
                     if (!isBlank(config.getTransfer().getIntermediateStorage())
                             || !isBlank(config.getTransfer().getTargetNamespace())) {
-                        rtn = intermediateDataStrategy.execute(tableMirror);
+                        rtn = intermediateDataStrategy.execute(dbMirror, tableMirror);
                     } else {
-                        rtn = sqlDataStrategy.execute(tableMirror);
+                        rtn = sqlDataStrategy.execute(dbMirror, tableMirror);
                     }
                 } else {
                     // EXPORT
-                    rtn = exportImportDataStrategy.execute(tableMirror);
+                    rtn = exportImportDataStrategy.execute(dbMirror, tableMirror);
                 }
             } else {
                 // EXPORT
-                rtn = exportImportDataStrategy.execute(tableMirror);
+                rtn = exportImportDataStrategy.execute(dbMirror, tableMirror);
             }
         }
         return rtn;

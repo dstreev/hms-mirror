@@ -59,6 +59,8 @@ public class CliReporter {
     private final Map<String, String> varMap = new TreeMap<>();
     private final List<TableMirror> startedTables = new ArrayList<>();
     private final SessionManager sessionManager;
+    // TODO: Need to populate this.
+    private DBMirror dbMirror;
 
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
@@ -90,7 +92,8 @@ public class CliReporter {
             // Table Processing
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
-                tblVars.put("db.name", HmsMirrorConfigUtil.getResolvedDB(tblMirror.getParent().getName(), config));
+                String dbName = findDatabaseForTable(conversionResult, tblMirror);
+                tblVars.put("db.name", HmsMirrorConfigUtil.getResolvedDB(dbName, config));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
@@ -310,6 +313,16 @@ public class CliReporter {
 
     public void setVariable(String key, String value) {
         varMap.put(key, value);
+    }
+
+    private String findDatabaseForTable(ConversionResult conversionResult, TableMirror tableMirror) {
+        for (Map.Entry<String, DBMirror> entry : conversionResult.getDatabases().entrySet()) {
+            DBMirror dbMirror = entry.getValue();
+            if (dbMirror.getTableMirrors() != null && dbMirror.getTableMirrors().containsValue(tableMirror)) {
+                return entry.getKey();
+            }
+        }
+        return null; // Table not found in any database
     }
 
 }

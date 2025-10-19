@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.core.model;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 
 /**
@@ -24,19 +25,22 @@ import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
  * Contains all necessary information to perform location translation business logic.
  */
 public class LocationTranslationRequest {
+    private final DBMirror dbMirror;
     private final TableMirror tableMirror;
     private final String originalLocation;
     private final int level;
     private final String partitionSpec;
 
-    public LocationTranslationRequest(TableMirror tableMirror, String originalLocation, 
+    public LocationTranslationRequest(DBMirror dbMirror, TableMirror tableMirror, String originalLocation,
                                     int level, String partitionSpec) {
+        this.dbMirror = dbMirror;
         this.tableMirror = tableMirror;
         this.originalLocation = originalLocation;
         this.level = level;
         this.partitionSpec = partitionSpec;
     }
 
+    public DBMirror getDbMirror() { return dbMirror; }
     public TableMirror getTableMirror() { return tableMirror; }
     public String getOriginalLocation() { return originalLocation; }
     public int getLevel() { return level; }

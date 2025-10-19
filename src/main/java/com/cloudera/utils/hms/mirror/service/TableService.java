@@ -172,9 +172,9 @@ public class TableService {
      * @param tableMirror The table mirror object.
      * @param environment The environment (LEFT or RIGHT).
      */
-    private void getTableDefinition(ExecuteSession session, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
+    private void getTableDefinition(ExecuteSession session, DBMirror dbMirror, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
         final String tableId = String.format("%s:%s.%s",
-                environment, tableMirror.getParent().getName(), tableMirror.getName());
+                environment, dbMirror.getName(), tableMirror.getName());
         log.info("Fetching table definition for table: {} in environment: {}", tableMirror.getName(), environment);
 //        EnvironmentTable environmentTable = null;
         log.info("Starting to get table definition for {}", tableId);
@@ -187,7 +187,7 @@ public class TableService {
             log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
         } else {
             log.debug("Loading schema from catalog for {}", tableId);
-            loadSchemaFromCatalog(tableMirror, environment);
+            loadSchemaFromCatalog(dbMirror, tableMirror, environment);
         }
         log.debug("Checking table filter for {}", tableId);
         checkTableFilter(session, tableMirror, environment);
@@ -201,7 +201,7 @@ public class TableService {
             log.debug("Table is partitioned. Checking metadata details for {}", tableId);
             if (config.loadMetadataDetails()) {
                 log.debug("Loading partition metadata directly for {}", tableId);
-                loadTablePartitionMetadataDirect(tableMirror, environment);
+                loadTablePartitionMetadataDirect(dbMirror, tableMirror, environment);
             }
         }
         Integer partLimit = config.getFilter().getTblPartitionLimit();
@@ -250,7 +250,7 @@ public class TableService {
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTableMetadata(TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> getTableMetadata(DBMirror dbMirror, TableMirror tableMirror) {
         log.info("Fetching table metadata asynchronously for table: {}", tableMirror.getName());
         ReturnStatus rtn = new ReturnStatus();
         // Preset and overwrite the status when an issue or anomoly occurs.
@@ -260,11 +260,12 @@ public class TableService {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // ...logic...
+                rtn.setDbMirror(dbMirror);
                 rtn.setTableMirror(tableMirror);
                 HmsMirrorConfig hmsMirrorConfig = session.getConfig();
                 EnvironmentTable leftEnvTable = tableMirror.getEnvironmentTable(Environment.LEFT);
                 try {
-                    getTableDefinition(session, tableMirror, leftEnvTable, Environment.LEFT);
+                    getTableDefinition(session, dbMirror, tableMirror, leftEnvTable, Environment.LEFT);
                     if (tableMirror.isRemove()) {
                         rtn.setStatus(ReturnStatus.Status.SKIP);
                         return rtn;
@@ -276,18 +277,18 @@ public class TableService {
                                 try {
                                     tableMirror.getEnvironments().put(Environment.RIGHT, tableMirror.getEnvironmentTable(Environment.LEFT).clone());
                                 } catch (CloneNotSupportedException e) {
-                                    log.error("Clone not supported for table: {}.{}", tableMirror.getParent().getName(), tableMirror.getName());
+                                    log.error("Clone not supported for table: {}.{}", dbMirror.getName(), tableMirror.getName());
                                 }
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                                 break;
                             default:
                                 EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                                 try {
-                                    getTableDefinition(session, tableMirror, rightEnvTable, Environment.RIGHT);
+                                    getTableDefinition(session, dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
                                     rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                                 } catch (SQLException se) {
                                     // Can't find the table on the RIGHT.  This is OK if the table doesn't exist.
-                                    log.debug("No table definition for {}:{}", tableMirror.getParent().getName(), tableMirror.getName(), se);
+                                    log.debug("No table definition for {}:{}", dbMirror.getName(), tableMirror.getName(), se);
                                 }
                         }
                     }
@@ -297,7 +298,7 @@ public class TableService {
                     if (hmsMirrorConfig.isSync()) {
                         EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                         try {
-                            getTableDefinition(session, tableMirror, rightEnvTable, Environment.RIGHT);
+                            getTableDefinition(session, dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                         } catch (SQLException se) {
                             // OK, if the db doesn't exist yet.
@@ -510,10 +511,10 @@ public class TableService {
     private static final String OWNER_PREFIX = "owner";
 
     public void
-    loadSchemaFromCatalog(TableMirror tableMirror, Environment environment) throws SQLException {
+    loadSchemaFromCatalog(DBMirror dbMirror, TableMirror tableMirror, Environment environment) throws SQLException {
         log.info("Loading schema from catalog for table: {} in environment: {}", tableMirror.getName(), environment);
         // ...logic...
-        String database = resolveDatabaseName(tableMirror, environment);
+        String database = resolveDatabaseName(dbMirror, tableMirror, environment);
         EnvironmentTable environmentTable = tableMirror.getEnvironmentTable(environment);
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -539,14 +540,14 @@ public class TableService {
         log.debug("Loaded schema from catalog for table: {}", tableMirror);
     }
 
-    private String resolveDatabaseName(TableMirror tableMirror, Environment environment) {
+    private String resolveDatabaseName(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.trace("Resolving database name for table: {} in environment: {}", tableMirror, environment);
         // ...logic...
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         if (environment == Environment.LEFT) {
-            return tableMirror.getParent().getName();
+            return dbMirror.getName();
         } else {
-            return HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+            return HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
         }
     }
 
@@ -618,7 +619,7 @@ public class TableService {
         }
     }
 
-    protected void loadTableOwnership(TableMirror tableMirror, Environment environment) {
+    protected void loadTableOwnership(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.info("Loading ownership information for table: {} in environment: {}", tableMirror, environment);
         // ...logic...
         Connection conn = null;
@@ -645,7 +646,7 @@ public class TableService {
                                     owner = ownerLine[1];
                                 } catch (Throwable t) {
                                     // Parsing issue.
-                                    log.error("Couldn't parse 'owner' value from: {} for table: {}.{}", resultSet.getString(1), tableMirror.getParent().getName(), tableMirror.getName());
+                                    log.error("Couldn't parse 'owner' value from: {} for table: {}.{}", resultSet.getString(1), dbMirror.getName(), tableMirror.getName());
                                 }
                                 break;
                             }
@@ -691,13 +692,13 @@ public class TableService {
         }
     }
 
-    protected void loadTablePartitionMetadata(TableMirror tableMirror, Environment environment) throws SQLException {
+    protected void loadTablePartitionMetadata(DBMirror dbMirror, TableMirror tableMirror, Environment environment) throws SQLException {
         log.info("Loading partition metadata for table: {}, environment: {}", tableMirror, environment);
         // ...logic...
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;
-        String database = tableMirror.getParent().getName();
+        String database = dbMirror.getName();
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
             conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
@@ -741,7 +742,7 @@ public class TableService {
         }
     }
 
-    protected void loadTablePartitionMetadataDirect(TableMirror tableMirror, Environment environment) {
+    protected void loadTablePartitionMetadataDirect(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         /*
         1. Get Metastore Direct Connection
         2. Get Query Definitions
@@ -763,7 +764,7 @@ public class TableService {
             return;
         }
 
-        String database = tableMirror.getParent().getName();
+        String database = dbMirror.getName();
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
             conn = getConnectionPoolService().getMetastoreDirectEnvironmentConnection(environment);

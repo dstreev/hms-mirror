@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyBase;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -89,23 +90,23 @@ public class ExportCircularResolveService extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
-    public Boolean buildOutExportImportSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutExportImportSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
         String database = null;
-        database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
         String leftNamespace = TableUtils.getLocation(let.getName(), let.getDefinition());
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-        Warehouse warehouse = warehouseService.getWarehousePlan(tableMirror.getParent().getName());
+        Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
         try {
             // LEFT Export to directory
-            String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
+            String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             String exportLoc = null;
 
@@ -116,7 +117,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 exportLoc = isLoc + "/" +
                         config.getTransfer().getRemoteWorkingDirectory() + "/" +
                         config.getRunMarker() + "/" +
-                        tableMirror.getParent().getName() + "/" +
+                        dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else if (!isBlank(config.getTransfer().getTargetNamespace())) {
                 String isLoc = config.getTransfer().getTargetNamespace();
@@ -124,11 +125,11 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
                         config.getRunMarker() + "/" +
-                        tableMirror.getParent().getName() + "/" +
+                        dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else {
                 exportLoc = config.getTransfer().getExportBaseDirPrefix()
-                        + tableMirror.getParent().getName() + "/" + let.getName();
+                        + dbMirror.getName() + "/" + let.getName();
             }
             String origTableName = let.getName();
             if (isACIDInPlace(tableMirror, Environment.LEFT)) {
@@ -165,7 +166,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
             }
 
             String sourceLocation = TableUtils.getLocation(let.getName(), let.getDefinition());
-            String targetLocation = getTranslatorService().translateTableLocation(tableMirror, sourceLocation, 1, null);
+            String targetLocation = getTranslatorService().translateTableLocation(dbMirror, tableMirror, sourceLocation, 1, null);
             String importSql;
             if (TableUtils.isACID(let)) {
                 if (!config.getMigrateACID().isDowngrade()) {
@@ -181,7 +182,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 if (config.loadMetadataDetails()) {
                     targetLocation = config.getTargetNamespace()
                             + warehouse.getExternalDirectory() +
-                            "/" + HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config) + ".db/"
+                            "/" + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db/"
                             + tableMirror.getName();
                     importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 } else {
@@ -233,17 +234,17 @@ public class ExportCircularResolveService extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 

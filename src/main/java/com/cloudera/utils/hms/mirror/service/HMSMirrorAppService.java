@@ -377,7 +377,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
             for (String database : config.getDatabases()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
-                DBMirror dbMirror = conversionResult.addDatabase(database);
+                DBMirror dbMirror = conversionResultService.addDatabase(conversionResult, database);
                 try {
                     // Get the Database definitions for the LEFT and RIGHT clusters.
                     if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) { //getConfig().getCluster(Environment.LEFT).getDatabase(config, dbMirror)) {
@@ -415,6 +415,7 @@ public class HMSMirrorAppService {
                     gtf.add(gt);
                 }
             }
+
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.COMPLETED);
 
             // Wait for all the CompletableFutures to finish.
@@ -531,11 +532,11 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.IN_PROGRESS);
             if (rtn) {
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversionResult.getDatabase(database);
+                    DBMirror dbMirror = conversionResultService.getDatabase(conversionResult, database);
                     Set<String> tables = dbMirror.getTableMirrors().keySet();
                     for (String table : tables) {
                         TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
-                        gtf.add(tableService.getTableMetadata(tableMirror));
+                        gtf.add(tableService.getTableMetadata(dbMirror, tableMirror));
                     }
                 }
 
@@ -562,7 +563,7 @@ public class HMSMirrorAppService {
                                     // Launch the next step, which is the transfer.
                                     runStatus.getOperationStatistics().getSuccesses().incrementTables();
 
-                                    migrationFuture.add(getTransferService().build(sf.get().getTableMirror()));
+                                    migrationFuture.add(getTransferService().build(sf.get().getDbMirror(), sf.get().getTableMirror()));
                                     break;
                                 case ERROR:
                                     runStatus.getOperationStatistics().getCounts().incrementTables();
@@ -601,7 +602,7 @@ public class HMSMirrorAppService {
 
                 // Remove the tables that are marked for removal.
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversionResult.getDatabase(database);
+                    DBMirror dbMirror = conversionResultService.getDatabase(conversionResult, database);
                     Set<String> tables = dbMirror.getTableMirrors().keySet();
                     for (String table : tables) {
                         TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
@@ -622,7 +623,7 @@ public class HMSMirrorAppService {
                 runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.SKIPPED);
             }
 
-            Set<TableMirror> migrationExecutions = new HashSet<>();
+            Set<ReturnStatus> migrationExecutions = new HashSet<>();
 
             // Check the Migration Futures are done.
             CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
@@ -636,7 +637,7 @@ public class HMSMirrorAppService {
                         // Only push SUCCESSFUL tables to the migrationExecutions list.
                         if (rs.getStatus() == ReturnStatus.Status.SUCCESS) {
                             // Success means add table the execution list.
-                            migrationExecutions.add(tableMirror);
+                            migrationExecutions.add(rs);
                         }
                     } else {
                         log.error("ReturnStatus is NULL in migration build");
@@ -660,7 +661,7 @@ public class HMSMirrorAppService {
             if (rtn) {
                 // Check the Unique SET statements.
                 for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversionResult.getDatabase(database);
+                    DBMirror dbMirror = conversionResultService.getDatabase(conversionResult, database);
                     if (!databaseService.checkSqlStatements(dbMirror)) {
                         rtn = Boolean.FALSE;
                     }
@@ -706,8 +707,8 @@ public class HMSMirrorAppService {
             if (rtn) {
                 if (config.isExecute()) {
                     // Using the migrationExecute List, create futures for the table executions.
-                    for (TableMirror tableMirror : migrationExecutions) {
-                        migrationFuture.add(getTransferService().execute(tableMirror));
+                    for (ReturnStatus returnStatus : migrationExecutions) {
+                        migrationFuture.add(getTransferService().execute(returnStatus.getDbMirror(), returnStatus.getTableMirror()));
                     }
 
                     // Wait for all the CompletableFutures to finish.

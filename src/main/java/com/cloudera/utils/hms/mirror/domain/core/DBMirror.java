@@ -40,6 +40,9 @@ import static java.util.Objects.nonNull;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DBMirror implements Cloneable {
 
+    @JsonIgnore
+    private String key;
+    private String name;
     private final Map<Environment, List<String>> issues = new TreeMap<>();
     /*
     table - reason
@@ -51,7 +54,6 @@ public class DBMirror implements Cloneable {
 //    @JsonIgnore
     private final Map<Environment, Map<String, String>> problemSQL = new TreeMap<>();
 
-    private String name;
     @JsonIgnore
     private String resolvedName;
     private Map<Environment, Map<String, String>> properties = new TreeMap<>();

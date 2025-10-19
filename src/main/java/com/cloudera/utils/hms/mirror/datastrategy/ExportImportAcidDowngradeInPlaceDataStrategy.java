@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -51,17 +52,17 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -75,7 +76,7 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
 
         // Check Partition Limits before proceeding.
         try {
-            rtn = getExportCircularResolveService().buildOutExportImportSql(tableMirror);
+            rtn = getExportCircularResolveService().buildOutExportImportSql(dbMirror, tableMirror);
         } catch (MissingDataPointException e) {
             let.addError("Failed to build out SQL: " + e.getMessage());
             rtn = Boolean.FALSE;
@@ -104,7 +105,7 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return getTableService().runTableSql(tableMirror, Environment.LEFT);
     }
 

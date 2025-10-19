@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -58,17 +59,17 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -85,7 +86,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                 } else if (tableMirror.isPartitioned(Environment.LEFT)) {
                     // We need to drop the RIGHT and RECREATE.
                     ret.addIssue("Table is partitioned.  Need to change data strategy to drop and recreate.");
-                    String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config));
+                    String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config));
                     ret.addSql(MirrorConf.USE_DESC, useDb);
 
                     // Make sure the table is NOT set to purge.
@@ -99,17 +100,17 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                     tableMirror.setStrategy(DataStrategyEnum.SCHEMA_ONLY);
                     // Set False that it doesn't exist, which it won't, since we're dropping it.
                     ret.setExists(Boolean.FALSE);
-                    rtn = schemaOnlyDataStrategy.build(tableMirror);
+                    rtn = schemaOnlyDataStrategy.build(dbMirror, tableMirror);
                 } else {
                     // - AVRO LOCATION
                     if (AVROCheck(tableMirror)) {
-                        String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config));
+                        String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config));
                         ret.addSql(MirrorConf.USE_DESC, useDb);
                         // Look at the table definition and get.
                         // - LOCATION
                         String sourceLocation = TableUtils.getLocation(ret.getName(), ret.getDefinition());
                         String targetLocation = getTranslatorService().
-                                translateTableLocation(tableMirror, sourceLocation, 1, null);
+                                translateTableLocation(dbMirror, tableMirror, sourceLocation, 1, null);
                         String alterLocSql = MessageFormat.format(MirrorConf.ALTER_TABLE_LOCATION, ret.getName(), targetLocation);
                         ret.addSql(MirrorConf.ALTER_TABLE_LOCATION_DESC, alterLocSql);
                         // TableUtils.updateTableLocation(ret, targetLocation)
@@ -135,7 +136,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

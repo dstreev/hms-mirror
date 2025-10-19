@@ -591,4 +591,35 @@ public class ConversionResultService {
         }
         return count;
     }
+
+    /**
+     * Adds a database to the conversion result or returns existing one.
+     * If the database already exists in the databases map, it returns the existing DBMirror.
+     * Otherwise, creates a new DBMirror, adds it to the map, and returns it.
+     *
+     * @param conversionResult The conversion result to add the database to
+     * @param database         The database name
+     * @return The DBMirror for the database
+     */
+    public DBMirror addDatabase(ConversionResult conversionResult, String database) {
+        if (conversionResult.getDatabases().containsKey(database)) {
+            return conversionResult.getDatabases().get(database);
+        } else {
+            DBMirror dbs = new DBMirror();
+            dbs.setName(database);
+            conversionResult.getDatabases().put(database, dbs);
+            return dbs;
+        }
+    }
+
+    /**
+     * Retrieves a database from the conversion result.
+     *
+     * @param conversionResult The conversion result containing databases
+     * @param database         The database name
+     * @return The DBMirror for the database, or null if not found
+     */
+    public DBMirror getDatabase(ConversionResult conversionResult, String database) {
+        return conversionResult.getDatabases().get(database);
+    }
 }

@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.Cluster;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -66,9 +67,9 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        log.debug("Table: {}.{} buildout SQL Definition", tableMirror.getParent().getName(), tableMirror.getName());
+        log.debug("Table: {}.{} buildout SQL Definition", dbMirror.getName(), tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = null;
@@ -82,7 +83,7 @@ public class SQLDataStrategy extends DataStrategyBase {
         if (!isBlank(config.getTransfer().getIntermediateStorage()) ||
                 !isBlank(config.getTransfer().getTargetNamespace()) ||
                 TableUtils.isACID(let)) {
-            return getIntermediateDataStrategy().buildOutDefinition(tableMirror);
+            return getIntermediateDataStrategy().buildOutDefinition(dbMirror, tableMirror);
         }
 
         if (ret.isExists()) {
@@ -94,7 +95,7 @@ public class SQLDataStrategy extends DataStrategyBase {
                 } else {
                     ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
                     ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION.getDesc());
-                    String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+                    String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                             SCHEMA_EXISTS_NO_ACTION.getDesc());
                     log.error(msg);
                     return Boolean.FALSE;
@@ -135,7 +136,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             shadowSpec.setTableNamePrefix(config.getTransfer().getShadowPrefix());
 
             // Build Shadow from Source.
-            rtn = buildTableSchema(shadowSpec);
+            rtn = buildTableSchema(shadowSpec, dbMirror);
         }
 
         // Create final table in right.
@@ -158,20 +159,20 @@ public class SQLDataStrategy extends DataStrategyBase {
         }
 
         // Rebuild Target from Source.
-        rtn = buildTableSchema(rightSpec);
+        rtn = buildTableSchema(rightSpec, dbMirror);
 
         return rtn;
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getTargetNamespace() != null) {
-            return getIntermediateDataStrategy().buildOutSql(tableMirror);
+            return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
         }
 
         String useDb = null;
@@ -189,7 +190,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             // TODO: Hum... Not sure this is right.
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
-            database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
             ret.addSql(TableUtils.USE_DESC, useDb);
@@ -250,14 +251,14 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-            rtn = getSqlAcidInPlaceDataStrategy().build(tableMirror);
+            rtn = getSqlAcidInPlaceDataStrategy().build(dbMirror, tableMirror);
         } else if (!isBlank(config.getTransfer().getIntermediateStorage())
                 || !isBlank(config.getTransfer().getTargetNamespace())
                 || (TableUtils.isACID(let)
@@ -265,7 +266,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             if (TableUtils.isACID(let)) {
                 tableMirror.setStrategy(DataStrategyEnum.ACID);
             }
-            rtn = getIntermediateDataStrategy().build(tableMirror);
+            rtn = getIntermediateDataStrategy().build(dbMirror, tableMirror);
         } else {
 
             EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -273,7 +274,7 @@ public class SQLDataStrategy extends DataStrategyBase {
 
             // We should not get ACID tables in this routine.
             try {
-                rtn = buildOutDefinition(tableMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -284,7 +285,7 @@ public class SQLDataStrategy extends DataStrategyBase {
 
             if (rtn) {
                 try {
-                    rtn = buildOutSql(tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
                 } catch (MissingDataPointException e) {
                     let.addError("Failed to build out SQL: " + e.getMessage());
                     rtn = Boolean.FALSE;
@@ -294,7 +295,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             // Construct Transfer SQL
             if (rtn) {
                 // TODO: Double check this...
-                rtn = buildMigrationSql(tableMirror, Environment.LEFT, Environment.SHADOW, Environment.RIGHT);
+                rtn = buildMigrationSql(dbMirror, tableMirror, Environment.LEFT, Environment.SHADOW, Environment.RIGHT);
 
             }
         }
@@ -302,7 +303,7 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         log.info("SQLDataStrategy -> Table: {} execute", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 

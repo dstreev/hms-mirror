@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -54,7 +55,7 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition( TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         log.debug("Table: {} buildout DUMP Definition", tableMirror.getName());
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -76,7 +77,7 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -90,7 +91,7 @@ public class DumpDataStrategy extends DataStrategyBase {
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         let.getSql().clear();
-        String database = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+        String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
         useDb = MessageFormat.format(MirrorConf.USE, database);
         let.addSql(TableUtils.USE_DESC, useDb);
 
@@ -127,13 +128,13 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = buildOutDefinition(tableMirror);
+        rtn = buildOutDefinition(dbMirror, tableMirror);
         if (rtn) {
             try {
-                rtn = buildOutSql(tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
                 log.error("Table: {} Missing Data Point: {}", let.getName(), e.getMessage());
@@ -145,7 +146,7 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         // No Action to perform.
         return Boolean.TRUE;
     }

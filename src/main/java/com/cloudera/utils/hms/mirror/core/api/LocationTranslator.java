@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.core.api;
 
 import com.cloudera.utils.hms.mirror.core.model.*;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 
@@ -39,7 +40,7 @@ public interface LocationTranslator {
      * Translates all partition locations for a table.
      * Returns validation result indicating success or failure with reasons.
      */
-    ValidationResult translatePartitionLocations(TableMirror tableMirror);
+    ValidationResult translatePartitionLocations(DBMirror dbMirror, TableMirror tableMirror);
 
     /**
      * Processes a location through the Global Location Map (GLM).

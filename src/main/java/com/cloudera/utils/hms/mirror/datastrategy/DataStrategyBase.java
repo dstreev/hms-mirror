@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.core.Cluster;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
@@ -162,7 +163,7 @@ public abstract class DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public BuildWhat whatToBuild(HmsMirrorConfig config, TableMirror tableMirror) {
+    public BuildWhat whatToBuild(HmsMirrorConfig config, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
@@ -175,7 +176,7 @@ public abstract class DataStrategyBase implements DataStrategy {
         return et;
     }
 
-    public Boolean buildTableSchema(CopySpec copySpec) throws RequiredConfigurationException {
+    public Boolean buildTableSchema(CopySpec copySpec, DBMirror dbMirror) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         TableMirror tableMirror = copySpec.getTableMirror();
@@ -386,7 +387,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
                                 String targetLocation = null;
                                 targetLocation = getTranslatorService().
-                                        translateTableLocation(tableMirror, sourceLocation, level, null);
+                                        translateTableLocation(dbMirror, tableMirror, sourceLocation, level, null);
                                 if (!TableUtils.updateTableLocation(target, targetLocation)) {
                                     rtn = Boolean.FALSE;
                                 }
@@ -423,7 +424,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                                     isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                                     isLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
                                             config.getRunMarker() + "/" +
-                                            tableMirror.getParent().getName() + "/" +
+                                            dbMirror.getName() + "/" +
                                             tableMirror.getName();
                                     if (!TableUtils.updateTableLocation(target, isLoc)) {
                                         rtn = Boolean.FALSE;
@@ -436,7 +437,9 @@ public abstract class DataStrategyBase implements DataStrategy {
                                     // Get Namespace of Original Table
                                     String origNamespace = NamespaceUtils.getNamespace(TableUtils.getLocation(source.getName(), source.getDefinition()));
                                     isLoc = origNamespace +
-                                            isLoc + tableMirror.getParent().getName() + "/" + tableMirror.getName();
+                                            isLoc +
+                                            dbMirror.getName() +
+                                            "/" + tableMirror.getName();
                                     if (!TableUtils.updateTableLocation(target, isLoc)) {
                                         rtn = Boolean.FALSE;
                                     }
@@ -452,7 +455,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                             // New Map.  So we can modify it..
                             Map<String, String> targetPartitions = new HashMap<>(source.getPartitions());
                             target.setPartitions(targetPartitions);
-                            if (!getTranslatorService().translatePartitionLocations(tableMirror)) {
+                            if (!getTranslatorService().translatePartitionLocations(dbMirror, tableMirror)) {
                                 rtn = Boolean.FALSE;
                             }
                         }
@@ -485,7 +488,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
                     if (config.isTranslateLegacy()) {
                         if (config.getLegacyTranslations().fixSchema(target)) {
-                            log.info("Legacy Translation applied to: {}:{}", tableMirror.getParent().getName(), target.getName());
+                            log.info("Legacy Translation applied to: {}:{}", dbMirror.getName(), target.getName());
                         }
                     }
 
@@ -534,7 +537,7 @@ public abstract class DataStrategyBase implements DataStrategy {
         return rtn;
     }
 
-    protected Boolean buildMigrationSql(TableMirror tableMirror, Environment originalEnv, Environment sourceEnv, Environment targetEnv) {
+    protected Boolean buildMigrationSql(DBMirror dbMirror, TableMirror tableMirror, Environment originalEnv, Environment sourceEnv, Environment targetEnv) {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -653,7 +656,9 @@ public abstract class DataStrategyBase implements DataStrategy {
                 } else {
                     // Otherwise, we're on the RIGHT cluster and need to cleanup the 'shadow' table.
                     // Add USE clause to the SQL
-                    String rightDatabase = HmsMirrorConfigUtil.getResolvedDB(tableMirror.getParent().getName(), config);
+                    String rightDatabase = HmsMirrorConfigUtil.getResolvedDB(
+                            dbMirror.getName()
+                            , config);
                     if (config.isSaveWorkingTables()) {
                         Pair cleanUp = new Pair("Post Migration Cleanup", "-- To be run AFTER final RIGHT SQL statements.");
                         targetEnvTable.addCleanUpSql(cleanUp);

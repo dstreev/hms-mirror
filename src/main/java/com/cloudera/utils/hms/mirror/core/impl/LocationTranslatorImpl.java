@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
 import com.cloudera.utils.hms.mirror.core.model.*;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -55,20 +56,21 @@ public class LocationTranslatorImpl implements LocationTranslator {
     @Override
     public LocationTranslationResult translateTableLocation(LocationTranslationRequest request) {
         // Extract request parameters
+        DBMirror dbMirror = request.getDbMirror();
         TableMirror tableMirror = request.getTableMirror();
         String originalLocation = request.getOriginalLocation();
         String partitionSpec = request.getPartitionSpec();
-        
+
         // Get configuration through infrastructure abstraction
         HmsMirrorConfig config = configurationProvider.getConfig();
-        
+
         // Perform the core business logic from TranslatorService.translateTableLocation()
         String tableName = tableMirror.getName();
         EnvironmentTable targetEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
-        String originalDatabase = tableMirror.getParent().getName();
+        String originalDatabase = dbMirror.getName();
         String targetDatabase = HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
-        String targetDatabaseDir = getOrDefault(tableMirror.getParent().getLocationDirectory(), targetDatabase + ".db");
-        String targetDatabaseManagedDir = getOrDefault(tableMirror.getParent().getManagedLocationDirectory(), targetDatabase + ".db");
+        String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
+        String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(), targetDatabase + ".db");
         String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
         String targetNamespace;
         try {
@@ -167,16 +169,16 @@ public class LocationTranslatorImpl implements LocationTranslator {
     }
 
     @Override
-    public ValidationResult translatePartitionLocations(TableMirror tableMirror) {
+    public ValidationResult translatePartitionLocations(DBMirror dbMirror, TableMirror tableMirror) {
         HmsMirrorConfig config = configurationProvider.getConfig();
-        
+
         if (!tableMirror.getEnvironmentTable(Environment.LEFT).getPartitioned()) {
             return ValidationResult.success();
         }
-        
+
         EnvironmentTable target = tableMirror.getEnvironmentTable(Environment.RIGHT);
         boolean isExternal = TableUtils.isExternal(target);
-        String originalDatabase = tableMirror.getParent().getName();
+        String originalDatabase = dbMirror.getName();
         String targetDatabase = HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
         
         List<String> allIssues = new ArrayList<>();
@@ -199,7 +201,7 @@ public class LocationTranslatorImpl implements LocationTranslator {
                 
                 // Translate the partition location - this may throw RuntimeException for DistCP validation failures
                 LocationTranslationRequest request = new LocationTranslationRequest(
-                    tableMirror, partitionLocation, level, partSpec);
+                    dbMirror, tableMirror, partitionLocation, level, partSpec);
                 LocationTranslationResult result = translateTableLocation(request);
                 
                 if (!result.isSuccess()) {

@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -69,7 +70,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         // Check definition to ensure it is compatible with Iceberg.
         // Alarm if not.
         // Alarm if already converted.
@@ -99,13 +100,13 @@ public class IcebergConversionDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         log.debug("Table: {} buildout Iceberg Conversion SQL", tableMirror.getName());
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         try {
-            String useLeftDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
+            String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             FileFormatType fileFormat = TableUtils.getFileFormatType(let.getDefinition());
             Map<String, String> tableProperties = new HashMap<>(hmsMirrorConfig.getIcebergConversion().getTableProperties());
@@ -138,13 +139,13 @@ public class IcebergConversionDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = buildOutDefinition(tableMirror);
+        rtn = buildOutDefinition(dbMirror, tableMirror);
         if (rtn) {
             try {
-                rtn = buildOutSql(tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
                 let.addError("Failed to build out SQL: " + e.getMessage());
@@ -159,7 +160,7 @@ public class IcebergConversionDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return  getTableService().runTableSql(tableMirror, Environment.LEFT);
     }
 

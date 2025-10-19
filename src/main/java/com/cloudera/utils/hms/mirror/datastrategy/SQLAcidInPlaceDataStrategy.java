@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -60,7 +61,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -70,7 +71,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         // Check the Left to ensure it hasn't already been processed by 'inplace'
         if (TableUtils.hasTblProperty(ACID_INPLACE, let)) {
             let.addIssue(INPLACE_MIGRATED.getDesc());
-            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), tableMirror.getParent().getName(), tableMirror.getName(),
+            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                     INPLACE_MIGRATED.getDesc());
             log.error(msg);
             return Boolean.FALSE;
@@ -83,7 +84,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
             if (bucketCount > config.getMigrateACID().getArtificialBucketThreshold()) {
                 // Skip.
                 String msg = MessageFormat.format(BUCKET_CONVERSION_THRESHOLD.getDesc(),
-                        tableMirror.getParent().getName(), tableMirror.getName(),
+                        dbMirror.getName(), tableMirror.getName(),
                         config.getMigrateACID().getArtificialBucketThreshold(), bucketCount);
                 log.error(msg);
                 let.addIssue(msg);
@@ -92,7 +93,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         }
 
         // Use db
-        String useDb = MessageFormat.format(MirrorConf.USE, tableMirror.getParent().getName());
+        String useDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
         let.addSql(TableUtils.USE_DESC, useDb);
 
         // Build Right (to be used as new table on left).
@@ -104,7 +105,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         // Location of converted data will got to default location.
         leftNewTableSpec.setStripLocation(Boolean.TRUE);
 
-        rtn = buildTableSchema(leftNewTableSpec);
+        rtn = buildTableSchema(leftNewTableSpec, dbMirror);
 
         String origTableName = let.getName();
 
@@ -141,7 +142,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -150,7 +151,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         // Ensure we're in the right database.
-        String database = tableMirror.getParent().getName();
+        String database = dbMirror.getName();
         String useDb = MessageFormat.format(MirrorConf.USE, database);
 
         let.addSql(TableUtils.USE_DESC, useDb);
@@ -211,7 +212,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -231,7 +232,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         write cleanup sql to drop original_archive.
          */
         try {
-            rtn = buildOutDefinition(tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+            rtn = buildOutDefinition(dbMirror, tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
         } catch (RequiredConfigurationException e) {
             let.addError("Failed to build out definition: " + e.getMessage());
             rtn = Boolean.FALSE;
@@ -253,7 +254,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         if (rtn) {
             // Build Transfer SQL
             try {
-                rtn = buildOutSql(tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -264,7 +265,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return getTableService().runTableSql(tableMirror, Environment.LEFT);
     }
 }
