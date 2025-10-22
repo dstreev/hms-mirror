@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
@@ -77,7 +78,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
@@ -147,7 +148,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -203,7 +204,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -407,10 +408,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                     //   even under the distcp movement strategy.  This allows the user access to the original
                     //   'data' under the archived table, which can be used for comparison or other purposes.
                     // Create new table
-                    rtn = buildOutDefinition(dbMirror, tableMirror);
+                    rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
 
                     // Rename the table
-                    rtn = buildOutSql(dbMirror, tableMirror);
+                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
 
                     // Need to build out SQL to recreate partitions (with new locations).
                     // Build Alter Statement for Partitions to change location.
@@ -525,13 +526,13 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                 }
             } else {
                 // No Distcp (SQL)
-                rtn = buildOutDefinition(dbMirror, tableMirror);
+                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
 
                 if (rtn)
                     rtn = AVROCheck(tableMirror);
 
                 if (rtn)
-                    rtn = buildOutSql(dbMirror, tableMirror);
+                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
 
                 if (rtn) {
                     // Construct Transfer SQL
@@ -644,7 +645,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.LEFT);
     }
 

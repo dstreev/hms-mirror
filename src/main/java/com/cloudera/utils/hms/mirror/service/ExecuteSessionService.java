@@ -167,13 +167,15 @@ public class ExecuteSessionService {
         config.getOptimization().setOverrides(currentConfig.getOptimization().getOverrides());
 
         // Apply rules for the DataStrategy that are not in the config.
-        configService.alignConfigurationSettings(session, config);
+        // TODO: Fix
+//        configService.alignConfigurationSettings(session, config);
 
         // Reset to the merged config.
         session.setConfig(config);
 
 //        model.addAttribute(READ_ONLY, Boolean.TRUE);
-        configService.validate(session, null);
+        // TODO: Fix
+//        configService.validate(session, null);
 
         if (passwordCheck.get()) {
             ExecuteSession session1 = getSession();

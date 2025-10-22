@@ -67,7 +67,7 @@ public class RuntimeService {
         ExecuteSession session = executeSessionService.getSession();
 
         HmsMirrorConfig config = session.getConfig();
-        ConversionRequest conversionRequest = session.getConversionRequest();
+//        ConversionRequest conversionRequest = session.getConversionRequest();
         ConversionResult conversionResult = session.getConversionResult();
         log.debug("Starting the HMS Mirror Application");
         RunStatus runStatus = new RunStatus();

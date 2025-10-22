@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
@@ -75,7 +76,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -131,7 +132,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -268,7 +269,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
@@ -289,7 +290,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         }
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().build(dbMirror, tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
+            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().build(conversionResult, dbMirror, tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
         } else {
             if (TableUtils.isACID(let)) {
                 if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() != hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
@@ -297,7 +298,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                     tableMirror.addIssue(Environment.LEFT, "ACID table EXPORTs are NOT compatible for IMPORT to clusters on a different major version of Hive.");
                 } else {
                     try {
-                        rtn = buildOutSql(dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                        rtn = buildOutSql(conversionResult, dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
                     } catch (MissingDataPointException e) {
                         let.addError("Failed to build out SQL: " + e.getMessage());
                         rtn = Boolean.FALSE;
@@ -306,7 +307,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
 
             } else {
                 try {
-                    rtn = buildOutSql(dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
                 } catch (MissingDataPointException e) {
                     let.addError("Failed to build out SQL: " + e.getMessage());
                     rtn = Boolean.FALSE;
@@ -322,7 +323,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         // If EXPORT_IMPORT, need to run LEFT queries.
         rtn = tableService.runTableSql(tableMirror, Environment.LEFT);

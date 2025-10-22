@@ -19,9 +19,12 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.config.SampleDataProperties;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
-import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
+import com.cloudera.utils.hms.mirror.domain.core.IcebergConversion;
+import com.cloudera.utils.hms.mirror.domain.core.MigrateACID;
+import com.cloudera.utils.hms.mirror.domain.core.Optimization;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -51,10 +54,11 @@ public class SampleDataInitializationService {
         }
 
         log.info("Initializing sample data for HMS Mirror");
-        
+
         try {
             createSampleConnections();
             createSampleDatasets();
+            createSystemConfigurations();
             log.info("Sample data initialization completed successfully");
         } catch (Exception e) {
             log.error("Failed to initialize sample data", e);
@@ -70,7 +74,7 @@ public class SampleDataInitializationService {
                         .name("DEMO HDP2-Production")
                         .description("Legacy HDP 2.6.5 production cluster - source for migration")
                         .environment(ConnectionDto.Environment.PROD)
-                        .platformType("HDP2")
+                        .platformType(PlatformType.HDP2)
                         .hcfsNamespace("hdfs://hdp2-prod-nn:8020")
                         .hs2Uri("jdbc:hive2://hdp2-prod-hs2:10000/default")
                         .hs2Username("hive")
@@ -101,7 +105,7 @@ public class SampleDataInitializationService {
                         .name("DEMO CDH6-Production")
                         .description("CDH 6.3.4 production cluster with Kerberos")
                         .environment(ConnectionDto.Environment.PROD)
-                        .platformType("CDH6")
+                        .platformType(PlatformType.CDH6)
                         .hcfsNamespace("hdfs://cdh6-prod-nameservice")
                         .hs2Uri("jdbc:hive2://cdh6-prod-hs2:10000/default;principal=hive/_HOST@REALM.COM")
                         .hs2Username("")
@@ -134,7 +138,7 @@ public class SampleDataInitializationService {
                         .name("DEMO CDP-Base-7.1.9")
                         .description("CDP Private Cloud Base 7.1.9 target cluster - default connection")
                         .environment(ConnectionDto.Environment.PROD)
-                        .platformType("CDP7_1_9_SP1")
+                        .platformType(PlatformType.CDP7_1_9_SP1)
                         .hcfsNamespace("hdfs://cdp7-nameservice")
                         .hs2Uri("jdbc:hive2://cdp7-hs2-lb:10000/default;principal=hive/_HOST@REALM.COM;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2")
                         .hs2Username("")
@@ -168,7 +172,7 @@ public class SampleDataInitializationService {
                         .name("CDP-DataHub-Dev")
                         .description("CDP Public Cloud DataHub development environment with S3")
                         .environment(ConnectionDto.Environment.DEV)
-                        .platformType("CDP7_2")
+                        .platformType(PlatformType.CDP7_2)
                         .hcfsNamespace("s3a://cdp-dev-bucket")
                         .hs2Uri("jdbc:hive2://dev-gateway.cloudera.site:443/default;transportMode=http;httpPath=cdp-proxy-api/hive;ssl=true")
                         .hs2Username("dev_user")
@@ -250,10 +254,24 @@ public class SampleDataInitializationService {
 
     private void createSystemConfigurations() {
         log.info("Creating 5 demo configurations");
-        
+
         try {
             // Create 5 sample configurations using ConfigLiteDto
             ConfigLiteDto[] configurations = {
+                    // 1. Basic Schema-Only Migration
+                    createSchemaOnlyConfig(),
+
+                    // 2. ACID Downgrade with SQL Strategy
+                    createAcidDowngradeConfig(),
+
+                    // 3. Hybrid Migration with Statistics
+                    createHybridMigrationConfig(),
+
+                    // 4. Storage Migration with Warehouse Plan
+                    createStorageMigrationConfig(),
+
+                    // 5. Iceberg Conversion
+                    createIcebergConversionConfig()
             };
 
             for (ConfigLiteDto config : configurations) {
@@ -271,6 +289,97 @@ public class SampleDataInitializationService {
         } catch (Exception e) {
             log.error("Failed to create sample configurations", e);
         }
+    }
+
+    private ConfigLiteDto createSchemaOnlyConfig() {
+        ConfigLiteDto config = new ConfigLiteDto("DEMO Schema-Only-Migration");
+        config.setDescription("Basic schema-only migration from HDP2 to CDP7 without data movement");
+        config.setExecute(false); // Dry-run by default
+        config.setCreateIfNotExists(true);
+        config.setEnableAutoTableStats(false);
+        config.setEnableAutoColumnStats(false);
+
+        // Basic VIEW migration
+        config.getMigrateVIEW().setOn(true);
+
+        return config;
+    }
+
+    private ConfigLiteDto createAcidDowngradeConfig() {
+        ConfigLiteDto config = new ConfigLiteDto("DEMO ACID-Downgrade-SQL");
+        config.setDescription("ACID table downgrade using SQL strategy for legacy platform compatibility");
+        config.setExecute(false); // Dry-run by default
+        config.setCreateIfNotExists(true);
+
+        // Configure ACID migration - downgrade to external tables
+        MigrateACID acidConfig = config.getMigrateACID();
+        acidConfig.setOn(true);
+        acidConfig.setDowngrade(true);
+        acidConfig.setInplace(false);
+        acidConfig.setPartitionLimit(500);
+        acidConfig.setArtificialBucketThreshold(4);
+
+        // VIEW migration
+        config.getMigrateVIEW().setOn(true);
+
+        return config;
+    }
+
+    private ConfigLiteDto createHybridMigrationConfig() {
+        ConfigLiteDto config = new ConfigLiteDto("DEMO Hybrid-Migration-Stats");
+        config.setDescription("Hybrid migration with automatic statistics collection and optimization");
+        config.setExecute(false); // Dry-run by default
+        config.setCreateIfNotExists(true);
+        config.setEnableAutoTableStats(true);
+        config.setEnableAutoColumnStats(true);
+
+        // Optimization settings
+        Optimization optimization = config.getOptimization();
+        optimization.setSkip(false);
+        optimization.setSortDynamicPartitionInserts(true);
+        optimization.setAutoTune(true);
+        optimization.setCompressTextOutput(true);
+
+        // VIEW migration
+        config.getMigrateVIEW().setOn(true);
+
+        return config;
+    }
+
+    private ConfigLiteDto createStorageMigrationConfig() {
+        ConfigLiteDto config = new ConfigLiteDto("DEMO Storage-Migration");
+        config.setDescription("Storage migration with namespace translation");
+        config.setExecute(false); // Dry-run by default
+        config.setCreateIfNotExists(true);
+        config.setForceExternalLocation(true);
+        config.setEnableAutoTableStats(false);
+        config.setEnableAutoColumnStats(false);
+
+        // Set intermediate storage for data transfer
+        config.getTransfer().setIntermediateStorage("s3a://migration-bucket/intermediate");
+        config.getTransfer().setTargetNamespace("hdfs://new-cluster:8020");
+
+        return config;
+    }
+
+    private ConfigLiteDto createIcebergConversionConfig() {
+        ConfigLiteDto config = new ConfigLiteDto("DEMO Iceberg-Conversion");
+        config.setDescription("Convert Hive tables to Iceberg format for improved performance");
+        config.setExecute(false); // Dry-run by default
+        config.setCreateIfNotExists(true);
+        config.setMigrateNonNative(true); // Required for Iceberg
+
+        // Iceberg conversion settings
+        IcebergConversion icebergConversion = config.getIcebergConversion();
+        icebergConversion.setVersion(2); // Iceberg format version
+
+        // Optimization for Iceberg
+        Optimization optimization = config.getOptimization();
+        optimization.setSkip(false);
+        optimization.setAutoTune(true);
+        optimization.setCompressTextOutput(true);
+
+        return config;
     }
 
     private DatasetDto createDataset(String name, String description, String[] databases, String[] tables) {
@@ -297,7 +406,7 @@ public class SampleDataInitializationService {
                 dbSpec.setFilter(filter);
             }
             
-            dataset.getDatabases().add(dbSpec);
+            dataset.getDatabaseSpecs().add(dbSpec);
         }
         
         return dataset;

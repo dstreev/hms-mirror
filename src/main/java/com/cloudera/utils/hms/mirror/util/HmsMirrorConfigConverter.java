@@ -21,12 +21,14 @@ import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.Cluster;
 import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.PartitionDiscovery;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -55,8 +57,8 @@ public class HmsMirrorConfigConverter {
 
         result.setConfigLite(toConfigLiteDto(config, configName));
         result.setDataset(toDatasetDto(config, datasetName));
-        result.setLeftConnection(toConnectionDto(config, Environment.LEFT));
-        result.setRightConnection(toConnectionDto(config, Environment.RIGHT));
+        result.setConnection(Environment.LEFT, toConnectionDto(config, Environment.LEFT));
+        result.setConnection(Environment.RIGHT, toConnectionDto(config, Environment.RIGHT));
         result.setJob(toJobDto(config, jobName, configName, datasetName));
 
         return result;
@@ -74,6 +76,7 @@ public class HmsMirrorConfigConverter {
 
         // Feature flags
         dto.setMigrateNonNative(config.isMigrateNonNative());
+        dto.setExecute(config.isExecute());
         dto.setCreateIfNotExists(extractCreateIfNotExistsFromCluster(config));
         dto.setEnableAutoTableStats(extractEnableAutoTableStatsFromCluster(config));
         dto.setEnableAutoColumnStats(extractEnableAutoColumnStatsFromCluster(config));
@@ -81,6 +84,7 @@ public class HmsMirrorConfigConverter {
 
         // File and data handling
         dto.setCopyAvroSchemaUrls(config.isCopyAvroSchemaUrls());
+        dto.setLoadTestDataFile(config.getLoadTestDataFile());
         // Note: forceExternalLocation is not available in TransferConfig
 
         // Sub-configuration objects
@@ -131,7 +135,6 @@ public class HmsMirrorConfigConverter {
 
         dto.setName(datasetName);
         dto.setDescription("Dataset converted from HmsMirrorConfig");
-        dto.setDatabases(new ArrayList<>());
 
         // If specific databases are defined, create database specs for each
         if (nonNull(config.getDatabases()) && !config.getDatabases().isEmpty()) {
@@ -161,7 +164,7 @@ public class HmsMirrorConfigConverter {
                     dbSpec.setDbRename(config.getDbRename());
                 }
 
-                dto.getDatabases().add(dbSpec);
+                dto.getDatabaseSpecs().add(dbSpec);
             }
         }
 
@@ -222,7 +225,7 @@ public class HmsMirrorConfigConverter {
 
         // Platform configuration
         if (nonNull(cluster.getPlatformType())) {
-            dto.setPlatformType(cluster.getPlatformType().name());
+            dto.setPlatformType(cluster.getPlatformType());
         }
 
         // Core configuration
@@ -410,5 +413,88 @@ public class HmsMirrorConfigConverter {
         }
 
         return false;
+    }
+
+    /**
+     * Convert ConnectionDto back to Cluster object
+     * This allows backward compatibility with code expecting Cluster objects
+     */
+    public static Cluster toCluster(ConnectionDto connectionDto) {
+        if (connectionDto == null) {
+            return null;
+        }
+
+        Cluster cluster = new Cluster();
+
+        // Core configuration
+        cluster.setHcfsNamespace(connectionDto.getHcfsNamespace());
+
+        // Platform type
+        if (connectionDto.getPlatformType() != null) {
+            cluster.setPlatformType(connectionDto.getPlatformType());
+        }
+
+        // HiveServer2 configuration
+        if (!isBlank(connectionDto.getHs2Uri())) {
+            HiveServer2Config hs2 = new HiveServer2Config();
+            hs2.setUri(connectionDto.getHs2Uri());
+
+            // Build connection properties
+            java.util.Properties connProps = new java.util.Properties();
+            if (!isBlank(connectionDto.getHs2Username())) {
+                connProps.put("user", connectionDto.getHs2Username());
+            }
+            if (!isBlank(connectionDto.getHs2Password())) {
+                connProps.put("password", connectionDto.getHs2Password());
+            }
+            if (nonNull(connectionDto.getHs2ConnectionProperties())) {
+                connProps.putAll(connectionDto.getHs2ConnectionProperties());
+            }
+            hs2.setConnectionProperties(connProps);
+
+            cluster.setHiveServer2(hs2);
+        }
+
+        // Metastore Direct configuration
+        if (connectionDto.isMetastoreDirectEnabled() && !isBlank(connectionDto.getMetastoreDirectUri())) {
+            DBStore metastore = new DBStore();
+            metastore.setUri(connectionDto.getMetastoreDirectUri());
+
+            // Set type
+            if (!isBlank(connectionDto.getMetastoreDirectType())) {
+                metastore.setType(DBStore.DB_TYPE.valueOf(connectionDto.getMetastoreDirectType()));
+            }
+
+            // Build connection properties
+            java.util.Properties metastoreProps = new java.util.Properties();
+            if (!isBlank(connectionDto.getMetastoreDirectUsername())) {
+                metastoreProps.put("user", connectionDto.getMetastoreDirectUsername());
+            }
+            if (!isBlank(connectionDto.getMetastoreDirectPassword())) {
+                metastoreProps.put("password", connectionDto.getMetastoreDirectPassword());
+            }
+            if (nonNull(connectionDto.getMetastoreDirectMinConnections())) {
+                metastoreProps.put("minConnections", connectionDto.getMetastoreDirectMinConnections().toString());
+            }
+            if (nonNull(connectionDto.getMetastoreDirectMaxConnections())) {
+                metastoreProps.put("maxConnections", connectionDto.getMetastoreDirectMaxConnections().toString());
+            }
+            metastore.setConnectionProperties(metastoreProps);
+
+            cluster.setMetastoreDirect(metastore);
+        }
+
+        // Partition discovery settings
+        PartitionDiscovery pd = new PartitionDiscovery();
+        pd.setAuto(connectionDto.isPartitionDiscoveryAuto());
+        pd.setInitMSCK(connectionDto.isPartitionDiscoveryInitMSCK());
+        cluster.setPartitionDiscovery(pd);
+
+        // Cluster settings
+        cluster.setCreateIfNotExists(connectionDto.isCreateIfNotExists());
+        cluster.setEnableAutoTableStats(connectionDto.isEnableAutoTableStats());
+        cluster.setEnableAutoColumnStats(connectionDto.isEnableAutoColumnStats());
+
+        return cluster;
     }
 }

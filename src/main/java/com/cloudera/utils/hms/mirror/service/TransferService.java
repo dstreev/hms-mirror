@@ -27,10 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
@@ -90,7 +87,7 @@ public class TransferService {
     }
 
     @Async("jobThreadPool")
-    public CompletableFuture<ReturnStatus> build(DBMirror dbMirror, TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         ReturnStatus rtn = new ReturnStatus();
         rtn.setTableMirror(tableMirror);
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -114,14 +111,14 @@ public class TransferService {
                 switch (config.getDataStrategy()) {
                     case HYBRID:
                         if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
-                            if (hybridAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror)) {
+                            if (hybridAcidDowngradeInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
                                 runStatus.getOperationStatistics().getIssues().incrementTables();
                             }
                         } else {
-                            if (hybridDataStrategy.build(dbMirror, tableMirror)) {
+                            if (hybridDataStrategy.build(conversionResult, dbMirror, tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -130,7 +127,7 @@ public class TransferService {
                         break;
                     default:
                         dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
-                        if (dataStrategy.build(dbMirror, tableMirror)) {
+                        if (dataStrategy.build(conversionResult, dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -268,7 +265,7 @@ public class TransferService {
     }
 
     @Async("jobThreadPool")
-    public CompletableFuture<ReturnStatus> execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         ReturnStatus rtn = new ReturnStatus();
         rtn.setTableMirror(tableMirror);
 
@@ -292,14 +289,14 @@ public class TransferService {
             switch (config.getDataStrategy()) {
                 case HYBRID:
                     if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
-                        if (hybridAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror)) {
+                        if (hybridAcidDowngradeInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
                             runStatus.getOperationStatistics().getIssues().incrementTables();
                         }
                     } else {
-                        if (hybridDataStrategy.execute(dbMirror, tableMirror)) {
+                        if (hybridDataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -308,7 +305,7 @@ public class TransferService {
                     break;
                 default:
                     dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
-                    if (dataStrategy.execute(dbMirror, tableMirror)) {
+                    if (dataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
                         rtn.setStatus(ReturnStatus.Status.SUCCESS);
                     } else {
                         rtn.setStatus(ReturnStatus.Status.ERROR);

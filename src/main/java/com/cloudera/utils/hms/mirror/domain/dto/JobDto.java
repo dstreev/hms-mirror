@@ -57,7 +57,7 @@ public class JobDto {
     TODO: WIP
      */
     @Schema(description = "Flag to indicate if this job is for disaster recovery purposes")
-    private Boolean disasterRecovery = Boolean.FALSE;
+    private boolean disasterRecovery = Boolean.FALSE;
 
     // Set by disasterRecovery.
     //    @Schema(description = "When set, the table purge option will be removed.")
@@ -65,7 +65,15 @@ public class JobDto {
 
     @Schema(description = "Flag to indicate if this job should perform a sync operation, only available if" +
             "the disasterRecovery flag is set to true")
-    private Boolean sync = Boolean.FALSE;
+    private boolean sync = Boolean.FALSE;
+
+    public boolean isReadOnly() {
+        return disasterRecovery;
+    }
+
+    public boolean isNoPurge() {
+        return disasterRecovery;
+    }
 
     /**
      * Create a deep clone of this JobDto.

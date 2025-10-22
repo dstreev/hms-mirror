@@ -104,7 +104,7 @@ public class DatabaseService {
             return;
 
         if (!warehouseMapBuilder.isInSync()) {
-            if (!connectionPoolService.isConnected() && !config.isLoadingTestData()) {
+            if (!connectionPoolService.isConnected() && !executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
                 try {
                     connectionPoolService.init();
                 } catch (SQLException | URISyntaxException e) {
@@ -129,7 +129,7 @@ public class DatabaseService {
                 // Reset the database in the translation map.
                 config.getTranslator().removeDatabaseFromTranslationMap(database);
                 // Load the database locations.
-                if (!config.isLoadingTestData()) {
+                if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
                     loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
                 } else {
                     // Parse test data for sources.
@@ -1003,7 +1003,7 @@ public class DatabaseService {
         final AtomicBoolean rtn = new AtomicBoolean(true);
 
         // Skip when running test data.
-        if (!config.isLoadingTestData()) {
+        if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
             for (Map.Entry<Environment, Set<String>> entry : uniqueSql.entrySet()) {
                 Environment environment = entry.getKey();
                 Set<String> uniqueSqlSet = entry.getValue();
@@ -1242,7 +1242,7 @@ public class DatabaseService {
             return rtn;
 
         // Skip when running test data.
-        if (!config.isLoadingTestData()) {
+        if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
             try {
                 conn = connectionPoolService.getHS2EnvironmentConnection(environment);
 

@@ -52,4 +52,9 @@ public enum PlatformType {
         this.icebergSupport = icebergSupport;
     }
 
+    public boolean isLegacyHive() {
+        return hiveVersion.isLegacy();
+    }
+
+
 }

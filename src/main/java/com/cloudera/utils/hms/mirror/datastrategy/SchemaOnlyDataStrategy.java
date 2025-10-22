@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
@@ -58,7 +59,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY Definition", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -204,7 +205,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -291,13 +292,13 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         try {
-            rtn = this.buildOutDefinition(dbMirror, tableMirror);
+            rtn = this.buildOutDefinition(conversionResult, dbMirror, tableMirror);
         } catch (RequiredConfigurationException e) {
             let.addError("Failed to build out definition: " + e.getMessage());
             rtn = Boolean.FALSE;
@@ -308,7 +309,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         }
         if (rtn) {
             try {
-                rtn = this.buildOutSql(dbMirror, tableMirror);
+                rtn = this.buildOutSql(conversionResult, dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -321,7 +322,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return getTableService().runTableSql(tableMirror, Environment.RIGHT);
     }
 }

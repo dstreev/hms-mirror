@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import lombok.Data;
 
 import java.util.Map;
@@ -30,7 +31,7 @@ public class ConnectionRequest {
 
     @Data
     public static class ConfigRequest {
-        private String platformType;
+        private PlatformType platformType;
         private String hcfsNamespace;
         private HiveServer2Request hiveServer2;
         private MetastoreDirectRequest metastoreDirect;

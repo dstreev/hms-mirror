@@ -183,7 +183,7 @@ public class TableService {
         HmsMirrorConfig config = session.getConfig();
 //            environmentTable = tableMirror.getEnvironmentTable(environment);
         // Fetch Table Definition
-        if (config.isLoadingTestData()) {
+        if (session.getConversionResult().getConfigLite().isLoadingTestData()) {
             log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
         } else {
             log.debug("Loading schema from catalog for {}", tableId);
@@ -191,13 +191,13 @@ public class TableService {
         }
         log.debug("Checking table filter for {}", tableId);
         checkTableFilter(session, tableMirror, environment);
-        if (!tableMirror.isRemove() && !config.isLoadingTestData()) {
+        if (!tableMirror.isRemove() && !session.getConversionResult().getConfigLite().isLoadingTestData()) {
             log.debug("Table is not marked for removal. Proceeding with data strategy checks for {}", tableId);
             handleDataStrategy(config, tableMirror, environment, environmentTable, tableId);
         }
         Boolean partitioned = TableUtils.isPartitioned(environmentTable);
         if (environment == Environment.LEFT && partitioned
-                && !tableMirror.isRemove() && !config.isLoadingTestData()) {
+                && !tableMirror.isRemove() && !session.getConversionResult().getConfigLite().isLoadingTestData()) {
             log.debug("Table is partitioned. Checking metadata details for {}", tableId);
             if (config.loadMetadataDetails()) {
                 log.debug("Loading partition metadata directly for {}", tableId);
@@ -886,7 +886,7 @@ public class TableService {
             if (nonNull(config.getCluster(environment)) && nonNull(config.getCluster(environment).getHiveServer2()) &&
                     !config.getCluster(environment).getHiveServer2().isDisconnected()) {
                 // Skip this if using test data.
-                if (!config.isLoadingTestData()) {
+                if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
 
                     try (Connection conn = getConnectionPoolService().getHS2EnvironmentConnection(environment)) {
                         if (isNull(conn) && config.isExecute() && !config.getCluster(environment).getHiveServer2().isDisconnected()) {

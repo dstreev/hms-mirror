@@ -57,7 +57,7 @@ public class ConversionResult implements Cloneable {
     static final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     // This would be the top level Key for the RocksDB columnFamily.
     private String key = df.format(new Date());
-    // This would the the value of the key about.  This can't be null.
+    // This would the value of the key about.  This can't be null.
     private String name;
 
     /*
@@ -71,20 +71,22 @@ public class ConversionResult implements Cloneable {
      */
     private DatasetDto dataset;
     /*
-    This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
-      '/dataset', with the value being the yaml string.
+    Map of connections by Environment (LEFT/RIGHT).
+    Each connection should be saved as a yaml in RocksDB. The key for this should build on the above key plus
+      '/connection/{environment}', with the value being the yaml string.
      */
-    private ConnectionDto leftConnection;
-    /*
-    This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
-      '/connection/left', with the value being the yaml string.
-     */
-    private ConnectionDto rightConnection;
+    private Map<Environment, ConnectionDto> connections = new HashMap<>();
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/job', with the value being the yaml string.
      */
     private JobDto job;
+    /*
+    RunStatus tracks the progress and status of the conversion process.
+    This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
+      '/runStatus', with the value being the yaml string.
+     */
+    private RunStatus runStatus;
 
     /*
     Each key in this structure is the name of a database. And will serve as the first part of the
@@ -116,5 +118,43 @@ public class ConversionResult implements Cloneable {
     @Deprecated(since = "4.0", forRemoval = true)
     public DBMirror getDatabase(String database) {
         return databases.get(database);
+    }
+
+    /**
+     * Get ConnectionDto for a specific environment.
+     *
+     * @param environment The environment (LEFT or RIGHT)
+     * @return ConnectionDto for the specified environment
+     */
+    public ConnectionDto getConnection(Environment environment) {
+        return connections.get(environment);
+    }
+
+    /**
+     * Set ConnectionDto for a specific environment.
+     *
+     * @param environment The environment (LEFT or RIGHT)
+     * @param connection The ConnectionDto to set
+     */
+    public void setConnection(Environment environment, ConnectionDto connection) {
+        connections.put(environment, connection);
+    }
+
+    /**
+     * Get RunStatus, creating it if it doesn't exist.
+     * This provides lazy initialization similar to ExecuteSession.
+     *
+     * @return RunStatus object, never null
+     */
+    public RunStatus getRunStatus() {
+        if (runStatus == null) {
+            this.runStatus = new RunStatus();
+            try {
+                this.runStatus.setAppVersion(com.jcabi.manifests.Manifests.read("HMS-Mirror-Version"));
+            } catch (IllegalArgumentException iae) {
+                this.runStatus.setAppVersion("Unknown");
+            }
+        }
+        return runStatus;
     }
 }

@@ -18,6 +18,7 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
@@ -53,45 +54,49 @@ public class AcidDataStrategy extends DataStrategyBase {
     /**
      * Builds the target (destination) table or schema definition for an ACID table.
      *
-     * @param tableMirror the table to build the definition for
+     * @param conversionResult
+     * @param tableMirror      the table to build the definition for
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     /**
      * Generates the SQL statements required to create or migrate an ACID table.
      *
-     * @param tableMirror the table to build SQL for
+     * @param conversionResult
+     * @param tableMirror      the table to build SQL for
      * @return {@code null} (method not implemented)
      * @throws MissingDataPointException if required data points are missing
      */
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     /**
      * Executes the build process for an ACID table. This can include copying or transforming data structures.
      *
-     * @param tableMirror the table to build
+     * @param conversionResult
+     * @param tableMirror      the table to build
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     /**
      * Executes the migration or transformation for an ACID table. This can include data transfer or applying changes.
      *
-     * @param tableMirror the table to execute migration for
+     * @param conversionResult
+     * @param tableMirror      the table to execute migration for
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 }

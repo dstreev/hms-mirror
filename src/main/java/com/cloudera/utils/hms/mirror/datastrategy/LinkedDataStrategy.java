@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -58,7 +59,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
@@ -142,13 +143,13 @@ public class LinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         // Reuse the SchemaOnlyDataStrategy to build out the DDL SQL for the LINKED table.
-        return schemaOnlyDataStrategy.buildOutSql(dbMirror, tableMirror);
+        return schemaOnlyDataStrategy.buildOutSql(conversionResult, dbMirror, tableMirror);
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
@@ -157,7 +158,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
             rtn = Boolean.FALSE;
         } else {
             try {
-                rtn = buildOutDefinition(dbMirror, tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
+                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -166,7 +167,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
 
         if (rtn) {
             try {
-                rtn = buildOutSql(dbMirror, tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
+                rtn = buildOutSql(conversionResult, dbMirror, tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -183,7 +184,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

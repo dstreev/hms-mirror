@@ -136,7 +136,7 @@ public class HMSMirrorAppService {
     public CompletableFuture<Boolean> cliRun() {
         Boolean rtn = Boolean.TRUE;
         ExecuteSession session = sessionManager.getCurrentSession();
-        rtn = theWork(session);
+        rtn = theWork(session.getConversionResult());
         return CompletableFuture.completedFuture(rtn);
 
     }
@@ -170,16 +170,14 @@ public class HMSMirrorAppService {
 
     }
 
-    private Boolean theWork(ExecuteSession session) {
+    private Boolean theWork(ConversionResult conversionResult) {
         Boolean rtn = Boolean.TRUE;
 
-        HmsMirrorConfig config = session.getConfig();
-        ConversionResult conversionResult = session.getConversionResult();
-        RunStatus runStatus = session.getRunStatus();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         // Transfer the Comment.
-        if (config.getComment() != null) {
-            runStatus.setComment(config.getComment());
+        if (runStatus.getComment() != null) {
+            // Comment already set in RunStatus
         } else {
             runStatus.setComment("No comments provided for this run.  Consider adding one for easier tracking.");
         }
@@ -190,7 +188,7 @@ public class HMSMirrorAppService {
         OperationStatistics stats = runStatus.getOperationStatistics();
         log.info("Starting HMSMirrorAppService.run()");
         runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
-        if (configService.validate(session, executeSessionService.getCliEnvironment())) {
+        if (configService.validate(conversionResult, executeSessionService.getCliEnvironment())) {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
         } else {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
@@ -199,11 +197,11 @@ public class HMSMirrorAppService {
             return Boolean.FALSE;
         }
 
-        if (!config.isLoadingTestData()) {
-            try {// Refresh the connections pool.
+        if (!conversionResult.getConfigLite().isLoadingTestData()) {
+            try{// Refresh the connections pool.
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.IN_PROGRESS);
 
-                configService.validateForConnections(session);
+                configService.validateForConnections(conversionResult);
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.COMPLETED);
 
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.IN_PROGRESS);
@@ -265,8 +263,8 @@ public class HMSMirrorAppService {
 
 
         // Correct the load data issue ordering.
-        if (config.isLoadingTestData() &&
-                (!config.loadMetadataDetails() && config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
+        if (conversionResult.getConfigLite().isLoadingTestData() &&
+                (!conversionResult.getConfigLite().loadMetadataDetails() && conversionResult.getJob().getStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
             // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
             log.info("Resetting Partition Data for Test Data Load");
             for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
@@ -281,13 +279,13 @@ public class HMSMirrorAppService {
         }
 
         log.info("Starting Application Workflow");
-        log.info("Debug: isLoadingTestData={}, isDatabaseOnly={}", config.isLoadingTestData(), config.isDatabaseOnly());
+        log.info("Debug: isLoadingTestData={}, isDatabaseOnly={}", conversionResult.getConfigLite().isLoadingTestData(), conversionResult.getJob().isDatabaseOnly());
         runStatus.setProgress(ProgressEnum.IN_PROGRESS);
 
         Date startTime = new Date();
         runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.IN_PROGRESS);
 
-        if (config.isLoadingTestData()) {
+        if (conversionResult.getConfigLite().isLoadingTestData()) {
             log.info("Loading Test Data.  Skipping Database Collection.");
             Set<String> databases = new TreeSet<>();
             for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
@@ -295,10 +293,10 @@ public class HMSMirrorAppService {
                 databases.add(dbMirror.getName());
             }
 //            String[] dbs = databases.toArray(new String[0]);
-            config.setDatabases(databases);
-        } else if (!isBlank(config.getFilter().getDbRegEx())) {
+            conversionResult.getDataset().setDatabases(databases);
+        } else if (!isBlank(conversionResult.getDataset().getFilter().getDbRegEx())) {
             // Look for the dbRegEx.
-            log.info("Using dbRegEx: {}", config.getFilter().getDbRegEx());
+            log.info("Using dbRegEx: {}", conversionResult.getDataset().getFilter().getDbRegEx());
             Connection conn = null;
             Statement stmt = null;
             Set<String> databases = new TreeSet<>();
@@ -312,20 +310,20 @@ public class HMSMirrorAppService {
                     ResultSet rs = stmt.executeQuery(MirrorConf.SHOW_DATABASES);
                     while (rs.next()) {
                         String db = rs.getString(1);
-                        Matcher matcher = config.getFilter().getDbFilterPattern().matcher(db);
+                        Matcher matcher = conversionResult.getDataset().getFilter().getDbFilterPattern().matcher(db);
                         if (matcher.find()) {
                             stats.getCounts().incrementDatabases();
                             databases.add(db);
                         }
                     }
-                    config.setDatabases(databases);
+                    conversionResult.getDataset().setDatabases(databases);
                 }
             } catch (SQLException se) {
                 // Issue
                 log.error("Issue getting databases for dbRegEx", se);
                 stats.getFailures().incrementDatabases();
                 runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.ERRORED);
-                executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
+                runStatus.addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
                 reportWriterService.wrapup();
                 connectionPoolService.close();
                 runStatus.setProgress(ProgressEnum.FAILED);
@@ -336,15 +334,15 @@ public class HMSMirrorAppService {
                         conn.close();
                     } catch (SQLException e) {
                         log.error("Issue closing connections for LEFT", e);
-                        executeSessionService.getSession().addError(MISC_ERROR, "LEFT:Issue closing connections.");
+                        runStatus.addError(MISC_ERROR, "LEFT:Issue closing connections.");
                     }
                 }
             }
         }
         runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.COMPLETED);
-        log.info("Start Processing for databases: {}", String.join(",", config.getDatabases()));
+        log.info("Start Processing for databases: {}", String.join(",", conversionResult.getDataset().getDatabases()));
 
-        if (!config.isLoadingTestData()) {
+        if (!conversionResult.getConfigLite().isLoadingTestData()) {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.IN_PROGRESS);
             rtn = databaseService.loadEnvironmentVars();
             if (rtn) {
@@ -360,7 +358,7 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.SKIPPED);
         }
 
-        if (isNull(config.getDatabases()) || config.getDatabases().isEmpty()) {
+        if (isNull(conversionResult.getDataset().getDatabases()) || conversionResult.getDataset().getDatabases().isEmpty()) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
             connectionPoolService.close();
@@ -373,9 +371,9 @@ public class HMSMirrorAppService {
         // Get the Database definitions for the LEFT and RIGHT clusters.
         // ========================================
         log.info("RunStatus Stage: {} is {}", StageEnum.DATABASES, runStatus.getStage(StageEnum.DATABASES));
-        if (!config.isLoadingTestData()) {
+        if (!conversionResult.getConfigLite().isLoadingTestData()) {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
-            for (String database : config.getDatabases()) {
+            for (String database : conversionResult.getDataset().getDatabases()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 DBMirror dbMirror = conversionResultService.addDatabase(conversionResult, database);
                 try {
@@ -390,7 +388,7 @@ public class HMSMirrorAppService {
                     }
                 } catch (SQLException se) {
                     log.error("Issue getting databases", se);
-                    executeSessionService.getSession().addError(MISC_ERROR, "Issue getting databases");
+                    runStatus.addError(MISC_ERROR, "Issue getting databases");
                     runStatus.getOperationStatistics().getFailures().incrementDatabases();
                     runStatus.setStage(StageEnum.DATABASES, CollectionEnum.ERRORED);
                     reportWriterService.wrapup();
@@ -409,7 +407,7 @@ public class HMSMirrorAppService {
                 }
 
                 // Build out the table in a database.
-                if (!config.isDatabaseOnly()) {
+                if (!conversionResult.getJob().isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
                     CompletableFuture<ReturnStatus> gt = getTableService().getTables(dbMirror);
                     gtf.add(gt);
@@ -459,6 +457,8 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.TABLES, CollectionEnum.SKIPPED);
         }
 
+        // TODO: Translator not yet migrated to ConversionResult - accessing through session for now
+        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         if (config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
             runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.SKIPPED);
         } else {
@@ -466,7 +466,7 @@ public class HMSMirrorAppService {
                 int defaultConsolidationLevel = 1;
                 runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.IN_PROGRESS);
 
-                if (config.loadMetadataDetails()) {
+                if (conversionResult.getConfigLite().loadMetadataDetails()) {
                     databaseService.buildDatabaseSources(defaultConsolidationLevel, false);
                     translatorService.buildGlobalLocationMapFromWarehousePlansAndSources(false, defaultConsolidationLevel);
                     runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.COMPLETED);
@@ -493,7 +493,7 @@ public class HMSMirrorAppService {
 
         runStatus.setStage(StageEnum.BUILDING_DATABASES, CollectionEnum.IN_PROGRESS);
         // Don't build DB with VIEW Migrations.
-        if (!config.getMigrateVIEW().isOn()) {
+        if (!conversionResult.getConfigLite().getMigrateVIEW().isOn()) {
             if (getDatabaseService().build()) {
                 runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
             } else {
@@ -520,8 +520,8 @@ public class HMSMirrorAppService {
 
         // Shortcut.  Only DB's.
         log.warn("DAVID DEBUG: Processing tables: isDatabaseOnly={}, isLoadingTestData={}, collectedDbs={}",
-                config.isDatabaseOnly(), config.isLoadingTestData(), conversionResult.getDatabases().keySet());
-        if (!config.isDatabaseOnly()) {
+                conversionResult.getJob().isDatabaseOnly(), conversionResult.getConfigLite().isLoadingTestData(), conversionResult.getDatabases().keySet());
+        if (!conversionResult.getJob().isDatabaseOnly()) {
             log.warn("DAVID DEBUG: Entering table processing section");
             Set<String> collectedDbs = conversionResult.getDatabases().keySet();
             // ========================================
@@ -563,7 +563,7 @@ public class HMSMirrorAppService {
                                     // Launch the next step, which is the transfer.
                                     runStatus.getOperationStatistics().getSuccesses().incrementTables();
 
-                                    migrationFuture.add(getTransferService().build(sf.get().getDbMirror(), sf.get().getTableMirror()));
+                                    migrationFuture.add(getTransferService().build(conversionResult, sf.get().getDbMirror(), sf.get().getTableMirror()));
                                     break;
                                 case ERROR:
                                     runStatus.getOperationStatistics().getCounts().incrementTables();
@@ -680,7 +680,7 @@ public class HMSMirrorAppService {
             // Process the SQL for the Databases;
             runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.IN_PROGRESS);
             if (rtn) {
-                if (config.isExecute()) {
+                if (conversionResult.getConfigLite().isExecute()) {
                     if (getDatabaseService().execute()) {
                         runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
                         runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.COMPLETED);
@@ -705,10 +705,10 @@ public class HMSMirrorAppService {
 
             runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.IN_PROGRESS);
             if (rtn) {
-                if (config.isExecute()) {
+                if (conversionResult.getConfigLite().isExecute()) {
                     // Using the migrationExecute List, create futures for the table executions.
                     for (ReturnStatus returnStatus : migrationExecutions) {
-                        migrationFuture.add(getTransferService().execute(returnStatus.getDbMirror(), returnStatus.getTableMirror()));
+                        migrationFuture.add(getTransferService().execute(conversionResult, returnStatus.getDbMirror(), returnStatus.getTableMirror()));
                     }
 
                     // Wait for all the CompletableFutures to finish.
@@ -753,19 +753,19 @@ public class HMSMirrorAppService {
         }
 
         // Clean up Environment for Reports.
-        switch (config.getDataStrategy()) {
+        switch (conversionResult.getJob().getStrategy()) {
             case STORAGE_MIGRATION:
             case DUMP:
-                // Clean up RIGHT cluster definition.
-                if (nonNull(config.getCluster(Environment.RIGHT))) {
-                    config.getClusters().remove(Environment.RIGHT);
+                // Clean up RIGHT connection definition.
+                if (nonNull(conversionResult.getConnection(Environment.RIGHT))) {
+                    conversionResult.getConnections().remove(Environment.RIGHT);
                 }
             default:
-                if (nonNull(config.getCluster(Environment.SHADOW))) {
-                    config.getClusters().remove(Environment.SHADOW);
+                if (nonNull(conversionResult.getConnection(Environment.SHADOW))) {
+                    conversionResult.getConnections().remove(Environment.SHADOW);
                 }
-                if (nonNull(config.getCluster(Environment.TRANSFER))) {
-                    config.getClusters().remove(Environment.TRANSFER);
+                if (nonNull(conversionResult.getConnection(Environment.TRANSFER))) {
+                    conversionResult.getConnections().remove(Environment.TRANSFER);
                 }
                 break;
         }

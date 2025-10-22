@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
@@ -59,17 +60,17 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
@@ -100,7 +101,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                     tableMirror.setStrategy(DataStrategyEnum.SCHEMA_ONLY);
                     // Set False that it doesn't exist, which it won't, since we're dropping it.
                     ret.setExists(Boolean.FALSE);
-                    rtn = schemaOnlyDataStrategy.build(dbMirror, tableMirror);
+                    rtn = schemaOnlyDataStrategy.build(conversionResult, dbMirror, tableMirror);
                 } else {
                     // - AVRO LOCATION
                     if (AVROCheck(tableMirror)) {
@@ -136,7 +137,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

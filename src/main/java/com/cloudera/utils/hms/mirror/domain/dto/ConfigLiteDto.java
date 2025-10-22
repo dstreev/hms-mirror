@@ -43,6 +43,7 @@ public class ConfigLiteDto {
 
     // Feature flags
     private boolean migrateNonNative = Boolean.FALSE;
+    private boolean execute = Boolean.FALSE;
     // Handled by the Job 'Disaster Recovery' feature.'
 //    private boolean databaseOnly = Boolean.FALSE;
 //    private boolean readOnly = Boolean.FALSE;
@@ -66,6 +67,7 @@ public class ConfigLiteDto {
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
 //    private boolean dumpTestData = Boolean.FALSE;
+    private String loadTestDataFile = null;
 
     /**
      * Force external location in table DDLs.
@@ -91,6 +93,33 @@ public class ConfigLiteDto {
     }
 
     /**
+     * Check if loading test data from file.
+     *
+     * @return true if loadTestDataFile is set
+     */
+    public boolean isLoadingTestData() {
+        return loadTestDataFile != null && !loadTestDataFile.isBlank();
+    }
+
+    /**
+     * Check if metadata details should be loaded.
+     * This is a computed property based on transfer configuration.
+     *
+     * @return true if metadata details should be loaded
+     */
+    public Boolean loadMetadataDetails() {
+        // When we're ALIGNED and asking for DISTCP, we need to load the partition metadata.
+        if (transfer != null && transfer.getStorageMigration() != null) {
+            if ((transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.ALIGNED
+                    || transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.RELATIVE)
+                    && transfer.getStorageMigration().isDistcp()) {
+                return Boolean.TRUE;
+            }
+        }
+        return Boolean.FALSE;
+    }
+
+    /**
      * Create a deep clone of this ConfigLiteDto.
      * All nested objects are cloned to avoid shared references.
      *
@@ -103,11 +132,13 @@ public class ConfigLiteDto {
         clone.name = this.name;
         clone.description = this.description;
         clone.migrateNonNative = this.migrateNonNative;
+        clone.execute = this.execute;
         clone.createIfNotExists = this.createIfNotExists;
         clone.enableAutoTableStats = this.enableAutoTableStats;
         clone.enableAutoColumnStats = this.enableAutoColumnStats;
         clone.saveWorkingTables = this.saveWorkingTables;
         clone.copyAvroSchemaUrls = this.copyAvroSchemaUrls;
+        clone.loadTestDataFile = this.loadTestDataFile;
         clone.forceExternalLocation = this.forceExternalLocation;
 
         // Deep clone sub-configuration objects using their existing clone() methods

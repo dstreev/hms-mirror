@@ -163,7 +163,7 @@ public abstract class DataStrategyBase implements DataStrategy {
     }
 
     @Override
-    public BuildWhat whatToBuild(HmsMirrorConfig config, DBMirror dbMirror, TableMirror tableMirror) {
+    public BuildWhat whatToBuild(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 

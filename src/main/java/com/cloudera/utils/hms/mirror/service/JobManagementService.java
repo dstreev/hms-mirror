@@ -80,8 +80,8 @@ public class JobManagementService {
                 jobInfo.put("leftConnectionReference", jobDto.getLeftConnectionReference());
                 jobInfo.put("rightConnectionReference", jobDto.getRightConnectionReference());
                 jobInfo.put("strategy", jobDto.getStrategy());
-                jobInfo.put("disasterRecovery", jobDto.getDisasterRecovery());
-                jobInfo.put("sync", jobDto.getSync());
+                jobInfo.put("disasterRecovery", jobDto.isDisasterRecovery());
+                jobInfo.put("sync", jobDto.isSync());
 
                 jobsList.add(jobInfo);
             }
@@ -313,7 +313,7 @@ public class JobManagementService {
         ConversionRequest conversionRequest = new ConversionRequest();
 
         // Iterate through each database specification in the dataset
-        for (DatasetDto.DatabaseSpec dbSpec : datasetDto.getDatabases()) {
+        for (DatasetDto.DatabaseSpec dbSpec : datasetDto.getDatabaseSpecs()) {
             String databaseName = dbSpec.getDatabaseName();
             List<String> tables = new ArrayList<>();
 
@@ -346,7 +346,7 @@ public class JobManagementService {
 
         // Set platform type
         if (connectionDto.getPlatformType() != null) {
-            cluster.setPlatformType(PlatformType.valueOf(connectionDto.getPlatformType()));
+            cluster.setPlatformType(connectionDto.getPlatformType());
         }
 
         // Set HCFS namespace
@@ -486,7 +486,7 @@ public class JobManagementService {
 
             // Set job-level flags
             config.setDatabaseOnly(jobDto.isDatabaseOnly());
-            config.setSync(jobDto.getSync() != null ? jobDto.getSync() : Boolean.FALSE);
+            config.setSync(jobDto.isSync());
 
             // Apply ConfigLiteDto settings
             config.setMigrateNonNative(configLiteDto.isMigrateNonNative());

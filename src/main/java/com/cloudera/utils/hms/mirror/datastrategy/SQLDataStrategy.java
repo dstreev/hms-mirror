@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
@@ -67,7 +68,7 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {}.{} buildout SQL Definition", dbMirror.getName(), tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
@@ -83,7 +84,7 @@ public class SQLDataStrategy extends DataStrategyBase {
         if (!isBlank(config.getTransfer().getIntermediateStorage()) ||
                 !isBlank(config.getTransfer().getTargetNamespace()) ||
                 TableUtils.isACID(let)) {
-            return getIntermediateDataStrategy().buildOutDefinition(dbMirror, tableMirror);
+            return getIntermediateDataStrategy().buildOutDefinition(conversionResult, dbMirror, tableMirror);
         }
 
         if (ret.isExists()) {
@@ -165,14 +166,14 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getTargetNamespace() != null) {
-            return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
+            return getIntermediateDataStrategy().buildOutSql(conversionResult, dbMirror, tableMirror);
         }
 
         String useDb = null;
@@ -251,14 +252,14 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-            rtn = getSqlAcidInPlaceDataStrategy().build(dbMirror, tableMirror);
+            rtn = getSqlAcidInPlaceDataStrategy().build(conversionResult, dbMirror, tableMirror);
         } else if (!isBlank(config.getTransfer().getIntermediateStorage())
                 || !isBlank(config.getTransfer().getTargetNamespace())
                 || (TableUtils.isACID(let)
@@ -266,7 +267,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             if (TableUtils.isACID(let)) {
                 tableMirror.setStrategy(DataStrategyEnum.ACID);
             }
-            rtn = getIntermediateDataStrategy().build(dbMirror, tableMirror);
+            rtn = getIntermediateDataStrategy().build(conversionResult, dbMirror, tableMirror);
         } else {
 
             EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
@@ -274,7 +275,7 @@ public class SQLDataStrategy extends DataStrategyBase {
 
             // We should not get ACID tables in this routine.
             try {
-                rtn = buildOutDefinition(dbMirror, tableMirror);
+                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -285,7 +286,7 @@ public class SQLDataStrategy extends DataStrategyBase {
 
             if (rtn) {
                 try {
-                    rtn = buildOutSql(dbMirror, tableMirror);
+                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
                 } catch (MissingDataPointException e) {
                     let.addError("Failed to build out SQL: " + e.getMessage());
                     rtn = Boolean.FALSE;
@@ -303,7 +304,7 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         log.info("SQLDataStrategy -> Table: {} execute", tableMirror.getName());
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 

@@ -18,18 +18,18 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 
 public interface DataStrategy {
-    Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException;
+    Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException;
 
-    Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException;
+    Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException;
 
-    BuildWhat whatToBuild(HmsMirrorConfig config, DBMirror dbMirror, TableMirror tableMirror);
+    BuildWhat whatToBuild(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror);
 
-    Boolean build(DBMirror dbMirror, TableMirror tableMirror);
-    Boolean execute(DBMirror dbMirror, TableMirror tableMirror);
+    Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror);
+    Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror);
 }

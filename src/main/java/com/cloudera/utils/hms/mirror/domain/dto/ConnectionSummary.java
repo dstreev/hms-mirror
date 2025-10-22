@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
@@ -30,7 +31,7 @@ public class ConnectionSummary {
     private String name;
     private String description;
     private String environment;
-    private String platformType;
+    private PlatformType platformType;
     private boolean isDefault;
     private String testStatus;
     

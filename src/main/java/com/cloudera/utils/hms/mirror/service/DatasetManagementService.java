@@ -281,12 +281,12 @@ public class DatasetManagementService {
                 errors.add("Dataset name is required");
             }
             
-            if (datasetDto.getDatabases() == null || datasetDto.getDatabases().isEmpty()) {
+            if (datasetDto.getDatabaseSpecs() == null || datasetDto.getDatabaseSpecs().isEmpty()) {
                 errors.add("At least one database must be specified");
             } else {
                 // Validate each database specification
-                for (int i = 0; i < datasetDto.getDatabases().size(); i++) {
-                    DatasetDto.DatabaseSpec dbSpec = datasetDto.getDatabases().get(i);
+                for (int i = 0; i < datasetDto.getDatabaseSpecs().size(); i++) {
+                    DatasetDto.DatabaseSpec dbSpec = datasetDto.getDatabaseSpecs().get(i);
                     String prefix = "Database " + (i + 1) + ": ";
                     
                     if (dbSpec.getDatabaseName() == null || dbSpec.getDatabaseName().trim().isEmpty()) {

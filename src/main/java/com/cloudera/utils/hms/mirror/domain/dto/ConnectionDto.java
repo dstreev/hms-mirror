@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -42,7 +43,7 @@ public class ConnectionDto {
     private Environment environment;
     
     // Platform configuration
-    private String platformType;
+    private PlatformType platformType;
     
     // Core configuration
     private String hcfsNamespace;
