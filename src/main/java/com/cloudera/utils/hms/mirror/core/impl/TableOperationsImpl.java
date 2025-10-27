@@ -21,8 +21,8 @@ import com.cloudera.utils.hms.mirror.core.api.TableOperations;
 import com.cloudera.utils.hms.mirror.core.model.*;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.infrastructure.connection.ConnectionProvider;
 
@@ -116,12 +116,13 @@ public class TableOperationsImpl implements TableOperations {
         return ValidationResult.success();
     }
 
+    /* moved to tableservice
     @Override
-    public ValidationResult validateTableFilter(ExecuteSession session, TableMirror tableMirror, Environment environment) {
+    public ValidationResult validateTableFilter(ConversionResult conversionResult, TableMirror tableMirror, Environment environment) {
         try {
             // Get configuration through the infrastructure abstraction
             var config = session.getConfig();
-            
+
             EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
             
             if (et == null || et.getDefinition().isEmpty()) {
@@ -187,6 +188,7 @@ public class TableOperationsImpl implements TableOperations {
             return ValidationResult.failure("Error validating table filter: " + e.getMessage());
         }
     }
+     */
 
     @Override
     public TableMetadata extractTableMetadata(String database, String table, Environment environment) {

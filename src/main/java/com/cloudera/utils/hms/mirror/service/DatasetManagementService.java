@@ -21,7 +21,6 @@ import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.repository.DatasetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.RocksDBException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -281,12 +280,12 @@ public class DatasetManagementService {
                 errors.add("Dataset name is required");
             }
             
-            if (datasetDto.getDatabaseSpecs() == null || datasetDto.getDatabaseSpecs().isEmpty()) {
+            if (datasetDto.getDatabases() == null || datasetDto.getDatabases().isEmpty()) {
                 errors.add("At least one database must be specified");
             } else {
                 // Validate each database specification
-                for (int i = 0; i < datasetDto.getDatabaseSpecs().size(); i++) {
-                    DatasetDto.DatabaseSpec dbSpec = datasetDto.getDatabaseSpecs().get(i);
+                for (int i = 0; i < datasetDto.getDatabases().size(); i++) {
+                    DatasetDto.DatabaseSpec dbSpec = datasetDto.getDatabases().get(i);
                     String prefix = "Database " + (i + 1) + ": ";
                     
                     if (dbSpec.getDatabaseName() == null || dbSpec.getDatabaseName().trim().isEmpty()) {
@@ -306,8 +305,8 @@ public class DatasetManagementService {
                     // Validate filter if present
                     if (hasFilter) {
                         DatasetDto.TableFilter filter = dbSpec.getFilter();
-                        if ((filter.getIncludePattern() == null || filter.getIncludePattern().trim().isEmpty()) &&
-                            (filter.getExcludePattern() == null || filter.getExcludePattern().trim().isEmpty()) &&
+                        if ((filter.getIncludeRegEx() == null || filter.getIncludeRegEx().trim().isEmpty()) &&
+                            (filter.getExcludeRegEx() == null || filter.getExcludeRegEx().trim().isEmpty()) &&
                             (filter.getTableTypes() == null || filter.getTableTypes().isEmpty())) {
                             errors.add(prefix + "Filter must specify at least one criteria (include pattern, exclude pattern, or table types)");
                         }

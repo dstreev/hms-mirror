@@ -26,6 +26,10 @@ import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -42,8 +46,6 @@ import java.sql.Connection;
 import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
@@ -63,46 +65,57 @@ public class TableService {
     private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
     private final ConfigService configService;
-    private final ExecuteSessionService executeSessionService;
+    private final ExecutionContextService executionContextService;
+    private final ConversionResultService conversionResultService;
     private final ConnectionPoolService connectionPoolService;
     private final QueryDefinitionsService queryDefinitionsService;
     private final TranslatorService translatorService;
     private final StatsCalculatorService statsCalculatorService;
     private final TableOperations tableOperations;  // NEW: Core business logic injection
     private final SessionManager sessionManager;
+    private final CliEnvironment cliEnvironment;
+
 
     // Assuming your logger is already defined, e.g.
     // private static final Logger log = LoggerFactory.getLogger(TableService.class);
 
     public TableService(
             ConfigService configService,
-            ExecuteSessionService executeSessionService,
+            ExecutionContextService executionContextService,
+            ConversionResultService conversionResultService,
             ConnectionPoolService connectionPoolService,
             QueryDefinitionsService queryDefinitionsService,
             TranslatorService translatorService,
             StatsCalculatorService statsCalculatorService,
             TableOperations tableOperations,  // NEW: Inject core business logic
-            SessionManager sessionManager) {
+            SessionManager sessionManager,
+            CliEnvironment cliEnvironment) {
         log.debug("Initializing TableService with provided service dependencies and core business logic");
         this.configService = configService;
-        this.executeSessionService = executeSessionService;
+        this.executionContextService = executionContextService;
+        this.conversionResultService = conversionResultService;
         this.connectionPoolService = connectionPoolService;
         this.queryDefinitionsService = queryDefinitionsService;
         this.translatorService = translatorService;
         this.statsCalculatorService = statsCalculatorService;
         this.tableOperations = tableOperations;  // NEW
         this.sessionManager = sessionManager;
+        this.cliEnvironment = cliEnvironment;
     }
 
     /**
      * Checks the table filter using the new core business logic.
      * This method now delegates to the pure business logic layer.
      */
-    protected void checkTableFilter(ExecuteSession session, TableMirror tableMirror, Environment environment) {
+    protected void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
-        
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         // NEW: Delegate to core business logic instead of doing it inline
-        ValidationResult result = tableOperations.validateTableFilter(session, tableMirror, environment);
+        ValidationResult result = validateTableFilterImpl(conversionResult, dbMirror, tableMirror, environment);
         
         // Handle the result in Spring-specific way (side effects, metrics, etc.)
         if (!result.isValid()) {
@@ -116,8 +129,6 @@ public class TableService {
             // For ACID tables that pass validation, add the TRANSACTIONAL step
             EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
             if (et != null && TableUtils.isManaged(et) && TableUtils.isACID(et)) {
-//                ExecuteSession session = executeSessionService.getSession();
-                HmsMirrorConfig config = session.getConfig();
                 if (config.getMigrateACID().isOn()) {
                     tableMirror.addStep("TRANSACTIONAL", Boolean.TRUE);
                 }
@@ -127,18 +138,92 @@ public class TableService {
         log.trace("Table filter checked for table: {} - Valid: {}", tableMirror, result.isValid());
     }
 
+    private ValidationResult validateTableFilterImpl(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
+        try {
+            // Get configuration through the infrastructure abstraction
+            ConfigLiteDto config = conversionResult.getConfigLite();
+            JobDto job = conversionResult.getJob();
+
+            EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
+
+            if (et == null || et.getDefinition().isEmpty()) {
+                return ValidationResult.success(); // Nothing to validate
+            }
+
+            // Apply the same business logic that was in TableService.checkTableFilter()
+
+            // Check VIEW processing rules
+            if (config.getMigrateVIEW().isOn() && job.getStrategy() != com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.DUMP) {
+                if (!com.cloudera.utils.hms.util.TableUtils.isView(et)) {
+                    return ValidationResult.failure("VIEW's only processing selected, but table is not a view");
+                }
+            } else {
+                // Check ACID table rules
+                if (com.cloudera.utils.hms.util.TableUtils.isManaged(et)) {
+                    if (com.cloudera.utils.hms.util.TableUtils.isACID(et)) {
+                        if (!config.getMigrateACID().isOn()) {
+                            return ValidationResult.failure("ACID table and ACID processing not selected (-ma|-mao)");
+                        }
+                    } else if (config.getMigrateACID().isOnly()) {
+                        return ValidationResult.failure("Non-ACID table and ACID only processing selected `-mao`");
+                    }
+                } else if (com.cloudera.utils.hms.util.TableUtils.isHiveNative(et)) {
+                    if (config.getMigrateACID().isOnly()) {
+                        return ValidationResult.failure("Non-ACID table and ACID only processing selected `-mao`");
+                    }
+                } else if (com.cloudera.utils.hms.util.TableUtils.isView(et)) {
+                    if (job.getStrategy() != com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.DUMP) {
+                        return ValidationResult.failure("This is a VIEW and VIEW processing wasn't selected");
+                    }
+                } else {
+                    // Non-Native Tables
+                    if (!config.isMigrateNonNative()) {
+                        return ValidationResult.failure("This is a Non-Native hive table and non-native process wasn't selected");
+                    }
+                }
+            }
+
+            // Check for storage migration flag
+            if (job.getStrategy() == com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION) {
+                String smFlag = com.cloudera.utils.hms.util.TableUtils.getTblProperty(
+                        com.cloudera.utils.hms.mirror.TablePropertyVars.HMS_STORAGE_MIGRATION_FLAG, et);
+                if (smFlag != null) {
+                    return ValidationResult.failure("The table has already gone through the STORAGE_MIGRATION process on " + smFlag);
+                }
+            }
+
+            // Check table size limit
+            DatasetDto.DatabaseSpec dbSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
+            if (dbSpec.getFilter() != null && dbSpec.getFilter().getMaxSizeMb() > 0) {
+                Long dataSize = (Long) et.getStatistics().get(com.cloudera.utils.hms.mirror.MirrorConf.DATA_SIZE);
+                if (dataSize != null) {
+                    if (dbSpec.getFilter().getMaxSizeMb() * (1024 * 1024) < dataSize) {
+                        return ValidationResult.failure("The table dataset size exceeds the specified table filter size limit: " +
+                                dbSpec.getFilter().getMaxSizeMb() + "Mb < " + dataSize);
+                    }
+                }
+            }
+
+            return ValidationResult.success();
+
+        } catch (Exception e) {
+            return ValidationResult.failure("Error validating table filter: " + e.getMessage());
+        }
+    }
+
     public String getCreateStatement(TableMirror tableMirror, Environment environment) {
         log.info("Getting CREATE statement for table: {} in environment: {}", tableMirror.getName(), environment);
         String createStatement = null;
         try {
             // ...existing logic to get the statement...
             StringBuilder createStatementBldr = new StringBuilder();
-            HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-            Cluster cluster = config.getCluster(environment);
-            Boolean cine = Boolean.FALSE;
-            if (nonNull(cluster)) {
-                cine = cluster.isCreateIfNotExists();
-            }
+            ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+            ConfigLiteDto config = conversionResult.getConfigLite();
+            JobDto job = conversionResult.getJob();
+            RunStatus runStatus = conversionResult.getRunStatus();
+
+            Boolean cine = config.isCreateIfNotExists();
+
             List<String> tblDef = tableMirror.getTableDefinition(environment);
             if (tblDef != null) {
                 Iterator<String> iter = tblDef.iterator();
@@ -172,39 +257,48 @@ public class TableService {
      * @param tableMirror The table mirror object.
      * @param environment The environment (LEFT or RIGHT).
      */
-    private void getTableDefinition(ExecuteSession session, DBMirror dbMirror, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
+    private void getTableDefinition(DBMirror dbMirror, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
         final String tableId = String.format("%s:%s.%s",
                 environment, dbMirror.getName(), tableMirror.getName());
         log.info("Fetching table definition for table: {} in environment: {}", tableMirror.getName(), environment);
-//        EnvironmentTable environmentTable = null;
         log.info("Starting to get table definition for {}", tableId);
-//        ExecuteSession s_session = sessionManager.getCurrentSession();
-//        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-//            environmentTable = tableMirror.getEnvironmentTable(environment);
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+        DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
+
         // Fetch Table Definition
-        if (session.getConversionResult().getConfigLite().isLoadingTestData()) {
-            log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
-        } else {
+        // TODO: Fix for Test Data
+//        if (session.getConversionResult().getConfigLite().isLoadingTestData()) {
+//            log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
+//        } else {
             log.debug("Loading schema from catalog for {}", tableId);
             loadSchemaFromCatalog(dbMirror, tableMirror, environment);
-        }
+//        }
         log.debug("Checking table filter for {}", tableId);
-        checkTableFilter(session, tableMirror, environment);
-        if (!tableMirror.isRemove() && !session.getConversionResult().getConfigLite().isLoadingTestData()) {
+        checkTableFilter(dbMirror, tableMirror, environment);
+        if (!tableMirror.isRemove()
+            // TODO: Fix for Test Data
+//                && !session.getConversionResult().getConfigLite().isLoadingTestData()
+        ) {
             log.debug("Table is not marked for removal. Proceeding with data strategy checks for {}", tableId);
-            handleDataStrategy(config, tableMirror, environment, environmentTable, tableId);
+            handleDataStrategy(tableMirror, environment, environmentTable, tableId);
         }
         Boolean partitioned = TableUtils.isPartitioned(environmentTable);
         if (environment == Environment.LEFT && partitioned
-                && !tableMirror.isRemove() && !session.getConversionResult().getConfigLite().isLoadingTestData()) {
+                && !tableMirror.isRemove()
+                // TODO: Fix for Test Data
+//                && !session.getConversionResult().getConfigLite().isLoadingTestData()
+        ) {
             log.debug("Table is partitioned. Checking metadata details for {}", tableId);
             if (config.loadMetadataDetails()) {
                 log.debug("Loading partition metadata directly for {}", tableId);
                 loadTablePartitionMetadataDirect(dbMirror, tableMirror, environment);
             }
         }
-        Integer partLimit = config.getFilter().getTblPartitionLimit();
+        Integer partLimit = databaseSpec.getFilter().getMaxPartitions();//.getFilter().getTblPartitionLimit();
         if (partLimit != null && partLimit > 0) {
             log.debug("Checking partition count filter for {}", tableId);
             if (environmentTable.getPartitions().size() > partLimit) {
@@ -219,14 +313,19 @@ public class TableService {
         log.debug("Successfully fetched table definition for table: {}", tableMirror);
     }
 
-    private void handleDataStrategy(HmsMirrorConfig hmsMirrorConfig, TableMirror tableMirror, Environment environment,
+    private void handleDataStrategy(TableMirror tableMirror, Environment environment,
                                     EnvironmentTable environmentTable, String tableId) {
-        switch (hmsMirrorConfig.getDataStrategy()) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        switch (job.getStrategy()) {
             case SCHEMA_ONLY:
             case CONVERT_LINKED:
             case DUMP:
             case LINKED:
-                log.debug("Data strategy {} does not require stats collection for {}", hmsMirrorConfig.getDataStrategy(), tableId);
+                log.debug("Data strategy {} does not require stats collection for {}", job.getStrategy(), tableId);
                 break;
             case SQL:
             case HYBRID:
@@ -255,27 +354,32 @@ public class TableService {
         ReturnStatus rtn = new ReturnStatus();
         // Preset and overwrite the status when an issue or anomoly occurs.
         rtn.setStatus(ReturnStatus.Status.SUCCESS);
-        ExecuteSession session = executeSessionService.getSession();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // ...logic...
                 rtn.setDbMirror(dbMirror);
                 rtn.setTableMirror(tableMirror);
-                HmsMirrorConfig hmsMirrorConfig = session.getConfig();
+//                HmsMirrorConfig hmsMirrorConfig = session.getConfig();
                 EnvironmentTable leftEnvTable = tableMirror.getEnvironmentTable(Environment.LEFT);
                 try {
-                    getTableDefinition(session, dbMirror, tableMirror, leftEnvTable, Environment.LEFT);
+                    getTableDefinition(dbMirror, tableMirror, leftEnvTable, Environment.LEFT);
                     if (tableMirror.isRemove()) {
                         rtn.setStatus(ReturnStatus.Status.SKIP);
                         return rtn;
                     } else {
-                        switch (hmsMirrorConfig.getDataStrategy()) {
+                        switch (job.getStrategy()) {
                             case DUMP:
                             case STORAGE_MIGRATION:
                                 // Make a clone of the left as a working copy.
                                 try {
-                                    tableMirror.getEnvironments().put(Environment.RIGHT, tableMirror.getEnvironmentTable(Environment.LEFT).clone());
+                                    tableMirror.getEnvironments().put(Environment.RIGHT,
+                                            tableMirror.getEnvironmentTable(Environment.LEFT).clone());
                                 } catch (CloneNotSupportedException e) {
                                     log.error("Clone not supported for table: {}.{}", dbMirror.getName(), tableMirror.getName());
                                 }
@@ -284,7 +388,7 @@ public class TableService {
                             default:
                                 EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                                 try {
-                                    getTableDefinition(session, dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
+                                    getTableDefinition(dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
                                     rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                                 } catch (SQLException se) {
                                     // Can't find the table on the RIGHT.  This is OK if the table doesn't exist.
@@ -295,10 +399,10 @@ public class TableService {
                 } catch (SQLException throwables) {
                     // Check to see if the RIGHT exists.  This is for `--sync` mode.
                     // If it doesn't exist, then this is OK.
-                    if (hmsMirrorConfig.isSync()) {
+                    if (job.isSync()) {
                         EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
                         try {
-                            getTableDefinition(session, dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
+                            getTableDefinition(dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
                         } catch (SQLException se) {
                             // OK, if the db doesn't exist yet.
@@ -330,13 +434,14 @@ public class TableService {
             ReturnStatus rtn = new ReturnStatus();
             try {
                 // ...logic...
-                ExecuteSession session = executeSessionService.getSession();
-                HmsMirrorConfig config = session.getConfig();
-                RunStatus runStatus = session.getRunStatus();
+                ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+                ConfigLiteDto config = conversionResult.getConfigLite();
+                JobDto job = conversionResult.getJob();
+                RunStatus runStatus = conversionResult.getRunStatus();
                 log.debug("Getting tables for Database {}", dbMirror.getName());
                 try {
                     getTables(dbMirror, Environment.LEFT);
-                    if (config.isSync()) {
+                    if (job.isSync()) {
                         // Get the tables on the RIGHT side.  Used to determine if a table has been dropped on the LEFT
                         // and later needs to be removed on the RIGHT.
                         try {
@@ -370,8 +475,10 @@ public class TableService {
         Connection conn = null;
         String database = null;
         try {
-            ExecuteSession session = executeSessionService.getSession();
-            HmsMirrorConfig config = session.getConfig();
+            ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+            ConfigLiteDto config = conversionResult.getConfigLite();
+            JobDto job = conversionResult.getJob();
+            RunStatus runStatus = conversionResult.getRunStatus();
 
             conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
             if (conn == null) {
@@ -382,11 +489,11 @@ public class TableService {
 
             database = (environment == Environment.LEFT)
                     ? dbMirror.getName()
-                    : HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                    : getConversionResultService().getResolvedDB(dbMirror.getName());
 
             log.info("Loading tables for {}:{}", environment, database);
 
-            List<String> showStatements = buildShowStatements(config, environment);
+            List<String> showStatements = buildShowStatements(environment);
 
             try (Statement stmt = conn.createStatement()) { // try-with-resources for Statement
                 setDatabaseContext(stmt, database);
@@ -395,7 +502,7 @@ public class TableService {
                     try (ResultSet rs = stmt.executeQuery(show)) { // try-with-resources for ResultSet
                         while (rs.next()) {
                             String tableName = rs.getString(1);
-                            handleTableName(dbMirror, config, database, tableName);
+                            handleTableName(dbMirror, tableName);
                         }
                     }
                 }
@@ -413,12 +520,18 @@ public class TableService {
         }
     }
 
-    private List<String> buildShowStatements(HmsMirrorConfig config, Environment environment) {
+    private List<String> buildShowStatements(Environment environment) {
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         List<String> shows = new ArrayList<>();
-        if (!config.getCluster(environment).isLegacyHive()) {
+        if (!conversionResult.getConnection(environment).getPlatformType().isLegacyHive()) {
             if (config.getMigrateVIEW().isOn()) {
                 shows.add(MirrorConf.SHOW_VIEWS);
-                if (config.getDataStrategy() == DUMP) {
+                if (job.getStrategy() == DUMP) {
                     shows.add(MirrorConf.SHOW_TABLES);
                 }
             } else {
@@ -435,26 +548,33 @@ public class TableService {
         log.debug("Set Hive DB Session Context to {}", database);
     }
 
-    private void handleTableName(DBMirror dbMirror, HmsMirrorConfig config, String database, String tableName) {
+    private void handleTableName(DBMirror dbMirror, String tableName) {
         if (tableName == null) return;
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+        DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
 
         if (startsWithAny(tableName, config.getTransfer().getTransferPrefix(), config.getTransfer().getShadowPrefix())
                 || endsWith(tableName, config.getTransfer().getStorageMigrationPostfix())) {
-            markTableForRemoval(dbMirror, tableName, database, getRemovalReason(tableName, config));
+            markTableForRemoval(dbMirror, tableName, getRemovalReason(tableName));
             return;
         }
 
-        Filter filter = config.getFilter();
+        DatasetDto.TableFilter filter = databaseSpec.getFilter();
+//        Filter filter = config.getFilter();
 
         boolean addTable = false;
-        if (filter == null || (isBlank(filter.getTblRegEx()) && isBlank(filter.getTblExcludeRegEx()))) {
+        if (filter == null || (isBlank(filter.getIncludeRegEx()) && isBlank(filter.getExcludeRegEx()))) {
             addTable = true;
         } else {
-            if (!isBlank(filter.getTblRegEx())) {
-                Matcher matcher = filter.getTblFilterPattern().matcher(tableName);
+            if (!isBlank(filter.getIncludeRegEx())) {
+                Matcher matcher = filter.getIncludeRegExPattern().matcher(tableName);
                 addTable = matcher.matches();
-            } else if (!isBlank(filter.getTblExcludeRegEx())) {
-                Matcher matcher = filter.getTblExcludeFilterPattern().matcher(tableName);
+            } else if (!isBlank(filter.getExcludeRegEx())) {
+                Matcher matcher = filter.getExcludeRegExPattern().matcher(tableName);
                 addTable = !matcher.matches();
             }
         }
@@ -468,7 +588,7 @@ public class TableService {
 //            tableMirror.setMigrationStageMessage("Added to evaluation inventory");
 //            log.info("{}.{} added to processing list.", database, tableName);
         } else {
-            log.info("{}.{} did not match filter and will NOT be added.", database, tableName);
+            log.info("{}.{} did not match filter and will NOT be added.", dbMirror.getName(), tableName);
         }
     }
 
@@ -483,7 +603,7 @@ public class TableService {
         return !isBlank(postfix) && value.endsWith(postfix);
     }
 
-    private void markTableForRemoval(DBMirror dbMirror, String tableName, String database, String reason) {
+    private void markTableForRemoval(DBMirror dbMirror, String tableName, String reason) {
         // TODO: Fix
 //        TableMirror tableMirror = dbMirror.addTable(tableName);
 //        tableMirror.setRemove(true);
@@ -491,7 +611,12 @@ public class TableService {
 //        log.info("{}.{} was NOT added to list. Reason: {}", database, tableName, reason);
     }
 
-    private String getRemovalReason(String tableName, HmsMirrorConfig config) {
+    private String getRemovalReason(String tableName) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         if (tableName.startsWith(config.getTransfer().getTransferPrefix())) {
             return "Table name matches the transfer prefix; likely remnant of a previous event.";
         } else if (tableName.startsWith(config.getTransfer().getShadowPrefix())) {
@@ -516,7 +641,11 @@ public class TableService {
         // ...logic...
         String database = resolveDatabaseName(dbMirror, tableMirror, environment);
         EnvironmentTable environmentTable = tableMirror.getEnvironmentTable(environment);
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         try (Connection connection = getConnectionPoolService().getHS2EnvironmentConnection(environment)) {
             if (connection == null) return;
@@ -543,11 +672,10 @@ public class TableService {
     private String resolveDatabaseName(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.trace("Resolving database name for table: {} in environment: {}", tableMirror, environment);
         // ...logic...
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         if (environment == Environment.LEFT) {
             return dbMirror.getName();
         } else {
-            return HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+            return getConversionResultService().getResolvedDB(dbMirror.getName());
         }
     }
 
@@ -625,10 +753,14 @@ public class TableService {
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        if (hmsMirrorConfig.getOwnershipTransfer().isTable()) {
+        if (config.getOwnershipTransfer().isTable()) {
             try {
                 conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
                 if (conn != null) {
@@ -753,12 +885,15 @@ public class TableService {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-        ExecuteSession session = executeSessionService.getSession();
-        RunStatus runStatus = session.getRunStatus();
-        HmsMirrorConfig config = session.getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+        ConnectionDto connection = conversionResult.getConnection(environment);
 
         // TODO: Handle RIGHT Environment. At this point, we're only handling LEFT.
-        if (!configService.isMetastoreDirectConfigured(session, environment)) {
+        if (!configService.isMetastoreDirectConfigured(connection)) {
             log.info("Metastore Direct Connection is not configured for {}.  Skipping.", environment);
             runStatus.addWarning(METASTORE_PARTITION_LOCATIONS_NOT_FETCHED);
             return;
@@ -801,13 +936,17 @@ public class TableService {
         // Considered only gathering stats for partitioned tables, but decided to gather for all tables to support
         //  smallfiles across the board.
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
-        if (hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        if (config.getOptimization().isSkipStatsCollection()) {
             log.debug("{}:{}: Skipping Stats Collection.", environment, et.getName());
             return;
         }
-        switch (hmsMirrorConfig.getDataStrategy()) {
+        switch (job.getStrategy()) {
             case DUMP:
             case SCHEMA_ONLY:
                 // We don't need stats for these.
@@ -829,8 +968,8 @@ public class TableService {
         // Determine Table File Format
         TableUtils.getSerdeType(et);
 
-        if (hmsMirrorConfig.getSupportFileSystems().contains(protocol)) {
-            CliEnvironment cli = executeSessionService.getCliEnvironment();
+        if (conversionResult.getSupportedFileSystems().contains(protocol)) {
+            CliEnvironment cli = getCliEnvironment();
 
             String countCmd = "count " + location;
             CommandReturn cr = cli.processInput(countCmd);
@@ -879,23 +1018,29 @@ public class TableService {
 
     public Boolean runTableSql(List<Pair> sqlList, TableMirror tblMirror, Environment environment) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        JobExecution jobExecution = conversionResult.getJobExecution();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         // Check if there is anything to run.
         if (nonNull(sqlList) && !sqlList.isEmpty()) {
             // Check if the cluster is connected. This could happen if the cluster is a virtual cluster created as a place holder for processing.
-            if (nonNull(config.getCluster(environment)) && nonNull(config.getCluster(environment).getHiveServer2()) &&
-                    !config.getCluster(environment).getHiveServer2().isDisconnected()) {
+            if (nonNull(conversionResult.getConnection(environment)) && !isBlank(conversionResult.getConnection(environment).getHs2Uri()) &&
+                    conversionResult.getConnection(environment).isHs2Connected()) {
                 // Skip this if using test data.
-                if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
+                if (!job.isLoadingTestData()) {
 
                     try (Connection conn = getConnectionPoolService().getHS2EnvironmentConnection(environment)) {
-                        if (isNull(conn) && config.isExecute() && !config.getCluster(environment).getHiveServer2().isDisconnected()) {
+                        if (isNull(conn) && jobExecution.isExecute() && conversionResult.getConnection(environment).isHs2Connected()) {
                             // this is a problem.
                             rtn = Boolean.FALSE;
                             tblMirror.addIssue(environment, "Connection missing. This is a bug.");
                         }
 
-                        if (isNull(conn) && config.getCluster(environment).getHiveServer2().isDisconnected()) {
+                        if (isNull(conn) && !conversionResult.getConnection(environment).isHs2Connected()) {
                             tblMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
                                     "The scripts will need to be run 'manually'.");
                         }
@@ -909,7 +1054,7 @@ public class TableService {
                                     } else {
                                         log.debug("{}:SQL:{}:{}", environment, pair.getDescription(), pair.getAction());
                                         tblMirror.setMigrationStageMessage("Executing SQL: " + pair.getDescription());
-                                        if (config.isExecute()) {
+                                        if (jobExecution.isExecute()) {
                                             // Log the Return of 'set' commands.
                                             if (pair.getAction().trim().toLowerCase().startsWith("set")) {
                                                 stmt.execute(pair.getAction());
@@ -961,4 +1106,6 @@ public class TableService {
         }
         return rtn;
     }
+
+
 }

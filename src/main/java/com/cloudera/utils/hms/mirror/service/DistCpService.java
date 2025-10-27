@@ -20,13 +20,18 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -55,18 +60,16 @@ import static java.util.Objects.nonNull;
  */
 @Component
 @Slf4j
+@Getter
+@RequiredArgsConstructor
 public class DistCpService {
 
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
     private final ObjectMapper yamlMapper;
-
-    /**
-     * Constructor for DistCpService.
-     *
-     * @param yamlMapper The ObjectMapper configured for YAML serialization
-     */
-    public DistCpService(@Qualifier("yamlMapper") ObjectMapper yamlMapper) {
-        this.yamlMapper = yamlMapper;
-    }
 
     /**
      * Builds DistCp reports and scripts for all databases in the conversion.
@@ -82,17 +85,19 @@ public class DistCpService {
      * @param session The execution session containing configuration and conversion data
      * @param outputDir The directory where the generated files will be written
      */
-    public void buildAllDistCpReports(ExecuteSession session, String outputDir) {
-        HmsMirrorConfig config = session.getConfig();
-        ConversionResult conversionResult = session.getConversionResult();
+    public void buildAllDistCpReports(String outputDir) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         for (Map.Entry<String, DBMirror> dbEntry : conversionResult.getDatabases().entrySet()) {
-            String database = HmsMirrorConfigUtil.getResolvedDB(dbEntry.getKey(), config);
+            String database = getConversionResultService().getResolvedDB(dbEntry.getKey());
             String originalDatabase = dbEntry.getKey();
 
             try {
                 Environment[] environments = null;
-                switch (config.getDataStrategy()) {
+                switch (job.getStrategy()) {
                     case DUMP:
                     case STORAGE_MIGRATION:
                         environments = new Environment[]{Environment.LEFT};

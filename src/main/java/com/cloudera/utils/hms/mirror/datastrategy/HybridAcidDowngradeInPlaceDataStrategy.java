@@ -17,19 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -39,32 +37,35 @@ import org.springframework.stereotype.Component;
 public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
 
     private final SQLAcidInPlaceDataStrategy sqlAcidInPlaceDataStrategy;
-
     private final ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy;
 
-    public HybridAcidDowngradeInPlaceDataStrategy(StatsCalculatorService statsCalculatorService,
-                                                  ExecuteSessionService executeSessionService,
-                                                  TranslatorService translatorService,
+    public HybridAcidDowngradeInPlaceDataStrategy(@NonNull ConversionResultService conversionResultService,
+                                                  @NonNull ExecutionContextService executionContextService,
+                                                  @NonNull StatsCalculatorService statsCalculatorService,
+                                                  @NonNull CliEnvironment cliEnvironment,
+                                                  @NonNull TranslatorService translatorService,
+                                                  @NonNull FeatureService featureService,
                                                   SQLAcidInPlaceDataStrategy sqlAcidInPlaceDataStrategy,
                                                   ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.sqlAcidInPlaceDataStrategy = sqlAcidInPlaceDataStrategy;
         this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
         JobDto job = conversionResult.getJob();
 
         /*
@@ -80,29 +81,30 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
             too many partitions.
          */
         if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
-            rtn = sqlAcidInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror);
+            rtn = sqlAcidInPlaceDataStrategy.build(dbMirror, tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             if (let.getPartitioned()) {
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
                 if (let.getPartitions().size() < job.getHybrid().getExportImportPartitionLimit() ||
                         job.getHybrid().getExportImportPartitionLimit() <= 0) {
-                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror);
+                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror);
                 } else {
-                    rtn = sqlAcidInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror);
+                    rtn = sqlAcidInPlaceDataStrategy.build(dbMirror, tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-                rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror);
+                rtn = exportImportAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror);
             }
         }
         return rtn;
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        JobDto job = conversionResult.getJob();
         /*
         Check environment is Hive 3.
             if not, need to do SQLACIDInplaceDowngrade.
@@ -115,21 +117,21 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
         else
             too many partitions.
          */
-        if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
-            rtn = sqlAcidInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror);
+        if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
+            rtn = sqlAcidInPlaceDataStrategy.execute(dbMirror, tableMirror);
         } else {
             EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
             if (let.getPartitioned()) {
                 // Partitions less than export limit or export limit set to 0 (or less), which means ignore.
-                if (let.getPartitions().size() < hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() ||
-                        hmsMirrorConfig.getHybrid().getExportImportPartitionLimit() <= 0) {
-                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror);
+                if (let.getPartitions().size() < job.getHybrid().getExportImportPartitionLimit() ||
+                        job.getHybrid().getExportImportPartitionLimit() <= 0) {
+                    rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror);
                 } else {
-                    rtn = sqlAcidInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror);
+                    rtn = sqlAcidInPlaceDataStrategy.execute(dbMirror, tableMirror);
                 }
             } else {
                 // Go with EXPORT_IMPORT
-                rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror);
+                rtn = exportImportAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror);
             }
         }
         return rtn;

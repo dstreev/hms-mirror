@@ -17,22 +17,21 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TableService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -48,28 +47,29 @@ public class LinkedDataStrategy extends DataStrategyBase {
     private final SchemaOnlyDataStrategy schemaOnlyDataStrategy;
     private final TableService tableService;
 
-    public LinkedDataStrategy(StatsCalculatorService statsCalculatorService,
-                              ExecuteSessionService executeSessionService,
-                              TranslatorService translatorService,
-                              SchemaOnlyDataStrategy schemaOnlyDataStrategy,
-                              TableService tableService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+    public LinkedDataStrategy(@NonNull ConversionResultService conversionResultService,
+                              @NonNull ExecutionContextService executionContextService,
+                              @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                              @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
+                              SchemaOnlyDataStrategy schemaOnlyDataStrategy, TableService tableService) {
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
         this.tableService = tableService;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        JobDto job = conversionResult.getJob();
 
         log.debug("Table: {} buildout LINKED Definition", tableMirror.getName());
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         // Can't LINK ACID tables.
@@ -77,12 +77,12 @@ public class LinkedDataStrategy extends DataStrategyBase {
             if (TableUtils.isHiveNative(let) && !TableUtils.isACID(let)) {
                 // Swap out the namespace of the LEFT with the RIGHT.
                 copySpec.setReplaceLocation(Boolean.FALSE);
-                if (hmsMirrorConfig.convertManaged())
+                if (getConversionResultService().convertManaged())
                     copySpec.setUpgrade(Boolean.TRUE);
                 // LINKED doesn't own the data.
                 copySpec.setTakeOwnership(Boolean.FALSE);
 
-                if (hmsMirrorConfig.isSync()) {
+                if (job.isSync()) {
                     // We assume that the 'definitions' are only there is the
                     //     table exists.
                     if (!let.isExists() && ret.isExists()) {
@@ -143,22 +143,22 @@ public class LinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         // Reuse the SchemaOnlyDataStrategy to build out the DDL SQL for the LINKED table.
-        return schemaOnlyDataStrategy.buildOutSql(conversionResult, dbMirror, tableMirror);
+        return schemaOnlyDataStrategy.buildOutSql(dbMirror, tableMirror);
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         if (TableUtils.isACID(let)) {
             tableMirror.addIssue(Environment.LEFT, "You can't 'LINK' ACID tables.");
             rtn = Boolean.FALSE;
         } else {
             try {
-                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);//tblMirror.buildoutLINKEDDefinition(config, dbMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -167,7 +167,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
 
         if (rtn) {
             try {
-                rtn = buildOutSql(conversionResult, dbMirror, tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);//tblMirror.buildoutLINKEDSql(config, dbMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -184,7 +184,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

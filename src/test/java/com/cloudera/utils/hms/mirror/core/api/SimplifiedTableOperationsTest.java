@@ -184,7 +184,7 @@ class SimplifiedTableOperationsTest {
         // For this standalone demo, we'll keep the validation simple
         
         // Test table filter validation
-        ValidationResult validation = tableOperations.validateTableFilter(session, tableMirror, Environment.LEFT);
+        ValidationResult validation = tableOperations.validateTableFilter(tableMirror, Environment.LEFT);
         
         assertNotNull(validation, "Validation result should not be null");
         System.out.println("✓ Table filter validation completed");

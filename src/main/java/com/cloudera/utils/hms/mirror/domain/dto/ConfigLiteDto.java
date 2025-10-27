@@ -43,7 +43,7 @@ public class ConfigLiteDto {
 
     // Feature flags
     private boolean migrateNonNative = Boolean.FALSE;
-    private boolean execute = Boolean.FALSE;
+//    private boolean execute = Boolean.FALSE;
     // Handled by the Job 'Disaster Recovery' feature.'
 //    private boolean databaseOnly = Boolean.FALSE;
 //    private boolean readOnly = Boolean.FALSE;
@@ -132,7 +132,6 @@ public class ConfigLiteDto {
         clone.name = this.name;
         clone.description = this.description;
         clone.migrateNonNative = this.migrateNonNative;
-        clone.execute = this.execute;
         clone.createIfNotExists = this.createIfNotExists;
         clone.enableAutoTableStats = this.enableAutoTableStats;
         clone.enableAutoColumnStats = this.enableAutoColumnStats;

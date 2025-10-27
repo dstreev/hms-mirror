@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.core.api;
 
-import com.cloudera.utils.hms.mirror.core.impl.LocationTranslatorImpl;
 import com.cloudera.utils.hms.mirror.core.model.GlobalLocationMapResult;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.Translator;

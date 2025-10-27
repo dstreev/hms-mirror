@@ -18,12 +18,16 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
-import com.cloudera.utils.hms.mirror.domain.core.Cluster;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.SerdeType;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -61,12 +65,11 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Component
 @Slf4j
 @Getter
+@RequiredArgsConstructor
 public class StatsCalculatorService {
-    private final ExecuteSessionService executeSessionService;
 
-    public StatsCalculatorService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-    }
+    @NonNull
+    private final ExecutionContextService executionContextService;
 
     protected static Long getTezMaxGrouping(EnvironmentTable envTable) {
         SerdeType serdeType = serdeFromStats(envTable.getStatistics());
@@ -112,10 +115,13 @@ public class StatsCalculatorService {
      */
     public String getDistributedPartitionElements(EnvironmentTable envTable) {
         StringBuilder sb = new StringBuilder();
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+
+        ConfigLiteDto config = conversionResult.getConfigLite();
+
         if (envTable.getPartitioned()) {
-            if (hmsMirrorConfig.getOptimization().isAutoTune() &&
-                    !hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
+            if (config.getOptimization().isAutoTune() &&
+                    !config.getOptimization().isSkipStatsCollection()) {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 if (nonNull(envTable.getStatistics().get(MirrorConf.DATA_SIZE))) {
                     Long ratio = getPartitionDistributionRatio(envTable);
@@ -154,8 +160,10 @@ public class StatsCalculatorService {
      */
     protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        if (!hmsMirrorConfig.getOptimization().isSkipStatsCollection()) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+
+        if (!config.getOptimization().isSkipStatsCollection()) {
             try {
                 SerdeType stype = serdeFromStats(envTable.getStatistics());
                 Long dataSize = (Long) envTable.getStatistics().get(MirrorConf.DATA_SIZE);
@@ -174,15 +182,19 @@ public class StatsCalculatorService {
      * small file handling, partition count, compression, and auto-stats gathering
      * based on the provided environment and cluster settings.
      *
-     * @param cluster the cluster instance representing the current execution context,
-     *                including settings that influence statistics and optimization behavior.
+     * @param connection the cluster instance representing the current execution context,
+     *                   including settings that influence statistics and optimization behavior.
      * @param controlEnv the environment table that provides control or source-side statistics
      *                   and configuration data, which is analyzed for session option adjustments.
-     * @param applyEnv the environment table where session configurations and adjustments
-     *                 are applied, including any logged issues or SQL settings.
+     * @param applyEnv   the environment table where session configurations and adjustments
+     *                   are applied, including any logged issues or SQL settings.
      */
-    public void setSessionOptions(Cluster cluster, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+    public void setSessionOptions(ConnectionDto connection, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+
+        ConfigLiteDto hmsMirrorConfig = conversionResult.getConfigLite();
+
         // Skip if no stats collection.
         if (hmsMirrorConfig.getOptimization().isSkipStatsCollection())
             return;
@@ -234,15 +246,15 @@ public class StatsCalculatorService {
         }
 
         // Handle Auto Stats Gathering.
-        if (!cluster.isLegacyHive()) {
-            if (cluster.isEnableAutoTableStats()) {
+        if (!connection.getPlatformType().isLegacyHive()) {
+            if (connection.isEnableAutoTableStats()) {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_TABLE_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_TABLE_STATS, MessageFormat.format(SET_SESSION_VALUE_STRING, HIVE_AUTO_TABLE_STATS, "true"));
             } else {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_TABLE_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_TABLE_STATS, MessageFormat.format(SET_SESSION_VALUE_STRING, HIVE_AUTO_TABLE_STATS, "false"));
             }
-            if (cluster.isEnableAutoColumnStats()) {
+            if (connection.isEnableAutoColumnStats()) {
                 applyEnv.addIssue("Setting " + HIVE_AUTO_COLUMN_STATS + " because you've set that optimization");
                 applyEnv.addSql("Setting: " + HIVE_AUTO_COLUMN_STATS, MessageFormat.format(SET_SESSION_VALUE_STRING, HIVE_AUTO_COLUMN_STATS, "true"));
             } else {

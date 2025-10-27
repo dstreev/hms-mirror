@@ -132,7 +132,7 @@ public enum DataStrategyEnum {
     location.  Commit/ownership?
      */
     COMMON(Boolean.FALSE, CommonDataStrategy.class, "common"),
-    ICEBERG_CONVERSION(Boolean.FALSE, IcebergConversionDataStrategy.class, "iceberg-conversion"),
+//    ICEBERG_CONVERSION(Boolean.FALSE, IcebergConversionDataStrategy.class, "iceberg-conversion"),
     INTERMEDIATE(Boolean.TRUE, IntermediateDataStrategy.class, "intermediate"),
     SQL_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, SQLAcidInPlaceDataStrategy.class, "sql-acid-downgrade-inplace"),
     EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, ExportImportAcidDowngradeInPlaceDataStrategy.class, "export-import-acid-downgrade-inplace"),

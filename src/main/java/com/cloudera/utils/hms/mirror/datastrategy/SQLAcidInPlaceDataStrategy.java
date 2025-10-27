@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
@@ -24,17 +25,18 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TableService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -53,21 +55,25 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
 
     private final TableService tableService;
 
-    public SQLAcidInPlaceDataStrategy(StatsCalculatorService statsCalculatorService,
-                                      ExecuteSessionService executeSessionService,
-                                      TranslatorService translatorService,
+    public SQLAcidInPlaceDataStrategy(@NonNull ConversionResultService conversionResultService,
+                                      @NonNull ExecutionContextService executionContextService,
+                                      @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                                      @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
                                       TableService tableService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.tableService = tableService;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         // Check the Left to ensure it hasn't already been processed by 'inplace'
         if (TableUtils.hasTblProperty(ACID_INPLACE, let)) {
@@ -143,13 +149,17 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
 
         // Check to see if there are partitions.
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         // Ensure we're in the right database.
         String database = dbMirror.getName();
@@ -158,14 +168,14 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         let.addSql(TableUtils.USE_DESC, useDb);
         // Set Override Properties.
         // Get the LEFT overrides for the DOWNGRADE.
-        List<String> overrides = ConfigUtils.getPropertyOverridesFor(Environment.LEFT, hmsMirrorConfig);
+        List<String> overrides = ConfigUtils.getPropertyOverridesFor(Environment.LEFT, config.getOptimization().getOverrides());
         for (String setCmd : overrides) {
             let.addSql(setCmd, setCmd);
         }
 
         if (let.getPartitioned()) {
-            if (hmsMirrorConfig.getOptimization().isSkip()) {
-                if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+            if (config.getOptimization().isSkip()) {
+                if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
                 }
                 String partElement = TableUtils.getPartitionElements(let);
@@ -173,10 +183,10 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
                         let.getName(), ret.getName(), partElement);
                 String transferDesc = MessageFormat.format(TableUtils.STAGE_TRANSFER_PARTITION_DESC, let.getPartitions().size());
                 let.addSql(new Pair(transferDesc, transferSql));
-            } else if (hmsMirrorConfig.getOptimization().isSortDynamicPartitionInserts()) {
-                if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+            } else if (config.getOptimization().isSortDynamicPartitionInserts()) {
+                if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "true"));
-                    if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                    if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                         let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, 0));
                     }
                 }
@@ -187,15 +197,15 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
                 let.addSql(new Pair(transferDesc, transferSql));
             } else {
                 // Prescriptive Optimization.
-                if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()) {
+                if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
-                    if (!hmsMirrorConfig.getCluster(Environment.LEFT).isHdpHive3()) {
+                    if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                         let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, -1));
                     }
                 }
 
                 String partElement = TableUtils.getPartitionElements(let);
-                String distPartElement = statsCalculatorService.getDistributedPartitionElements(let);
+                String distPartElement = getStatsCalculatorService().getDistributedPartitionElements(let);
                 String transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS_PRESCRIPTIVE,
                         let.getName(), ret.getName(), partElement, distPartElement);
                 String transferDesc = MessageFormat.format(TableUtils.STORAGE_MIGRATION_TRANSFER_DESC, let.getPartitions().size());
@@ -213,12 +223,15 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         // Build cleanup Queries (drop archive table)
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         /*
         In this case, the LEFT is the source and we'll us the RIGHT cluster definition to hold the work. We need to ensure
@@ -233,7 +246,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         write cleanup sql to drop original_archive.
          */
         try {
-            rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
+            rtn = buildOutDefinition(dbMirror, tableMirror);//tableMirror.buildoutSQLACIDDowngradeInplaceDefinition(config, dbMirror);
         } catch (RequiredConfigurationException e) {
             let.addError("Failed to build out definition: " + e.getMessage());
             rtn = Boolean.FALSE;
@@ -244,9 +257,9 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
             let.addCleanUpSql(TableUtils.DROP_DESC, cleanUpArchive);
 
             // Check Partition Counts.
-            if (let.getPartitioned() && let.getPartitions().size() > hmsMirrorConfig.getMigrateACID().getPartitionLimit()) {
+            if (let.getPartitioned() && let.getPartitions().size() > config.getMigrateACID().getPartitionLimit()) {
                 let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the ACID SQL " +
-                        "partition limit (migrateACID->partitionLimit) of " + hmsMirrorConfig.getMigrateACID().getPartitionLimit() +
+                        "partition limit (migrateACID->partitionLimit) of " + config.getMigrateACID().getPartitionLimit() +
                         ".  The queries will NOT be automatically run.");
                 rtn = Boolean.FALSE;
             }
@@ -255,7 +268,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         if (rtn) {
             // Build Transfer SQL
             try {
-                rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -266,7 +279,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return getTableService().runTableSql(tableMirror, Environment.LEFT);
     }
 }

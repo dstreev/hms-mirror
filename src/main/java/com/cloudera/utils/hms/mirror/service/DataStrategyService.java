@@ -51,14 +51,12 @@ public class DataStrategyService {
             StorageMigrationDataStrategy storageMigrationDataStrategy,
             SQLDataStrategy sqlDataStrategy,
             SQLAcidInPlaceDataStrategy sqlAcidInPlaceDataStrategy,
-            IntermediateDataStrategy intermediateDataStrategy,
-            IcebergConversionDataStrategy icebergConversionDataStrategy) {
+            IntermediateDataStrategy intermediateDataStrategy) {
         
         this.defaultStrategy = schemaOnlyDataStrategy;
         this.strategies = new EnumMap<>(DataStrategyEnum.class);
         
         strategies.put(DataStrategyEnum.STORAGE_MIGRATION, storageMigrationDataStrategy);
-        strategies.put(DataStrategyEnum.ICEBERG_CONVERSION, icebergConversionDataStrategy);
         strategies.put(DataStrategyEnum.DUMP, dumpDataStrategy);
         strategies.put(DataStrategyEnum.EXPORT_IMPORT, exportImportDataStrategy);
         strategies.put(DataStrategyEnum.HYBRID, hybridDataStrategy);

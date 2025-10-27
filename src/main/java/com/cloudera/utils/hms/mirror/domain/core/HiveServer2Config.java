@@ -24,16 +24,13 @@ import lombok.Setter;
 
 import java.util.Properties;
 
+import static com.cloudera.utils.hms.mirror.domain.support.HiveDriverClasses.APACHE_HIVE_DRIVER;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Getter
 @Setter
 public class HiveServer2Config implements Cloneable {
-    @JsonIgnore
-    public static final String APACHE_HIVE_DRIVER = "org.apache.hive.jdbc.HiveDriver";
-    @JsonIgnore
-    public static final String CLOUDERA_HIVE_DRIVER = "com.cloudera.hive.jdbc.HS2Driver";
 
     @Schema(description = "The JDBC URI for the HiveServer2 connections. EG: jdbc:hive2://<host>:<port>")
     private String uri = null;
@@ -42,7 +39,7 @@ public class HiveServer2Config implements Cloneable {
     private Properties connectionProperties = new Properties();
     @Schema(description = "The driver class name for the HiveServer2 connections. Default is org.apache.hive.jdbc.HiveDriver. Specify this if you are using a different driver.")
     private String driverClassName = APACHE_HIVE_DRIVER; // default driver.
-    @Schema(description = "The path to the jar file for the HiveServer2 connections. Must be specified for non-kerberos connections.  Should be null for kerberos connections and driver should be in 'aux_libs'.")
+    @Schema(description = "The path to the jar file for the HiveServer2 connections.")
     private String jarFile = null;
     private String version = null;
 

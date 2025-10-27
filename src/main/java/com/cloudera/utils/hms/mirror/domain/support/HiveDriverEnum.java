@@ -24,16 +24,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-import static com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config.APACHE_HIVE_DRIVER;
-import static com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config.CLOUDERA_HIVE_DRIVER;
+import static com.cloudera.utils.hms.mirror.domain.support.HiveDriverClasses.APACHE_HIVE_DRIVER;
+import static com.cloudera.utils.hms.mirror.domain.support.HiveDriverClasses.CLOUDERA_HIVE_DRIVER;
 
 @Slf4j
 public enum HiveDriverEnum {
 
     APACHE_HIVE(APACHE_HIVE_DRIVER, Arrays.asList("host", "port",
             "dbName", "sessionConfs", "hiveConfs", "hiveVars", " transportMode", "principal", "saslQop", "user",
-            "password", "ssl", "sslTrustStore", "trustStorePassword","serviceDiscoveryMode","zookeeperKeyStoreType",
-            "zookeeperNamespace", "retries")),
+            "password", "ssl", "sslTrustStore", "trustStorePassword", "user", "password", "serviceDiscoveryMode",
+            "zookeeperKeyStoreType", "zookeeperNamespace", "retries")),
     CLOUDERA_HIVE(CLOUDERA_HIVE_DRIVER, Arrays.asList("AllowSelfSignedCerts",
             "AsyncExecPollInterval","AuthMech","BinaryColumnLength","CAIssuedCertsMismatch","CatalogSchemaSwitch",
             "DecimalColumnScale","DefaultStringColumnLength","DelegationToken","DelegationUID",
@@ -42,7 +42,7 @@ public enum HiveDriverEnum {
             "LogLevel","LogPath","NonRowcountQueryPrefixes","PreparedMetaLimitZero","PWD",
             "RowsFetchedPerBlock","SocketTimeout","SSL","SSLKeyStore","SSLKeyStoreProvider",
             "SSLKeyStorePwd","SSLKeyStoreType","SSLTrustStore","SSLTrustStoreProvider",
-            "SSLTrustStorePwd","SSLTrustStoreType","TransportMode",
+            "SSLTrustStorePwd","SSLTrustStoreType","TransportMode", "user", "password",
             "UID","UseNativeQuery","zk"));
 
 

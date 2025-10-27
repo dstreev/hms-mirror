@@ -17,18 +17,19 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -36,6 +37,7 @@ import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -64,25 +66,24 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     private final TableService tableService;
     private final WarehouseService warehouseService;
 
-
-    public StorageMigrationDataStrategy(StatsCalculatorService statsCalculatorService,
-                                        ExecuteSessionService executeSessionService,
-                                        TranslatorService translatorService,
-                                        DatabaseService databaseService,
-                                        TableService tableService,
-                                        WarehouseService warehouseService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+    public StorageMigrationDataStrategy(@NonNull ConversionResultService conversionResultService,
+                                        @NonNull ExecutionContextService executionContextService,
+                                        @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                                        @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
+                                        DatabaseService databaseService, TableService tableService, WarehouseService warehouseService) {
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.databaseService = databaseService;
         this.tableService = tableService;
         this.warehouseService = warehouseService;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -90,11 +91,11 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         EnvironmentTable set = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);
 
         // Check that the table isn't already in the target location.
         StringBuilder sb = new StringBuilder();
-        sb.append(hmsMirrorConfig.getTransfer().getTargetNamespace());
+        sb.append(config.getTransfer().getTargetNamespace());
         String warehouseDir = null;
         // Get the Warehouse for the database
         Warehouse dbWarehouse = null;
@@ -115,7 +116,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
             warehouseDir = dbWarehouse.getManagedDirectory();
         }
 
-        if (!hmsMirrorConfig.getTransfer().getTargetNamespace().endsWith("/") && !warehouseDir.startsWith("/")) {
+        if (!config.getTransfer().getTargetNamespace().endsWith("/") && !warehouseDir.startsWith("/")) {
             sb.append("/");
         }
         sb.append(warehouseDir);
@@ -133,7 +134,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
         if (TableUtils.isACID(let)) {
             copySpec.setStripLocation(Boolean.TRUE);
-            if (hmsMirrorConfig.getMigrateACID().isDowngrade()) {
+            if (config.getMigrateACID().isDowngrade()) {
                 copySpec.setMakeExternal(Boolean.TRUE);
                 copySpec.setTakeOwnership(Boolean.TRUE);
             }
@@ -148,21 +149,22 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
 
         String useDb = null;
 //        String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getConversionResultService().getEnvironmentTable(Environment.RIGHT, tableMirror);
         let.getSql().clear();
         ret.getSql().clear();
 
-        String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+        String database = getConversionResultService().getResolvedDB(dbMirror.getName());
         String originalDatabase = dbMirror.getName();
 
 //        database = dbMirror.getName();
@@ -188,7 +190,8 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         // Create table with New Location
         String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
         let.addSql(TableUtils.CREATE_DESC, createStmt2);
-        if (!config.getCluster(Environment.LEFT).isLegacyHive() && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
+        if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
+                config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
         }
@@ -204,12 +207,14 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getConversionResultService().getEnvironmentTable(Environment.RIGHT, tableMirror);
 
         if (!let.isExists()) {
             // Nothing to process.
@@ -258,7 +263,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                         } else {
                             String location = null;
                             // Need to make adjustments for hdp3 hive 3.
-                            if (config.getCluster(Environment.LEFT).isHdpHive3()) {
+                            if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                                 location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                             } else {
                                 location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
@@ -360,7 +365,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                 } else {
                                     String location = null;
                                     // Need to make adjustments for hdp3 hive 3.
-                                    if (config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                    if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                                         location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                     } else {
                                         location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
@@ -388,7 +393,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                         rtn = Boolean.TRUE;
 
                         if (rtn)
-                            rtn = AVROCheck(tableMirror);
+                            rtn = getConversionResultService().AVROCheck(tableMirror);
 
                     } else if (config.getTransfer().getStorageMigration().isStrict()) {
                         log.warn("Cleaning up SQL due to issues for table: {}", tableMirror.getName());
@@ -408,10 +413,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                     //   even under the distcp movement strategy.  This allows the user access to the original
                     //   'data' under the archived table, which can be used for comparison or other purposes.
                     // Create new table
-                    rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
+                    rtn = buildOutDefinition(dbMirror, tableMirror);
 
                     // Rename the table
-                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
 
                     // Need to build out SQL to recreate partitions (with new locations).
                     // Build Alter Statement for Partitions to change location.
@@ -488,7 +493,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             } else {
                                 String location = null;
                                 // Need to make adjustments for hdp3 hive 3.
-                                if (config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                                     location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
                                 } else {
                                     location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
@@ -526,31 +531,32 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                 }
             } else {
                 // No Distcp (SQL)
-                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);
 
                 if (rtn)
-                    rtn = AVROCheck(tableMirror);
+                    rtn = getConversionResultService().AVROCheck(tableMirror);
 
                 if (rtn)
-                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
 
                 if (rtn) {
                     // Construct Transfer SQL
-                    if (config.getCluster(Environment.LEFT).isLegacyHive()) {
+                    if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                         // We need to ensure that 'tez' is the execution engine.
                         let.addSql(new Pair(TEZ_EXECUTION_DESC, SET_TEZ_AS_EXECUTION_ENGINE));
                     }
                     // Set Override Properties.
-                    List<String> overrides = ConfigUtils.getPropertyOverridesFor(Environment.LEFT, config);
+                    List<String> overrides = ConfigUtils.getPropertyOverridesFor(Environment.LEFT,
+                            config.getOptimization().getOverrides());
                     for (String setCmd : overrides) {
                         let.addSql(setCmd, setCmd);
                     }
 
-                    statsCalculatorService.setSessionOptions(config.getCluster(Environment.LEFT), let, let);
+                    getStatsCalculatorService().setSessionOptions(conversionResult.getConnection(Environment.LEFT), let, let);
 
                     // Set the LEFT and RIGHT table names.  When the table migration is NOT to the same database, we need to
                     //  prefix the table name with the database name.
-                    String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+                    String database = getConversionResultService().getResolvedDB(dbMirror.getName());
                     String originalDatabase = dbMirror.getName();
                     String leftTable = let.getName();
                     String rightTable = ret.getName();
@@ -564,7 +570,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                         // Check that the partition count doesn't exceed the configuration limit.
                         // Build Partition Elements.
                         if (config.getOptimization().isSkip()) {
-                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                            if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
                             }
                             String partElement = TableUtils.getPartitionElements(let);
@@ -574,9 +580,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             let.addSql(new Pair(transferDesc, transferSql));
                         } else if (config.getOptimization().isSortDynamicPartitionInserts()) {
                             // Declarative
-                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                            if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "true"));
-                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, 0));
                                 }
                             }
@@ -587,14 +593,14 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             let.addSql(new Pair(transferDesc, transferSql));
                         } else {
                             // Prescriptive
-                            if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                            if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                                 let.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
-                                if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                                if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                                     let.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, -1));
                                 }
                             }
                             String partElement = TableUtils.getPartitionElements(let);
-                            String distPartElement = statsCalculatorService.getDistributedPartitionElements(let);
+                            String distPartElement = getStatsCalculatorService().getDistributedPartitionElements(let);
                             String transferSql = null;
                             if (TableUtils.isIceberg(let)) {
                                 transferSql = MessageFormat.format(MirrorConf.SQL_DATA_TRANSFER_WITH_PARTITIONS_PRESCRIPTIVE_FOR_NON_NATIVE,
@@ -616,10 +622,10 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                 rtn = Boolean.FALSE;
                             }
                         } else {
-                            if (let.getPartitions().size() > config.getHybrid().getSqlPartitionLimit() && config.getHybrid().getSqlPartitionLimit() > 0) {
+                            if (let.getPartitions().size() > job.getHybrid().getSqlPartitionLimit() && job.getHybrid().getSqlPartitionLimit() > 0) {
                                 // The partition limit has been exceeded.  The process will need to be done manually.
                                 let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
-                                        "limit (hybrid->sqlPartitionLimit) of " + config.getHybrid().getSqlPartitionLimit() +
+                                        "limit (hybrid->sqlPartitionLimit) of " + job.getHybrid().getSqlPartitionLimit() +
                                         ".  This value is used to abort migrations that have a high potential for failure.  " +
                                         "The migration will need to be done manually OR try increasing the limit. Review commandline option '-sp'.");
                                 rtn = Boolean.FALSE;
@@ -645,7 +651,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.LEFT);
     }
 

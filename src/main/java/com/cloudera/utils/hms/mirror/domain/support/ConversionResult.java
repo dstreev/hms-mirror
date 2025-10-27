@@ -17,34 +17,24 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.Marker;
-import com.cloudera.utils.hms.mirror.MirrorConf;
-import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
+import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.util.TableUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.DateFormat;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /*
 For RocksDB persistence, save this into its own column family 'conversionResult'.
@@ -54,11 +44,14 @@ For RocksDB persistence, save this into its own column family 'conversionResult'
 @Slf4j
 public class ConversionResult implements Cloneable {
 
-    static final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    static final DateFormat df = new SimpleDateFormat("yyyyMMdd_HHmmss");
     // This would be the top level Key for the RocksDB columnFamily.
     private String key = df.format(new Date());
     // This would the value of the key about.  This can't be null.
-    private String name;
+
+    private final List<String> supportedFileSystems = new ArrayList<String>(Arrays.asList(
+            "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs", "maprfs", "gs"
+    ));
 
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
@@ -76,6 +69,19 @@ public class ConversionResult implements Cloneable {
       '/connection/{environment}', with the value being the yaml string.
      */
     private Map<Environment, ConnectionDto> connections = new HashMap<>();
+
+    @JsonIgnore
+    private ConnectionPoolType connectionPoolLib; // DBCP2 is Alternate.
+
+    /*
+    Build this from the ConnectionDto's.  Not persisted, this is the actual connection pools.
+     */
+    @JsonIgnore
+    private ConnectionPools connectionPools;
+
+//    @JsonIgnore
+//    private Connections connections;
+
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/job', with the value being the yaml string.
@@ -88,12 +94,46 @@ public class ConversionResult implements Cloneable {
      */
     private RunStatus runStatus;
 
+    private JobExecution jobExecution;
+
     /*
     Each key in this structure is the name of a database. And will serve as the first part of the
     key that builds on the main key. EG: /database/Finance or /database/HR.
 
      */
+    @JsonIgnore
     private Map<String, DBMirror> databases = new TreeMap<>();
+
+    /*
+    Used to store the working translations (locations).
+    This will be stored separately from the main conversion result.
+    The key will be: /translator
+    */
+    @JsonIgnore
+    private Translator translator = new Translator();
+
+    public boolean convertManaged() {
+        if (getConnection(Environment.LEFT).getPlatformType().isLegacyHive() && !getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
+    public String getTargetNamespace() throws RequiredConfigurationException {
+        String rtn = null;
+        if (nonNull(configLite.getTransfer()) && !isBlank(configLite.getTransfer().getTargetNamespace())) {
+            rtn = configLite.getTransfer().getTargetNamespace();
+        } else if (nonNull(getConnection(Environment.RIGHT))
+                && !isBlank(getConnection(Environment.RIGHT).getHcfsNamespace())) {
+            log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
+            rtn = getConnection(Environment.RIGHT).getHcfsNamespace();
+        }
+        if (isBlank(rtn)) {
+            throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
+        }
+        return rtn;
+    }
 
     /**
      * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#addDatabase(ConversionResult, String)} instead.
@@ -114,11 +154,13 @@ public class ConversionResult implements Cloneable {
     /**
      * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#getDatabase(ConversionResult, String)} instead.
      * This method will be removed in a future release. Business logic should not reside in domain objects.
+     *
+     * Moved to ConversionResultService.
      */
-    @Deprecated(since = "4.0", forRemoval = true)
-    public DBMirror getDatabase(String database) {
-        return databases.get(database);
-    }
+//    @Deprecated(since = "4.0", forRemoval = true)
+//    public DBMirror getDatabase(String database) {
+//        return databases.get(database);
+//    }
 
     /**
      * Get ConnectionDto for a specific environment.

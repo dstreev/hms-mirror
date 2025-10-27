@@ -1,0 +1,141 @@
+sequenceDiagram
+    participant TW as theWork()
+    participant CS as configService
+    participant CPS as connectionPoolService
+    participant DBS as databaseService
+    participant TS as tableService
+    participant TRS as transferService
+    participant TRANS as translatorService
+    participant RWS as reportWriterService
+    participant AT as Async Threads
+
+    Note over TW: Phase 1: Initialization & Validation
+
+    TW->>TW: Set run status start time
+    TW->>CS: validate()
+    CS-->>TW: validation result
+    alt validation fails
+        TW->>TW: Early exit
+    end
+
+    TW->>CPS: init()
+    Note right of CPS: Establish LEFT/RIGHT<br/>cluster connections
+    CPS-->>TW: connections established
+
+    Note over TW: Phase 2: Database Discovery
+
+    TW->>TW: Stage: GATHERING_DATABASES
+    alt Test Data Mode
+        TW->>TW: Use existing databases
+    else dbRegEx Mode
+        TW->>DBS: Query LEFT cluster for databases
+        DBS-->>TW: database list
+    else Explicit List
+        TW->>TW: Use predefined list
+    end
+
+    TW->>DBS: loadEnvironmentVars()
+    DBS-->>TW: environment variables
+
+    Note over TW: Phase 3: Metadata Collection
+
+    TW->>TW: Stage: DATABASES
+    loop For Each Database
+        TW->>DBS: getDatabase(LEFT)
+        DBS-->>TW: LEFT database info
+        TW->>DBS: getDatabase(RIGHT)
+        DBS-->>TW: RIGHT database info
+    end
+
+    rect rgb(255, 230, 200)
+        Note over TW,AT: ASYNC INVOCATION #1 (Line 416)
+        TW->>TW: Stage: TABLES
+        loop For Each Database
+            TW->>AT: tableService.getTables(dbMirror)
+            Note right of AT: Parallel table<br/>list collection
+        end
+        TW->>TW: CompletableFuture.allOf().join()
+        AT-->>TW: All table lists collected
+        TW->>TW: Validate results & collect stats
+    end
+
+    Note over TW: Phase 4: Global Location Map
+
+    TW->>TW: Stage: GLM_BUILD
+    TW->>DBS: buildDatabaseSources()
+    DBS-->>TW: database sources
+    TW->>TRANS: buildGlobalLocationMapFromWarehousePlansAndSources()
+    TRANS-->>TW: global location map
+
+    Note over TW: Phase 5: Database Creation
+
+    TW->>TW: Stage: BUILDING_DATABASES
+    TW->>DBS: build()
+    Note right of DBS: Generate database DDL
+    DBS-->>TW: database DDL generated
+
+    Note over TW: Phase 6: Table Processing (MAIN WORK)
+
+    rect rgb(200, 230, 255)
+        Note over TW,AT: ASYNC INVOCATION #2 (Lines 538-545)
+        TW->>TW: Stage: LOAD_TABLE_METADATA
+        loop For Each Database
+            loop For Each Table
+                TW->>AT: tableService.getTableMetadata()
+                Note right of AT: Parallel metadata<br/>loading (schema,<br/>partitions, properties)
+            end
+        end
+        TW->>TW: CompletableFuture.allOf().join()
+        AT-->>TW: All metadata loaded
+    end
+
+    TW->>TW: Process metadata results
+
+    rect rgb(220, 255, 220)
+        Note over TW,AT: ASYNC INVOCATION #3 (Line 570)
+        TW->>TW: Stage: BUILDING_TABLES
+        loop For Each Successful Metadata Load
+            TW->>AT: transferService.build()
+            Note right of AT: Parallel SQL/DDL<br/>generation
+        end
+        TW->>TW: CompletableFuture.allOf().join()
+        AT-->>TW: All migration SQL built
+        TW->>TW: Collect successful migrations
+    end
+
+    TW->>TW: Filter excluded tables
+
+    TW->>TW: Stage: VALIDATING_ENVIRONMENT_SETS
+    TW->>TW: Validate SET statements
+
+    TW->>TW: Stage: PROCESSING_DATABASES
+    alt execute flag is true
+        TW->>DBS: execute()
+        Note right of DBS: Create databases<br/>in target cluster
+        DBS-->>TW: databases created
+    end
+
+    rect rgb(255, 220, 255)
+        Note over TW,AT: ASYNC INVOCATION #4 (Lines 714-716)
+        TW->>TW: Stage: PROCESSING_TABLES
+        loop For Each Migration Execution
+            TW->>AT: transferService.execute()
+            Note right of AT: Parallel SQL<br/>execution (CREATE,<br/>data movement)
+        end
+        TW->>TW: CompletableFuture.allOf().join()
+        AT-->>TW: All tables executed
+        TW->>TW: Validate execution results
+    end
+
+    Note over TW: Phase 7: Cleanup & Reporting
+
+    TW->>TW: Remove unnecessary connections
+    TW->>TW: Stage: SAVING_REPORTS
+    TW->>RWS: wrapup()
+    Note right of RWS: Generate migration<br/>reports
+    RWS-->>TW: reports generated
+    TW->>CPS: close()
+    Note right of CPS: Cleanup connection pool
+    CPS-->>TW: resources released
+
+    Note over TW: Migration Complete

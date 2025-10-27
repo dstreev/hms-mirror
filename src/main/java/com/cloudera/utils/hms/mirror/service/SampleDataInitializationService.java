@@ -294,7 +294,7 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createSchemaOnlyConfig() {
         ConfigLiteDto config = new ConfigLiteDto("DEMO Schema-Only-Migration");
         config.setDescription("Basic schema-only migration from HDP2 to CDP7 without data movement");
-        config.setExecute(false); // Dry-run by default
+//        config.setExecute(false); // Dry-run by default
         config.setCreateIfNotExists(true);
         config.setEnableAutoTableStats(false);
         config.setEnableAutoColumnStats(false);
@@ -308,7 +308,7 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createAcidDowngradeConfig() {
         ConfigLiteDto config = new ConfigLiteDto("DEMO ACID-Downgrade-SQL");
         config.setDescription("ACID table downgrade using SQL strategy for legacy platform compatibility");
-        config.setExecute(false); // Dry-run by default
+//        config.setExecute(false); // Dry-run by default
         config.setCreateIfNotExists(true);
 
         // Configure ACID migration - downgrade to external tables
@@ -328,7 +328,7 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createHybridMigrationConfig() {
         ConfigLiteDto config = new ConfigLiteDto("DEMO Hybrid-Migration-Stats");
         config.setDescription("Hybrid migration with automatic statistics collection and optimization");
-        config.setExecute(false); // Dry-run by default
+//        config.setExecute(false); // Dry-run by default
         config.setCreateIfNotExists(true);
         config.setEnableAutoTableStats(true);
         config.setEnableAutoColumnStats(true);
@@ -349,7 +349,7 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createStorageMigrationConfig() {
         ConfigLiteDto config = new ConfigLiteDto("DEMO Storage-Migration");
         config.setDescription("Storage migration with namespace translation");
-        config.setExecute(false); // Dry-run by default
+//        config.setExecute(false); // Dry-run by default
         config.setCreateIfNotExists(true);
         config.setForceExternalLocation(true);
         config.setEnableAutoTableStats(false);
@@ -365,7 +365,7 @@ public class SampleDataInitializationService {
     private ConfigLiteDto createIcebergConversionConfig() {
         ConfigLiteDto config = new ConfigLiteDto("DEMO Iceberg-Conversion");
         config.setDescription("Convert Hive tables to Iceberg format for improved performance");
-        config.setExecute(false); // Dry-run by default
+//        config.setExecute(false); // Dry-run by default
         config.setCreateIfNotExists(true);
         config.setMigrateNonNative(true); // Required for Iceberg
 
@@ -400,13 +400,13 @@ public class SampleDataInitializationService {
                 dbSpec.setTables(Arrays.asList(tables));
             } else if (includePattern != null || excludePattern != null) {
                 DatasetDto.TableFilter filter = new DatasetDto.TableFilter();
-                filter.setIncludePattern(includePattern);
-                filter.setExcludePattern(excludePattern);
+                filter.setIncludeRegEx(includePattern);
+                filter.setExcludeRegEx(excludePattern);
                 filter.setTableTypes(Arrays.asList("MANAGED_TABLE", "EXTERNAL_TABLE"));
                 dbSpec.setFilter(filter);
             }
             
-            dataset.getDatabaseSpecs().add(dbSpec);
+            dataset.getDatabases().add(dbSpec);
         }
         
         return dataset;

@@ -29,9 +29,9 @@ import java.sql.SQLException;
 
 public interface ConnectionPools {
 
-    void addHiveServer2(Environment environment, HiveServer2Config hiveServer2);
+//    void addHiveServer2(Environment environment, HiveServer2Config hiveServer2);
 
-    void addMetastoreDirect(Environment environment, DBStore dbStore);
+//    void addMetastoreDirect(Environment environment, DBStore dbStore);
 
     void close();
 

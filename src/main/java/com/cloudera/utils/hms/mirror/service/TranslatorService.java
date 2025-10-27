@@ -17,12 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.PhaseState;
-import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
-import com.cloudera.utils.hms.mirror.core.model.LocationTranslationRequest;
-import com.cloudera.utils.hms.mirror.core.model.LocationTranslationResult;
-import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
+import com.cloudera.utils.hms.mirror.core.model.*;
 import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
@@ -32,15 +32,14 @@ import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
@@ -56,20 +55,15 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  */
 @Service
 @Slf4j
+@Getter
+@RequiredArgsConstructor
 public class TranslatorService {
-
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
     private final WarehouseService warehouseService;
-    private final LocationTranslator locationTranslator;  // NEW: Core business logic injection
-    // keeping the log field is not needed if using @Slf4j from Lombok
-
-    public TranslatorService(ExecuteSessionService executeSessionService,
-                             WarehouseService warehouseService,
-                             LocationTranslator locationTranslator) {  // NEW: Inject core business logic
-        this.executeSessionService = executeSessionService;
-        this.warehouseService = warehouseService;
-        this.locationTranslator = locationTranslator;  // NEW
-    }
 
     /**
      * Builds a SQL statement for adding partitions to a table based on the given
@@ -111,20 +105,25 @@ public class TranslatorService {
      * @param externalTable    Indicates whether the table is an external table (true) or a managed table (false).
      * @return A {@code GLMResult} object containing the original directory, mapped directory,
      * and whether the location mapping was successfully applied.
-     */
     public GLMResult processGlobalLocationMap(String originalLocation, Boolean externalTable) {
         // Set to original, so we capture the original location if we don't find a match.
         GLMResult glmResult = new GLMResult();
         glmResult.setOriginalDir(originalLocation);
 
         String newLocation = originalLocation;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
-        if (!hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+
+        if (!conversionResult.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
             log.debug("Checking location: {} for replacement element in global location map.", originalLocation);
-            for (String key : hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().keySet()) {
+            for (String key : conversionResult.getTranslator().getOrderedGlobalLocationMap().keySet()) {
                 if (originalLocation.startsWith(key)) {
-                    Map<TableType, String> rLocMap = hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap().get(key);
+                    Map<TableType, String> rLocMap = conversionResult.getTranslator().getOrderedGlobalLocationMap().get(key);
                     String rLoc = null;
                     if (externalTable) {
                         rLoc = rLocMap.get(TableType.EXTERNAL_TABLE);
@@ -145,6 +144,7 @@ public class TranslatorService {
         glmResult.setMappedDir(newLocation);
         return glmResult;
     }
+     */
 
     /**
      * Translates the partition locations for a given table mirror, adjusting the namespace in the target environment
@@ -165,22 +165,20 @@ public class TranslatorService {
         log.debug("Translating partition locations for table: {}", tblMirror.getName());
 
         try {
-            // NEW: Delegate to core business logic instead of doing it inline
-            ValidationResult result = locationTranslator.translatePartitionLocations(dbMirror, tblMirror);
-            
+            ValidationResult result = translatePartitionLocationsImpl(dbMirror, tblMirror);
+
             // Handle the result in Spring-specific way (side effects, metrics, etc.)
             if (!result.isValid()) {
                 log.error("Partition location translation failed: {}", result.getMessage());
                 return Boolean.FALSE;
             }
-            
+
             // Add any issues from partition translations to the table mirror to preserve original validation behavior
             result.getWarnings().forEach(issue -> tblMirror.addIssue(Environment.RIGHT, issue));
-            
-            
+
             log.debug("Partition locations translated successfully for table: {}", tblMirror.getName());
             return Boolean.TRUE;
-            
+
         } catch (RuntimeException e) {
             // Re-throw RuntimeExceptions (like DistCP validation failures) to ensure they bubble up
             // and cause the application to exit with error code 1
@@ -213,9 +211,14 @@ public class TranslatorService {
 
         log.debug("Translating table location for table: {} from: {}", tableMirror.getName(), originalLocation);
 
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         // NEW: Delegate to core business logic instead of doing it inline
         LocationTranslationRequest request = new LocationTranslationRequest(dbMirror, tableMirror, originalLocation, level, partitionSpec);
-        LocationTranslationResult result = locationTranslator.translateTableLocation(request);
+        LocationTranslationResult result = translateTableLocationImpl(request);
         
         // Handle the result in Spring-specific way (side effects, metrics, etc.)
         if (!result.isSuccess()) {
@@ -234,22 +237,26 @@ public class TranslatorService {
         // Add table-level location validation issue to preserve original validation behavior
         // Only for scenarios that originally generated this issue
         if (level == 1 && isBlank(partitionSpec)) {
-            HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+//            HmsMirrorConfig config = executeSessionService.getSession().getConfig();
             
             // The validation issue is only needed in these specific scenarios:
             // 1. Tests with successful GLM remapping (but exclude mismatch scenarios)
             // 2. SCHEMA_ONLY tests with partitioned tables and partition data
             boolean hasSuccessfulGLMRemapping = tableMirror.isReMapped();
-            boolean isSchemaOnlyWithPartitions = config.getDataStrategy() == DataStrategyEnum.SCHEMA_ONLY &&
+            boolean isSchemaOnlyWithPartitions = job.getStrategy() == DataStrategyEnum.SCHEMA_ONLY &&
                                                 tableMirror.getEnvironmentTable(Environment.LEFT).getPartitioned() &&
                                                 tableMirror.getEnvironmentTable(Environment.RIGHT).getPartitions() != null &&
                                                 !tableMirror.getEnvironmentTable(Environment.RIGHT).getPartitions().isEmpty();
             
             // Exclude mismatch scenario tests that are designed to test failure cases
-            boolean isMismatchScenario = config.getOutputDirectory() != null && 
-                                       config.getOutputDirectory().contains("mismatch");
+            // TODO: Fix
+//            boolean isMismatchScenario = config.getOutputDirectory() != null &&
+//                                       config.getOutputDirectory().contains("mismatch");
             
-            if ((hasSuccessfulGLMRemapping || isSchemaOnlyWithPartitions) && !isMismatchScenario) {
+            if ((hasSuccessfulGLMRemapping || isSchemaOnlyWithPartitions)
+                    // TODO: Fix
+//                    && !isMismatchScenario
+            ) {
                 tableMirror.addIssue(Environment.RIGHT, "Table location validation completed");
             }
         }
@@ -257,8 +264,8 @@ public class TranslatorService {
         log.debug("Translate Location: {}: {}", originalLocation, result.getTranslatedLocation());
 
         // Handle storage migration distcp consolidation if needed
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        addTranslationIfRequired(config, dbMirror.getName(), originalLocation,
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        addTranslationIfRequired(dbMirror.getName(), originalLocation,
                 result.getTranslatedLocation(), level, config.getTransfer().getStorageMigration().isConsolidateTablesForDistcp(), tableMirror);
 
         return result.getTranslatedLocation();
@@ -455,7 +462,6 @@ public class TranslatorService {
      * and the data strategy is not SQL. It determines the environment and translation details
      * based on the specified configuration and parameters.
      *
-     * @param config                  the HmsMirrorConfig object containing the migration configurations
      * @param originalDatabase        the name of the original database
      * @param originalLocation        the location of the original data
      * @param newLocation             the new target location for the data
@@ -463,19 +469,26 @@ public class TranslatorService {
      * @param consolidateSourceTables a flag indicating whether source tables should be consolidated
      * @param tableMirror             the TableMirror instance representing the current table migration process
      */
-    private void addTranslationIfRequired(HmsMirrorConfig config, String originalDatabase,
+    private void addTranslationIfRequired(String originalDatabase,
                                           String originalLocation, String newLocation, int level,
                                           boolean consolidateSourceTables, TableMirror tableMirror) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         if (config.getTransfer().getStorageMigration().isDistcp()
-                && config.getDataStrategy() != DataStrategyEnum.SQL) {
+                && job.getStrategy() != DataStrategyEnum.SQL) {
 
-            if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
-                config.getTranslator().addTranslation(originalDatabase, Environment.LEFT, originalLocation, newLocation, level, consolidateSourceTables);
-            } else if (config.getTransfer().getStorageMigration().getDataFlow() == DistcpFlowEnum.PULL && !config.isFlip()) {
-                config.getTranslator().addTranslation(originalDatabase, Environment.RIGHT, originalLocation, newLocation, level, consolidateSourceTables);
+            if (job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
+                conversionResult.getTranslator().addTranslation(originalDatabase, Environment.LEFT, originalLocation, newLocation, level, consolidateSourceTables);
+            } else if (config.getTransfer().getStorageMigration().getDataFlow() == DistcpFlowEnum.PULL
+                    // TODO: Do we need this?
+//                    && !config.isFlip()
+            ) {
+                conversionResult.getTranslator().addTranslation(originalDatabase, Environment.RIGHT, originalLocation, newLocation, level, consolidateSourceTables);
             } else {
-                config.getTranslator().addTranslation(originalDatabase, Environment.LEFT, originalLocation, newLocation, level, consolidateSourceTables);
+                conversionResult.getTranslator().addTranslation(originalDatabase, Environment.LEFT, originalLocation, newLocation, level, consolidateSourceTables);
             }
         }
     }
@@ -489,7 +502,7 @@ public class TranslatorService {
      * @param source the source location to be mapped
      * @param target the target location to map to
      * @throws SessionException if an error occurs while closing the session or accessing the session configuration
-     */
+    // WAS UNUSED
     public void addGlobalLocationMap(TableType type, String source, String target) throws SessionException {
         // Don't reload if running.
         executeSessionService.closeSession();
@@ -497,7 +510,10 @@ public class TranslatorService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         hmsMirrorConfig.getTranslator().addUserGlobalLocationMap(type, source, target);
     }
+     */
 
+    /*
+    // WAS UNUSED
     public void removeGlobalLocationMap(String source, TableType type) throws SessionException {
         // Don't reload if running.
         executeSessionService.closeSession();
@@ -505,11 +521,15 @@ public class TranslatorService {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         hmsMirrorConfig.getTranslator().removeUserGlobalLocationMap(source, type);
     }
+     */
 
+    /*
+    // WAS UNUSED
     public Map<String, Map<TableType, String>> getGlobalLocationMap() {
         HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
     }
+     */
 
     /**
      * Constructs a Global Location Map (GLM) from the provided warehouse plans and source mappings.
@@ -530,16 +550,17 @@ public class TranslatorService {
      */
     public Map<String, Map<TableType, String>> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
 
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-        ConversionResult conversionResult = session.getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         // We need to know if we are dealing with potential conversions (IE: Legacy Hive Managed to External)
         // If we are, we need to ensure that there are GLM's built for Managed Tables into External Locations.
         // This is because the location will be different and we need to ensure that the location is translated correctly.
-        boolean conversions = HmsMirrorConfigUtil.possibleConversions(config);
+        boolean conversions = getConversionResultService().possibleConversions();
 
-        Translator translator = config.getTranslator();
+        Translator translator = conversionResult.getTranslator();
         Map<String, Map<TableType, String>> lclGlobalLocationMap = new TreeMap<>(new StringLengthComparator());
 
         WarehouseMapBuilder warehouseMapBuilder = translator.getWarehouseMapBuilder();
@@ -575,12 +596,14 @@ public class TranslatorService {
      */
 
         for (Map.Entry<String, Warehouse> warehouseEntry : warehousePlans.entrySet()) {
-            String database = HmsMirrorConfigUtil.getResolvedDB(warehouseEntry.getKey(), config);
+            String database = getConversionResultService().getResolvedDB(warehouseEntry.getKey());
             Warehouse warehouse = warehouseEntry.getValue();
             String externalBaseLocation = warehouse.getExternalDirectory();
             String managedBaseLocation = warehouse.getManagedDirectory();
             SourceLocationMap sourceLocationMap = sources.get(database);
-            DBMirror dbMirror = conversionResult.getDatabase(warehouseEntry.getKey());
+            // TODO: Need to go to DBMirror service for retrieval.
+            DBMirror dbMirror = null;
+//                    conversionResult.getDatabase(warehouseEntry.getKey());
             if (sourceLocationMap != null && dbMirror != null) {
                 for (Map.Entry<TableType, Map<String, Set<String>>> sourceLocationEntry : sourceLocationMap.getLocations().entrySet()) {
                     String typeTargetLocation = null;
@@ -634,4 +657,316 @@ public class TranslatorService {
 
         return lclGlobalLocationMap;
     }
+
+    public LocationTranslationResult translateTableLocationImpl(LocationTranslationRequest request) {
+        // Extract request parameters
+        DBMirror dbMirror = request.getDbMirror();
+        TableMirror tableMirror = request.getTableMirror();
+        String originalLocation = request.getOriginalLocation();
+        String partitionSpec = request.getPartitionSpec();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        // Perform the core business logic from TranslatorService.translateTableLocation()
+        String tableName = tableMirror.getName();
+        EnvironmentTable targetEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        String originalDatabase = dbMirror.getName();
+        String targetDatabase = dbMirror.getResolvedName(); // HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
+        String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
+        String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(), targetDatabase + ".db");
+        String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
+        String targetNamespace;
+        try {
+            targetNamespace = conversionResult.getTargetNamespace();
+        } catch (RequiredConfigurationException e) {
+            return LocationTranslationResult.failure("Failed to get target namespace: " + e.getMessage());
+        }
+        String relativeDir = NamespaceUtils.stripNamespace(originalLocation);
+
+        // Process Global Location Map
+        GlobalLocationMapResult glmMapping = processGlobalLocationMapImpl(relativeDir, TableUtils.isExternal(targetEnvTable));
+        boolean remapped = glmMapping.isMapped();
+
+        String newLocation;
+        if (glmMapping.isMapped()) {
+            // Use mapped location
+            String mappedDir = glmMapping.getMappedDir();
+            newLocation = buildMappedLocation(targetNamespace, mappedDir, partitionSpec);
+        } else {
+            // Compute new location using business rules
+            newLocation = computeNewLocationFromBusinessRules(
+                    targetNamespace, partitionSpec,
+//                    tableMirror,
+//                    config,
+                    targetDatabaseManagedDir, tableName, originalDatabase, targetDatabase,
+                    relativeDir,
+//                    originalLocation,
+                    targetEnvTable
+            );
+
+            // Handle storage migration scenarios and validate location alignment for DistCP
+            handleStorageMigrationLogic(originalLocation, tableMirror);
+
+            // Validate that non-GLM locations can be handled with DistCP
+            // This may throw RuntimeException which will propagate up to cause application exit code 1
+            validateLocationForDistcp(originalLocation, tableMirror);
+        }
+
+        // Validate location alignment
+        ValidationResult validation = validateLocationAlignment(tableMirror, newLocation, partitionSpec);
+
+        List<String> issues = new ArrayList<>();
+        if (!validation.isValid()) {
+            issues.addAll(validation.getErrors());
+        }
+
+        // Add GLM issue if mapped
+        if (glmMapping.isMapped()) {
+            issues.add("GLM applied. Original Location: " + glmMapping.getOriginalDir() +
+                    " Mapped Location: " + glmMapping.getMappedDir());
+        }
+
+
+        return new LocationTranslationResult(newLocation, true, "Location translated successfully",
+                List.of(), issues, remapped);
+    }
+
+    public GlobalLocationMapResult processGlobalLocationMapImpl(String originalLocation, boolean isExternalTable) {
+        try {
+            ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+            ConfigLiteDto config = conversionResult.getConfigLite();
+            JobDto job = conversionResult.getJob();
+            RunStatus runStatus = conversionResult.getRunStatus();
+
+            String newLocation = originalLocation;
+            boolean mapped = false;
+
+            // Process Global Location Map if configured
+            if (!conversionResult.getTranslator().getOrderedGlobalLocationMap().isEmpty()) {
+                for (String key : conversionResult.getTranslator().getOrderedGlobalLocationMap().keySet()) {
+                    if (originalLocation.startsWith(key)) {
+                        Map<TableType, String> rLocMap = conversionResult.getTranslator().getOrderedGlobalLocationMap().get(key);
+                        String rLoc = null;
+
+                        if (isExternalTable) {
+                            rLoc = rLocMap.get(TableType.EXTERNAL_TABLE);
+                            if (nonNull(rLoc)) {
+                                newLocation = rLoc + originalLocation.replace(key, "");
+                                mapped = true;
+                            }
+                        } else {
+                            rLoc = rLocMap.get(TableType.MANAGED_TABLE);
+                            if (nonNull(rLoc)) {
+                                newLocation = rLoc + originalLocation.replace(key, "");
+                                mapped = true;
+                            }
+                        }
+
+                        if (mapped) {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return mapped ?
+                    GlobalLocationMapResult.mapped(originalLocation, newLocation) :
+                    GlobalLocationMapResult.notMapped(originalLocation);
+
+        } catch (Exception e) {
+            return GlobalLocationMapResult.notMapped(originalLocation);
+        }
+    }
+
+    public ValidationResult translatePartitionLocationsImpl(DBMirror dbMirror, TableMirror tableMirror) {
+//        HmsMirrorConfig config = configurationProvider.getConfig();
+
+        if (!tableMirror.getEnvironmentTable(Environment.LEFT).getPartitioned()) {
+            return ValidationResult.success();
+        }
+
+        EnvironmentTable target = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        boolean isExternal = TableUtils.isExternal(target);
+        String originalDatabase = dbMirror.getName();
+        String targetDatabase = getConversionResultService().getResolvedDB(originalDatabase);
+
+        List<String> allIssues = new ArrayList<>();
+
+        Map<String, String> partitionLocationMap = target.getPartitions();
+        if (partitionLocationMap != null && !partitionLocationMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : partitionLocationMap.entrySet()) {
+                String partitionLocation = entry.getValue();
+                String partSpec = entry.getKey();
+
+                // Calculate partition level
+                String[] spec = partSpec.split("/");
+                int level = spec.length + 1;
+
+                // Skip empty or invalid partition locations
+                if (isBlank(partitionLocation) || partitionLocation.isEmpty() ||
+                        partitionLocation.equals(MirrorConf.NOT_SET)) {
+                    return ValidationResult.failure("Invalid partition location found for spec: " + partSpec);
+                }
+
+                // Translate the partition location - this may throw RuntimeException for DistCP validation failures
+                LocationTranslationRequest request = new LocationTranslationRequest(
+                        dbMirror, tableMirror, partitionLocation, level, partSpec);
+                LocationTranslationResult result = translateTableLocationImpl(request);
+
+                if (!result.isSuccess()) {
+                    return ValidationResult.failure("Failed to translate partition location for spec " +
+                            partSpec + ": " + result.getMessage());
+                }
+
+                // Collect issues from the individual translation result
+                allIssues.addAll(result.getIssues());
+
+                // Update the partition location map
+                entry.setValue(result.getTranslatedLocation());
+            }
+        }
+
+        // Return success with collected issues from individual translations
+        return new ValidationResult(true, List.of(), allIssues, "Partition locations translated successfully");
+    }
+
+    public ValidationResult validateLocationAlignment(TableMirror tableMirror, String translatedLocation, String partitionSpec) {
+        try {
+            // TODO: Extract validation logic from TranslatorService.warnIfLocationMismatch()
+            // This would validate the location against warehouse expectations
+
+            return ValidationResult.success();
+
+        } catch (Exception e) {
+            return ValidationResult.failure("Location alignment validation failed: " + e.getMessage());
+        }
+    }
+
+    public ValidationResult buildGlobalLocationMap(boolean dryRun, int consolidationLevel) {
+        try {
+            // TODO: Extract GLM building logic from TranslatorService.buildGlobalLocationMapFromWarehousePlansAndSources()
+            // This would construct the global location map for the migration
+
+            return ValidationResult.success();
+
+        } catch (Exception e) {
+            return ValidationResult.failure("GLM building failed: " + e.getMessage());
+        }
+    }
+
+    // Private helper methods extracted from the original business logic
+
+    private String buildMappedLocation(String targetNamespace, String mappedDir, String partitionSpec) {
+        // Build the mapped location with target namespace
+        StringBuilder location = new StringBuilder();
+        if (!isBlank(targetNamespace)) {
+            location.append(targetNamespace);
+        }
+        location.append(mappedDir);
+
+        // Check if we need to append partition spec (avoid duplication but preserve validation behavior)
+        if (!isBlank(partitionSpec)) {
+            // Only append if the mappedDir doesn't already end with this partition spec
+            if (!mappedDir.endsWith("/" + partitionSpec)) {
+                location.append("/").append(partitionSpec);
+            }
+            // Note: We handle the validation issue generation separately to preserve issue counts
+        }
+        return location.toString();
+    }
+
+    private String computeNewLocationFromBusinessRules(String targetNamespace, String partitionSpec,
+//                                                       TableMirror tableMirror,
+                                                       String targetDatabaseManagedDir, String tableName,
+                                                       String originalDatabase, String targetDatabase,
+                                                       String relativeDir,
+//                                                       String originalLocation,
+                                                       EnvironmentTable targetEnvTable) {
+        StringBuilder newLocation = new StringBuilder();
+
+        if (!isBlank(targetNamespace)) {
+            newLocation.append(targetNamespace);
+        }
+
+        // Build location by replacing namespace and database paths appropriately
+        if (!isBlank(relativeDir)) {
+            // Replace the original database path with target database path
+            String adjustedRelativeDir = relativeDir;
+
+            // Replace database directory if it exists in the path
+            if (adjustedRelativeDir.contains(originalDatabase + ".db")) {
+                adjustedRelativeDir = adjustedRelativeDir.replace(originalDatabase + ".db", targetDatabase + ".db");
+            }
+
+            // Ensure we have proper path separator
+            if (!adjustedRelativeDir.startsWith("/")) {
+                newLocation.append("/");
+            }
+            newLocation.append(adjustedRelativeDir);
+
+            // CRITICAL FIX: Do not append partitionSpec because relativeDir already contains
+            // the complete path including any partition directories from the original location.
+            // The originalLocation passed in is the full path including partitions,
+            // and relativeDir is that path with just the namespace stripped off.
+
+        } else {
+            // Fallback: construct path from components when no relative directory available
+            if (TableUtils.isExternal(targetEnvTable)) {
+                // Default external warehouse location structure
+                newLocation.append("/warehouse/tablespace/external/hive/").append(targetDatabase).append(".db/").append(tableName);
+            } else {
+                // Managed table location
+                newLocation.append("/").append(targetDatabaseManagedDir).append("/").append(tableName);
+            }
+
+            // Only append partition spec in fallback case when building from scratch
+            if (!isBlank(partitionSpec)) {
+                newLocation.append("/").append(partitionSpec);
+            }
+        }
+
+        return newLocation.toString();
+    }
+
+    private void handleStorageMigrationLogic(String originalLocation, TableMirror tableMirror) {
+        // TODO: Extract storage migration handling logic
+        // This would handle the storage migration scenarios from the original method
+    }
+
+    /**
+     * Validates that location can be handled properly with DistCP when no GLM mapping is available.
+     * This replicates the validation logic from the original handleNoGlmMapping method.
+     *
+     * @param originalLocation the original partition/table location
+     * @param tableMirror the table mirror object
+     * @param config the configuration
+     * @throws RuntimeException if location mapping cannot be determined for DistCP
+     */
+    private void validateLocationForDistcp(String originalLocation, TableMirror tableMirror) {
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        // Get the original table location for comparison
+        String originalTableLocation = TableUtils.getLocation(tableMirror.getName(),
+                tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
+
+        // Check if the partition location aligns with the table base location
+        if (!isBlank(originalTableLocation) && !originalLocation.startsWith(originalTableLocation)) {
+            if (config.getTransfer().getStorageMigration().isDistcp()) {
+                // This is the critical validation - partition location doesn't align with table location
+                // and DistCP is enabled, which means we can't create a proper DistCP plan
+                tableMirror.setPhaseState(PhaseState.ERROR);
+                throw new RuntimeException("Location Mapping can't be determined. No matching GLM entry to make translation. " +
+                        "Original Location: " + originalLocation + " which doesn't align with the original table location " +
+                        originalTableLocation + " and ALIGNED with DISTCP can't be determined.");
+            }
+        }
+    }
+
 }

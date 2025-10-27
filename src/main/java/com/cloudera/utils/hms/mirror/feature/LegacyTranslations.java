@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.feature;
 
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -30,6 +31,7 @@ import static com.cloudera.utils.hms.util.TableUtils.*;
 import static java.util.Objects.isNull;
 
 @Slf4j
+@Getter
 public class LegacyTranslations extends BaseFeature implements Feature, Cloneable {
     private final Pattern RFS = Pattern.compile(ROW_FORMAT_SERDE + " '(.*)'");
     private final Pattern SAIF = Pattern.compile(STORED_AS_INPUTFORMAT + " '(.*)'");
@@ -40,6 +42,14 @@ public class LegacyTranslations extends BaseFeature implements Feature, Cloneabl
     // TODO: When needed... add translation for formats.
     //    private Map<String, String> inputFormat = null;
     //    private Map<String, String> outputFormat = null;
+
+    public LegacyTranslations() {
+        super();
+        rowSerde = new TreeMap<>();
+        rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.RegexSerDe'", "'org.apache.hadoop.hive.serde2.RegexSerDe'");
+        rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.MultiDelimitSerDe'", "'org.apache.hadoop.hive.serde2.MultiDelimitSerDe'");
+        rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.TypedBytesSerDe'", "'org.apache.hadoop.hive.serde2.TypedBytesSerDe'");
+    }
 
     @Override
     public Boolean applicable(EnvironmentTable envTable) {
@@ -96,20 +106,6 @@ public class LegacyTranslations extends BaseFeature implements Feature, Cloneabl
     @JsonIgnore
     public String getDescription() {
         return "Legacy Translations";
-    }
-
-    public Map<String, String> getRowSerde() {
-        if (isNull(rowSerde)) {
-            rowSerde = new TreeMap<>();
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.RegexSerDe'", "'org.apache.hadoop.hive.serde2.RegexSerDe'");
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.MultiDelimitSerDe'", "'org.apache.hadoop.hive.serde2.MultiDelimitSerDe'");
-            rowSerde.put("'org.apache.hadoop.hive.contrib.serde2.TypedBytesSerDe'", "'org.apache.hadoop.hive.serde2.TypedBytesSerDe'");
-        }
-        return rowSerde;
-    }
-
-    public void setRowSerde(Map<String, String> rowSerde) {
-        this.rowSerde = rowSerde;
     }
 
 }

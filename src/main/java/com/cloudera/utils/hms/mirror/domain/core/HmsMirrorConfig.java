@@ -680,7 +680,7 @@ public class HmsMirrorConfig implements Cloneable {
     public void addGlobalLocationMap(String glmEntry) {
         boolean set = Boolean.TRUE;
         // Determine if the migrations between the clusters might have conversions (managed to external).
-        boolean conversionsPossible = HmsMirrorConfigUtil.possibleConversions(this);
+        boolean conversionsPossible = ConversionResultUtil.possibleConversions(this);
         if (glmEntry != null) {
             String[] glmParts = glmEntry.split("=");
             String source_dir = glmParts[0];

@@ -28,7 +28,6 @@ import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -76,7 +75,7 @@ public class HmsMirrorConfigConverter {
 
         // Feature flags
         dto.setMigrateNonNative(config.isMigrateNonNative());
-        dto.setExecute(config.isExecute());
+//        dto.setExecute(config.isExecute());
         dto.setCreateIfNotExists(extractCreateIfNotExistsFromCluster(config));
         dto.setEnableAutoTableStats(extractEnableAutoTableStatsFromCluster(config));
         dto.setEnableAutoColumnStats(extractEnableAutoColumnStatsFromCluster(config));
@@ -164,7 +163,7 @@ public class HmsMirrorConfigConverter {
                     dbSpec.setDbRename(config.getDbRename());
                 }
 
-                dto.getDatabaseSpecs().add(dbSpec);
+                dto.getDatabases().add(dbSpec);
             }
         }
 
@@ -182,15 +181,15 @@ public class HmsMirrorConfigConverter {
         DatasetDto.TableFilter tableFilter = new DatasetDto.TableFilter();
 
         if (!isBlank(filter.getTblRegEx())) {
-            tableFilter.setIncludePattern(filter.getTblRegEx());
+            tableFilter.setIncludeRegEx(filter.getTblRegEx());
         }
 
         if (!isBlank(filter.getTblExcludeRegEx())) {
-            tableFilter.setExcludePattern(filter.getTblExcludeRegEx());
+            tableFilter.setExcludeRegEx(filter.getTblExcludeRegEx());
         }
 
         if (filter.getTblSizeLimit() != null && filter.getTblSizeLimit() > 0) {
-            tableFilter.setMaxSizeBytes(filter.getTblSizeLimit());
+            tableFilter.setMaxSizeMb(filter.getTblSizeLimit());
         }
 
         if (filter.getTblPartitionLimit() != null && filter.getTblPartitionLimit() > 0) {
@@ -198,9 +197,9 @@ public class HmsMirrorConfigConverter {
         }
 
         // Only return filter if at least one field is set
-        if (!isBlank(tableFilter.getIncludePattern()) ||
-            !isBlank(tableFilter.getExcludePattern()) ||
-            tableFilter.getMaxSizeBytes() > 0 ||
+        if (!isBlank(tableFilter.getIncludeRegEx()) ||
+            !isBlank(tableFilter.getExcludeRegEx()) ||
+            tableFilter.getMaxSizeMb() > 0 ||
             tableFilter.getMaxPartitions() > 0) {
             return tableFilter;
         }

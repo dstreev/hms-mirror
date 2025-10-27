@@ -17,22 +17,20 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TableService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,30 +45,34 @@ public class DumpDataStrategy extends DataStrategyBase {
 
     private final TableService tableService;
 
-    public DumpDataStrategy(StatsCalculatorService statsCalculatorService,
-                            ExecuteSessionService executeSessionService,
-                            TranslatorService translatorService,
+
+    public DumpDataStrategy(@NonNull ConversionResultService conversionResultService,
+                            @NonNull ExecutionContextService executionContextService,
+                            @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                            @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
                             TableService tableService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.tableService = tableService;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         log.debug("Table: {} buildout DUMP Definition", tableMirror.getName());
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         CopySpec copySpec = null;
 
-        let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        let = tableMirror.getEnvironmentTable(Environment.LEFT);
         // Standardize the LEFT def.
         // Remove DB from CREATE
         TableUtils.stripDatabase(let.getName(), let.getDefinition());
 
         // If not legacy, remove location from ACID tables.
-        if (!hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() &&
+        if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
                 TableUtils.isACID(let)) {
             TableUtils.stripLocation(let.getName(), let.getDefinition());
         }
@@ -78,9 +80,10 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
 
         log.debug("Table: {} buildout DUMP SQL", tableMirror.getName());
 
@@ -88,17 +91,17 @@ public class DumpDataStrategy extends DataStrategyBase {
 //        String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         let.getSql().clear();
-        String database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+        String database = getConversionResultService().getResolvedDB(dbMirror.getName());
         useDb = MessageFormat.format(MirrorConf.USE, database);
         let.addSql(TableUtils.USE_DESC, useDb);
 
         createTbl = tableService.getCreateStatement(tableMirror, Environment.LEFT);
         let.addSql(TableUtils.CREATE_DESC, createTbl);
-        if (!config.getCluster(Environment.LEFT).isLegacyHive()
+        if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
                 && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
             String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, let.getName(), let.getOwner());
             let.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
@@ -113,7 +116,7 @@ public class DumpDataStrategy extends DataStrategyBase {
                     String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
                     let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
                 }
-            } else if (config.getCluster(Environment.LEFT).getPartitionDiscovery().isInitMSCK()) {
+            } else if (conversionResult.getConnection(Environment.LEFT).isPartitionDiscoveryInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, let.getName());
                 if (config.getTransfer().getStorageMigration().isDistcp()) {
                     let.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
@@ -129,15 +132,15 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
+        rtn = buildOutDefinition(dbMirror, tableMirror);
         if (rtn) {
             try {
-                rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
+                rtn = buildOutSql(dbMirror, tableMirror);
             } catch (MissingDataPointException e) {
-                EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+                EnvironmentTable let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);
                 log.error("Table: {} Missing Data Point: {}", let.getName(), e.getMessage());
                 let.addError("Failed to build out SQL: " + e.getMessage());
                 rtn = Boolean.FALSE;
@@ -147,7 +150,7 @@ public class DumpDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         // No Action to perform.
         return Boolean.TRUE;
     }

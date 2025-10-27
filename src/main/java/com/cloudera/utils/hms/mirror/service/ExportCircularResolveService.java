@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.datastrategy.DataStrategyBase;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
@@ -24,12 +25,15 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -70,40 +74,36 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 public class ExportCircularResolveService extends DataStrategyBase {
 
-    private final ConfigService configService;
-    private final DatabaseService databaseService;
-    private final TableService tableService;
-    private final WarehouseService warehouseService;
-
-    // All dependencies are injected via the constructor
-    public ExportCircularResolveService(StatsCalculatorService statsCalculatorService,
-                                        ExecuteSessionService executeSessionService,
-                                        TranslatorService translatorService,
-                                        ConfigService configService,
-                                        DatabaseService databaseService,
-                                        TableService tableService,
-                                        WarehouseService warehouseService) {
-        super(statsCalculatorService, executeSessionService,translatorService);
-        this.configService = configService;
-        this.databaseService = databaseService;
-        this.tableService = tableService;
-        this.warehouseService = warehouseService;
+    public ExportCircularResolveService(@NonNull ConversionResultService conversionResultService,
+                                        @NonNull ExecutionContextService executionContextService,
+                                        @NonNull StatsCalculatorService statsCalculatorService,
+                                        @NonNull CliEnvironment cliEnvironment,
+                                        @NonNull TranslatorService translatorService,
+                                        @NonNull FeatureService featureService) {
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment,
+                translatorService, featureService);
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     public Boolean buildOutExportImportSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
         String database = null;
-        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        database = getConversionResultService().getResolvedDB(dbMirror.getName());
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         String leftNamespace = TableUtils.getLocation(let.getName(), let.getDefinition());
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
         Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
         try {
             // LEFT Export to directory
@@ -117,7 +117,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" +
                         config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        config.getRunMarker() + "/" +
+                        conversionResult.getKey() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else if (!isBlank(config.getTransfer().getTargetNamespace())) {
@@ -125,7 +125,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        config.getRunMarker() + "/" +
+                        conversionResult.getKey() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else {
@@ -181,9 +181,9 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 }
             } else {
                 if (config.loadMetadataDetails()) {
-                    targetLocation = config.getTargetNamespace()
+                    targetLocation = conversionResult.getTargetNamespace()
                             + warehouse.getExternalDirectory() +
-                            "/" + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db/"
+                            "/" + getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db/"
                             + tableMirror.getName();
                     importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 } else {
@@ -192,7 +192,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
             }
 
             if (ret.isExists()) {
-                if (config.isSync()) {
+                if (job.isSync()) {
                     // Need to Drop table first.
                     String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
                     if (isACIDInPlace(tableMirror, Environment.LEFT)) {
@@ -208,19 +208,19 @@ public class ExportCircularResolveService extends DataStrategyBase {
                 let.addSql(TableUtils.IMPORT_TABLE, importSql);
             } else {
                 ret.addSql(TableUtils.IMPORT_TABLE, importSql);
-                if (!config.getCluster(Environment.RIGHT).isLegacyHive()
+                if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()
                         && config.getOwnershipTransfer().isTable() && !isBlank(let.getOwner())) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, let.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
                 }
             }
 
-            if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit() &&
-                    config.getHybrid().getExportImportPartitionLimit() > 0) {
+            if (let.getPartitions().size() > job.getHybrid().getExportImportPartitionLimit() &&
+                    job.getHybrid().getExportImportPartitionLimit() > 0) {
                 // The partition limit has been exceeded.  The process will need to be done manually.
                 let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
                         "limit (hybrid->exportImportPartitionLimit) of "
-                        + config.getHybrid().getExportImportPartitionLimit() +
+                        + job.getHybrid().getExportImportPartitionLimit() +
                         ".  This value is used to abort migrations that have a high potential for failure.  " +
                         "The migration will need to be done manually OR try increasing the limit. Review commandline option '-ep'.");
                 rtn = Boolean.FALSE;
@@ -235,17 +235,17 @@ public class ExportCircularResolveService extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 

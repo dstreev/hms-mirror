@@ -19,13 +19,13 @@ package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
-import com.cloudera.utils.hms.util.DriverUtils;
+import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
@@ -49,16 +49,24 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Slf4j
 public abstract class ConnectionPoolsBase implements ConnectionPools {
 
+    protected final DriverUtilsService driverUtilsService;
+    protected final ConversionResult conversionResult;
+    protected final PasswordService passwordService;
+    protected final ConnectionPoolService connectionPoolService;
+
     private ConnectionState connectionState = ConnectionState.DISCONNECTED;
-    protected ExecuteSession executeSession;
-    protected PasswordService passwordService;
-    protected ConnectionPoolService connectionPoolService;
 
     protected final Map<Environment, DataSource> hs2DataSources = new TreeMap<>();
     protected final Map<Environment, Driver> hs2Drivers = new TreeMap<>();
-    protected final Map<Environment, HiveServer2Config> hiveServerConfigs = new TreeMap<>();
-    protected final Map<Environment, DBStore> metastoreDirectConfigs = new TreeMap<>();
     protected final Map<Environment, DataSource> metastoreDirectDataSources = new TreeMap<>();
+
+    public ConnectionPoolsBase(DriverUtilsService driverUtilsService, ConversionResult conversionResult,
+                               PasswordService passwordService, ConnectionPoolService connectionPoolService) {
+        this.driverUtilsService = driverUtilsService;
+        this.conversionResult = conversionResult;
+        this.passwordService = passwordService;
+        this.connectionPoolService = connectionPoolService;
+    }
 
     public void close() {
         try {
@@ -114,13 +122,13 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
     }
 
 
-    public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
-        hiveServerConfigs.put(environment, hiveServer2);
-    }
-
-    public void addMetastoreDirect(Environment environment, DBStore dbStore) {
-        metastoreDirectConfigs.put(environment, dbStore);
-    }
+//    public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
+//        hiveServerConfigs.put(environment, hiveServer2);
+//    }
+//
+//    public void addMetastoreDirect(Environment environment, DBStore dbStore) {
+//        metastoreDirectConfigs.put(environment, dbStore);
+//    }
 
     public synchronized Connection getHS2EnvironmentConnection(Environment environment) throws SQLException {
         Driver lclDriver = getHS2EnvironmentDriver(environment);
@@ -167,20 +175,18 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
         environments.add(Environment.LEFT);
         environments.add(Environment.RIGHT);
 
-        for (Environment environment : environments) {
-            HiveServer2Config hs2Config = hiveServerConfigs.get(environment);
-            if (hs2Config != null) {
-                Driver driver = DriverUtils.getDriver(hs2Config, environment);
-                // Need to deregister, because it was registered in the getDriver.
-                try {
-                    DriverManager.deregisterDriver(driver);
-                } catch (SQLException throwables) {
-                    log.error(throwables.getMessage(), throwables);
-                    throw throwables;
-                }
-                hs2Drivers.put(environment, driver);
+        conversionResult.getConnections().forEach((environment, connection) -> {
+           Driver driver = driverUtilsService.getHs2Driver(connection, environment);
+            try {
+                DriverManager.deregisterDriver(driver);
+            } catch (SQLException throwables) {
+                log.error(throwables.getMessage(), throwables);
+                throw throwables;
             }
-        }
+            hs2Drivers.put(environment, driver);
+
+
+        });
     }
 
 
@@ -188,17 +194,17 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
 
     protected void initMetastoreDataSources() throws SessionException, EncryptionException, SQLException, URISyntaxException {
         // Metastore Direct
-        log.debug("Initializing Metastore Direct DataSources");
-        Set<Environment> environments = metastoreDirectConfigs.keySet();
-        for (Environment environment : environments) {
-            DBStore metastoreDirectConfig = metastoreDirectConfigs.get(environment);
-
-            if (nonNull(metastoreDirectConfig) && !isBlank(metastoreDirectConfig.getUri())) {
-
+        conversionResult.getConnections().forEach((environment, connection) -> {
+            if (nonNull(connection) && !isBlank(connection.getMetastoreDirectUri())) {
                 // Make a copy.
                 Properties connProperties = new Properties();
-                connProperties.putAll(metastoreDirectConfig.getConnectionProperties());
-                // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
+                connProperties.putAll(connection.getMetastoreDirectConnectionProperties());
+                // Add Username and Password to Properties.
+                connProperties.put("user", connection.getMetastoreDirectUsername());
+                connProperties.put("password", connection.getMetastoreDirectPassword());
+
+                // TODO: Fix for encrypted passwords.
+                /*
                 if (executeSession.getConfig().isEncryptedPasswords()) {
                     if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
                         String encryptedPassword = connProperties.getProperty("password");
@@ -208,9 +214,10 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                         throw new SessionException("Passwords encrypted, but no password key present.");
                     }
                 }
+                 */
 
                 HikariConfig config = new HikariConfig();
-                config.setJdbcUrl(metastoreDirectConfig.getUri());
+                config.setJdbcUrl(connection.getMetastoreDirectUri());
                 config.setDataSourceProperties(connProperties);
                 // Attempt to get the Driver Version for the Metastore Direct Connection.
                 try {
@@ -219,11 +226,12 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
 
                     DataSource ds = getMetastoreDirectEnvironmentDataSource(environment);
                     Class driverClass = DriverManager.getDriver(ds.getConnection().getMetaData().getURL()).getClass();
-                    String jarFile = DriverUtils.byGetProtectionDomain(driverClass);
-                    metastoreDirectConfig.setResource(jarFile);
+                    String jarFile = DriverUtilsService.byGetProtectionDomain(driverClass);
+                    // These should be in the path.
+                    // metastoreDirectConfig.setResource(jarFile);
                     log.info("{} - Metastore Direct JDBC JarFile: {}", environment, jarFile);
                     String version = ds.getConnection().getMetaData().getDriverVersion();
-                    metastoreDirectConfig.setVersion(version);
+                    connection.setMetastoreDirectVersion(version);
                     log.info("{} - Metastore Direct JDBC Driver Version: {}", environment, version);
                 } catch (SQLException | URISyntaxException e) {
                     log.error("Issue getting Metastore Direct JDBC JarFile details", e);
@@ -247,11 +255,13 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                     }
                 }
             }
-        }
+        });
+
     }
 
     public synchronized void init() throws SQLException, SessionException, EncryptionException, URISyntaxException {
-        if (!executeSession.getConfig().isLoadingTestData()) {
+        // TODO: Fix to handle test data load. (Don't init connections).
+//        if (!executeSession.getConfig().isLoadingTestData()) {
             try {
                 switch (connectionState) {
                     case DISCONNECTED:
@@ -273,7 +283,7 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                 connectionState = ConnectionState.ERROR;
                 throw e;
             }
-        }
+//        }
     }
 
 

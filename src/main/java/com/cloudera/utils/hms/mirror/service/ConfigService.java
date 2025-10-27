@@ -22,20 +22,19 @@ import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.Env;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,12 +63,23 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Service
 @Slf4j
 @Getter
+@RequiredArgsConstructor
 public class ConfigService {
 
+    @NonNull
     private final ObjectMapper yamlMapper;
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
     private final org.springframework.core.env.Environment springEnv;
+    @NonNull
     private final DomainService domainService;
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final CliEnvironment cliEnvironment;
+//    @NonNull
+//    private final ExecuteSessionService executeSessionService;
 //    private TranslatorService translatorService;
 
     /**
@@ -79,7 +89,6 @@ public class ConfigService {
      * @param springEnv Spring environment
      * @param domainService Service for domain operations
      * @param executeSessionService Service for execute session management
-     */
     public ConfigService(@Qualifier("yamlMapper") ObjectMapper yamlMapper,
                         org.springframework.core.env.Environment springEnv,
                         DomainService domainService,
@@ -90,15 +99,16 @@ public class ConfigService {
         this.executeSessionService = executeSessionService;
         log.debug("ConfigService initialized");
     }
+     */
 
     /**
+     * TODO: Review
      * Checks if warehouse plans exist in the configuration.
      * This method verifies if either warehouse map builder plans are defined or
      * if warehouse directories (external and managed) are configured.
      *
      * @param session The execute session containing the configuration
      * @return true if warehouse plans exist, false otherwise
-     */
     public boolean doWareHousePlansExist(ExecuteSession session) {
         HmsMirrorConfig config = session.getConfig();
         
@@ -111,6 +121,7 @@ public class ConfigService {
         return nonNull(warehouse) && !(isBlank(warehouse.getExternalDirectory())
                 || isBlank(warehouse.getManagedDirectory()));
     }
+     */
 
     /**
      * Checks if metastore direct configuration is available for a specific environment.
@@ -119,28 +130,22 @@ public class ConfigService {
      * @param environment The environment (LEFT/RIGHT) to check
      * @return true if metastore direct is configured, false otherwise
      */
-    public boolean isMetastoreDirectConfigured(ExecuteSession session, Environment environment) {
-        HmsMirrorConfig config = session.getConfig();
-        
-        if (nonNull(config.getCluster(environment).getMetastoreDirect())) {
-            DBStore dbStore = config.getCluster(environment).getMetastoreDirect();
-            return !isBlank(dbStore.getUri());
+    public boolean isMetastoreDirectConfigured(ConnectionDto connect) {
+        if (nonNull(connect)) {
+            return !isBlank(connect.getMetastoreDirectUri());
         }
         return false;
     }
 
     /**
      * Determines if a DistCp plan can be derived from the current configuration.
-     *
-     * @param session The execute session containing the configuration
-     * @return true if DistCp plan can be derived, false otherwise
      */
-    public boolean canDeriveDistcpPlan(ExecuteSession session) {
-        HmsMirrorConfig config = session.getConfig();
-        return config.getTransfer().getStorageMigration().isDistcp();
+    public boolean canDeriveDistcpPlan(ConversionResult conversionResult) {
+        return conversionResult.getConfigLite().getTransfer().getStorageMigration().isDistcp();
     }
 
     /**
+     * TODO: Review
      * Converts the configuration to a string representation, masking sensitive information.
      * This method converts the configuration to YAML format and masks passwords for security.
      *
@@ -165,14 +170,13 @@ public class ConfigService {
      * This method adjusts various configuration settings to ensure they are compatible
      * with the selected data strategy and other configuration options.
      *
-     * @param session The execute session containing the configuration
-     * @param config The HMS Mirror configuration to align
      * @return true if alignment was successful without breaking errors, false otherwise
      */
     public boolean alignConfigurationSettings(ConversionResult conversionResult) {
         boolean rtn = Boolean.TRUE;
         ConfigLiteDto config = conversionResult.getConfigLite();
         JobDto job = conversionResult.getJob();
+        JobExecution jobExecution = conversionResult.getJobExecution();
         // Iceberg Conversions is a beta feature.
         if (config.getIcebergConversion().isEnable()) {
             // Check that the DataStategy is either STORAGE_MIGRATION or SQL before allowing the Iceberg Conversion can be set.
@@ -199,8 +203,8 @@ public class ConfigService {
                 }
                 config.getTransfer().getStorageMigration().setDataMovementStrategy(DataMovementStrategyEnum.NA);
                 // DUMP doesn't require Execute.
-                if (config.isExecute()) {
-                    config.setExecute(Boolean.FALSE);
+                if (jobExecution.isExecute()) {
+                    jobExecution.setDryRun(Boolean.TRUE);
                 }
                 break;
             case SCHEMA_ONLY:
@@ -406,41 +410,25 @@ public class ConfigService {
     }
 
     /**
-     * Determines if the current configuration represents a legacy migration.
-     * A legacy migration is when one cluster is using legacy Hive and the other isn't.
-     *
-     * @param config The HMS Mirror configuration
-     * @return true if this is a legacy migration, false otherwise
-     */
-    public Boolean legacyMigration(HmsMirrorConfig config) {
-        Boolean rtn = Boolean.FALSE;
-
-        if (config.getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive()) {
-            if (config.getCluster(Environment.LEFT).isLegacyHive()) {
-                rtn = Boolean.TRUE;
-            }
-        }
-        return rtn;
-    }
-
-    /**
      * Tests the link between clusters to validate namespace availability.
      * This method checks if the configured HCFS namespaces are accessible.
      *
-     * @param session The execute session
-     * @param cli The CLI environment
      * @return true if link test passes, false otherwise
      * @throws DisabledException if the CLI interface is disabled
      */
-    protected Boolean linkTest(ExecuteSession session, CliEnvironment cli) throws DisabledException {
+    protected Boolean linkTest() throws DisabledException {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig config = session.getConfig();
 
-        if (isNull(cli)) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        if (isNull(cliEnvironment)) {
             return Boolean.TRUE;
         }
 
-        if (config.isSkipLinkCheck() || config.isLoadingTestData()) {
+        if (conversionResult.getJob().isSkipLinkCheck() || conversionResult.getJob().isLoadingTestData()) {
             log.warn("Skipping Link Check.");
             rtn = Boolean.TRUE;
         } else {
@@ -452,11 +440,11 @@ public class ConfigService {
             // If a namespace is NOT defined, record an issue and move on.  Only 'fail' when a defined namespace fails.
             List<String> namespaces = new ArrayList<>();
 
-            if (nonNull(config.getCluster(Environment.LEFT)) && !isBlank(config.getCluster(Environment.LEFT).getHcfsNamespace())) {
-                namespaces.add(config.getCluster(Environment.LEFT).getHcfsNamespace());
+            if (nonNull(conversionResult.getConnection(Environment.LEFT)) && !isBlank(conversionResult.getConnection(Environment.LEFT).getHcfsNamespace())) {
+                namespaces.add(conversionResult.getConnection(Environment.LEFT).getHcfsNamespace());
             }
-            if (nonNull(config.getCluster(Environment.RIGHT)) && !isBlank(config.getCluster(Environment.RIGHT).getHcfsNamespace())) {
-                namespaces.add(config.getCluster(Environment.RIGHT).getHcfsNamespace());
+            if (nonNull(conversionResult.getConnection(Environment.RIGHT)) && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace())) {
+                namespaces.add(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace());
             }
             if (!isBlank(config.getTransfer().getTargetNamespace())) {
                 namespaces.add(config.getTransfer().getTargetNamespace());
@@ -464,7 +452,7 @@ public class ConfigService {
 
             for (String namespace : namespaces) {
                 try {
-                    if (NamespaceUtils.isNamespaceAvailable(cli, namespace)) {
+                    if (NamespaceUtils.isNamespaceAvailable(cliEnvironment, namespace)) {
                         log.info("Namespace: {} is available.", namespace);
                     } else {
                         log.warn("Namespace: {} is not available.", namespace);
@@ -675,49 +663,52 @@ public class ConfigService {
      * - Driver JAR file validation
      * - Kerberos configuration validation across versions
      *
-     * @param conversionResult The conversion result containing the configuration to validate
      * @return Boolean TRUE if all connection configurations are valid, FALSE otherwise.
      *         The method will add appropriate error messages to the conversionResult's RunStatus for any validation failures.
      */
-    public Boolean validateForConnections(ConversionResult conversionResult) {
+    public Boolean validateForConnections() {
         Boolean rtn = Boolean.TRUE;
 
-        // Get the configuration from the session
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
-        if (config.isEncryptedPasswords()) {
-            runStatus.addWarning(PASSWORDS_ENCRYPTED);
-            if (isNull(config.getPasswordKey()) || config.getPasswordKey().isEmpty()) {
-                runStatus.addError(PKEY_PASSWORD_CFG);
-                rtn = Boolean.FALSE;
-            }
-        }
+        // Get the configuration from the session
+//        ExecuteSession session = executeSessionService.getSession();
+//        HmsMirrorConfig config = session.getConfig();
+
+        // TODO: Fix for encrypted passwords
+//        if (config.isEncryptedPasswords()) {
+//            runStatus.addWarning(PASSWORDS_ENCRYPTED);
+//            if (isNull(config.getPasswordKey()) || config.getPasswordKey().isEmpty()) {
+//                runStatus.addError(PKEY_PASSWORD_CFG);
+//                rtn = Boolean.FALSE;
+//            }
+//        }
 
         List<Environment> envList = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         Set<Environment> envSet = new TreeSet<>(envList);
         // Validate that the cluster properties are set for the data strategy.
-        switch (config.getDataStrategy()) {
+        switch (job.getStrategy()) {
             // Need both clusters defined and HS2 configs set.
             case SQL:
                 // Inplace Downgrade is a single cluster effort
                 if (config.getMigrateACID().isInplace()) {
                     envSet.remove(Environment.RIGHT);
                     // Drop the Right cluster to prevent confusion.
-                    config.getClusters().remove(Environment.RIGHT);
+                    conversionResult.getConnections().remove(Environment.RIGHT);
                 }
             case SCHEMA_ONLY:
             case EXPORT_IMPORT:
             case HYBRID:
             case COMMON:
                 for (Environment env : envSet) {
-                    if (isNull(config.getCluster(env))) {
+                    if (isNull(conversionResult.getConnection(env))) {
                         runStatus.addError(CLUSTER_NOT_DEFINED_OR_CONFIGURED, env);
                         rtn = Boolean.FALSE;
                     } else {
-                        if (isNull(config.getCluster(env).getHiveServer2())) {
+                        if (isNull(conversionResult.getConnection(env).getHs2Uri())) {
                             if (!conversionResult.getConfigLite().isLoadingTestData()) {
                                 runStatus.addError(HS2_NOT_DEFINED_OR_CONFIGURED, env);
                                 rtn = Boolean.FALSE;
@@ -731,17 +722,20 @@ public class ConfigService {
                             - username (if not kerberized)
 
                              */
-                            HiveServer2Config hs2 = config.getCluster(env).getHiveServer2();
+                            ConnectionDto connection = conversionResult.getConnection(env);
                             if (!conversionResult.getConfigLite().isLoadingTestData()) {
-                                if (isBlank(hs2.getUri())) {
+                                if (isBlank(connection.getHs2Uri())) {
                                     runStatus.addError(MISSING_PROPERTY, "uri", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
+                                /* We know this from the Platform Type.
                                 if (isBlank(hs2.getDriverClassName())) {
                                     runStatus.addError(MISSING_PROPERTY, "driverClassName", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
-                                if (!hs2.isKerberosConnection() && isBlank(hs2.getConnectionProperties().getProperty("user"))) {
+                                */
+
+                                if (!connection.isHs2KerberosConnection() && isBlank(connection.getHs2Username())) {
                                     runStatus.addError(MISSING_PROPERTY, "user", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
                                 }
@@ -755,7 +749,7 @@ public class ConfigService {
                 // Check for Metastore Direct on LEFT.
             case DUMP:
                 // Drop the Right cluster to prevent confusion.
-                config.getClusters().remove(Environment.RIGHT);
+                conversionResult.getConnections().remove(Environment.RIGHT);
                 break;
 
         }
@@ -763,58 +757,60 @@ public class ConfigService {
         // Set maxConnections to Concurrency.
         // Don't validate connections or url's if we're working with test data.
         if (!conversionResult.getConfigLite().isLoadingTestData()) {
-            HiveServer2Config leftHS2 = config.getCluster(Environment.LEFT).getHiveServer2();
-            if (!leftHS2.isValidUri()) {
+            ConnectionDto leftConnection = conversionResult.getConnection(Environment.LEFT);
+            if (!leftConnection.isValidHs2Uri()) {
                 rtn = Boolean.FALSE;
                 runStatus.addError(LEFT_HS2_URI_INVALID);
             }
-
+            /* We know this from the Platform Type.
             if (isBlank(leftHS2.getJarFile())) {
                 rtn = Boolean.FALSE;
                 runStatus.addError(LEFT_HS2_DRIVER_JARS);
             }
+             */
 
-            if (nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
-                DBStore leftMS = config.getCluster(Environment.LEFT).getMetastoreDirect();
-
-                if (isBlank(leftMS.getUri())) {
-                    runStatus.addWarning(LEFT_METASTORE_URI_NOT_DEFINED);
-                }
+            if (isBlank(leftConnection.getMetastoreDirectUri())) {
+                runStatus.addWarning(LEFT_METASTORE_URI_NOT_DEFINED);
             }
 
-            if (nonNull(config.getCluster(Environment.RIGHT))) {
+            ConnectionDto rightConnection = conversionResult.getConnection(Environment.RIGHT);
+
+            if (nonNull(rightConnection)) {
                 // TODO: Add validation for -rid (right-is-disconnected) option.
                 // - Only applies to SCHEMA_ONLY, SQL, EXPORT_IMPORT, and HYBRID data strategies.
                 // -
                 //
-                if (nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
-                    HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
+//                if (nonNull(config.getCluster(Environment.RIGHT).getHiveServer2())) {
+//                    HiveServer2Config rightHS2 = config.getCluster(Environment.RIGHT).getHiveServer2();
 
+                    /* We know this from the Platform Type.
                     if (isBlank(rightHS2.getJarFile())) {
                         rtn = Boolean.FALSE;
                         runStatus.addError(RIGHT_HS2_DRIVER_JARS);
                     }
+                     */
 
-                    if (config.getDataStrategy() != STORAGE_MIGRATION
-                            && !rightHS2.isValidUri()) {
-                        if (!config.getDataStrategy().equals(DataStrategyEnum.DUMP)) {
+                    if (job.getStrategy() != STORAGE_MIGRATION
+                            && !rightConnection.isValidHs2Uri()) {
+                        if (!job.getStrategy().equals(DataStrategyEnum.DUMP)) {
                             rtn = Boolean.FALSE;
                             runStatus.addError(RIGHT_HS2_URI_INVALID);
                         }
                     } else {
 
 
-                        if (leftHS2.isKerberosConnection()
-                                && rightHS2.isKerberosConnection()
-                                && (config.getCluster(Environment.LEFT).isLegacyHive() != config.getCluster(Environment.RIGHT).isLegacyHive())) {
+                        if (leftConnection.isHs2KerberosConnection()
+                                && rightConnection.isHs2KerberosConnection()
+                                && (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
+                                != conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive())) {
                             rtn = Boolean.FALSE;
                             runStatus.addError(KERB_ACROSS_VERSIONS);
                         }
                     }
-                }
+//                }
             } else {
-                if (!(config.getDataStrategy() == STORAGE_MIGRATION
-                        || config.getDataStrategy() == DataStrategyEnum.DUMP)) {
+                if (!(job.getStrategy() == STORAGE_MIGRATION
+                        || job.getStrategy() == DataStrategyEnum.DUMP)) {
                     if (!config.getMigrateACID().isInplace()) {
                         rtn = Boolean.FALSE;
                         runStatus.addError(RIGHT_HS2_DEFINITION_MISSING);
@@ -829,11 +825,9 @@ public class ConfigService {
     /**
      * Validates the configuration for cluster connections using ExecuteSession.
      *
-     * @param session The execute session containing the configuration to validate
      * @return Boolean TRUE if all connection configurations are valid, FALSE otherwise
      * @deprecated Use {@link #validateForConnections(ConversionResult)} instead.
      *             This method will be removed in a future release.
-     */
     @Deprecated(since = "4.0", forRemoval = true)
     public Boolean validateForConnections(ExecuteSession session) {
         // Delegate to ConversionResult-based method
@@ -845,6 +839,7 @@ public class ConfigService {
         }
         return validateForConnections(session.getConversionResult());
     }
+     */
 
     /**
      * Validates the complete configuration using ConversionResult.
@@ -857,17 +852,15 @@ public class ConfigService {
      * - Link testing between clusters
      * - Database filtering validation
      *
-     * @param conversionResult The conversion result containing the configuration to validate
      * @param cli The CLI environment
      * @return Boolean TRUE if configuration is valid, FALSE otherwise
      */
-    public Boolean validate(ConversionResult conversionResult, CliEnvironment cli) {
+    public Boolean validate() {
         AtomicReference<Boolean> rtn = new AtomicReference<>(Boolean.TRUE);
 
         // Get the configuration from the session
-//        ExecuteSession session = executeSessionService.getSession();
-//        HmsMirrorConfig config = session.getConfig();
-        ConfigLiteDto configLite = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -923,9 +916,9 @@ public class ConfigService {
         // BUT, if you've asked to save an ARCHIVE of the table and use 'distcp', we need to 'create' the new table, which
         // will not maintain the ACID properties. This is an invalid state.
         if (job.getStrategy() == STORAGE_MIGRATION) {
-            if (configLite.getTransfer().getStorageMigration().isDistcp() &&
-                    configLite.getMigrateACID().isOn() &&
-                    configLite.getTransfer().getStorageMigration().isCreateArchive()) {
+            if (config.getTransfer().getStorageMigration().isDistcp() &&
+                    config.getMigrateACID().isOn() &&
+                    config.getTransfer().getStorageMigration().isCreateArchive()) {
                 runStatus.addError(STORAGE_MIGRATION_ACID_ARCHIVE_DISTCP);
                 rtn.set(Boolean.FALSE);
             }
@@ -969,42 +962,39 @@ public class ConfigService {
                 // When STORAGE_MIGRATION and HDP3, we need to force external location AND
                 //   we can't use the ACID options.
                 if (conversionResult.getConnection(Environment.LEFT).getPlatformType() == PlatformType.HDP3) {
-                    configLite.setForceExternalLocation(Boolean.TRUE);
-                    if (configLite.getMigrateACID().isOn() &&
-                            !configLite.getTransfer().getStorageMigration().isDistcp()) {
+                    config.setForceExternalLocation(Boolean.TRUE);
+                    if (config.getMigrateACID().isOn() &&
+                            !config.getTransfer().getStorageMigration().isDistcp()) {
                         runStatus.addError(HIVE3_ON_HDP_ACID_TRANSFERS);
                         rtn.set(Boolean.FALSE);
                     }
                 }
 
                 break;
-            case ICEBERG_CONVERSION:
-                break;
             case SCHEMA_ONLY:
                 // Because the ACID downgrade requires some SQL transformation, we can't do this via SCHEMA_ONLY.
-                if (configLite.getMigrateACID().isOn() &&
-                        configLite.getMigrateACID().isDowngrade()) {
+                if (config.getMigrateACID().isOn() &&
+                        config.getMigrateACID().isDowngrade()) {
                     runStatus.addError(ACID_DOWNGRADE_SCHEMA_ONLY);
                     rtn.set(Boolean.FALSE);
                 }
-                if (configLite.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE
-                        && configLite.getTransfer().getStorageMigration().getDataMovementStrategy() == DataMovementStrategyEnum.DISTCP) {
+                if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE
+                        && config.getTransfer().getStorageMigration().getDataMovementStrategy() == DataMovementStrategyEnum.DISTCP) {
                     runStatus.addWarning(DISTCP_W_RELATIVE);
                 }
-                if (configLite.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE
-                        && configLite.getTransfer().getStorageMigration().getDataMovementStrategy() == DataMovementStrategyEnum.MANUAL) {
+                if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE
+                        && config.getTransfer().getStorageMigration().getDataMovementStrategy() == DataMovementStrategyEnum.MANUAL) {
                     runStatus.addWarning(RELATIVE_MANUAL);
                 }
             default:
-                // TODO: FIX
                 // Need to build a conversions supported map. EG: HDP2 -> CDP, etc..
-//                if (nonNull(config.getCluster(Environment.RIGHT)) && config.getCluster(Environment.RIGHT).isHdpHive3()) {
-//                    configLite.setForceExternalLocation(Boolean.TRUE);
-//                    runStatus.addWarning(HDP3_HIVE);
-//                }
+                if (nonNull(conversionResult.getConnection(Environment.RIGHT)) && conversionResult.getConnection(Environment.RIGHT).getPlatformType().isHdpHive3()) {
+                    config.setForceExternalLocation(Boolean.TRUE);
+                    runStatus.addWarning(HDP3_HIVE);
+                }
 
                 // Check for INPLACE DOWNGRADE, in which case no RIGHT needs to be defined or check.
-                if (!configLite.getMigrateACID().isInplace()) {
+                if (!config.getMigrateACID().isInplace()) {
                     if (conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive() &&
                             !conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
                             // TODO: Review
@@ -1015,18 +1005,17 @@ public class ConfigService {
                     }
                 } else {
                     // Drop the Right cluster to prevent confusion.
-                    // TODO: Review if necessary
-//                    config.getClusters().remove(Environment.RIGHT);
+                    conversionResult.getConnections().remove(Environment.RIGHT);
                 }
         }
 
         // Ozone Volume Name Check.
         // If the target namespace is set to ofs:// and we have warehouse plans defined for movement, ensure the
         //   volume name is at least 3 characters long.
-        if (!isBlank(configLite.getTransfer().getTargetNamespace()) &&
-                configLite.getTransfer().getTargetNamespace().startsWith("ofs://")) {
+        if (!isBlank(config.getTransfer().getTargetNamespace()) &&
+                config.getTransfer().getTargetNamespace().startsWith("ofs://")) {
             //
-            for (DatasetDto.DatabaseSpec dbs: conversionResult.getDataset().getDatabaseSpecs()) {
+            for (DatasetDto.DatabaseSpec dbs: conversionResult.getDataset().getDatabases()) {
                 Warehouse wp = dbs.getWarehouse();
                 String externalDirectory = wp.getExternalDirectory();
                 String managedDirectory = wp.getManagedDirectory();
@@ -1068,7 +1057,7 @@ public class ConfigService {
 
         // Check for valid acid downgrade scenario.
         // Can't downgrade without SQL.
-        if (configLite.getMigrateACID().isInplace()) {
+        if (config.getMigrateACID().isInplace()) {
             if (job.getStrategy() != SQL) {
                 runStatus.addError(VALID_ACID_DA_IP_STRATEGIES);
                 rtn.set(Boolean.FALSE);
@@ -1144,13 +1133,13 @@ public class ConfigService {
          */
 
         // TODO: Work to do on Force External Location.
-        if (configLite.isForceExternalLocation()) {
+        if (config.isForceExternalLocation()) {
             runStatus.addWarning(RDL_FEL_OVERRIDES);
         }
 
         // Can't LINK ACID tables. They'll need to turn ACID off.
         if (job.getStrategy() == DataStrategyEnum.LINKED) {
-            if (configLite.getMigrateACID().isOn()) {
+            if (config.getMigrateACID().isOn()) {
                 runStatus.addError(LINKED_NO_ACID_SUPPORT);
                 rtn.set(Boolean.FALSE);
             }
@@ -1181,7 +1170,7 @@ public class ConfigService {
             rtn.set(Boolean.FALSE);
         }
 
-        if (configLite.getMigrateACID().isOn()
+        if (config.getMigrateACID().isOn()
                 && !(job.getStrategy() == DataStrategyEnum.SCHEMA_ONLY
                 || job.getStrategy() == DataStrategyEnum.DUMP
                 || job.getStrategy() == DataStrategyEnum.EXPORT_IMPORT
@@ -1192,21 +1181,21 @@ public class ConfigService {
             rtn.set(Boolean.FALSE);
         }
 
-        if (configLite.getMigrateACID().isOn()
-                && configLite.getMigrateACID().isInplace()) {
+        if (config.getMigrateACID().isOn()
+                && config.getMigrateACID().isInplace()) {
             if (!(job.getStrategy() == SQL)) {
                 runStatus.addError(VALID_ACID_DA_IP_STRATEGIES);
                 rtn.set(Boolean.FALSE);
             }
-            if (!isBlank(configLite.getTransfer().getTargetNamespace())) {
+            if (!isBlank(config.getTransfer().getTargetNamespace())) {
                 runStatus.addError(COMMON_STORAGE_WITH_DA_IP);
                 rtn.set(Boolean.FALSE);
             }
-            if (!isBlank(configLite.getTransfer().getIntermediateStorage())) {
+            if (!isBlank(config.getTransfer().getIntermediateStorage())) {
                 runStatus.addError(INTERMEDIATE_STORAGE_WITH_DA_IP);
                 rtn.set(Boolean.FALSE);
             }
-            if (configLite.getTransfer().getStorageMigration().isDistcp()) {
+            if (config.getTransfer().getStorageMigration().isDistcp()) {
                 runStatus.addError(DISTCP_W_DA_IP_ACID);
                 rtn.set(Boolean.FALSE);
             }
@@ -1269,11 +1258,11 @@ public class ConfigService {
         // Test to ensure the clusters are LINKED to support underlying functions.
         switch (job.getStrategy()) {
             case LINKED:
-                if (configLite.getTransfer().getTargetNamespace() != null) {
+                if (config.getTransfer().getTargetNamespace() != null) {
                     runStatus.addError(COMMON_STORAGE_WITH_LINKED);
                     rtn.set(Boolean.FALSE);
                 }
-                if (!isBlank(configLite.getTransfer().getIntermediateStorage())) {
+                if (!isBlank(config.getTransfer().getIntermediateStorage())) {
                     runStatus.addError(INTERMEDIATE_STORAGE_WITH_LINKED);
                     rtn.set(Boolean.FALSE);
                 }
@@ -1284,7 +1273,7 @@ public class ConfigService {
                 // Downgrade inplace is a single cluster effort.
                 // TODO: Review and Fix
                 /*
-                if (!configLite.getMigrateACID().isInplace()) {
+                if (!config.getMigrateACID().isInplace()) {
                     if (conversionResult.getConnection(Environment.RIGHT).getHiveServer2() != null
                             && !config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()
                             && isBlank(config.getTransfer().getIntermediateStorage())
@@ -1307,7 +1296,7 @@ public class ConfigService {
                  */
                 break;
             case SCHEMA_ONLY:
-                if (configLite.isCopyAvroSchemaUrls()) {
+                if (config.isCopyAvroSchemaUrls()) {
                     log.info("CopyAVROSchemaUrls is TRUE, so the cluster must be linked to do this.  Testing...");
                     // TODO: Review
                         /*
@@ -1412,7 +1401,6 @@ public class ConfigService {
      * @return Boolean TRUE if configuration is valid, FALSE otherwise
      * @deprecated Use {@link #validate(ConversionResult, CliEnvironment)} instead.
      *             This method will be removed in a future release.
-     */
     @Deprecated(since = "4.0", forRemoval = true)
     public Boolean validate(ExecuteSession session, CliEnvironment cli) {
         // Delegate to ConversionResult-based method
@@ -1424,6 +1412,7 @@ public class ConfigService {
         }
         return validate(session.getConversionResult(), cli);
     }
+     */
 
     /**
      * Flips the configuration between LEFT and RIGHT clusters.

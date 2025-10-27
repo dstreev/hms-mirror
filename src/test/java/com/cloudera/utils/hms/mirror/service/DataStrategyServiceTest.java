@@ -77,8 +77,8 @@ public class DataStrategyServiceTest {
     @Mock
     private IntermediateDataStrategy intermediateDataStrategy;
 
-    @Mock
-    private IcebergConversionDataStrategy icebergConversionDataStrategy;
+//    @Mock
+//    private IcebergConversionDataStrategy icebergConversionDataStrategy;
 
     @Mock
     private AcidDataStrategy acidDataStrategy;
@@ -106,15 +106,15 @@ public class DataStrategyServiceTest {
         assertEquals(storageMigrationDataStrategy, result, "Expected STORAGE_MIGRATION strategy to be returned.");
     }
 
-    @Test
-    public void testGetDefaultDataStrategy_ReturnsCorrectStrategyForIcebergConversion() {
-        HmsMirrorConfig config = Mockito.mock(HmsMirrorConfig.class);
-        Mockito.when(config.getDataStrategy()).thenReturn(DataStrategyEnum.ICEBERG_CONVERSION);
-
-        DataStrategy result = dataStrategyService.getDefaultDataStrategy(config);
-
-        assertEquals(icebergConversionDataStrategy, result, "Expected ICEBERG_CONVERSION strategy to be returned.");
-    }
+//    @Test
+//    public void testGetDefaultDataStrategy_ReturnsCorrectStrategyForIcebergConversion() {
+//        HmsMirrorConfig config = Mockito.mock(HmsMirrorConfig.class);
+//        Mockito.when(config.getDataStrategy()).thenReturn(DataStrategyEnum.ICEBERG_CONVERSION);
+//
+//        DataStrategy result = dataStrategyService.getDefaultDataStrategy(config);
+//
+//        assertEquals(icebergConversionDataStrategy, result, "Expected ICEBERG_CONVERSION strategy to be returned.");
+//    }
 
     @Test
     public void testGetDefaultDataStrategy_ReturnsCorrectStrategyForDump() {

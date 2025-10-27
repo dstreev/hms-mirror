@@ -20,13 +20,18 @@ package com.cloudera.utils.hms.mirror.cli;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.domain.support.JobExecution;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
+import com.cloudera.utils.hms.mirror.service.ConversionResultService;
+import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import com.cloudera.utils.hms.mirror.service.SessionManager;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -58,7 +63,10 @@ public class CliReporter {
     private final List<String> reportTemplateOutput = new ArrayList<>();
     private final Map<String, String> varMap = new TreeMap<>();
     private final List<TableMirror> startedTables = new ArrayList<>();
-    private final SessionManager sessionManager;
+
+    private final ExecutionContextService executionContextService;
+    private final ConversionResultService conversionResultService;
+
     // TODO: Need to populate this.
     private DBMirror dbMirror;
 
@@ -67,9 +75,11 @@ public class CliReporter {
     private Boolean quiet = Boolean.FALSE;
     private boolean tiktok = false;
 
+
     // Constructor injection for dependencies
-    public CliReporter(SessionManager sessionManager) {
-        this.sessionManager  = sessionManager;
+    public CliReporter(ExecutionContextService executionContextService, ConversionResultService conversionResultService) {
+        this.executionContextService = executionContextService;
+        this.conversionResultService = conversionResultService;
     }
 
     @Bean
@@ -79,9 +89,11 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-        ExecuteSession session = sessionManager.getCurrentSession();
-        HmsMirrorConfig config = session.getConfig();
-        ConversionResult conversionResult = session.getConversionResult();
+//        ExecuteSession session = sessionManager.getCurrentSession();
+//        HmsMirrorConfig config = session.getConfig();
+//        ConversionResult conversionResult = session.getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -93,7 +105,7 @@ public class CliReporter {
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
                 String dbName = findDatabaseForTable(conversionResult, tblMirror);
-                tblVars.put("db.name", HmsMirrorConfigUtil.getResolvedDB(dbName, config));
+                tblVars.put("db.name", getConversionResultService().getResolvedDB(dbName));
                 tblVars.put("tbl.name", tblMirror.getName());
                 tblVars.put("tbl.progress", tblMirror.getProgressIndicator(80));
                 tblVars.put("tbl.msg", tblMirror.getMigrationStageMessage());
@@ -123,9 +135,9 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        ExecuteSession session = sessionManager.getCurrentSession();
-        RunStatus runStatus = session.getRunStatus();
-        HmsMirrorConfig config = session.getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         if (runStatus.hasErrors()) {
             report.append("\n=== Errors ===\n");
@@ -134,7 +146,7 @@ public class CliReporter {
             }
         }
 
-        if (runStatus.hasWarnings() && !config.isSuppressCliWarnings()) {
+        if (runStatus.hasWarnings()) {
             report.append("\n=== Warnings ===\n");
             for (String message : runStatus.getWarningMessages()) {
                 report.append("\t").append(message).append("\n");
@@ -177,9 +189,14 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
-        ExecuteSession session = sessionManager.getCurrentSession();
-        ConversionResult conversionResult = session.getConversionResult();
-        HmsMirrorConfig config = session.getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        JobExecution jobExecution = conversionResult.getJobExecution();
+
+//        ExecuteSession session = sessionManager.getCurrentSession();
+//        ConversionResult conversionResult = session.getConversionResult();
+//        HmsMirrorConfig config = session.getConfig();
 
         tiktok = !tiktok;
         startedTables.clear();
@@ -187,10 +204,11 @@ public class CliReporter {
             varMap.put("retry", "       ");
         else
             varMap.put("retry", "(RETRY)");
-        varMap.put("run.mode", config.isExecute() ? "EXECUTE" : "DRYRUN");
+        varMap.put("run.mode", jobExecution.isExecute() ? "EXECUTE" : "DRYRUN");
         varMap.put("HMS-Mirror-Version", ReportingConf.substituteVariablesFromManifest("${HMS-Mirror-Version}"));
-        varMap.put("config.file", config.getConfigFilename());
-        varMap.put("config.strategy", config.getDataStrategy().toString());
+        // TODO: Fix
+//        varMap.put("config.file", config.getConfigFilename());
+        varMap.put("config.strategy", job.getStrategy().toString());
         varMap.put("tik.tok", tiktok ? "*" : "");
         varMap.put("java.version", System.getProperty("java.version"));
         varMap.put("os.name", System.getProperty("os.name"));
@@ -198,6 +216,8 @@ public class CliReporter {
         varMap.put("os.arch", System.getProperty("os.arch"));
         varMap.put("memory", Runtime.getRuntime().totalMemory() / 1024 / 1024 + "MB");
 
+        // TODO: Fix
+        /*
         String outputDir = session.getConfig().getOutputDirectory();
         if (!isBlank(session.getConfig().getFinalOutputDirectory())) {
             outputDir = session.getConfig().getFinalOutputDirectory();
@@ -209,13 +229,16 @@ public class CliReporter {
         varMap.put("left.cleanup.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
         varMap.put("right.execute.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
         varMap.put("right.cleanup.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-
+         */
         varMap.put("total.dbs", Integer.toString(conversionResult.getDatabases().size()));
         // Count
         int tblCount = 0;
+        // TODO: FIX
+        /*
         for (String database : conversionResult.getDatabases().keySet()) {
             tblCount += conversionResult.getDatabase(database).getTableMirrors().size();
         }
+         */
         varMap.put("total.tbls", Integer.toString(tblCount));
 
         // Table Counters

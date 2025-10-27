@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MirrorConf;
@@ -25,15 +26,19 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -53,14 +58,13 @@ public class SQLDataStrategy extends DataStrategyBase {
     private final TableService tableService;
     private final IntermediateDataStrategy intermediateDataStrategy;
 
-    public SQLDataStrategy(StatsCalculatorService statsCalculatorService,
-                           ExecuteSessionService executeSessionService,
-                           TranslatorService translatorService,
-                           ConfigService configService,
-                           SQLAcidInPlaceDataStrategy sqlAcidInPlaceDataStrategy,
-                           TableService tableService,
-                           IntermediateDataStrategy intermediateDataStrategy) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+    public SQLDataStrategy(@NonNull ConversionResultService conversionResultService,
+                           @NonNull ExecutionContextService executionContextService,
+                           @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                           @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
+                           ConfigService configService, SQLAcidInPlaceDataStrategy sqlAcidInPlaceDataStrategy,
+                           TableService tableService, IntermediateDataStrategy intermediateDataStrategy) {
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.configService = configService;
         this.sqlAcidInPlaceDataStrategy = sqlAcidInPlaceDataStrategy;
         this.tableService = tableService;
@@ -68,28 +72,32 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {}.{} buildout SQL Definition", dbMirror.getName(), tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
         EnvironmentTable set = null;
 
-        let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         // Different transfer technique.  Staging location.
         if (!isBlank(config.getTransfer().getIntermediateStorage()) ||
                 !isBlank(config.getTransfer().getTargetNamespace()) ||
                 TableUtils.isACID(let)) {
-            return getIntermediateDataStrategy().buildOutDefinition(conversionResult, dbMirror, tableMirror);
+            return getIntermediateDataStrategy().buildOutDefinition(dbMirror, tableMirror);
         }
 
         if (ret.isExists()) {
             if (let.isExists()) {
-                if (config.isSync() && config.getCluster(Environment.RIGHT).isCreateIfNotExists()) {
+                if (job.isSync() && config.isCreateIfNotExists()) {
                     // sync with overwrite.
                     ret.addIssue(SQL_SYNC_W_CINE.getDesc());
                     ret.setCreateStrategy(CreateStrategy.CREATE);
@@ -103,7 +111,7 @@ public class SQLDataStrategy extends DataStrategyBase {
                 }
             } else {
                 ret.addIssue(SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
-                if (config.isSync()) {
+                if (job.isSync()) {
                     ret.setCreateStrategy(CreateStrategy.DROP);
                 } else {
                     ret.setCreateStrategy(CreateStrategy.LEAVE);
@@ -115,11 +123,16 @@ public class SQLDataStrategy extends DataStrategyBase {
             ret.setCreateStrategy(CreateStrategy.CREATE);
         }
 
-        if (!isBlank(config.getTargetNamespace())) {
+        if (!isBlank(conversionResult.getTargetNamespace())) {
             // If the temp cluster doesn't exist, create it as a clone of the LEFT.
-            if (isNull(config.getCluster(Environment.SHADOW))) {
-                Cluster shadowCluster = config.getCluster(Environment.LEFT).clone();
-                config.getClusters().put(Environment.SHADOW, shadowCluster);
+            if (isNull(conversionResult.getConnection(Environment.SHADOW))) {
+                ConnectionDto shadowCluster = null;
+                try {
+                    shadowCluster = conversionResult.getConnection(Environment.LEFT).clone();
+                } catch (CloneNotSupportedException e) {
+                    throw new RuntimeException(e);
+                }
+                conversionResult.getConnections().put(Environment.SHADOW, shadowCluster);
             }
 
             CopySpec shadowSpec = null;
@@ -127,7 +140,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             // Create a 'shadow' table definition on right cluster pointing to the left data.
             shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
 
-            if (config.convertManaged())
+            if (conversionResult.convertManaged())
                 shadowSpec.setUpgrade(Boolean.TRUE);
 
             // Don't claim data.  It will be in the LEFT cluster, so the LEFT owns it.
@@ -145,17 +158,17 @@ public class SQLDataStrategy extends DataStrategyBase {
 
         // Swap out the namespace of the LEFT with the RIGHT.
         rightSpec.setReplaceLocation(Boolean.TRUE);
-        if (TableUtils.isManaged(let) && config.convertManaged()) {
+        if (TableUtils.isManaged(let) && conversionResult.convertManaged()) {
             rightSpec.setUpgrade(Boolean.TRUE);
         } else {
             rightSpec.setMakeExternal(Boolean.TRUE);
         }
-        if (config.isReadOnly()) {
+        if (job.isReadOnly()) {
             rightSpec.setTakeOwnership(Boolean.FALSE);
         } else if (TableUtils.isManaged(let)) {
             rightSpec.setTakeOwnership(Boolean.TRUE);
         }
-        if (config.isNoPurge()) {
+        if (job.isNoPurge()) {
             rightSpec.setTakeOwnership(Boolean.FALSE);
         }
 
@@ -166,23 +179,27 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         if (config.getTransfer().getIntermediateStorage() != null ||
                 config.getTransfer().getTargetNamespace() != null) {
-            return getIntermediateDataStrategy().buildOutSql(conversionResult, dbMirror, tableMirror);
+            return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
         }
 
         String useDb = null;
         String database = null;
         String createTbl = null;
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-        EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+        EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+        EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
 
         ret.getSql().clear();
 
@@ -191,7 +208,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             // TODO: Hum... Not sure this is right.
             tableMirror.addIssue(Environment.LEFT, "Shouldn't get an ACID table here.");
         } else {
-            database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+            database = getConversionResultService().getResolvedDB(dbMirror.getName());
             useDb = MessageFormat.format(MirrorConf.USE, database);
 
             ret.addSql(TableUtils.USE_DESC, useDb);
@@ -240,7 +257,7 @@ public class SQLDataStrategy extends DataStrategyBase {
                     String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                     //tableMirror.getCreateStatement(Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
-                    if (!config.getCluster(Environment.RIGHT).isLegacyHive() && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
+                    if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive() && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, ret.getName(), let.getOwner());
                         ret.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
                     }
@@ -252,14 +269,18 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-            rtn = getSqlAcidInPlaceDataStrategy().build(conversionResult, dbMirror, tableMirror);
+            rtn = getSqlAcidInPlaceDataStrategy().build(dbMirror, tableMirror);
         } else if (!isBlank(config.getTransfer().getIntermediateStorage())
                 || !isBlank(config.getTransfer().getTargetNamespace())
                 || (TableUtils.isACID(let)
@@ -267,26 +288,26 @@ public class SQLDataStrategy extends DataStrategyBase {
             if (TableUtils.isACID(let)) {
                 tableMirror.setStrategy(DataStrategyEnum.ACID);
             }
-            rtn = getIntermediateDataStrategy().build(conversionResult, dbMirror, tableMirror);
+            rtn = getIntermediateDataStrategy().build(dbMirror, tableMirror);
         } else {
 
-            EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-            EnvironmentTable set = getEnvironmentTable(Environment.SHADOW, tableMirror);
+            EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
+            EnvironmentTable set = tableMirror.getEnvironmentTable(Environment.SHADOW);
 
             // We should not get ACID tables in this routine.
             try {
-                rtn = buildOutDefinition(conversionResult, dbMirror, tableMirror);
+                rtn = buildOutDefinition(dbMirror, tableMirror);
             } catch (RequiredConfigurationException e) {
                 let.addError("Failed to build out definition: " + e.getMessage());
                 rtn = Boolean.FALSE;
             }
 
             if (rtn)
-                rtn = AVROCheck(tableMirror);
+                rtn = getConversionResultService().AVROCheck(tableMirror);
 
             if (rtn) {
                 try {
-                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror);
                 } catch (MissingDataPointException e) {
                     let.addError("Failed to build out SQL: " + e.getMessage());
                     rtn = Boolean.FALSE;
@@ -304,9 +325,13 @@ public class SQLDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         log.info("SQLDataStrategy -> Table: {} execute", tableMirror.getName());
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         Boolean rtn = Boolean.FALSE;
         rtn = tableService.runTableSql(tableMirror, Environment.LEFT);

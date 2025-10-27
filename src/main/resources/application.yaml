@@ -49,6 +49,8 @@ hms-mirror:
   data:
     sample:
       create: false      # Set to true to create sample connections, datasets, and configurations
+  drivers:
+    base-dir: "${user.home}/.hms-mirror/drivers"
   config:
     beta: "false"
     testing: "false"

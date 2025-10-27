@@ -17,19 +17,19 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,32 +47,33 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     private final SchemaOnlyDataStrategy schemaOnlyDataStrategy;
     private final TableService tableService;
 
-    public ConvertLinkedDataStrategy(StatsCalculatorService statsCalculatorService,
-                                     ExecuteSessionService executeSessionService,
-                                     TranslatorService translatorService,
-                                     ConfigService configService,
-                                     SchemaOnlyDataStrategy schemaOnlyDataStrategy,
+    public ConvertLinkedDataStrategy(@NonNull ConversionResultService conversionResultService,
+                                     @NonNull ExecutionContextService executionContextService,
+                                     @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                                     @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
+                                     ConfigService configService, SchemaOnlyDataStrategy schemaOnlyDataStrategy,
                                      TableService tableService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.configService = configService;
         this.schemaOnlyDataStrategy = schemaOnlyDataStrategy;
         this.tableService = tableService;
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
@@ -87,7 +88,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                 } else if (tableMirror.isPartitioned(Environment.LEFT)) {
                     // We need to drop the RIGHT and RECREATE.
                     ret.addIssue("Table is partitioned.  Need to change data strategy to drop and recreate.");
-                    String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config));
+                    String useDb = MessageFormat.format(MirrorConf.USE, getConversionResultService().getResolvedDB(dbMirror.getName()));
                     ret.addSql(MirrorConf.USE_DESC, useDb);
 
                     // Make sure the table is NOT set to purge.
@@ -101,11 +102,11 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                     tableMirror.setStrategy(DataStrategyEnum.SCHEMA_ONLY);
                     // Set False that it doesn't exist, which it won't, since we're dropping it.
                     ret.setExists(Boolean.FALSE);
-                    rtn = schemaOnlyDataStrategy.build(conversionResult, dbMirror, tableMirror);
+                    rtn = schemaOnlyDataStrategy.build(dbMirror, tableMirror);
                 } else {
                     // - AVRO LOCATION
-                    if (AVROCheck(tableMirror)) {
-                        String useDb = MessageFormat.format(MirrorConf.USE, HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config));
+                    if (getConversionResultService().AVROCheck(tableMirror)) {
+                        String useDb = MessageFormat.format(MirrorConf.USE, getConversionResultService().getResolvedDB(dbMirror.getName()));
                         ret.addSql(MirrorConf.USE_DESC, useDb);
                         // Look at the table definition and get.
                         // - LOCATION
@@ -137,7 +138,7 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return tableService.runTableSql(tableMirror, Environment.RIGHT);
     }
 

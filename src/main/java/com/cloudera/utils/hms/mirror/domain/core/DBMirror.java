@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,9 @@ public class DBMirror implements Cloneable {
 
     @JsonIgnore
     private String key;
+    @Schema(description = "The name of the database that will be created during migration.")
     private String name;
+
     private final Map<Environment, List<String>> issues = new TreeMap<>();
     /*
     table - reason
@@ -54,8 +57,11 @@ public class DBMirror implements Cloneable {
 //    @JsonIgnore
     private final Map<Environment, Map<String, String>> problemSQL = new TreeMap<>();
 
-    @JsonIgnore
+    @Schema(description = "The name of the database that will be created during migration. If no prefix or rename was specified" +
+            "in the Dataset.DatabasesSpec, this will be the original name of the database.  If either of these are set on the input " +
+            "this name represents those adjustements.")
     private String resolvedName;
+
     private Map<Environment, Map<String, String>> properties = new TreeMap<>();
 
     /*

@@ -23,15 +23,25 @@ import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
+import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Generated;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -41,16 +51,24 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 /**
  * Service for handling ConversionResult business operations.
  * This service contains the business logic that was previously embedded in the ConversionResult domain object.
  */
 @Service
+@Getter
 @RequiredArgsConstructor
 @Slf4j
 public class ConversionResultService {
 
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+
+//    private final ExecuteSessionService executeSessionService;
 
 //    /**
 //     * Generates action SQL script for a specific environment and database.
@@ -82,6 +100,201 @@ public class ConversionResultService {
 //        }
 //        return sb.toString();
 //    }
+
+    public DBMirror getDatabase(String database) {
+        ConversionResult conversionResult = executionContextService.getConversionResult();
+        // TODO: Go to the ConversionResult Repo and get the DBMirror from persistence.
+
+        return null;
+    }
+
+    public List<String> getDatabaseTableList(String database) {
+        ConversionResult conversionResult = executionContextService.getConversionResult();
+        DBMirror dbMirror = conversionResult.getDatabases().get(database);
+        if (nonNull(dbMirror)) {
+            // TODO: Fix: Needs to come from Repo as these are disconnected for Scale.
+//            return new ArrayList<>(dbMirror.getTableMirrors().keySet());
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
+    public boolean convertManaged() {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
+                !conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
+    public String getResolvedDB(String database) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        String rtn = null;
+        // Set Local Value for adjustments
+        String lclDb = database;
+        // When dbp, set new value
+        DatasetDto.DatabaseSpec dbSpec = conversionResult.getDataset().getDatabase(database);
+        if (nonNull(dbSpec) && !isBlank(dbSpec.getDbPrefix())) {
+            lclDb = dbSpec.getDbPrefix() + lclDb;
+        }
+        // Rename overrides prefix, otherwise use lclDb as its been set.
+        rtn = (!isBlank(dbSpec.getDbRename()) ? dbSpec.getDbRename() : lclDb);
+        return rtn;
+    }
+
+    public boolean possibleConversions() {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        boolean conversions = Boolean.FALSE;
+        if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
+                (nonNull(conversionResult.getConnection(Environment.RIGHT)) &&
+                        !conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive())) {
+            conversions = Boolean.TRUE;
+        }
+
+        return conversions;
+    }
+
+    @JsonIgnore
+    /*
+    Target Namespace is a hierarchy check of the 'common' storage location, the RIGHT cluster's namespace.
+     */
+    public String getTargetNamespace() throws RequiredConfigurationException {
+        String rtn = null;
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
+            rtn = config.getTransfer().getTargetNamespace();
+        } else if (nonNull(conversionResult.getConnection(Environment.RIGHT))
+                && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace())) {
+            log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
+            rtn = conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace();
+        }
+        if (isBlank(rtn)) {
+            throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
+        }
+        return rtn;
+    }
+
+    /**
+     * Determines if the current configuration represents a legacy migration.
+     * A legacy migration is when one cluster is using legacy Hive and the other isn't.
+     *
+     * @param config The HMS Mirror configuration
+     * @return true if this is a legacy migration, false otherwise
+     */
+    public Boolean legacyMigration() {
+        Boolean rtn = Boolean.FALSE;
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+
+        if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() !=
+                conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
+            if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
+                rtn = Boolean.TRUE;
+            }
+        }
+        return rtn;
+    }
+
+    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
+        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
+        if (isNull(et)) {
+            et = new EnvironmentTable(tableMirror);
+            tableMirror.getEnvironments().put(environment, et);
+        }
+        return et;
+    }
+
+
+    public Boolean AVROCheck(TableMirror tableMirror) {
+        Boolean rtn = Boolean.TRUE;
+        Boolean relative = Boolean.FALSE;
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+
+        // Check for AVRO
+        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        if (TableUtils.isAVROSchemaBased(let)) {
+            log.info("{}: is an AVRO table.", let.getName());
+            String leftPath = TableUtils.getAVROSchemaPath(let);
+            String rightPath = null;
+            log.debug("{}: Original AVRO Schema path: {}", let.getName(), leftPath);
+                /* Checks:
+                - Is Path prefixed with a protocol?
+                    - (Y) Does it match the LEFT's hcfsNamespace.
+                        - (Y) Replace prefix with RIGHT 'hcfsNamespace' prefix.
+                        - (N) Throw WARNING and set return to FALSE.  We don't recognize the prefix and
+                                 can't guarantee that we can retrieve the file.
+                    - (N) Leave it and copy the file to the same relative path on the RIGHT
+                 */
+            String leftNamespace = NamespaceUtils.getNamespace(leftPath);
+            try {
+                if (nonNull(leftNamespace)) {
+                    log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
+                    rightPath = NamespaceUtils.replaceNamespace(leftPath, conversionResult.getTargetNamespace());
+                } else {
+                    // No Protocol defined.  So we're assuming that its a relative path to the
+                    // defaultFS
+                    String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
+                    log.info("{}: {}", let.getName(), rpath);
+                    ret.addIssue(rpath);
+                    rightPath = leftPath;
+                    relative = Boolean.TRUE;
+                }
+
+                // TODO: Fix
+                /*
+                if (nonNull(leftPath) && nonNull(rightPath) && config.isCopyAvroSchemaUrls() && job.isExecute()) {
+                    // Copy over.
+                    log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
+                    try {
+                        CommandReturn cr = null;
+                        if (relative) {
+                            // checked..
+                            rightPath = conversionResult.getTargetNamespace() + rightPath;
+                        }
+                        log.info("AVRO Schema COPY from: {} to {}", leftPath, rightPath);
+                        // Ensure the path for the right exists.
+                        String parentDirectory = NamespaceUtils.getParentDirectory(rightPath);
+                        if (nonNull(parentDirectory)) {
+                            cr = cliEnvironment.processInput("mkdir -p " + parentDirectory);
+                            if (cr.isError()) {
+                                ret.addError("Problem creating directory " + parentDirectory + ". " + cr.getError());
+                                rtn = Boolean.FALSE;
+                            } else {
+                                cr = cliEnvironment.processInput("cp -f " + leftPath + " " + rightPath);
+                                if (cr.isError()) {
+                                    ret.addError("Problem copying AVRO schema file from " + leftPath + " to " + parentDirectory + ".\n```" + cr.getError() + "```");
+                                    rtn = Boolean.FALSE;
+                                }
+                            }
+                        }
+                    } catch (Throwable t) {
+                        log.error("{}: AVRO file copy issue", ret.getName(), t);
+                        ret.addError(t.getMessage());
+                        rtn = Boolean.FALSE;
+                    }
+                } else {
+                    log.info("{}: did NOT attempt to copy AVRO schema file to target cluster.", let.getName());
+                }
+                tableMirror.addStep("AVRO", "Checked");
+
+                 */
+            } catch (RequiredConfigurationException e) {
+                log.error("Required Configuration Exception", e);
+                ret.addError(e.getMessage());
+                rtn = Boolean.FALSE;
+            }
+        } else {
+            // Not AVRO, so no action (passthrough)
+            rtn = Boolean.TRUE;
+        }
+        return rtn;
+    }
+
 
     /**
      * Generates cleanup SQL script for a specific environment and database.

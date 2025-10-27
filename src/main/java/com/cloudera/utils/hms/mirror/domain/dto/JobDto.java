@@ -2,12 +2,15 @@ package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.UUID;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Getter
 @Setter
@@ -47,6 +50,9 @@ public class JobDto {
     @Schema(description = "Flag to indicate if this job is for a database only migration")
     private boolean databaseOnly = Boolean.FALSE;
 
+    private String loadTestDataFile = null;
+    private boolean skipLinkCheck = Boolean.FALSE;
+
 //    private boolean replace = Boolean.FALSE;
 
 //    @Schema(description = "Flag to indicate if this job should reset the right table")
@@ -75,6 +81,15 @@ public class JobDto {
         return disasterRecovery;
     }
 
+    @JsonIgnore
+    public boolean isLoadingTestData() {
+        if (!isBlank(loadTestDataFile)) {
+            return Boolean.TRUE;
+        } else {
+            return Boolean.FALSE;
+        }
+    }
+
     /**
      * Create a deep clone of this JobDto.
      * All nested objects are cloned to avoid shared references.
@@ -98,6 +113,8 @@ public class JobDto {
         clone.databaseOnly = this.databaseOnly;
         clone.disasterRecovery = this.disasterRecovery;
         clone.sync = this.sync;
+        clone.loadTestDataFile = this.loadTestDataFile;
+        clone.skipLinkCheck = this.skipLinkCheck;
 
         // Deep clone hybrid config
         if (this.hybrid != null) {

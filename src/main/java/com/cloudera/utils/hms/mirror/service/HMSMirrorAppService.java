@@ -17,12 +17,13 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
@@ -30,25 +31,21 @@ import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.net.URISyntaxException;
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static java.lang.Thread.sleep;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * The HMSMirrorAppService class provides the main application service logic for handling
@@ -69,46 +66,40 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Service
 @Getter
 @Slf4j
+@RequiredArgsConstructor
 public class HMSMirrorAppService {
 
+    @NonNull
     private final ConfigService configService;
+    @NonNull
     private final ConnectionPoolService connectionPoolService;
+    @NonNull
     private final ConversionResultService conversionResultService;
+    @NonNull
     private final DatabaseService databaseService;
+    @NonNull
     private final EnvironmentService environmentService;
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
     private final ReportWriterService reportWriterService;
+    @NonNull
     private final SessionManager sessionManager;
+    @NonNull
     private final TableService tableService;
+    @NonNull
     private final TranslatorService translatorService;
+    @NonNull
     private final TransferService transferService;
-
-    public HMSMirrorAppService(ExecuteSessionService executeSessionService,
-                               ConnectionPoolService connectionPoolService,
-                               ConversionResultService conversionResultService,
-                               DatabaseService databaseService,
-                               ReportWriterService reportWriterService,
-                               SessionManager sessionManager,
-                               TableService tableService,
-                               TranslatorService translatorService,
-                               TransferService transferService,
-                               ConfigService configService,
-                               EnvironmentService environmentService) {
-        this.executeSessionService = executeSessionService;
-        this.connectionPoolService = connectionPoolService;
-        this.conversionResultService = conversionResultService;
-        this.databaseService = databaseService;
-        this.reportWriterService = reportWriterService;
-        this.sessionManager = sessionManager;
-        this.tableService = tableService;
-        this.translatorService = translatorService;
-        this.transferService = transferService;
-        this.configService = configService;
-        this.environmentService = environmentService;
-    }
+    @NonNull
+    private final CliEnvironment cliEnvironment;
+    @NonNull
+    private final JobManagementService jobManagementService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
 
     public long getReturnCode() {
         long rtn = 0L;
+        // TODO: Fix
+        /*
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
         ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         rtn = runStatus.getReturnCode();
@@ -116,14 +107,18 @@ public class HMSMirrorAppService {
         if (rtn == 0) {
             rtn = conversionResultService.getUnsuccessfullTableCount(conversionResult);
         }
+        */
         return rtn;
     }
 
     public long getWarningCode() {
         long rtn = 0L;
+        // TODO: Fix;
+        /*
         RunStatus runStatus = executeSessionService.getSession().getRunStatus();
         ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         rtn = runStatus.getWarningCode();
+         */
         return rtn;
     }
 
@@ -142,15 +137,22 @@ public class HMSMirrorAppService {
     }
 
     /*
-    This method is were all the work starts.  The configuration and asks are configured before this point.  The passed in
+    This method is where all the work starts.  The configuration and asks are configured before this point.  The passed in
     objects are 'deep' copies of the working objects in the ExecuteSession and will be used to drive forward.
-
-    The incoming 'masterSession' is needed to establish a 'run instance' for this thread. So we need to create a new
-    session and add 'clones' to the new session.
      */
     @Async("executionThreadPool")
-    public CompletableFuture<Boolean> run(RunStatus runStatus, String jobId, ExecuteSession masterSession) {
+    public CompletableFuture<Boolean> run(RunStatus runStatus, String jobId) {
         Boolean rtn = Boolean.TRUE;
+        CompletableFuture<Boolean> theWork;
+        try {
+            ConversionResult conversionResult = jobManagementService.buildConversionResultFromJobId(jobId);
+            conversionResult.setRunStatus(runStatus);
+            theWork = CompletableFuture.supplyAsync(() -> theWork(conversionResult));
+        } catch (Exception e) {
+            log.error("Issue building ConversionResult from JobId", e);
+            runStatus.addError(MISC_ERROR, "Issue building ConversionResult from JobId");
+            theWork = CompletableFuture.completedFuture(Boolean.FALSE);
+        }
         // Now that we're in a new Thread, create a New Session for this thread and set the id to the masterSession id + subId.
         // TODO: Fix.
 //        ExecuteSession session = sessionManager.createSession(masterSession.getNextSubSessionId(), config);
@@ -166,12 +168,17 @@ public class HMSMirrorAppService {
 //        }
 //        rtn = theWork(session);
 
-        return CompletableFuture.completedFuture(rtn);
+        return theWork;
 
     }
 
     private Boolean theWork(ConversionResult conversionResult) {
         Boolean rtn = Boolean.TRUE;
+
+        // Set the conversionResult for this thread's context.
+        // Note: Other threaded calls will take the conversionResult from this thread (manually) and
+        //       use that to assign to their ThreadLocal, since that context will be different.
+        executionContextService.setConversionResult(conversionResult);
 
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -188,7 +195,7 @@ public class HMSMirrorAppService {
         OperationStatistics stats = runStatus.getOperationStatistics();
         log.info("Starting HMSMirrorAppService.run()");
         runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
-        if (configService.validate(conversionResult, executeSessionService.getCliEnvironment())) {
+        if (configService.validate()) {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
         } else {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
@@ -201,7 +208,7 @@ public class HMSMirrorAppService {
             try{// Refresh the connections pool.
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.IN_PROGRESS);
 
-                configService.validateForConnections(conversionResult);
+                configService.validateForConnections();
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.COMPLETED);
 
                 runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.IN_PROGRESS);
@@ -286,6 +293,7 @@ public class HMSMirrorAppService {
         runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.IN_PROGRESS);
 
         if (conversionResult.getConfigLite().isLoadingTestData()) {
+            // TODO: Need to rework whole test data loading.
             log.info("Loading Test Data.  Skipping Database Collection.");
             Set<String> databases = new TreeSet<>();
             for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
@@ -294,7 +302,11 @@ public class HMSMirrorAppService {
             }
 //            String[] dbs = databases.toArray(new String[0]);
             conversionResult.getDataset().setDatabases(databases);
-        } else if (!isBlank(conversionResult.getDataset().getFilter().getDbRegEx())) {
+        }
+        /*
+        TODO: I don't think this is relevant anymore because of the Datasets concept.
+
+        else if (!isBlank(conversionResult.getDataset().getFilter().getDbRegEx())) {
             // Look for the dbRegEx.
             log.info("Using dbRegEx: {}", conversionResult.getDataset().getFilter().getDbRegEx());
             Connection conn = null;
@@ -339,6 +351,7 @@ public class HMSMirrorAppService {
                 }
             }
         }
+         */
         runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.COMPLETED);
         log.info("Start Processing for databases: {}", String.join(",", conversionResult.getDataset().getDatabases()));
 
@@ -358,6 +371,8 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.SKIPPED);
         }
 
+        /*
+        TODO: I don't think this is relevant anymore because of the Datasets concept.
         if (isNull(conversionResult.getDataset().getDatabases()) || conversionResult.getDataset().getDatabases().isEmpty()) {
             log.error("No databases specified OR found if you used dbRegEx");
             runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
@@ -365,6 +380,7 @@ public class HMSMirrorAppService {
             runStatus.setProgress(ProgressEnum.FAILED);
             return Boolean.FALSE;
         }
+        */
 
         List<CompletableFuture<ReturnStatus>> gtf = new ArrayList<>();
         // ========================================
@@ -373,7 +389,15 @@ public class HMSMirrorAppService {
         log.info("RunStatus Stage: {} is {}", StageEnum.DATABASES, runStatus.getStage(StageEnum.DATABASES));
         if (!conversionResult.getConfigLite().isLoadingTestData()) {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
-            for (String database : conversionResult.getDataset().getDatabases()) {
+            // From the DatasetDto, iterate through the DatabaseSpecs and build out the DBMirror instances and table list.
+
+            // If there is a table list in the DatabaseSpec, go ahead and create the DBMirror instance and the TableMirror
+            //    instances based on that list.
+
+            // If there is a table filter, we need to get a connection to the cluster and get the list of tables that
+            //    meet the filter criteria.
+
+            for (DatasetDto.DatabaseSpec database : conversionResult.getDataset().getDatabaseSpecs()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 DBMirror dbMirror = conversionResultService.addDatabase(conversionResult, database);
                 try {

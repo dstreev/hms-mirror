@@ -173,7 +173,7 @@ public class ReportWriterService {
         }
 
         for (Map.Entry<String, DBMirror> dbEntry : conversionResult.getDatabases().entrySet()) {
-            String database = HmsMirrorConfigUtil.getResolvedDB(dbEntry.getKey(), config);
+            String database = getConversionResultService().getResolvedDB(dbEntry.getKey());
             String originalDatabase = dbEntry.getKey();
             Map<String, Number> leftSummaryStats = databaseService.getEnvironmentSummaryStatistics(dbEntry.getValue(), Environment.LEFT);
             dbEntry.getValue().getEnvironmentStatistics().put(Environment.LEFT, leftSummaryStats);

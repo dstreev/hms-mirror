@@ -23,6 +23,8 @@ import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Service
 @Slf4j
 @Getter
+@RequiredArgsConstructor
 public class WarehouseService {
 
     private static final String EXTERNAL_AND_MANAGED_LOCATIONS_REQUIRED =
@@ -49,18 +52,8 @@ public class WarehouseService {
             "External and Managed Warehouse Locations must be different.";
     private static final String WAREHOUSE_PLAN_NOT_FOUND_MSG =
             "Warehouse Plan for Database: %s not found and couldn't be built from (Warehouse Plans, General Warehouse Configs or Hive ENV.";
-
-    private final ExecuteSessionService executeSessionService;
-
-    /**
-     * Constructs a WarehouseService with the given ExecuteSessionService.
-     *
-     * @param executeSessionService the service for managing execution sessions.
-     */
-    public WarehouseService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-        log.debug("WarehouseService initialized.");
-    }
+    @NonNull
+    private final ExecutionContextService executionContextService;
 
     /**
      * Adds a warehouse plan for a given database.

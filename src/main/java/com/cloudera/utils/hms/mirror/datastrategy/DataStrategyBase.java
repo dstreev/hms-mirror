@@ -20,29 +20,29 @@ package com.cloudera.utils.hms.mirror.datastrategy;
 //import com.cloudera.utils.hadoop.HadoopSession;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.core.Cluster;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.Feature;
 import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.text.DateFormat;
@@ -64,121 +64,142 @@ public abstract class DataStrategyBase implements DataStrategy {
     public static final Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static final Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
-    protected final StatsCalculatorService statsCalculatorService;
-    protected final ExecuteSessionService executeSessionService;
-    protected final TranslatorService translatorService;
 
-    // Constructor injection replaces Spring's field or setter injection
-    public DataStrategyBase(
-            StatsCalculatorService statsCalculatorService,
-            ExecuteSessionService executeSessionService,
-            TranslatorService translatorService
-    ) {
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
+    private final StatsCalculatorService statsCalculatorService;
+    @NonNull
+    private final CliEnvironment cliEnvironment;
+    @NonNull
+    private final TranslatorService translatorService;
+    @NonNull
+    private final FeatureService featureService;
+
+    public DataStrategyBase(@NonNull ConversionResultService conversionResultService,
+                            @NonNull ExecutionContextService executionContextService,
+                            @NonNull StatsCalculatorService statsCalculatorService,
+                            @NonNull CliEnvironment cliEnvironment,
+                            @NonNull TranslatorService translatorService,
+                            @NonNull FeatureService featureService) {
+        this.conversionResultService = conversionResultService;
+        this.executionContextService = executionContextService;
         this.statsCalculatorService = statsCalculatorService;
-        this.executeSessionService = executeSessionService;
+        this.cliEnvironment = cliEnvironment;
         this.translatorService = translatorService;
+        this.featureService = featureService;
     }
 
-    protected Boolean AVROCheck(TableMirror tableMirror) {
-        Boolean rtn = Boolean.TRUE;
-        Boolean relative = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-
-        // Check for AVRO
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-        if (TableUtils.isAVROSchemaBased(let)) {
-            log.info("{}: is an AVRO table.", let.getName());
-            String leftPath = TableUtils.getAVROSchemaPath(let);
-            String rightPath = null;
-            log.debug("{}: Original AVRO Schema path: {}", let.getName(), leftPath);
-                /* Checks:
-                - Is Path prefixed with a protocol?
-                    - (Y) Does it match the LEFT's hcfsNamespace.
-                        - (Y) Replace prefix with RIGHT 'hcfsNamespace' prefix.
-                        - (N) Throw WARNING and set return to FALSE.  We don't recognize the prefix and
-                                 can't guarantee that we can retrieve the file.
-                    - (N) Leave it and copy the file to the same relative path on the RIGHT
-                 */
-            String leftNamespace = NamespaceUtils.getNamespace(leftPath);
-            try {
-                if (nonNull(leftNamespace)) {
-                    log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
-                    rightPath = NamespaceUtils.replaceNamespace(leftPath, hmsMirrorConfig.getTargetNamespace());
-                } else {
-                    // No Protocol defined.  So we're assuming that its a relative path to the
-                    // defaultFS
-                    String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
-                    log.info("{}: {}", let.getName(), rpath);
-                    ret.addIssue(rpath);
-                    rightPath = leftPath;
-                    relative = Boolean.TRUE;
-                }
-
-                if (nonNull(leftPath) && nonNull(rightPath) && hmsMirrorConfig.isCopyAvroSchemaUrls() && hmsMirrorConfig.isExecute()) {
-                    // Copy over.
-                    log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
-                    CliEnvironment cli = executeSessionService.getCliEnvironment();
-                    try {
-                        CommandReturn cr = null;
-                        if (relative) {
-                            // checked..
-                            rightPath = hmsMirrorConfig.getTargetNamespace() + rightPath;
-                        }
-                        log.info("AVRO Schema COPY from: {} to {}", leftPath, rightPath);
-                        // Ensure the path for the right exists.
-                        String parentDirectory = NamespaceUtils.getParentDirectory(rightPath);
-                        if (nonNull(parentDirectory)) {
-                            cr = cli.processInput("mkdir -p " + parentDirectory);
-                            if (cr.isError()) {
-                                ret.addError("Problem creating directory " + parentDirectory + ". " + cr.getError());
-                                rtn = Boolean.FALSE;
-                            } else {
-                                cr = cli.processInput("cp -f " + leftPath + " " + rightPath);
-                                if (cr.isError()) {
-                                    ret.addError("Problem copying AVRO schema file from " + leftPath + " to " + parentDirectory + ".\n```" + cr.getError() + "```");
-                                    rtn = Boolean.FALSE;
-                                }
-                            }
-                        }
-                    } catch (Throwable t) {
-                        log.error("{}: AVRO file copy issue", ret.getName(), t);
-                        ret.addError(t.getMessage());
-                        rtn = Boolean.FALSE;
-                    }
-                } else {
-                    log.info("{}: did NOT attempt to copy AVRO schema file to target cluster.", let.getName());
-                }
-                tableMirror.addStep("AVRO", "Checked");
-            } catch (RequiredConfigurationException e) {
-                log.error("Required Configuration Exception", e);
-                ret.addError(e.getMessage());
-                rtn = Boolean.FALSE;
-            }
-        } else {
-            // Not AVRO, so no action (passthrough)
-            rtn = Boolean.TRUE;
-        }
-        return rtn;
-    }
+    //    protected Boolean AVROCheck(ConversionResult conversionResult, TableMirror tableMirror) {
+//        Boolean rtn = Boolean.TRUE;
+//        Boolean relative = Boolean.FALSE;
+//
+//        ConfigLiteDto config = conversionResult.getConfigLite();
+//        JobDto job = conversionResult.getJob();
+//
+//        // Check for AVRO
+//        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+//        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+//        if (TableUtils.isAVROSchemaBased(let)) {
+//            log.info("{}: is an AVRO table.", let.getName());
+//            String leftPath = TableUtils.getAVROSchemaPath(let);
+//            String rightPath = null;
+//            log.debug("{}: Original AVRO Schema path: {}", let.getName(), leftPath);
+//                /* Checks:
+//                - Is Path prefixed with a protocol?
+//                    - (Y) Does it match the LEFT's hcfsNamespace.
+//                        - (Y) Replace prefix with RIGHT 'hcfsNamespace' prefix.
+//                        - (N) Throw WARNING and set return to FALSE.  We don't recognize the prefix and
+//                                 can't guarantee that we can retrieve the file.
+//                    - (N) Leave it and copy the file to the same relative path on the RIGHT
+//                 */
+//            String leftNamespace = NamespaceUtils.getNamespace(leftPath);
+//            try {
+//                if (nonNull(leftNamespace)) {
+//                    log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
+//                    rightPath = NamespaceUtils.replaceNamespace(leftPath, conversionResult.getTargetNamespace());
+//                } else {
+//                    // No Protocol defined.  So we're assuming that its a relative path to the
+//                    // defaultFS
+//                    String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
+//                    log.info("{}: {}", let.getName(), rpath);
+//                    ret.addIssue(rpath);
+//                    rightPath = leftPath;
+//                    relative = Boolean.TRUE;
+//                }
+//
+//                // TODO: Fix
+//                /*
+//                if (nonNull(leftPath) && nonNull(rightPath) && config.isCopyAvroSchemaUrls() && job.isExecute()) {
+//                    // Copy over.
+//                    log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
+//                    try {
+//                        CommandReturn cr = null;
+//                        if (relative) {
+//                            // checked..
+//                            rightPath = conversionResult.getTargetNamespace() + rightPath;
+//                        }
+//                        log.info("AVRO Schema COPY from: {} to {}", leftPath, rightPath);
+//                        // Ensure the path for the right exists.
+//                        String parentDirectory = NamespaceUtils.getParentDirectory(rightPath);
+//                        if (nonNull(parentDirectory)) {
+//                            cr = cliEnvironment.processInput("mkdir -p " + parentDirectory);
+//                            if (cr.isError()) {
+//                                ret.addError("Problem creating directory " + parentDirectory + ". " + cr.getError());
+//                                rtn = Boolean.FALSE;
+//                            } else {
+//                                cr = cliEnvironment.processInput("cp -f " + leftPath + " " + rightPath);
+//                                if (cr.isError()) {
+//                                    ret.addError("Problem copying AVRO schema file from " + leftPath + " to " + parentDirectory + ".\n```" + cr.getError() + "```");
+//                                    rtn = Boolean.FALSE;
+//                                }
+//                            }
+//                        }
+//                    } catch (Throwable t) {
+//                        log.error("{}: AVRO file copy issue", ret.getName(), t);
+//                        ret.addError(t.getMessage());
+//                        rtn = Boolean.FALSE;
+//                    }
+//                } else {
+//                    log.info("{}: did NOT attempt to copy AVRO schema file to target cluster.", let.getName());
+//                }
+//                tableMirror.addStep("AVRO", "Checked");
+//
+//                 */
+//            } catch (RequiredConfigurationException e) {
+//                log.error("Required Configuration Exception", e);
+//                ret.addError(e.getMessage());
+//                rtn = Boolean.FALSE;
+//            }
+//        } else {
+//            // Not AVRO, so no action (passthrough)
+//            rtn = Boolean.TRUE;
+//        }
+//        return rtn;
+//    }
 
     @Override
-    public BuildWhat whatToBuild(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public BuildWhat whatToBuild(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
-    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
-        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
-        if (isNull(et)) {
-            et = new EnvironmentTable(tableMirror);
-            tableMirror.getEnvironments().put(environment, et);
-        }
-        return et;
-    }
-
+//    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
+//        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
+//        if (isNull(et)) {
+//            et = new EnvironmentTable(tableMirror);
+//            tableMirror.getEnvironments().put(environment, et);
+//        }
+//        return et;
+//    }
+//
     public Boolean buildTableSchema(CopySpec copySpec, DBMirror dbMirror) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
+
         TableMirror tableMirror = copySpec.getTableMirror();
         Boolean rtn = Boolean.TRUE;
 
@@ -186,20 +207,20 @@ public abstract class DataStrategyBase implements DataStrategy {
         EnvironmentTable target = tableMirror.getEnvironmentTable(copySpec.getTarget());
 
         // Since we are building the cluster on request, we need to build the transfer cluster if they don't exist.
-        if (isNull(config.getCluster(copySpec.getTarget()))) {
-            Cluster intermediateCluster = null;
+        if (isNull(conversionResult.getConnection(copySpec.getTarget()))) {
+            ConnectionDto intermediateConnection = null;
             if (copySpec.getTarget() == Environment.SHADOW) {
-                intermediateCluster = config.getCluster(Environment.LEFT).clone();
+                intermediateConnection = conversionResult.getConnection(Environment.LEFT).clone();
             } else if (copySpec.getTarget() == Environment.TRANSFER) {
-                intermediateCluster = config.getCluster(Environment.RIGHT).clone();
+                intermediateConnection = conversionResult.getConnection(Environment.RIGHT).clone();
             } else if (copySpec.getTarget() == Environment.RIGHT) {
                 // This can happen when the strategy is a single cluster effort BUT we're using the RIGHT
                 // Cluster as an intermediate holder.
-                intermediateCluster = config.getCluster(Environment.LEFT).clone();
+                intermediateConnection = conversionResult.getConnection(Environment.LEFT).clone();
             }
-            if (nonNull(intermediateCluster) && nonNull(intermediateCluster.getHiveServer2())) {
-                intermediateCluster.getHiveServer2().setDisconnected(Boolean.TRUE);
-                config.getClusters().put(copySpec.getTarget(), intermediateCluster);
+            if (nonNull(intermediateConnection) && nonNull(intermediateConnection.getHs2Uri())) {
+                intermediateConnection.setHs2Connected(Boolean.FALSE);
+                conversionResult.getConnections().put(copySpec.getTarget(), intermediateConnection);
             }
         }
 
@@ -261,7 +282,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                                 target.addProperty(HMS_MIRROR_LEGACY_MANAGED_FLAG, converted.toString());
                                 target.addProperty(HMS_MIRROR_CONVERTED_FLAG, converted.toString());
                                 if (copySpec.isTakeOwnership()) {
-                                    if (!config.isNoPurge()) {
+                                    if (!job.isNoPurge()) {
                                         target.addProperty(EXTERNAL_TABLE_PURGE, "true");
                                     }
                                 } else {
@@ -274,7 +295,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                             }
                             if (copySpec.isTakeOwnership()) {
                                 if (TableUtils.isACID(source)) {
-                                    if (config.getMigrateACID().isDowngrade() && !config.isNoPurge()) {
+                                    if (config.getMigrateACID().isDowngrade() && !job.isNoPurge()) {
                                         target.addProperty(EXTERNAL_TABLE_PURGE, "true");
                                     }
                                 } else {
@@ -299,7 +320,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                             if (TableUtils.isACID(source)) {
                                 if (copySpec.getTarget() == Environment.TRANSFER) {
                                     target.addProperty(EXTERNAL_TABLE_PURGE, "true");
-                                } else if (config.getMigrateACID().isDowngrade() && !config.isNoPurge()) {
+                                } else if (config.getMigrateACID().isDowngrade() && !job.isNoPurge()) {
                                     target.addProperty(EXTERNAL_TABLE_PURGE, "true");
                                 }
                             } else {
@@ -320,7 +341,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
                         if (config.getMigrateACID().isDowngrade() && copySpec.isMakeExternal()) {
                             converted = TableUtils.makeExternal(target);
-                            if (!config.isNoPurge()) {
+                            if (!job.isNoPurge()) {
                                 target.addProperty(EXTERNAL_TABLE_PURGE, Boolean.TRUE.toString());
                             }
                             target.addProperty(DOWNGRADED_FROM_ACID, Boolean.TRUE.toString());
@@ -365,8 +386,8 @@ public abstract class DataStrategyBase implements DataStrategy {
                     TableUtils.removeTblProperty("last_modified_time", target);
 
                     // 6. Set 'discover.partitions' if config and non-acid
-                    if (nonNull(config.getCluster(copySpec.getTarget())) &&
-                            config.getCluster(copySpec.getTarget()).getPartitionDiscovery().isAuto() && TableUtils.isPartitioned(target)) {
+                    if (nonNull(conversionResult.getConnection(copySpec.getTarget())) &&
+                            conversionResult.getConnection(copySpec.getTarget()).isPartitionDiscoveryAuto() && TableUtils.isPartitioned(target)) {
 
                         if (converted) {
                             target.addProperty(DISCOVER_PARTITIONS, Boolean.TRUE.toString());
@@ -404,7 +425,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
                             if (tableMirror.isReMapped()) {
                                 target.addIssue(MessageCode.TABLE_LOCATION_REMAPPED.getDesc());
-                            } else if (config.getTranslator().isForceExternalLocation()) {
+                            } else if (config.isForceExternalLocation()) {
                                 target.addIssue(MessageCode.TABLE_LOCATION_FORCED.getDesc());
                             } else if (config.loadMetadataDetails() && config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.ALIGNED) {
                                 TableUtils.stripLocation(target);
@@ -423,7 +444,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                                     // Deal with extra '/'
                                     isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                                     isLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                                            config.getRunMarker() + "/" +
+                                            conversionResult.getKey() + "/" +
                                             dbMirror.getName() + "/" +
                                             tableMirror.getName();
                                     if (!TableUtils.updateTableLocation(target, isLoc)) {
@@ -470,34 +491,37 @@ public abstract class DataStrategyBase implements DataStrategy {
                             break;
                     }
                     // 6. Go through the features, if any.
-                    if (!config.isSkipFeatures()) {
-                        for (FeaturesEnum features : FeaturesEnum.values()) {
-                            Feature feature = features.getFeature();
-                            log.debug("Table: {} - Checking Feature: {}", tableMirror.getName(), features);
-                            if (feature.fixSchema(target)) {
-                                log.debug("Table: {} - Feature Applicable: {}", tableMirror.getName(), features);
-                                target.addIssue("Feature (" + features + ") was found applicable and adjustments applied. " +
-                                        feature.getDescription());
-                            } else {
-                                log.debug("Table: {} - Feature NOT Applicable: {}", tableMirror.getName(), features);
-                            }
-                        }
-                    } else {
-                        log.debug("Table: {} - Skipping Features Check...", tableMirror.getName());
-                    }
+                    getFeatureService().fixSchema(target);
 
-                    if (config.isTranslateLegacy()) {
-                        if (config.getLegacyTranslations().fixSchema(target)) {
-                            log.info("Legacy Translation applied to: {}:{}", dbMirror.getName(), target.getName());
-                        }
-                    }
+//                    if (!config.isSkipFeatures()) {
+//                        for (FeaturesEnum features : FeaturesEnum.values()) {
+//                            Feature feature = features.getFeature();
+//                            log.debug("Table: {} - Checking Feature: {}", tableMirror.getName(), features);
+//                            if (feature.fixSchema(target)) {
+//                                log.debug("Table: {} - Feature Applicable: {}", tableMirror.getName(), features);
+//                                target.addIssue("Feature (" + features + ") was found applicable and adjustments applied. " +
+//                                        feature.getDescription());
+//                            } else {
+//                                log.debug("Table: {} - Feature NOT Applicable: {}", tableMirror.getName(), features);
+//                            }
+//                        }
+//                    } else {
+//                        log.debug("Table: {} - Skipping Features Check...", tableMirror.getName());
+//                    }
 
-                    if (!copySpec.isTakeOwnership() && config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
+//                    if (config.isTranslateLegacy()) {
+//                        if (config.getLegacyTranslations().fixSchema(target)) {
+//                            log.info("Legacy Translation applied to: {}:{}", dbMirror.getName(), target.getName());
+//                        }
+//                    }
+
+                    if (!copySpec.isTakeOwnership() && job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         TableUtils.removeTblProperty(EXTERNAL_TABLE_PURGE, target);
                     }
 
-                    if (nonNull(config.getCluster(copySpec.getTarget())) &&
-                            config.getCluster(copySpec.getTarget()).isLegacyHive() && config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
+                    if (nonNull(conversionResult.getConnection(copySpec.getTarget())) &&
+                            conversionResult.getConnection(copySpec.getTarget()).getPlatformType().isLegacyHive() &&
+                            job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         // remove newer flags;
                         TableUtils.removeTblProperty(EXTERNAL_TABLE_PURGE, target);
                         TableUtils.removeTblProperty(DISCOVER_PARTITIONS, target);
@@ -539,7 +563,9 @@ public abstract class DataStrategyBase implements DataStrategy {
 
     protected Boolean buildMigrationSql(DBMirror dbMirror, TableMirror tableMirror, Environment originalEnv, Environment sourceEnv, Environment targetEnv) {
         Boolean rtn = Boolean.TRUE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
 
         EnvironmentTable original, source, target;
         original = tableMirror.getEnvironmentTable(originalEnv);
@@ -576,11 +602,11 @@ public abstract class DataStrategyBase implements DataStrategy {
                 rtn = Boolean.FALSE;
             }
         } else {
-            if (original.getPartitions().size() > config.getHybrid().getSqlPartitionLimit() &&
-                    config.getHybrid().getSqlPartitionLimit() > 0) {
+            if (original.getPartitions().size() > job.getHybrid().getSqlPartitionLimit() &&
+                    job.getHybrid().getSqlPartitionLimit() > 0) {
                 // The partition limit has been exceeded.  The process will need to be done manually.
                 original.addError("The number of partitions: " + original.getPartitions().size() + " exceeds the configuration " +
-                        "limit (hybrid->sqlPartitionLimit) of " + config.getHybrid().getSqlPartitionLimit() +
+                        "limit (hybrid->sqlPartitionLimit) of " + job.getHybrid().getSqlPartitionLimit() +
                         ".  This value is used to abort migrations that have a high potential for failure.  " +
                         "The migration will need to be done manually OR try increasing the limit. Review commandline option '-sp'.");
                 rtn = Boolean.FALSE;
@@ -595,17 +621,17 @@ public abstract class DataStrategyBase implements DataStrategy {
         }
 
         // Set Override Properties.
-        List<String> overrides = ConfigUtils.getPropertyOverridesFor(targetEnv2, config);
+        List<String> overrides = ConfigUtils.getPropertyOverridesFor(targetEnv2, config.getOptimization().getOverrides());
         for (String setCmd : overrides) {
             assert targetEnvTable != null;
             targetEnvTable.addSql(setCmd, setCmd);
         }
 
         if (source.isDefined()) {
-            statsCalculatorService.setSessionOptions(config.getCluster(targetEnv2), original, targetEnvTable);
+            getStatsCalculatorService().setSessionOptions(conversionResult.getConnection(targetEnv2), original, targetEnvTable);
             if (original.getPartitioned()) {
                 if (config.getOptimization().isSkip()) {
-                    if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                    if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                         assert targetEnvTable != null;
                         targetEnvTable.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
                     }
@@ -616,9 +642,9 @@ public abstract class DataStrategyBase implements DataStrategy {
                     assert targetEnvTable != null;
                     targetEnvTable.addSql(new Pair(transferDesc, transferSql));
                 } else if (config.getOptimization().isSortDynamicPartitionInserts()) {
-                    if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                    if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                         targetEnvTable.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "true"));
-                        if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                        if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                             targetEnvTable.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, 0));
                         }
                     }
@@ -628,9 +654,9 @@ public abstract class DataStrategyBase implements DataStrategy {
                     String transferDesc = MessageFormat.format(TableUtils.STAGE_TRANSFER_PARTITION_DESC, original.getPartitions().size());
                     targetEnvTable.addSql(new Pair(transferDesc, transferSql));
                 } else {
-                    if (!config.getCluster(Environment.LEFT).isLegacyHive()) {
+                    if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                         targetEnvTable.addSql("Setting " + SORT_DYNAMIC_PARTITION, MessageFormat.format(SET_SESSION_VALUE_STRING, SORT_DYNAMIC_PARTITION, "false"));
-                        if (!config.getCluster(Environment.LEFT).isHdpHive3()) {
+                        if (!conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                             targetEnvTable.addSql("Setting " + SORT_DYNAMIC_PARTITION_THRESHOLD, MessageFormat.format(SET_SESSION_VALUE_INT, SORT_DYNAMIC_PARTITION_THRESHOLD, -1));
                         }
                     }
@@ -656,9 +682,8 @@ public abstract class DataStrategyBase implements DataStrategy {
                 } else {
                     // Otherwise, we're on the RIGHT cluster and need to cleanup the 'shadow' table.
                     // Add USE clause to the SQL
-                    String rightDatabase = HmsMirrorConfigUtil.getResolvedDB(
-                            dbMirror.getName()
-                            , config);
+                    String rightDatabase = getConversionResultService().getResolvedDB(
+                            dbMirror.getName());
                     if (config.isSaveWorkingTables()) {
                         Pair cleanUp = new Pair("Post Migration Cleanup", "-- To be run AFTER final RIGHT SQL statements.");
                         targetEnvTable.addCleanUpSql(cleanUp);
@@ -681,10 +706,12 @@ public abstract class DataStrategyBase implements DataStrategy {
     }
 
     public Boolean isACIDInPlace(TableMirror tableMirror, Environment environment) {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-        if (TableUtils.isACID(et) && hmsMirrorConfig.getMigrateACID().isInplace()) {
+        if (TableUtils.isACID(et) && config.getMigrateACID().isInplace()) {
             return Boolean.TRUE;
         } else {
             return Boolean.FALSE;

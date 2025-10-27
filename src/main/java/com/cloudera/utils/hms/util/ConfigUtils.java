@@ -18,7 +18,8 @@
 
 package com.cloudera.utils.hms.util;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Overrides;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.SideType;
 
@@ -34,10 +35,10 @@ public class ConfigUtils {
     public final static String TEZ_QUEUE_PROPERTY = "tez.queue.name";
     public final static String MAPRED_QUEUE_PROPERTY = "mapred.job.queue.name";
 
-    public static List<String> getPropertyOverridesFor(Environment target, HmsMirrorConfig config) {
+    public static List<String> getPropertyOverridesFor(Environment target, Overrides optimizationOverrides) {
         final ArrayList<String> overrides = new ArrayList<>();
-        if (!config.getOptimization().getOverrides().getProperties().isEmpty()) {
-            config.getOptimization().getOverrides().getProperties().forEach((k, v) -> {
+        if (!optimizationOverrides.getProperties().isEmpty()) {
+            optimizationOverrides.getProperties().forEach((k, v) -> {
                 // Look at Map 'v' and add each key value pair as a SET statement.
                 v.forEach((k1, v1) -> {
                     switch (k1) {
@@ -75,16 +76,16 @@ public class ConfigUtils {
         return overrides;
     }
 
-    public static String getQueuePropertyOverride(Environment environment, HmsMirrorConfig config) {
+    public static String getQueuePropertyOverride(Environment environment, Overrides optimizationOverrides) {
         final StringBuilder sb = new StringBuilder();
-        if (!config.getOptimization().getOverrides().getProperties().isEmpty()) {
+        if (!optimizationOverrides.getProperties().isEmpty()) {
             // Create a for loop to iterate over the config.getOptimization().getOverrides().getProperties()
             // and check if the key is equal to the TEZ_QUEUE_PROPERTY or MAPRED_QUEUE_PROPERTY.
             // If it is, then check if the environment is equal to the key of the Map.
             // If it is, then append the key and value to the StringBuilder.
             // Return the StringBuilder as a String.
             for (Map.Entry<String, Map<SideType, String>> entry :
-                    config.getOptimization().getOverrides().getProperties().entrySet()) {
+                    optimizationOverrides.getProperties().entrySet()) {
                 if (entry.getKey().toLowerCase().equals(TEZ_QUEUE_PROPERTY) ||
                         entry.getKey().toLowerCase().equals(MAPRED_QUEUE_PROPERTY)) {
                     // Look through v and see if we have a match for the environment.
@@ -112,7 +113,7 @@ public class ConfigUtils {
         }
     }
 
-    public Map<String, String> getOverrideMapFor(Environment environment, HmsMirrorConfig config) {
+    public Map<String, String> getOverrideMapFor(Environment environment, ConfigLiteDto config) {
 
         Map<String, String> rtn = new TreeMap<String, String>();
         for (Map.Entry<String, Map<SideType, String>> entry : config.getOptimization().getOverrides().getProperties().entrySet()) {

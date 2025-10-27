@@ -26,10 +26,13 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionPoolType;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -313,7 +316,7 @@ public class JobManagementService {
         ConversionRequest conversionRequest = new ConversionRequest();
 
         // Iterate through each database specification in the dataset
-        for (DatasetDto.DatabaseSpec dbSpec : datasetDto.getDatabaseSpecs()) {
+        for (DatasetDto.DatabaseSpec dbSpec : datasetDto.getDatabases()) {
             String databaseName = dbSpec.getDatabaseName();
             List<String> tables = new ArrayList<>();
 
@@ -419,108 +422,85 @@ public class JobManagementService {
     }
 
     /**
-     * Builds an HmsMirrorConfig from a JobDto and its referenced DTOs.
-     * This method fetches the referenced connections, dataset, and configuration,
-     * then assembles them into a complete HmsMirrorConfig object.
+     * Builds a ConversionResult from a JobDto by looking up the job by ID
+     * and assembling all referenced DTOs (connections, dataset, configuration).
      *
-     * @param jobDto The job DTO containing references to connections, dataset, and configuration
-     * @return Map containing the build results with HmsMirrorConfig and ConversionRequest
+     * @param jobId The job ID to look up
+     * @return ConversionResult instance constructed from the JobDto's references, or null if not found
      */
-    public Map<String, Object> buildHmsMirrorConfigFromJob(JobDto jobDto) {
-        log.debug("Building HmsMirrorConfig from job: {}", jobDto.getName());
-        Map<String, Object> result = new HashMap<>();
+    public ConversionResult buildConversionResultFromJobId(String jobId) {
+        log.debug("Building ConversionResult from jobId: {}", jobId);
 
         try {
+            // First, look up the JobDto by ID
+            Optional<JobDto> jobOpt = jobRepository.findById(jobId);
+            if (!jobOpt.isPresent()) {
+                log.error("Job not found: {}", jobId);
+                return null;
+            }
+
+            JobDto jobDto = jobOpt.get();
+            log.debug("Found job: {}", jobDto.getName());
+
             // Fetch referenced DTOs
             ConnectionDto leftConnection = connectionService.getConnectionById(jobDto.getLeftConnectionReference()).orElse(null);
             if (leftConnection == null) {
-                result.put("status", "ERROR");
-                result.put("message", "Left connection not found: " + jobDto.getLeftConnectionReference());
-                return result;
+                log.error("Left connection not found: {}", jobDto.getLeftConnectionReference());
+                return null;
             }
 
             ConnectionDto rightConnection = connectionService.getConnectionById(jobDto.getRightConnectionReference()).orElse(null);
             if (rightConnection == null) {
-                result.put("status", "ERROR");
-                result.put("message", "Right connection not found: " + jobDto.getRightConnectionReference());
-                return result;
+                log.error("Right connection not found: {}", jobDto.getRightConnectionReference());
+                return null;
             }
 
             Map<String, Object> datasetResult = datasetManagementService.loadDataset(jobDto.getDatasetReference());
             if (!"SUCCESS".equals(datasetResult.get("status"))) {
-                result.put("status", "ERROR");
-                result.put("message", "Dataset not found: " + jobDto.getDatasetReference());
-                return result;
+                log.error("Dataset not found: {}", jobDto.getDatasetReference());
+                return null;
             }
             DatasetDto datasetDto = (DatasetDto) datasetResult.get("dataset");
 
             Map<String, Object> configResult = configurationManagementService.loadConfiguration(jobDto.getConfigReference());
             if (!"SUCCESS".equals(configResult.get("status"))) {
-                result.put("status", "ERROR");
-                result.put("message", "Configuration not found: " + jobDto.getConfigReference());
-                return result;
+                log.error("Configuration not found: {}", jobDto.getConfigReference());
+                return null;
             }
             ConfigLiteDto configLiteDto = (ConfigLiteDto) configResult.get("configuration");
 
-            // Create ConversionRequest from dataset
-            ConversionRequest conversionRequest = createConversionRequestFromDataset(datasetDto);
+            // Construct ConversionResult
+            ConversionResult conversionResult = new ConversionResult();
 
-            // Build HmsMirrorConfig
-            HmsMirrorConfig config = new HmsMirrorConfig();
+            // Set the ConfigLiteDto
+            conversionResult.setConfigLite(configLiteDto);
 
-            // Set clusters (LEFT and RIGHT)
-            Map<Environment, Cluster> clusters = new TreeMap<>();
-            clusters.put(Environment.LEFT, convertConnectionDtoToCluster(leftConnection, Environment.LEFT));
-            clusters.put(Environment.RIGHT, convertConnectionDtoToCluster(rightConnection, Environment.RIGHT));
-            config.setClusters(clusters);
+            // Set the DatasetDto
+            conversionResult.setDataset(datasetDto);
 
-            // Set data strategy from job
-            if (jobDto.getStrategy() != null) {
-                config.setDataStrategy(jobDto.getStrategy());
-            }
+            // Set the connections
+            Map<Environment, ConnectionDto> connections = new HashMap<>();
+            connections.put(Environment.LEFT, leftConnection);
+            connections.put(Environment.RIGHT, rightConnection);
+            conversionResult.setConnections(connections);
 
-            // Set hybrid configuration from job
-            if (jobDto.getHybrid() != null) {
-                config.setHybrid(jobDto.getHybrid());
-            }
+            // Set the JobDto
+            conversionResult.setJob(jobDto);
 
-            // Set job-level flags
-            config.setDatabaseOnly(jobDto.isDatabaseOnly());
-            config.setSync(jobDto.isSync());
+            // Initialize RunStatus
+//            RunStatus runStatus = new RunStatus();
+//            conversionResult.setRunStatus(runStatus);
 
-            // Apply ConfigLiteDto settings
-            config.setMigrateNonNative(configLiteDto.isMigrateNonNative());
-            config.setIcebergConversion(configLiteDto.getIcebergConversion());
-            config.setMigrateACID(configLiteDto.getMigrateACID());
-            config.setMigrateVIEW(configLiteDto.getMigrateVIEW());
-            config.setOptimization(configLiteDto.getOptimization());
-            config.setTransfer(configLiteDto.getTransfer());
-            config.setOwnershipTransfer(configLiteDto.getOwnershipTransfer());
-            config.setCopyAvroSchemaUrls(configLiteDto.isCopyAvroSchemaUrls());
-            config.setSaveWorkingTables(configLiteDto.isSaveWorkingTables());
+            log.debug("ConversionResult built successfully from job: {}", jobDto.getName());
+            return conversionResult;
 
-            // Populate databases set from ConversionRequest
-            config.setDatabases(new TreeSet<>(conversionRequest.getDatabases().keySet()));
-
-            // Determine connection pool type based on platform type
-            PlatformType platformType = clusters.get(Environment.RIGHT).getPlatformType();
-            if (platformType != null) {
-                ConnectionPoolType poolType = determineConnectionPoolType(platformType);
-                config.setConnectionPoolLib(poolType);
-            }
-
-            result.put("status", "SUCCESS");
-            result.put("hmsMirrorConfig", config);
-            result.put("conversionRequest", conversionRequest);
-            result.put("message", "HmsMirrorConfig built successfully");
-
+        } catch (RocksDBException e) {
+            log.error("RocksDB error building ConversionResult from jobId {}", jobId, e);
+            return null;
         } catch (Exception e) {
-            log.error("Error building HmsMirrorConfig from job {}", jobDto.getName(), e);
-            result.put("status", "ERROR");
-            result.put("message", "Failed to build HmsMirrorConfig: " + e.getMessage());
+            log.error("Error building ConversionResult from jobId {}", jobId, e);
+            return null;
         }
-
-        return result;
     }
 
     /**
@@ -537,17 +517,20 @@ public class JobManagementService {
             case CDP7_2:
             case CDP7_3:
                 return ConnectionPoolType.HIKARICP;
+//            case EMR4:
             case HDP2:
             case HDP3:
             case CDH5:
             case CDH6:
                 return ConnectionPoolType.DBCP2;
-            case APACHE_HIVE1:
+//            case APACHE_HIVE1:
             case APACHE_HIVE2:
             case APACHE_HIVE3:
             case APACHE_HIVE4:
-            case EMR:
-            case MAPR:
+//            case EMR5:
+            case EMR6:
+            case EMR7:
+//            case MAPR:
             default:
                 return ConnectionPoolType.HYBRID;
         }

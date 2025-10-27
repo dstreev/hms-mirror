@@ -17,9 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.config;
 
-import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
 import com.cloudera.utils.hms.mirror.core.api.TableOperations;
-import com.cloudera.utils.hms.mirror.core.impl.LocationTranslatorImpl;
 import com.cloudera.utils.hms.mirror.core.impl.TableOperationsImpl;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.SpringConfigurationProviderAdapter;
@@ -65,13 +63,5 @@ public class CoreBusinessConfig {
         return new TableOperationsImpl(connectionProvider, configurationProvider);
     }
 
-    /**
-     * Creates the core location translator implementation with pure business logic.
-     * This handles all location translation and mapping operations.
-     */
-    @Bean
-    public LocationTranslator locationTranslator(ConfigurationProvider configurationProvider) {
-        return new LocationTranslatorImpl(configurationProvider);
-    }
 
 }

@@ -33,6 +33,8 @@ import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -51,40 +53,33 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Slf4j
 @Getter
 @Setter
+@RequiredArgsConstructor
 public class TransferService {
     public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
     private final DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
     private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
+    @NonNull
     private final ConfigService configService;
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
     private final ExecuteSessionService executeSessionService;
+    @NonNull
     private final TableService tableService;
+    @NonNull
     private final DatabaseService databaseService;
+    @NonNull
     private final WarehouseService warehouseService;
+    @NonNull
     private final DataStrategyService dataStrategyService;
+    @NonNull
     private final HybridDataStrategy hybridDataStrategy;
+    @NonNull
     private final HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy;
-
-    public TransferService(
-            ConfigService configService,
-            ExecuteSessionService executeSessionService,
-            TableService tableService,
-            DatabaseService databaseService,
-            WarehouseService warehouseService,
-            DataStrategyService dataStrategyService,
-            HybridDataStrategy hybridDataStrategy,
-            HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy
-    ) {
-        this.configService = configService;
-        this.executeSessionService = executeSessionService;
-        this.tableService = tableService;
-        this.databaseService = databaseService;
-        this.warehouseService = warehouseService;
-        this.dataStrategyService = dataStrategyService;
-        this.hybridDataStrategy = hybridDataStrategy;
-        this.hybridAcidDowngradeInPlaceDataStrategy = hybridAcidDowngradeInPlaceDataStrategy;
-    }
 
     @Async("jobThreadPool")
     public CompletableFuture<ReturnStatus> build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
@@ -111,14 +106,14 @@ public class TransferService {
                 switch (config.getDataStrategy()) {
                     case HYBRID:
                         if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
-                            if (hybridAcidDowngradeInPlaceDataStrategy.build(conversionResult, dbMirror, tableMirror)) {
+                            if (hybridAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
                                 runStatus.getOperationStatistics().getIssues().incrementTables();
                             }
                         } else {
-                            if (hybridDataStrategy.build(conversionResult, dbMirror, tableMirror)) {
+                            if (hybridDataStrategy.build(dbMirror, tableMirror)) {
                                 rtn.setStatus(ReturnStatus.Status.SUCCESS);
                             } else {
                                 rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -127,7 +122,7 @@ public class TransferService {
                         break;
                     default:
                         dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
-                        if (dataStrategy.build(conversionResult, dbMirror, tableMirror)) {
+                        if (dataStrategy.build(dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -169,7 +164,7 @@ public class TransferService {
                             if (isBlank(fnlLoc) && config.loadMetadataDetails()) {
                                 String sbDir = config.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
-                                        HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db" + "/" + tableMirror.getName();
+                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 fnlLoc = sbDir;
                             }
                         }
@@ -195,7 +190,7 @@ public class TransferService {
                         if (isBlank(newLoc) && config.loadMetadataDetails()) {
                             String sbDir = config.getTransfer().getTargetNamespace() +
                                     warehouse.getExternalDirectory() + "/" +
-                                    HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db" + "/" + tableMirror.getName();
+                                    getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;
                         }
                         config.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
@@ -213,7 +208,7 @@ public class TransferService {
                             if (isBlank(rLoc) && config.loadMetadataDetails()) {
                                 String sbDir = config.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
-                                        HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db" + "/" + tableMirror.getName();
+                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 rLoc = sbDir;
                             }
                             config.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
@@ -224,7 +219,7 @@ public class TransferService {
                             if (isBlank(rLoc) && config.loadMetadataDetails()) {
                                 String sbDir = config.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
-                                        HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db" + "/" + tableMirror.getName();
+                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 rLoc = sbDir;
                             }
                             config.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
@@ -289,14 +284,14 @@ public class TransferService {
             switch (config.getDataStrategy()) {
                 case HYBRID:
                     if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
-                        if (hybridAcidDowngradeInPlaceDataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
+                        if (hybridAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
                             runStatus.getOperationStatistics().getIssues().incrementTables();
                         }
                     } else {
-                        if (hybridDataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
+                        if (hybridDataStrategy.execute(dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
                             rtn.setStatus(ReturnStatus.Status.ERROR);
@@ -305,7 +300,7 @@ public class TransferService {
                     break;
                 default:
                     dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
-                    if (dataStrategy.execute(conversionResult, dbMirror, tableMirror)) {
+                    if (dataStrategy.execute(dbMirror, tableMirror)) {
                         rtn.setStatus(ReturnStatus.Status.SUCCESS);
                     } else {
                         rtn.setStatus(ReturnStatus.Status.ERROR);

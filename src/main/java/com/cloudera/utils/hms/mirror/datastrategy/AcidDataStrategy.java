@@ -16,13 +16,12 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
-import com.cloudera.utils.hms.mirror.service.StatsCalculatorService;
-import com.cloudera.utils.hms.mirror.service.TranslatorService;
+import com.cloudera.utils.hms.mirror.service.*;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -38,65 +37,55 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AcidDataStrategy extends DataStrategyBase {
 
-    /**
-     * Constructs a new instance of {@code AcidDataStrategy}.
-     *
-     * @param statsCalculatorService the service responsible for statistics calculation
-     * @param executeSessionService the service for executing sessions/queries
-     * @param translatorService the service handling translation/mapping logic
-     */
-    public AcidDataStrategy(StatsCalculatorService statsCalculatorService,
-                            ExecuteSessionService executeSessionService,
-                            TranslatorService translatorService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+    public AcidDataStrategy(@NonNull ConversionResultService conversionResultService,
+                            @NonNull ExecutionContextService executionContextService,
+                            @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                            @NonNull TranslatorService translatorService, @NonNull FeatureService featureService) {
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
     }
 
     /**
      * Builds the target (destination) table or schema definition for an ACID table.
      *
-     * @param conversionResult
-     * @param tableMirror      the table to build the definition for
+     * @param tableMirror the table to build the definition for
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     /**
      * Generates the SQL statements required to create or migrate an ACID table.
      *
-     * @param conversionResult
-     * @param tableMirror      the table to build SQL for
+     * @param tableMirror the table to build SQL for
      * @return {@code null} (method not implemented)
      * @throws MissingDataPointException if required data points are missing
      */
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         return null;
     }
 
     /**
      * Executes the build process for an ACID table. This can include copying or transforming data structures.
      *
-     * @param conversionResult
-     * @param tableMirror      the table to build
+     * @param tableMirror the table to build
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
     /**
      * Executes the migration or transformation for an ACID table. This can include data transfer or applying changes.
      *
-     * @param conversionResult
-     * @param tableMirror      the table to execute migration for
+     * @param tableMirror the table to execute migration for
      * @return {@code null} (method not implemented)
      */
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 }

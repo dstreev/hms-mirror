@@ -17,24 +17,26 @@
 
 package com.cloudera.utils.hms.mirror.datastrategy;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.HmsMirrorConfigUtil;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -50,23 +52,21 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class ExportImportDataStrategy extends DataStrategyBase {
 
     private final ExportCircularResolveService exportCircularResolveService;
-    //    private TranslatorService translatorService;
     private final ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy;
     private final ConfigService configService;
     private final DatabaseService databaseService;
     private final TableService tableService;
     private final WarehouseService warehouseService;
 
-    public ExportImportDataStrategy(StatsCalculatorService statsCalculatorService,
-                                    ExecuteSessionService executeSessionService,
-                                    TranslatorService translatorService,
+    public ExportImportDataStrategy(@NonNull ConversionResultService conversionResultService,
+                                    @NonNull ExecutionContextService executionContextService,
+                                    @NonNull StatsCalculatorService statsCalculatorService, @NonNull CliEnvironment cliEnvironment,
+                                    @NonNull TranslatorService translatorService, @NonNull FeatureService featureService,
                                     ExportCircularResolveService exportCircularResolveService,
                                     ExportImportAcidDowngradeInPlaceDataStrategy exportImportAcidDowngradeInPlaceDataStrategy,
-                                    ConfigService configService,
-                                    DatabaseService databaseService,
-                                    TableService tableService,
+                                    ConfigService configService, DatabaseService databaseService, TableService tableService,
                                     WarehouseService warehouseService) {
-        super(statsCalculatorService, executeSessionService, translatorService);
+        super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment, translatorService, featureService);
         this.exportCircularResolveService = exportCircularResolveService;
         this.exportImportAcidDowngradeInPlaceDataStrategy = exportImportAcidDowngradeInPlaceDataStrategy;
         this.configService = configService;
@@ -76,9 +76,11 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutDefinition(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
+    public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
 
         log.debug("Table: {} buildout EXPORT_IMPORT Definition", tableMirror.getName());
         EnvironmentTable let = null;
@@ -89,8 +91,8 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         if (TableUtils.isACID(let) &&
-                !hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive()
-                        == hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                !conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
+                        == conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
             let.addError("Can't process ACID tables with EXPORT_IMPORT between 'legacy' and 'non-legacy' hive environments.  The processes aren't compatible.");
             return Boolean.FALSE;
         }
@@ -103,15 +105,15 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         copySpec = new CopySpec(tableMirror, Environment.LEFT, Environment.RIGHT);
         // Swap out the namespace of the LEFT with the RIGHT.
         copySpec.setReplaceLocation(Boolean.TRUE);
-        if (hmsMirrorConfig.convertManaged())
+        if (getConversionResultService().convertManaged())
             copySpec.setUpgrade(Boolean.TRUE);
-        if (!hmsMirrorConfig.isReadOnly() || !hmsMirrorConfig.isSync()) {
+        if (!job.isReadOnly() || !job.isSync()) {
             copySpec.setTakeOwnership(Boolean.TRUE);
         }
-        if (hmsMirrorConfig.isReadOnly()) {
+        if (job.isReadOnly()) {
             copySpec.setTakeOwnership(Boolean.FALSE);
         }
-        if (hmsMirrorConfig.isNoPurge()) {
+        if (job.isNoPurge()) {
             copySpec.setTakeOwnership(Boolean.FALSE);
         }
 
@@ -132,21 +134,22 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean buildOutSql(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
+    public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfigLite();
+        JobDto job = conversionResult.getJob();
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
 
         Warehouse dbWarehouse = warehouseService.getWarehousePlan(dbMirror.getName());
 
         String database = null;
-        database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
+        database = getConversionResultService().getResolvedDB(dbMirror.getName());
 
-        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
+        EnvironmentTable let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);
         String leftNamespace = NamespaceUtils.getNamespace(TableUtils.getLocation(let.getName(), let.getDefinition()));
 
-        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
+        EnvironmentTable ret = getConversionResultService().getEnvironmentTable(Environment.RIGHT, tableMirror);
         try {
             // LEFT Export to directory
             String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
@@ -159,7 +162,8 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" +
                         config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        config.getRunMarker() + "/" +
+                        // TODO: Fix
+//                        config.getRunMarker() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else if (!isBlank(config.getTransfer().getTargetNamespace())) {
@@ -167,7 +171,8 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        config.getRunMarker() + "/" +
+                        // TODO: Fix
+//                        config.getRunMarker() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else {
@@ -214,9 +219,9 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 }
             } else {
                 if (config.loadMetadataDetails()) {
-                    targetLocation = config.getTargetNamespace()
+                    targetLocation = getConversionResultService().getTargetNamespace()
                             + dbWarehouse.getExternalDirectory() +
-                            "/" + HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config) + ".db/"
+                            "/" + getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db/"
                             + tableMirror.getName();
                     importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 } else {
@@ -225,7 +230,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
             }
 
             if (ret.isExists()) {
-                if (config.isSync()) {
+                if (job.isSync()) {
                     // Need to Drop table first.
                     String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
                     if (isACIDInPlace(tableMirror, Environment.LEFT)) {
@@ -241,19 +246,19 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 let.addSql(TableUtils.IMPORT_TABLE, importSql);
             } else {
                 ret.addSql(TableUtils.IMPORT_TABLE, importSql);
-                if (!config.getCluster(Environment.RIGHT).isLegacyHive()
+                if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()
                         && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {
                     String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, let.getName(), let.getOwner());
                     ret.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
                 }
             }
 
-            if (let.getPartitions().size() > config.getHybrid().getExportImportPartitionLimit() &&
-                    config.getHybrid().getExportImportPartitionLimit() > 0) {
+            if (let.getPartitions().size() > job.getHybrid().getExportImportPartitionLimit() &&
+                    job.getHybrid().getExportImportPartitionLimit() > 0) {
                 // The partition limit has been exceeded.  The process will need to be done manually.
                 let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
                         "limit (hybrid->exportImportPartitionLimit) of "
-                        + config.getHybrid().getExportImportPartitionLimit() +
+                        + job.getHybrid().getExportImportPartitionLimit() +
                         ".  This value is used to abort migrations that have a high potential for failure.  " +
                         "The migration will need to be done manually OR try increasing the limit. Review commandline option '-ep'.");
                 rtn = Boolean.FALSE;
@@ -269,13 +274,16 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        JobDto job = conversionResult.getJob();
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
         if (ret.isExists()) {
-            if (!hmsMirrorConfig.isSync() && let.isExists()) {
+            if (!job.isSync() && let.isExists()) {
                 let.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                 let.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                 String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
@@ -290,15 +298,16 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         }
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().build(conversionResult, dbMirror, tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
+            rtn = getExportImportAcidDowngradeInPlaceDataStrategy().build(dbMirror, tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();
         } else {
             if (TableUtils.isACID(let)) {
-                if (hmsMirrorConfig.getCluster(Environment.LEFT).isLegacyHive() != hmsMirrorConfig.getCluster(Environment.RIGHT).isLegacyHive()) {
+                if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() !=
+                        conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
                     rtn = Boolean.FALSE;
                     tableMirror.addIssue(Environment.LEFT, "ACID table EXPORTs are NOT compatible for IMPORT to clusters on a different major version of Hive.");
                 } else {
                     try {
-                        rtn = buildOutSql(conversionResult, dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                        rtn = buildOutSql(dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
                     } catch (MissingDataPointException e) {
                         let.addError("Failed to build out SQL: " + e.getMessage());
                         rtn = Boolean.FALSE;
@@ -307,14 +316,14 @@ public class ExportImportDataStrategy extends DataStrategyBase {
 
             } else {
                 try {
-                    rtn = buildOutSql(conversionResult, dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
+                    rtn = buildOutSql(dbMirror, tableMirror); //tableMirror.buildoutEXPORT_IMPORTSql(config, dbMirror);
                 } catch (MissingDataPointException e) {
                     let.addError("Failed to build out SQL: " + e.getMessage());
                     rtn = Boolean.FALSE;
                 }
 
                 if (rtn)
-                    rtn = AVROCheck(tableMirror);
+                    rtn = getConversionResultService().AVROCheck(tableMirror);
             }
         }
 
@@ -323,7 +332,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     }
 
     @Override
-    public Boolean execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         // If EXPORT_IMPORT, need to run LEFT queries.
         rtn = tableService.runTableSql(tableMirror, Environment.LEFT);

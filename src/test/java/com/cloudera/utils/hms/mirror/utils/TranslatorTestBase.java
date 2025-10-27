@@ -18,8 +18,6 @@
 package com.cloudera.utils.hms.mirror.utils;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.core.api.LocationTranslator;
-import com.cloudera.utils.hms.mirror.core.impl.LocationTranslatorImpl;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;

@@ -28,13 +28,19 @@ import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHybridImpl;
 import com.cloudera.utils.hms.mirror.domain.core.DBCP2Properties;
 import com.cloudera.utils.hms.mirror.domain.core.HikariProperties;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.rocksdb.Env;
 import org.springframework.stereotype.Component;
 
 import java.net.URISyntaxException;
@@ -54,86 +60,59 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 @Setter
 @Slf4j
+@RequiredArgsConstructor
 public class ConnectionPoolService {
 
     private boolean connected = false;
 
-    private ExecuteSession executeSession;
-    private ConnectionPools connectionPools = null;
+    // Replace with ExecutionContext and ConversionResult.
+//    private ExecuteSession executeSession;
+    // This will be in the ConversionResult now.
+//    private ConnectionPools connectionPools = null;
+    @NonNull
+    private final ExecutionContextService context;
+    @NonNull
     private final EnvironmentService environmentService;
+    @NonNull
     private final CliEnvironment cliEnvironment;
+    @NonNull
+    private final DriverUtilsService driverUtilsService;
+    @NonNull
     private final ConfigService configService;
+    @NonNull
     private final PasswordService passwordService;
+    @NonNull
     private final HikariProperties hikariProperties;
+    @NonNull
     private final DBCP2Properties dbcp2Properties;
 
-    /**
-     * Constructor for ConnectionPoolService.
-     *
-     * @param environmentService Service for environment operations
-     * @param passwordService    Service for password operations
-     * @param cliEnvironment     CLI environment
-     * @param configService      Service for configuration
-     */
-    public ConnectionPoolService(EnvironmentService environmentService,
-                                 PasswordService passwordService,
-                                 CliEnvironment cliEnvironment,
-                                 ConfigService configService,
-                                 HikariProperties hikariProperties,
-                                 DBCP2Properties dbcp2Properties) {
-        this.environmentService = environmentService;
-        this.passwordService = passwordService;
-        this.cliEnvironment = cliEnvironment;
-        this.configService = configService;
-        this.hikariProperties = hikariProperties;
-        this.dbcp2Properties = dbcp2Properties;
-        log.debug("ConnectionPoolService initialized");
-    }
 
-    public ExecuteSession getExecuteSession() throws SessionException {
-        if (isNull(executeSession)) {
-            throw new SessionException("Session hasn't been set in ConnectionPoolService");// = executeSessionService.getSession();
-        }
-        return executeSession;
+    public ConversionResult getConversionResult() {
+        return context.getConversionResult();
     }
 
     public void close() {
-        if (nonNull(connectionPools)) {
-            // Set State of Connection.
-            connected = false;
-            getConnectionPools().close();
-            try {
-                getExecuteSession().setConnected(Boolean.FALSE);
-            } catch (SessionException e) {
-                throw new RuntimeException(e);
-            }
-            // Set to null to allow for reset.
-            connectionPools = null;
-        }
+        getConversionResult().getConnectionPools().close();
     }
 
     public ConnectionPools getConnectionPools() {
-        if (isNull(connectionPools)) {
-            try {
-                connectionPools = getConnectionPoolsImpl();
-            } catch (SQLException | SessionException e) {
-                log.error("Error creating connections pools", e);
-//                throw new RuntimeException(e);
-            }
+        if (getConversionResult().getConnectionPools() == null) {
+            getConversionResult().setConnectionPools(getConnectionPoolsImpl());
         }
-        return connectionPools;
+        return getConversionResult().getConnectionPools();
     }
 
-    private ConnectionPools getConnectionPoolsImpl() throws SQLException, SessionException {
+    private ConnectionPools getConnectionPoolsImpl() {
         ConnectionPools rtn = null;
-        HmsMirrorConfig config = getExecuteSession().getConfig();
+        ConversionResult conversionResult = getConversionResult();
 
-        if (isNull(config)) {
+        if (isNull(conversionResult)) {
             log.error("Configuration not set.  Connections can't be established.");
             return null;
 //            throw new RuntimeException("Configuration not set.  Connections can't be established.");
         }
-        ConnectionPoolType cpt = config.getConnectionPoolLib();
+
+        ConnectionPoolType cpt = conversionResult.getConnectionPoolLib();
         if (isNull(cpt)) {
             // Need to calculate the connectio pool type:
             // When both clusters are defined:
@@ -143,18 +122,18 @@ public class ConnectionPoolService {
             // When only the left cluster is defined:
             // Use DBCP2 when the left cluster is legacy
             // Use HIKARICP when the left cluster is non-legacy
-            if (isNull(config.getCluster(Environment.RIGHT))) {
-                if (config.getCluster(Environment.LEFT).isLegacyHive()) {
+            if (isNull(conversionResult.getConnection(Environment.RIGHT))) {
+                if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()) {
                     cpt = ConnectionPoolType.DBCP2;
                 } else {
                     cpt = ConnectionPoolType.HIKARICP;
                 }
             } else {
-                if (config.getCluster(Environment.LEFT).isLegacyHive()
-                        && config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
+                        && conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
                     cpt = ConnectionPoolType.DBCP2;
-                } else if (config.getCluster(Environment.LEFT).isLegacyHive()
-                        || config.getCluster(Environment.RIGHT).isLegacyHive()) {
+                } else if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
+                        || conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
                     cpt = ConnectionPoolType.HYBRID;
                 } else {
                     cpt = ConnectionPoolType.HIKARICP;
@@ -166,15 +145,15 @@ public class ConnectionPoolService {
         switch (cpt) {
             case DBCP2:
                 log.info("Using DBCP2 Connection Pooling Libraries");
-                rtn = new ConnectionPoolsDBCP2Impl(executeSession, passwordService, this);
+                rtn = new ConnectionPoolsDBCP2Impl(driverUtilsService, conversionResult, passwordService, this);
                 break;
             case HIKARICP:
                 log.info("Using HIKARICP Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHikariImpl(executeSession, passwordService, this);
+                rtn = new ConnectionPoolsHikariImpl(driverUtilsService, conversionResult, passwordService, this);
                 break;
             case HYBRID:
                 log.info("Using HYBRID Connection Pooling Libraries");
-                rtn = new ConnectionPoolsHybridImpl(executeSession, passwordService, this);
+                rtn = new ConnectionPoolsHybridImpl(driverUtilsService, conversionResult, passwordService, this);
                 break;
         }
         // Initialize the connections pools
@@ -203,18 +182,17 @@ public class ConnectionPoolService {
     public boolean init() throws SQLException, SessionException, EncryptionException, URISyntaxException {
         // Set Session Connections.
         boolean rtn = Boolean.TRUE;
-        ExecuteSession executeSession = getExecuteSession();
+        ConversionResult conversionResult = getConversionResult();
 
-        if (executeSession.isConnected()) {
+        // TODO: Fix.
+        /*
+        if (conversionResult.isConnected()) {
             log.info("Connections already established.  Skipping Connection Setup/Validation.");
             return Boolean.TRUE;
         }
+         */
 
-//        if (executeSession.isRunning()) {
-//            throw new SessionException("Session is already running.  Can't validate connections at this time.");
-//        }
-
-        RunStatus runStatus = executeSession.getRunStatus();
+        RunStatus runStatus = conversionResult.getRunStatus();
         runStatus.setProgress(ProgressEnum.STARTED);
         this.close();
 
@@ -228,8 +206,8 @@ public class ConnectionPoolService {
         boolean nsRtn = initHcfsNamespaces();
 
         if (rtn && msRtn && nsRtn) {
-//            runStatus.setProgress(ProgressEnum.COMPLETED);
-            executeSession.setConnected(Boolean.TRUE);
+//             TODO: Fix
+//            conversionResult.setConnected(Boolean.TRUE);
         } else {
             runStatus.setProgress(ProgressEnum.FAILED);
         }
@@ -240,36 +218,39 @@ public class ConnectionPoolService {
 
     protected boolean initHcfsNamespaces() throws SessionException {
         AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
-        ExecuteSession session = getExecuteSession();
-        Connections connections = session.getConnections();
+        ConversionResult conversionResult = getConversionResult();
+//        ExecuteSession session = getConversionResult();
+//        Connections connections = getConversionResult().getConnections();
         // TODO: Make sure connections has been populated.
 
-        HmsMirrorConfig config = session.getConfig();
+//        HmsMirrorConfig config = session.getConfig();
 
-        config.getClusters().forEach((k, v) -> {
+        conversionResult.getConnections().forEach((k, v) -> {
             // checked..
             if (!isBlank(v.getHcfsNamespace())) {
-                connections.getNamespaces().get(k).setEndpoint(v.getHcfsNamespace());
+//                connections.getNamespaces().get(k).setEndpoint(v.getHcfsNamespace());
                 try {
                     log.info("Testing HCFS Connection for {}", k);
-                    CommandReturn cr = cliEnvironment.processInput("ls /");
+                    // Concat 'ls' with v.getHcfsNamespace() to a checkConnectionStr
+                    String checkConnectionStr = "ls " + v.getHcfsNamespace();
+                    CommandReturn cr = cliEnvironment.processInput(checkConnectionStr);
                     if (cr.isError()) {
                         log.error("HCFS Connection Failed for {} with: {}", k, cr.getError());
-                        connections.getNamespaces().get(k).setStatus(ConnectionStatus.FAILED);
-                        connections.getNamespaces().get(k).setMessage(cr.getError());
+                        v.setHcfsStatus(ConnectionStatus.FAILED);
+                        v.setHcfsStatusMessage(cr.getError());
                         rtn.set(Boolean.FALSE);
                     } else {
                         log.info("HCFS Connection Successful for {}", k);
-                        connections.getNamespaces().get(k).setStatus(ConnectionStatus.SUCCESS);
+                        v.setHcfsStatus(ConnectionStatus.SUCCESS);
                     }
                 } catch (DisabledException e) {
                     log.info("HCFS Connection Disabled for {}", k);
-                    connections.getNamespaces().get(k).setStatus(ConnectionStatus.DISABLED);
+                    v.setHcfsStatus(ConnectionStatus.DISABLED);
 //                        throw new RuntimeException(e);
                 }
             } else {
                 log.info("HCFS Connection Not Configured for {}", k);
-                connections.getNamespaces().get(k).setStatus(ConnectionStatus.NOT_CONFIGURED);
+                v.setHcfsStatus(ConnectionStatus.NOT_CONFIGURED);
             }
         });
         return rtn.get();
@@ -283,21 +264,15 @@ public class ConnectionPoolService {
 
     protected boolean initMetastoreDirect() throws SQLException, SessionException, EncryptionException {
         AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
-        ExecuteSession session = getExecuteSession();
-        Connections connections = session.getConnections();
+        ConversionResult conversionResult = getConversionResult();
+
         // TODO: Make sure connections has been populated.
-
-        HmsMirrorConfig config = session.getConfig();
-
-        config.getClusters().forEach((k, v) -> {
-            if (!isNull(v.getMetastoreDirect())) { // && !finalConfigErrors) {
-                connections.getMetastoreDirectConnections().get(k).setEndpoint(v.getMetastoreDirect().getUri());
-                if (!configService.isMetastoreDirectConfigured(session, k)) {
-                    connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.NOT_CONFIGURED);
-                    connections.getMetastoreDirectConnections().get(k).setMessage(MessageCode.LEFT_METASTORE_URI_NOT_DEFINED.getDesc());
-                } else {
+        conversionResult.getConnections().forEach((k, v) -> {
+            if (!isNull(v) && !isBlank(v.getMetastoreDirectUri())) { // && !finalConfigErrors) {
+                if (configService.isMetastoreDirectConfigured(v)) {
                     try {
                         log.info("Testing Metastore Direct Connection for {}", k);
+                        // TODO: Need to check that the connection has been setup..  I don't think it has yet.
                         Connection conn = getConnectionPools().getMetastoreDirectEnvironmentConnection(k);
                         if (conn != null) {
                             log.info("Metastore Direct Connection Successful for {}", k);
@@ -305,20 +280,20 @@ public class ConnectionPoolService {
                             log.error("Metastore Direct Connection Failed for {}", k);
                             rtn.set(Boolean.FALSE);
                         }
-                        connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.SUCCESS);
+                        v.setMetastoreDirectStatus(ConnectionStatus.SUCCESS);
                     } catch (SQLException se) {
                         log.error("Metastore Direct Connection Failed for {}", k, se);
-                        connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.FAILED);
-                        connections.getMetastoreDirectConnections().get(k).setMessage(se.getMessage());
+                        v.setMetastoreDirectStatus(ConnectionStatus.FAILED);
+                        v.setMetastoreDirectStatusMessage(se.getMessage());
                     }
                 }
 
-            } else if (!isNull(v.getMetastoreDirect())) {
+            } else if (!isNull(v)) {
                 log.info("Metastore Direct Connection Check Configuration for {}", k);
-                connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.CHECK_CONFIGURATION);
+                v.setMetastoreDirectStatus(ConnectionStatus.CHECK_CONFIGURATION);
             } else {
                 log.info("Metastore Direct Connection Not Configured for {}", k);
-                connections.getMetastoreDirectConnections().get(k).setStatus(ConnectionStatus.NOT_CONFIGURED);
+                v.setMetastoreDirectStatus(ConnectionStatus.NOT_CONFIGURED);
             }
         });
         return rtn.get();
@@ -327,93 +302,32 @@ public class ConnectionPoolService {
     protected void initConnectionsSetup() throws SQLException, SessionException, EncryptionException, URISyntaxException {
         // Close and reset the connections.
 
-        ExecuteSession session = getExecuteSession();
-        Connections connections = session.getConnections();
-        connections.reset();
+        ConversionResult conversionResult = getConversionResult();
+//        Connections connections = conversionResult.getConnections();
+        JobDto job = conversionResult.getJob();
+        JobExecution jobExecution = conversionResult.getJobExecution();
+        // TODO: Review.  Use the ConnectionDtos
+//        connections.reset();
 
-        HmsMirrorConfig config = session.getConfig();
+        ConfigLiteDto config = conversionResult.getConfigLite();
 
 //        RunStatus runStatus = executeSession.getRunStatus();
 
-        if (config.getDataStrategy() == DataStrategyEnum.DUMP) {
-            config.setExecute(Boolean.FALSE); // No Actions.
-            config.setSync(Boolean.FALSE);
+        if (job.getStrategy() == DataStrategyEnum.DUMP) {
+            jobExecution.setDryRun(Boolean.TRUE); // No Actions.
+            job.setSync(Boolean.FALSE);
         }
 
         // Make adjustments to the config clusters based on settings.
         // Buildout the right connections pool details.
-        switch (config.getDataStrategy()) {
+        switch (job.getStrategy()) {
             case DUMP:
-                // Don't load the datasource for the right with DUMP strategy.
-                if (config.getDumpSource() == Environment.RIGHT) {
-                    // switch LEFT and RIGHT
-                    config.getClusters().remove(Environment.LEFT);
-                    config.getClusters().put(Environment.LEFT, config.getCluster(Environment.RIGHT));
-                    config.getCluster(Environment.LEFT).setEnvironment(Environment.LEFT);
-                    config.getClusters().remove(Environment.RIGHT);
-                }
             case STORAGE_MIGRATION:
-                // Get Pool
-                getConnectionPools().addHiveServer2(Environment.LEFT, config.getCluster(Environment.LEFT).getHiveServer2());
-                connections.getHiveServer2Connections().get(Environment.LEFT)
-                        .setEndpoint(config.getCluster(Environment.LEFT)
-                                .getHiveServer2().getUri());
-                break;
-            case SQL:
-            case COMMON:
-            case LINKED:
-            case SCHEMA_ONLY:
-            case EXPORT_IMPORT:
-            case HYBRID:
-                // When doing inplace downgrade of ACID tables, we're only dealing with the LEFT cluster.
-                if (!config.getMigrateACID().isInplace() && null != config.getCluster(Environment.RIGHT).getHiveServer2()) {
-                    getConnectionPools().addHiveServer2(Environment.RIGHT, config.getCluster(Environment.RIGHT).getHiveServer2());
-                    // Place holder for the right connection to capture element for reporting.
-                    connections.getHiveServer2Connections().get(Environment.RIGHT)
-                            .setEndpoint(config.getCluster(Environment.RIGHT)
-                                    .getHiveServer2().getUri());
-                }
-            default:
-                getConnectionPools().addHiveServer2(Environment.LEFT, config.getCluster(Environment.LEFT).getHiveServer2());
-                connections.getHiveServer2Connections().get(Environment.LEFT)
-                        .setEndpoint(config.getCluster(Environment.LEFT)
-                                .getHiveServer2().getUri());
+                // Don't load the datasource for the right with DUMP strategy.
+                conversionResult.getConnections().remove(Environment.RIGHT);
                 break;
         }
-        if (nonNull(config.getCluster(Environment.LEFT)) &&
-                nonNull(config.getCluster(Environment.LEFT).getMetastoreDirect())) {
-            getConnectionPools().addMetastoreDirect(Environment.LEFT, config.getCluster(Environment.LEFT).getMetastoreDirect());
-            connections.getMetastoreDirectConnections().get(Environment.LEFT)
-                    .setEndpoint(config.getCluster(Environment.LEFT)
-                            .getMetastoreDirect().getUri());
-        }
-        if (nonNull(config.getCluster(Environment.RIGHT)) &&
-                nonNull(config.getCluster(Environment.RIGHT).getMetastoreDirect())) {
-            getConnectionPools().addMetastoreDirect(Environment.RIGHT, config.getCluster(Environment.RIGHT).getMetastoreDirect());
-            connections.getMetastoreDirectConnections().get(Environment.RIGHT)
-                    .setEndpoint(config.getCluster(Environment.RIGHT)
-                            .getMetastoreDirect().getUri());
-        }
 
-        if (!isNull(config.getCluster(Environment.LEFT)) &&
-                !isBlank(config.getCluster(Environment.LEFT).getHcfsNamespace())) {
-            connections.getNamespaces().get(Environment.LEFT)
-                    .setEndpoint(config.getCluster(Environment.LEFT)
-                            .getHcfsNamespace());
-        }
-
-        if (!isNull(config.getCluster(Environment.RIGHT)) &&
-                !isBlank(config.getCluster(Environment.RIGHT).getHcfsNamespace())) {
-            connections.getNamespaces().get(Environment.RIGHT)
-                    .setEndpoint(config.getCluster(Environment.RIGHT)
-                            .getHcfsNamespace());
-        }
-
-        if (!isNull(config.getTransfer().getTargetNamespace()) &&
-                !isBlank(config.getTransfer().getTargetNamespace())) {
-            connections.getNamespaces().get(Environment.TARGET)
-                    .setEndpoint(config.getTransfer().getTargetNamespace());
-        }
         // Should've been called already and HMSMirrorAppService.
         environmentService.setupGSS();
 
@@ -424,102 +338,108 @@ public class ConnectionPoolService {
 
     //    @Override
     protected boolean initHS2() throws SQLException, SessionException, EncryptionException {
-        boolean rtn = Boolean.TRUE;
-        ExecuteSession session = getExecuteSession();
-        Connections connections = session.getConnections();
+        AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
+        ConversionResult conversionResult = getConversionResult();
+//        Connections connections = conversionResult.getConnections();
 
-        HmsMirrorConfig config = session.getConfig();
+        RunStatus runStatus = conversionResult.getRunStatus();
 
-        RunStatus runStatus = executeSession.getRunStatus();
+//            Environment[] hs2Envs = {Environment.LEFT, Environment.RIGHT};
+            conversionResult.getConnections().forEach((environment, connection) -> {
 
-        try {
-            Environment[] hs2Envs = {Environment.LEFT, Environment.RIGHT};
-            for (Environment target : hs2Envs) {
+//            for (Environment target : hs2Envs) {
                 Connection conn = null;
                 Statement stmt = null;
                 try {
-                    log.info("Testing HiveServer2 Connection for {}", target);
-                    conn = getConnectionPools().getHS2EnvironmentConnection(target);
+                    log.info("Testing HiveServer2 Connection for {}", environment);
+                    conn = getConnectionPools().getHS2EnvironmentConnection(environment);
                     if (isNull(conn)) {
-                        if (isNull(config.getCluster(target))
-                                || isNull(config.getCluster(target).getHiveServer2())) {
-                            runStatus.addWarning(ENVIRONMENT_DISCONNECTED, target);
-                        } else if (target == Environment.RIGHT
-                                && config.getCluster(target).getHiveServer2().isDisconnected()) {
-                            // Skip error.  Set Warning that we're disconnected.
-                            runStatus.addWarning(ENVIRONMENT_DISCONNECTED, target);
-                        } else if (!config.isLoadingTestData()) {
-                            runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
-                            connections.getHiveServer2Connections().get(target).setStatus(ConnectionStatus.FAILED);
-                            connections.getHiveServer2Connections().get(target).setMessage("Connection is null.");
-                            rtn = Boolean.FALSE;
+                        if (isNull(conversionResult.getConnection(environment))
+                                || isNull(conversionResult.getConnection(environment).getHs2Uri())) {
+                            runStatus.addWarning(ENVIRONMENT_DISCONNECTED, environment);
+                        // TODO: Review if we need this.
+//                        } else if (environment == Environment.RIGHT
+//                                && conversionResult.getConnection(environment).isHs2Disconnected()) {
+//                            // Skip error.  Set Warning that we're disconnected.
+//                            runStatus.addWarning(ENVIRONMENT_DISCONNECTED, environment);
+                        // TODO: Fix when we have test data fixed.
+//                        } else if (!config.isLoadingTestData()) {
+//                            runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target);
+//                            connections.getHiveServer2Connections().get(target).setStatus(ConnectionStatus.FAILED);
+//                            connections.getHiveServer2Connections().get(target).setMessage("Connection is null.");
+//                            rtn = Boolean.FALSE;
                         }
                     } else {
                         // Exercise the connections.
-                        log.info("HS2 Connection Successful for {}", target);
+                        log.info("HS2 Connection Successful for {}", environment);
                         stmt = conn.createStatement();
 
                         // Run these first to ensure we preset the queue, if being set.
                         // Property Overrides from 'config.optimization.overrides'
-                        List<String> overrides = ConfigUtils.getPropertyOverridesFor(target, config);
-                        connections.getHiveServer2Connections().get(target).setProperties(overrides);
+                        // TODO: Review these property overrides.  I think these are NOT for the
+                        //       connection properties, but for the initSqls to run on the session.
+                        List<String> overrides = ConfigUtils.getPropertyOverridesFor(environment, conversionResult.getConfigLite().getOptimization().getOverrides());
+                        connection.getHs2EnvSets().addAll(overrides);
                         // Run the overrides;
                         for (String o : overrides) {
-                            log.info("Running Override: {} on {} connection", o, target);
+                            log.info("Running Override: {} on {} connection", o, environment);
                             stmt.execute(o);
                         }
 
                         // Create an array of strings with various settings to run.
                         // Only set this when we need to know we need compute and we need to establish a session.
-                        String[] sessionSets = config.isExecute()?new String[]{
+                        String[] sessionSets = conversionResult.getJobExecution().isExecute()?new String[]{
                                 "SET hive.query.results.cache.enabled=false",
                                 "SET hive.fetch.task.conversion = none"}:new String[0];
 
                         for (String s : sessionSets) {
-                            connections.getHiveServer2Connections().get(target).getProperties().add(s);
-                            log.info("Running session check: {} on {} connection", s, target);
+                            connection.getHs2EnvSets().add(s);
+                            log.info("Running session check: {} on {} connection", s, environment);
                             stmt.execute(s);
                         }
 
-                        log.info("HS2 Connection validated (resources) for {}", target);
-                        connections.getHiveServer2Connections().get(target).setStatus(ConnectionStatus.SUCCESS);
-                        connections.getHiveServer2Connections().get(target).setMessage("Connection Successful and Validated.");
+                        log.info("HS2 Connection validated (resources) for {}", environment);
+                        connection.setHs2Status(ConnectionStatus.SUCCESS);
+                        connection.setHs2StatusMessage("Connection Successful and Validated.");
                     }
                 } catch (SQLException se) {
-                    if (target == Environment.RIGHT && config.getCluster(target).getHiveServer2().isDisconnected()) {
+                    if (environment == Environment.RIGHT && !conversionResult.getConnection(environment).isHs2Connected()) {
                         // Set warning that RIGHT is disconnected.
-                        runStatus.addWarning(ENVIRONMENT_DISCONNECTED, target);
+                        runStatus.addWarning(ENVIRONMENT_DISCONNECTED, environment);
                     } else {
                         log.error(se.getMessage(), se);
-                        runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target, se.getMessage());
-                        connections.getHiveServer2Connections().get(target).setStatus(ConnectionStatus.FAILED);
-                        connections.getHiveServer2Connections().get(target).setMessage(se.getMessage());
-                        rtn = Boolean.FALSE;
+                        runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, environment, se.getMessage());
+                        connection.setHs2Status(ConnectionStatus.FAILED);
+                        connection.setHs2StatusMessage(se.getMessage());
+                        rtn.set(Boolean.FALSE);
                     }
                 } catch (Throwable t) {
                     log.error(t.getMessage(), t);
-                    runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, target, t.getMessage());
-                    connections.getHiveServer2Connections().get(target).setStatus(ConnectionStatus.FAILED);
-                    connections.getHiveServer2Connections().get(target).setMessage(t.getMessage());
-                    rtn = Boolean.FALSE;
+                    runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, environment, t.getMessage());
+                    connection.setHs2Status(ConnectionStatus.FAILED);
+                    connection.setHs2StatusMessage(t.getMessage());
+                    rtn.set(Boolean.FALSE);
                 } finally {
                     if (nonNull(stmt)) {
-                        stmt.close();
+                        try {
+                            stmt.close();
+                        } catch (SQLException e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
                     if (nonNull(conn)) {
-                        conn.close();
+                        try {
+                            conn.close();
+                        } catch (SQLException e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
                 }
-            }
-        } catch (SQLException cnfe) { // | URISyntaxException cnfe) {
-            getConnectionPools().close();
-            log.error("Issue initializing connections.  Check driver locations", cnfe);
-            throw new RuntimeException(cnfe);
-        }
+            });
 
         // Set state of connections.
-        connected = rtn;
-        return rtn;
+        connected = rtn.get();
+        return rtn.get();
     }
 
 }
