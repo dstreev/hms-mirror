@@ -83,7 +83,7 @@ public class DumpDataStrategy extends DataStrategyBase {
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         log.debug("Table: {} buildout DUMP SQL", tableMirror.getName());
 

@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Dataset configuration containing databases and table specifications")
-public class DatasetDto {
+public class DatasetDto implements Cloneable {
 
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
     private String name;
@@ -152,8 +152,8 @@ public class DatasetDto {
 //        return new com.cloudera.utils.hms.mirror.domain.core.Filter();
 //    }
 
-    public DatasetDto deepClone() {
-        DatasetDto clone = new DatasetDto();
+    public DatasetDto clone() throws CloneNotSupportedException {
+        DatasetDto clone = (DatasetDto) super.clone();
 
         // Copy primitive and immutable fields
         clone.name = this.name;

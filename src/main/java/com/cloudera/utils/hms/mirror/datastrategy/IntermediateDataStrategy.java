@@ -68,7 +68,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
         Boolean rtn = Boolean.FALSE;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto configLite = conversionResult.getConfigLite();
+        ConfigLiteDto configLite = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         BuildWhat buildWhat = whatToBuild(dbMirror, tableMirror);
@@ -274,14 +274,14 @@ public class IntermediateDataStrategy extends DataStrategyBase {
                     String createStmt2 = tableService.getCreateStatement(tableMirror, Environment.RIGHT);
                     ret.addSql(TableUtils.CREATE_DESC, createStmt2);
                     if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()
-                            && conversionResult.getConfigLite().getOwnershipTransfer().isTable() && let.getOwner() != null) {
+                            && conversionResult.getConfig().getOwnershipTransfer().isTable() && let.getOwner() != null) {
                         String ownerSql = MessageFormat.format(MirrorConf.SET_TABLE_OWNER, ret.getName(), let.getOwner());
                         ret.addSql(MirrorConf.SET_TABLE_OWNER_DESC, ownerSql);
                     }
                     // Don't need this for final table..
                     // Unless we are using 'distcp' to copy the data.
                     // Partitioned, non-acid, w/ distcp.
-                    if (let.getPartitioned() && conversionResult.getConfigLite().getTransfer().getStorageMigration().isDistcp()
+                    if (let.getPartitioned() && conversionResult.getConfig().getTransfer().getStorageMigration().isDistcp()
                             && !TableUtils.isACID(ret)) {
                         String rightMSCKStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, ret.getName());
                         ret.addSql(TableUtils.REPAIR_DESC, rightMSCKStmt);
@@ -299,7 +299,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     public BuildWhat whatToBuild(DBMirror dbMirror, TableMirror tableMirror) {
         BuildWhat buildWhat = new BuildWhat();
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto configLite = conversionResult.getConfigLite();
+        ConfigLiteDto configLite = conversionResult.getConfig();
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         // Build the RIGHT table definition.
@@ -398,7 +398,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto configLite = conversionResult.getConfigLite();
+        ConfigLiteDto configLite = conversionResult.getConfig();
 
         rtn = getTableService().runTableSql(tableMirror, Environment.LEFT);
         if (rtn) {

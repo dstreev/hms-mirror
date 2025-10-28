@@ -20,16 +20,13 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsDBCP2Impl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHikariImpl;
 import com.cloudera.utils.hms.mirror.connections.ConnectionPoolsHybridImpl;
 import com.cloudera.utils.hms.mirror.domain.core.DBCP2Properties;
 import com.cloudera.utils.hms.mirror.domain.core.HikariProperties;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
@@ -40,7 +37,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.Env;
 import org.springframework.stereotype.Component;
 
 import java.net.URISyntaxException;
@@ -88,7 +84,8 @@ public class ConnectionPoolService {
 
 
     public ConversionResult getConversionResult() {
-        return context.getConversionResult();
+        return context.getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
     }
 
     public void close() {
@@ -309,7 +306,7 @@ public class ConnectionPoolService {
         // TODO: Review.  Use the ConnectionDtos
 //        connections.reset();
 
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
 //        RunStatus runStatus = executeSession.getRunStatus();
 
@@ -378,7 +375,7 @@ public class ConnectionPoolService {
                         // Property Overrides from 'config.optimization.overrides'
                         // TODO: Review these property overrides.  I think these are NOT for the
                         //       connection properties, but for the initSqls to run on the session.
-                        List<String> overrides = ConfigUtils.getPropertyOverridesFor(environment, conversionResult.getConfigLite().getOptimization().getOverrides());
+                        List<String> overrides = ConfigUtils.getPropertyOverridesFor(environment, conversionResult.getConfig().getOptimization().getOverrides());
                         connection.getHs2EnvSets().addAll(overrides);
                         // Run the overrides;
                         for (String o : overrides) {

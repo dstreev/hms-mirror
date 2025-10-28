@@ -19,12 +19,10 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
@@ -33,7 +31,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -87,7 +84,7 @@ public class DistCpService {
      */
     public void buildAllDistCpReports(String outputDir) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -254,7 +251,6 @@ public class DistCpService {
      * <p>This method creates a map of target locations to sets of source locations
      * that need to be copied using DistCp.</p>
      *
-     * @param config The HmsMirrorConfig
      * @param database The database name
      * @param environment The environment (LEFT or RIGHT)
      * @param consolidationLevel The level at which to consolidate paths
@@ -262,13 +258,19 @@ public class DistCpService {
      * @return A map of database names to maps of target locations to sets of source locations
      */
     public synchronized Map<String, Map<String, Set<String>>> buildDistcpListForDatabase(
-            HmsMirrorConfig config, String database, Environment environment, 
+            String database, Environment environment,
             int consolidationLevel, boolean consolidateTablesForDistcp) {
+
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
         Map<String, Map<String, Set<String>>> rtn = new TreeMap<>();
 
         // Get a static view of set to avoid concurrent modification.
         Set<EnvironmentMap.TranslationLevel> dbTranslationLevel =
-                new HashSet<>(config.getTranslator().getTranslationMap(database, environment));
+                new HashSet<>(conversionResult.getTranslator().getTranslationMap(database, environment));
 
         Map<String, String> dbLocationMap = new TreeMap<>();
 

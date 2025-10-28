@@ -83,7 +83,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
         log.debug("Table: {} buildout SQL Definition", tableMirror.getName());
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -153,7 +153,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout STORAGE_MIGRATION SQL", tableMirror.getName());
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         String useDb = null;
 //        String database = null;
@@ -210,7 +210,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         EnvironmentTable let = getConversionResultService().getEnvironmentTable(Environment.LEFT, tableMirror);

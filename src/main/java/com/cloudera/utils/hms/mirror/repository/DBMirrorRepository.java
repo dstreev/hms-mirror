@@ -18,17 +18,17 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import org.rocksdb.RocksDBException;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * Repository for managing DBMirror instances in RocksDB.
+ * Repository for managing DBMirror instances.
  *
  * The key for a DBMirror is a composite of the ConversionResult key and the DBMirror name,
  * formatted as "conversionResultKey/databaseName".
- * The value is the DBMirror instance serialized as YAML.
+ * The value is the DBMirror instance serialized.
  */
 public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> {
     String DATABASE_PREFIX = "/database/";
@@ -38,9 +38,9 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      *
      * @param conversionResultKey The key of the ConversionResult
      * @return Map of database names to DBMirror instances
-     * @throws RocksDBException if there's an error accessing RocksDB
+     * @throws RepositoryException if there's an error accessing the repository
      */
-    Map<String, DBMirror> findByConversionResult(String conversionResultKey) throws RocksDBException;
+    Map<String, DBMirror> findByKey(String conversionResultKey) throws RepositoryException;
 
     /**
      * Save a DBMirror instance for a specific ConversionResult.
@@ -49,17 +49,48 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @param databaseName The name of the database
      * @param dbMirror The DBMirror instance to save
      * @return The saved DBMirror instance
-     * @throws RocksDBException if there's an error accessing RocksDB
+     * @throws RepositoryException if there's an error accessing the repository
      */
-    DBMirror save(String conversionResultKey, String databaseName, DBMirror dbMirror) throws RocksDBException;
+    DBMirror save(String conversionResultKey, String databaseName, DBMirror dbMirror) throws RepositoryException;
 
     /**
      * Delete all DBMirror instances for a specific ConversionResult.
      *
      * @param conversionResultKey The key of the ConversionResult
-     * @throws RocksDBException if there's an error accessing RocksDB
+     * @throws RepositoryException if there's an error accessing the repository
      */
-    void deleteByConversionResult(String conversionResultKey) throws RocksDBException;
+    void deleteByKey(String conversionResultKey) throws RepositoryException;
+
+    /**
+     * Delete a specific DBMirror instance by name.
+     * This method matches the save signature pattern by taking the same identifiers needed to build the composite key.
+     *
+     * @param conversionResultKey The key of the ConversionResult
+     * @param databaseName The name of the database
+     * @return true if the DBMirror existed and was deleted, false if it didn't exist
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    boolean deleteByName(String conversionResultKey, String databaseName) throws RepositoryException;
+
+    /**
+     * Find all database names for a specific ConversionResult.
+     * Returns a list of database names (extracted from DBMirror.getName()).
+     *
+     * @param conversionResultKey The key of the ConversionResult
+     * @return List of database names
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    List<String> listNamesByKey(String conversionResultKey) throws RepositoryException;
+
+    /**
+     * Find a specific DBMirror instance by ConversionResult key and database name.
+     *
+     * @param conversionResultKey The key of the ConversionResult
+     * @param databaseName The name of the database
+     * @return Optional containing the DBMirror if found, empty otherwise
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    java.util.Optional<DBMirror> findByName(String conversionResultKey, String databaseName) throws RepositoryException;
 
     /**
      * Build a composite key from ConversionResult key and database name.
@@ -69,6 +100,12 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @return The composite key in format "conversionResultKey/databaseName"
      */
     static String buildKey(String conversionResultKey, String databaseName) {
-        return conversionResultKey + DATABASE_PREFIX + databaseName;
+        String prefix = buildKeyPrefix(conversionResultKey);
+        return prefix + databaseName;
     }
+
+    static String buildKeyPrefix(String conversionResultKey) {
+        return conversionResultKey + DATABASE_PREFIX;
+    }
+
 }

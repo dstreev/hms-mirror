@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
@@ -117,7 +116,7 @@ public class StatsCalculatorService {
         StringBuilder sb = new StringBuilder();
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
 
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         if (envTable.getPartitioned()) {
             if (config.getOptimization().isAutoTune() &&
@@ -161,7 +160,7 @@ public class StatsCalculatorService {
     protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         if (!config.getOptimization().isSkipStatsCollection()) {
             try {
@@ -193,7 +192,7 @@ public class StatsCalculatorService {
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
 
-        ConfigLiteDto hmsMirrorConfig = conversionResult.getConfigLite();
+        ConfigLiteDto hmsMirrorConfig = conversionResult.getConfig();
 
         // Skip if no stats collection.
         if (hmsMirrorConfig.getOptimization().isSkipStatsCollection())

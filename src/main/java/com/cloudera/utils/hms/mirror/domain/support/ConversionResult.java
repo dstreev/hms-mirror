@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -53,20 +54,21 @@ public class ConversionResult implements Cloneable {
             "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs", "maprfs", "gs"
     ));
 
+    @Schema(description = "Flag used to identify that this process was seeded via a Test Dataset")
+    private boolean mockTestDataset = Boolean.FALSE;
+
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/config', with the value being the yaml string.
      */
-    private ConfigLiteDto configLite;
+    private ConfigLiteDto config;
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/config', with the value being the yaml string.
      */
     private DatasetDto dataset;
     /*
-    Map of connections by Environment (LEFT/RIGHT).
-    Each connection should be saved as a yaml in RocksDB. The key for this should build on the above key plus
-      '/connection/{environment}', with the value being the yaml string.
+    Resolved Map of connections by Environment (LEFT/RIGHT).
      */
     private Map<Environment, ConnectionDto> connections = new HashMap<>();
 
@@ -79,19 +81,16 @@ public class ConversionResult implements Cloneable {
     @JsonIgnore
     private ConnectionPools connectionPools;
 
-//    @JsonIgnore
-//    private Connections connections;
-
     /*
-    This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
-      '/job', with the value being the yaml string.
+    This is a copy of the JobDto for this conversion.
      */
     private JobDto job;
     /*
     RunStatus tracks the progress and status of the conversion process.
-    This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
+      This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/runStatus', with the value being the yaml string.
      */
+    @JsonIgnore
     private RunStatus runStatus;
 
     private JobExecution jobExecution;
@@ -122,8 +121,8 @@ public class ConversionResult implements Cloneable {
 
     public String getTargetNamespace() throws RequiredConfigurationException {
         String rtn = null;
-        if (nonNull(configLite.getTransfer()) && !isBlank(configLite.getTransfer().getTargetNamespace())) {
-            rtn = configLite.getTransfer().getTargetNamespace();
+        if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
+            rtn = config.getTransfer().getTargetNamespace();
         } else if (nonNull(getConnection(Environment.RIGHT))
                 && !isBlank(getConnection(Environment.RIGHT).getHcfsNamespace())) {
             log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
@@ -138,7 +137,6 @@ public class ConversionResult implements Cloneable {
     /**
      * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#addDatabase(ConversionResult, String)} instead.
      * This method will be removed in a future release. Business logic should not reside in domain objects.
-     */
     @Deprecated(since = "4.0", forRemoval = true)
     public DBMirror addDatabase(String database) {
         if (databases.containsKey(database)) {
@@ -150,6 +148,7 @@ public class ConversionResult implements Cloneable {
             return dbs;
         }
     }
+     */
 
     /**
      * @deprecated Use {@link com.cloudera.utils.hms.mirror.service.ConversionResultService#getDatabase(ConversionResult, String)} instead.
@@ -192,6 +191,7 @@ public class ConversionResult implements Cloneable {
         if (runStatus == null) {
             this.runStatus = new RunStatus();
             try {
+                this.runStatus.setConversionResultKey(this.getKey());
                 this.runStatus.setAppVersion(com.jcabi.manifests.Manifests.read("HMS-Mirror-Version"));
             } catch (IllegalArgumentException iae) {
                 this.runStatus.setAppVersion("Unknown");

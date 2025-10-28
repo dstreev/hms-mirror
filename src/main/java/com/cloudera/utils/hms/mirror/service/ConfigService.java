@@ -141,7 +141,7 @@ public class ConfigService {
      * Determines if a DistCp plan can be derived from the current configuration.
      */
     public boolean canDeriveDistcpPlan(ConversionResult conversionResult) {
-        return conversionResult.getConfigLite().getTransfer().getStorageMigration().isDistcp();
+        return conversionResult.getConfig().getTransfer().getStorageMigration().isDistcp();
     }
 
     /**
@@ -174,7 +174,7 @@ public class ConfigService {
      */
     public boolean alignConfigurationSettings(ConversionResult conversionResult) {
         boolean rtn = Boolean.TRUE;
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();
         // Iceberg Conversions is a beta feature.
@@ -419,8 +419,9 @@ public class ConfigService {
     protected Boolean linkTest() throws DisabledException {
         Boolean rtn = Boolean.TRUE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -669,8 +670,9 @@ public class ConfigService {
     public Boolean validateForConnections() {
         Boolean rtn = Boolean.TRUE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -709,7 +711,7 @@ public class ConfigService {
                         rtn = Boolean.FALSE;
                     } else {
                         if (isNull(conversionResult.getConnection(env).getHs2Uri())) {
-                            if (!conversionResult.getConfigLite().isLoadingTestData()) {
+                            if (!conversionResult.isMockTestDataset()) {
                                 runStatus.addError(HS2_NOT_DEFINED_OR_CONFIGURED, env);
                                 rtn = Boolean.FALSE;
                             }
@@ -723,7 +725,7 @@ public class ConfigService {
 
                              */
                             ConnectionDto connection = conversionResult.getConnection(env);
-                            if (!conversionResult.getConfigLite().isLoadingTestData()) {
+                            if (!conversionResult.isMockTestDataset()) {
                                 if (isBlank(connection.getHs2Uri())) {
                                     runStatus.addError(MISSING_PROPERTY, "uri", "HiveServer2", env);
                                     rtn = Boolean.FALSE;
@@ -756,7 +758,7 @@ public class ConfigService {
 
         // Set maxConnections to Concurrency.
         // Don't validate connections or url's if we're working with test data.
-        if (!conversionResult.getConfigLite().isLoadingTestData()) {
+        if (!conversionResult.isMockTestDataset()) {
             ConnectionDto leftConnection = conversionResult.getConnection(Environment.LEFT);
             if (!leftConnection.isValidHs2Uri()) {
                 rtn = Boolean.FALSE;
@@ -859,8 +861,9 @@ public class ConfigService {
         AtomicReference<Boolean> rtn = new AtomicReference<>(Boolean.TRUE);
 
         // Get the configuration from the session
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -879,7 +882,7 @@ public class ConfigService {
         // Validate the jar files listed in the configs for each cluster.
         // Visible Environment Variables:
         // Don't validate when using test data.
-        if (!conversionResult.getConfigLite().isLoadingTestData()) {
+        if (!conversionResult.isMockTestDataset()) {
             Environment[] envs = Environment.getVisible();
             /* Under the idea, the jar files will be static or known, so no need to validate them. */
             /*

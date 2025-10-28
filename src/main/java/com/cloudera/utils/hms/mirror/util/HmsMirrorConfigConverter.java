@@ -51,14 +51,14 @@ public class HmsMirrorConfigConverter {
     /**
      * Main conversion method that returns all converted DTOs
      */
-    public static ConversionResult convert(HmsMirrorConfig config, String configName, String datasetName, String jobName) {
+    public static ConversionResult convert(HmsMirrorConfig config, String jobName) {
         ConversionResult result = new ConversionResult();
 
-        result.setConfigLite(toConfigLiteDto(config, configName));
-        result.setDataset(toDatasetDto(config, datasetName));
+        result.setConfig(toConfigLiteDto(config, result.getKey()));
+        result.setDataset(toDatasetDto(config, result.getKey()));
         result.setConnection(Environment.LEFT, toConnectionDto(config, Environment.LEFT));
         result.setConnection(Environment.RIGHT, toConnectionDto(config, Environment.RIGHT));
-        result.setJob(toJobDto(config, jobName, configName, datasetName));
+        result.setJob(toJobDto(config, jobName));
 
         return result;
     }
@@ -83,7 +83,7 @@ public class HmsMirrorConfigConverter {
 
         // File and data handling
         dto.setCopyAvroSchemaUrls(config.isCopyAvroSchemaUrls());
-        dto.setLoadTestDataFile(config.getLoadTestDataFile());
+//        dto.setLoadTestDataFile(config.getLoadTestDataFile());
         // Note: forceExternalLocation is not available in TransferConfig
 
         // Sub-configuration objects
@@ -320,13 +320,13 @@ public class HmsMirrorConfigConverter {
     /**
      * Convert HmsMirrorConfig to JobDto
      */
-    public static JobDto toJobDto(HmsMirrorConfig config, String jobName, String configReference, String datasetReference) {
+    public static JobDto toJobDto(HmsMirrorConfig config, String jobName) {
         JobDto dto = new JobDto();
 
         dto.setName(jobName);
         dto.setDescription("Job converted from HmsMirrorConfig");
-        dto.setDatasetReference(datasetReference);
-        dto.setConfigReference(configReference);
+//        dto.setDatasetReference(datasetReference);
+//        dto.setConfigReference(configReference);
 
         // Connection references
         dto.setLeftConnectionReference("LEFT");

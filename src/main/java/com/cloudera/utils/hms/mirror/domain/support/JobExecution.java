@@ -12,8 +12,6 @@ Keep track of things realted to the jobs execution.
 @Getter
 @Setter
 public class JobExecution {
-    private long startTime;
-    private long endTime;
     private boolean dryRun = Boolean.TRUE;
 
     public boolean isExecute() {

@@ -33,7 +33,7 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Lightweight Configuration DTO for storage and API transfer")
-public class ConfigLiteDto {
+public class ConfigLiteDto implements Cloneable {
 
     // Basic configuration
     private String name;
@@ -67,7 +67,7 @@ public class ConfigLiteDto {
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
 //    private boolean dumpTestData = Boolean.FALSE;
-    private String loadTestDataFile = null;
+//    private String loadTestDataFile = null;
 
     /**
      * Force external location in table DDLs.
@@ -90,15 +90,6 @@ public class ConfigLiteDto {
     // Constructor with name and dataStrategy
     public ConfigLiteDto(String name) {
         this.name = name;
-    }
-
-    /**
-     * Check if loading test data from file.
-     *
-     * @return true if loadTestDataFile is set
-     */
-    public boolean isLoadingTestData() {
-        return loadTestDataFile != null && !loadTestDataFile.isBlank();
     }
 
     /**
@@ -125,8 +116,8 @@ public class ConfigLiteDto {
      *
      * @return A deep clone of this ConfigLiteDto
      */
-    public ConfigLiteDto deepClone() {
-        ConfigLiteDto clone = new ConfigLiteDto();
+    public ConfigLiteDto clone() throws CloneNotSupportedException {
+        ConfigLiteDto clone = (ConfigLiteDto) super.clone();
 
         // Copy primitive and immutable fields
         clone.name = this.name;
@@ -137,7 +128,7 @@ public class ConfigLiteDto {
         clone.enableAutoColumnStats = this.enableAutoColumnStats;
         clone.saveWorkingTables = this.saveWorkingTables;
         clone.copyAvroSchemaUrls = this.copyAvroSchemaUrls;
-        clone.loadTestDataFile = this.loadTestDataFile;
+//        clone.loadTestDataFile = this.loadTestDataFile;
         clone.forceExternalLocation = this.forceExternalLocation;
 
         // Deep clone sub-configuration objects using their existing clone() methods

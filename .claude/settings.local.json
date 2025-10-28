@@ -89,7 +89,10 @@
       "Bash(\"/Users/dstreev/projects/hms-mirror/src/main/java/com/cloudera/utils/hms/mirror/datastrategy/HybridAcidDowngradeInPlaceDataStrategy.java\" )",
       "Bash(\"/Users/dstreev/projects/hms-mirror/src/main/java/com/cloudera/utils/hms/mirror/datastrategy/ExportImportAcidDowngradeInPlaceDataStrategy.java\" )",
       "Bash(\"/Users/dstreev/projects/hms-mirror/src/main/java/com/cloudera/utils/hms/mirror/datastrategy/IcebergConversionDataStrategy.java\")",
-      "Bash(do)"
+      "Bash(do)",
+      "Bash(for file in /Users/dstreev/projects/hms-mirror/src/main/java/com/cloudera/utils/hms/mirror/repository/rocksDbImpl/*RepositoryImpl.java)",
+      "Bash(if ! grep -q \"import com.cloudera.utils.hms.mirror.exceptions.RepositoryException\" \"$file\")",
+      "Bash(then)"
     ],
     "deny": [],
     "ask": [],

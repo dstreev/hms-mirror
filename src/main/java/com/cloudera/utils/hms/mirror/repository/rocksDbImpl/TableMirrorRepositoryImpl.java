@@ -15,10 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.repository.impl;
+package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -53,16 +54,16 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
 
     @Override
     public TableMirror findByName(String conversionResultKey, String databaseName, String tableName)
-            throws RocksDBException {
+            throws RepositoryException {
         String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
         return findById(compositeKey).orElse(null);
     }
 
     @Override
     public Map<String, TableMirror> findByDatabase(String conversionResultKey, String databaseName)
-            throws RocksDBException {
+            throws RepositoryException {
         Map<String, TableMirror> result = new HashMap<>();
-        String prefix = TableMirrorRepository.buildDatabasePrefix(conversionResultKey, databaseName);
+        String prefix = TableMirrorRepository.buildPrefixKey(conversionResultKey, databaseName);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             iterator.seek(prefix.getBytes());
@@ -93,15 +94,20 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
     }
 
     @Override
-    public TableMirror save(String conversionResultKey, String databaseName, String tableName,
-                            TableMirror tableMirror) throws RocksDBException {
-        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
+    public TableMirror save(String conversionResultKey, String databaseName, TableMirror tableMirror) throws RepositoryException {
+        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableMirror.getName());
         return save(compositeKey, tableMirror);
     }
 
     @Override
-    public void deleteByDatabase(String conversionResultKey, String databaseName) throws RocksDBException {
-        String prefix = TableMirrorRepository.buildDatabasePrefix(conversionResultKey, databaseName);
+    public boolean deleteByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException {
+        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
+        return deleteById(compositeKey);
+    }
+
+    @Override
+    public void deleteByDatabase(String conversionResultKey, String databaseName) throws RepositoryException {
+        String prefix = TableMirrorRepository.buildPrefixKey(conversionResultKey, databaseName);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             iterator.seek(prefix.getBytes());

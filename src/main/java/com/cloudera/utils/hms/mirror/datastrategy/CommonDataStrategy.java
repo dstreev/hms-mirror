@@ -76,7 +76,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
         EnvironmentTable let = null;
@@ -167,7 +167,7 @@ public class CommonDataStrategy extends DataStrategyBase {
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
 
         String useDb = null;

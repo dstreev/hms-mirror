@@ -27,6 +27,8 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -84,9 +86,14 @@ public class TransferService {
     @Async("jobThreadPool")
     public CompletableFuture<ReturnStatus> build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         ReturnStatus rtn = new ReturnStatus();
+        // Set these for the new thread.
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
+
         rtn.setTableMirror(tableMirror);
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        RunStatus runStatus = conversionResult.getRunStatus();
         Warehouse warehouse = null;
         try {
             Date start = new Date();
@@ -98,12 +105,12 @@ public class TransferService {
 
             // Set Database to Transfer DB.
             tableMirror.setPhaseState(PhaseState.CALCULATING_SQL);
-            tableMirror.setStrategy(config.getDataStrategy());
+            tableMirror.setStrategy(job.getStrategy());
             tableMirror.incPhase();
-            tableMirror.addStep("Build TRANSFER", config.getDataStrategy().toString());
+            tableMirror.addStep("Build TRANSFER", job.getStrategy().toString());
             try {
                 DataStrategy dataStrategy = null;
-                switch (config.getDataStrategy()) {
+                switch (job.getStrategy()) {
                     case HYBRID:
                         if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
                             if (hybridAcidDowngradeInPlaceDataStrategy.build(dbMirror, tableMirror)) {
@@ -143,14 +150,14 @@ public class TransferService {
                         isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                         isLoc = isLoc + "/" +
                                 config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                                config.getRunMarker() + "/" +
+                                conversionResult.getKey() + "/" +
                                 dbMirror.getName() + ".db/" +
                                 tableMirror.getName();
                         if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
                             // skip the LEFT because the TRANSFER table used to downgrade was placed in the intermediate location.
                         } else {
                             // LEFT PUSH INTERMEDIATE
-                            config.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
+                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
                                     TableUtils.getLocation(tableMirror.getName(), let.getDefinition()),
                                     isLoc, 1, consolidateSourceTables);
                         }
@@ -162,17 +169,17 @@ public class TransferService {
                         } else {
                             fnlLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(fnlLoc) && config.loadMetadataDetails()) {
-                                String sbDir = config.getTargetNamespace() +
+                                String sbDir = conversionResult.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
                                         getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 fnlLoc = sbDir;
                             }
                         }
-                        config.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
+                        conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
                                 isLoc,
                                 fnlLoc, 1, consolidateSourceTables);
                     } else if (!isBlank(config.getTransfer().getTargetNamespace())
-                            && config.getDataStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
+                            && job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         // LEFT PUSH COMMON
                         String origLoc = TableUtils.isACID(let) ?
                                 TableUtils.getLocation(let.getName(), tet.getDefinition()) :
@@ -193,36 +200,36 @@ public class TransferService {
                                     getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;
                         }
-                        config.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
+                        conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
                                 origLoc, newLoc, 1, consolidateSourceTables);
                     } else {
                         // RIGHT PULL
                         if (TableUtils.isACID(let)
                                 && !config.getMigrateACID().isDowngrade()
-                                && !(config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
+                                && !(job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
                             tableMirror.addError(Environment.RIGHT, DISTCP_FOR_SO_ACID.getDesc());
                             rtn.setStatus(ReturnStatus.Status.INCOMPLETE);
 //                            successful = Boolean.FALSE;
                         } else if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(rLoc) && config.loadMetadataDetails()) {
-                                String sbDir = config.getTargetNamespace() +
+                                String sbDir = conversionResult.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
                                         getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 rLoc = sbDir;
                             }
-                            config.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
+                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), tet.getDefinition()),
                                     rLoc, 1, consolidateSourceTables);
                         } else {
                             String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
                             if (isBlank(rLoc) && config.loadMetadataDetails()) {
-                                String sbDir = config.getTargetNamespace() +
+                                String sbDir = conversionResult.getTargetNamespace() +
                                         warehouse.getExternalDirectory() + "/" +
                                         getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                                 rLoc = sbDir;
                             }
-                            config.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
+                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
                                     TableUtils.getLocation(tableMirror.getName(), let.getDefinition())
                                     , rLoc, 1, consolidateSourceTables);
                         }
@@ -255,6 +262,9 @@ public class TransferService {
         } catch (MissingDataPointException | RequiredConfigurationException mde) {
             rtn.setStatus(ReturnStatus.Status.FATAL);
             rtn.setException(mde);
+        } finally {
+            // Reset the thread context.
+            getExecutionContextService().reset();
         }
         return CompletableFuture.completedFuture(rtn);
     }

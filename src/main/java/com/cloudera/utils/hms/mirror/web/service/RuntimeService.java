@@ -28,6 +28,8 @@ import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.*;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,44 +40,32 @@ import java.util.concurrent.CompletableFuture;
 @Getter
 @Setter
 @Slf4j
+@RequiredArgsConstructor
 public class RuntimeService {
 
+    @NonNull
     private final ConfigService configService;
-    private final DatabaseService databaseService;
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final ConversionResultService conversionResultService;
+
+    @NonNull
     private final HMSMirrorAppService hmsMirrorAppService;
-    private final SessionManager sessionManager;
+
+    private final DatabaseService databaseService;
     private final TranslatorService translatorService;
 
-    public RuntimeService(
-            ConfigService configService,
-            DatabaseService databaseService,
-            ExecuteSessionService executeSessionService,
-            HMSMirrorAppService hmsMirrorAppService,
-            SessionManager sessionManager,
-            TranslatorService translatorService) {
-        this.configService = configService;
-        this.databaseService = databaseService;
-        this.executeSessionService = executeSessionService;
-        this.hmsMirrorAppService = hmsMirrorAppService;
-        this.sessionManager = sessionManager;
-        this.translatorService = translatorService;
-    }
+    public RunStatus start(String jobKey, boolean dryrun) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
 
-    public RunStatus start(boolean dryrun,
-                           Integer concurrency) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
-        ExecuteSession session = executeSessionService.getSession();
+        ConversionResult conversionResult = getConversionResultService().fromJob(jobKey);
+        conversionResult.getJobExecution().setDryRun(dryrun);
 
-        HmsMirrorConfig config = session.getConfig();
-//        ConversionRequest conversionRequest = session.getConversionRequest();
-        ConversionResult conversionResult = session.getConversionResult();
+
         log.debug("Starting the HMS Mirror Application");
-        RunStatus runStatus = new RunStatus();
-        session.addSubRunStatus(runStatus);
-        // NOTE: The transitionToActive process happens in another bean....
-        // TODO: Fix
-//        CompletableFuture<Boolean> result = hmsMirrorAppService.run(runStatus, conversionRequest, conversionResult, config, session);
-//        runStatus.setRunningTask(result);
+        RunStatus runStatus = conversionResult.getRunStatus();
+        // TODO: We need to add this to the web session we are currently using so we can track progress.
+
+        // TODO: What to do with the 'result'?
+        CompletableFuture<Boolean> result = getHmsMirrorAppService().run(conversionResult);
 
         return runStatus;
     }

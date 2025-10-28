@@ -29,9 +29,7 @@ import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
 import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
-import com.cloudera.utils.hms.mirror.service.SessionManager;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -45,10 +43,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.FileSystems;
 import java.util.*;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Component
 @Getter
@@ -92,8 +87,9 @@ public class CliReporter {
 //        ExecuteSession session = sessionManager.getCurrentSession();
 //        HmsMirrorConfig config = session.getConfig();
 //        ConversionResult conversionResult = session.getConversionResult();
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -135,8 +131,9 @@ public class CliReporter {
 
     public String getMessages() {
         StringBuilder report = new StringBuilder();
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         RunStatus runStatus = conversionResult.getRunStatus();
 
         if (runStatus.hasErrors()) {
@@ -189,8 +186,9 @@ public class CliReporter {
     Go through the Conversion object and set the variables.
      */
     private void populateVarMap() {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();
 
@@ -303,6 +301,8 @@ public class CliReporter {
 
     @Async("reportingThreadPool")
     public void run() {
+        // TODO: Fix
+        /*
         ExecuteSession session = sessionManager.getCurrentSession();
         try {
             fetchReportTemplates();
@@ -327,6 +327,8 @@ public class CliReporter {
         } catch (IOException ioe) {
             System.out.println("Missing Reporting Template");
         }
+
+         */
     }
 
     @PreDestroy

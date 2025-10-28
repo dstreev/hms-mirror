@@ -15,10 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.repository.impl;
+package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
-import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.repository.ConfigurationRepository;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.repository.DatasetRepository;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -37,42 +38,42 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * RocksDB implementation of ConfigurationRepository.
- * Handles persistence of Configuration entities in RocksDB.
+ * RocksDB implementation of DatasetRepository.
+ * Handles persistence of Dataset entities in RocksDB.
  */
 @Repository
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
-public class ConfigurationRepositoryImpl extends AbstractRocksDBRepository<ConfigLiteDto, String> implements ConfigurationRepository {
+public class DatasetRepositoryImpl extends AbstractRocksDBRepository<DatasetDto, String> implements DatasetRepository {
 
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-    public ConfigurationRepositoryImpl(RocksDB rocksDB,
-                                      @Qualifier("configurationsColumnFamily") ColumnFamilyHandle columnFamily,
-                                      @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConfigLiteDto>() {});
+    public DatasetRepositoryImpl(RocksDB rocksDB,
+                                @Qualifier("datasetsColumnFamily") ColumnFamilyHandle columnFamily,
+                                @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<DatasetDto>() {});
     }
 
     @Override
-    public ConfigLiteDto save(String id, ConfigLiteDto configLiteDto) throws RocksDBException {
+    public DatasetDto save(String id, DatasetDto datasetDto) throws RepositoryException {
         // Set timestamps
         String currentTime = LocalDateTime.now().format(dateFormatter);
-        if (configLiteDto.getCreatedDate() == null) {
-            configLiteDto.setCreatedDate(currentTime);
+        if (datasetDto.getCreatedDate() == null) {
+            datasetDto.setCreatedDate(currentTime);
         }
-        configLiteDto.setModifiedDate(currentTime);
+        datasetDto.setModifiedDate(currentTime);
 
-        // Ensure configuration name matches the id
-        configLiteDto.setName(id);
+        // Ensure dataset name matches the id
+        datasetDto.setName(id);
 
-        return super.save(id, configLiteDto);
+        return super.save(id, datasetDto);
     }
 
     @Override
-    public List<ConfigLiteDto> findAllSortedByName() throws RocksDBException {
-        Map<String, ConfigLiteDto> allConfigurations = findAll();
-        return allConfigurations.values().stream()
-                .sorted(Comparator.comparing(ConfigLiteDto::getName))
+    public List<DatasetDto> findAllSortedByName() throws RepositoryException {
+        Map<String, DatasetDto> allDatasets = findAll();
+        return allDatasets.values().stream()
+                .sorted(Comparator.comparing(DatasetDto::getName))
                 .collect(Collectors.toList());
     }
 }

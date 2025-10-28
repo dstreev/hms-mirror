@@ -34,15 +34,12 @@ import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.feature.Feature;
-import com.cloudera.utils.hms.mirror.feature.FeaturesEnum;
 import com.cloudera.utils.hms.mirror.service.*;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.text.DateFormat;
@@ -197,7 +194,7 @@ public abstract class DataStrategyBase implements DataStrategy {
     public Boolean buildTableSchema(CopySpec copySpec, DBMirror dbMirror) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         TableMirror tableMirror = copySpec.getTableMirror();
@@ -564,7 +561,7 @@ public abstract class DataStrategyBase implements DataStrategy {
     protected Boolean buildMigrationSql(DBMirror dbMirror, TableMirror tableMirror, Environment originalEnv, Environment sourceEnv, Environment targetEnv) {
         Boolean rtn = Boolean.TRUE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         EnvironmentTable original, source, target;
@@ -707,7 +704,7 @@ public abstract class DataStrategyBase implements DataStrategy {
 
     public Boolean isACIDInPlace(TableMirror tableMirror, Environment environment) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
 
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);

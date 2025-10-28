@@ -66,7 +66,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY Definition", tableMirror.getName());
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         EnvironmentTable let = null;
         EnvironmentTable ret = null;
@@ -213,7 +213,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY SQL", tableMirror.getName());
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
 
         String useDb = null;
         String database = null;

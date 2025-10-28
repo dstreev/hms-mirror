@@ -18,18 +18,48 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
-import org.rocksdb.RocksDBException;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository interface for Connection persistence operations.
+ * Extends the base RocksDBRepository with Connection-specific operations.
+ */
 public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, String> {
-    
-    Optional<ConnectionDto> findDefaultConnection() throws RocksDBException;
-    
-    List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RocksDBException;
-    
-    void setAsDefault(String connectionId) throws RocksDBException;
-    
-    boolean testConnection(String connectionId) throws RocksDBException;
+
+    /**
+     * Find the default connection.
+     *
+     * @return Optional containing the default connection if found
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    Optional<ConnectionDto> findDefaultConnection() throws RepositoryException;
+
+    /**
+     * Find all connections for a specific environment.
+     *
+     * @param environment The environment to filter by
+     * @return List of connections for the specified environment
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RepositoryException;
+
+    /**
+     * Set a connection as the default.
+     *
+     * @param connectionId The ID of the connection to set as default
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    void setAsDefault(String connectionId) throws RepositoryException;
+
+    /**
+     * Test a connection.
+     *
+     * @param connectionId The ID of the connection to test
+     * @return true if the connection is successful, false otherwise
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    boolean testConnection(String connectionId) throws RepositoryException;
 }

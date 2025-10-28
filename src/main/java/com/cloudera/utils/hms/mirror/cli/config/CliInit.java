@@ -22,16 +22,24 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResultHelper;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.testdata.DBMirrorTest;
+import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
+import com.cloudera.utils.hms.mirror.service.ConversionResultService;
 import com.cloudera.utils.hms.mirror.service.DomainService;
-import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import com.cloudera.utils.hms.mirror.service.SessionManager;
+import com.cloudera.utils.hms.mirror.util.HmsMirrorConfigConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -55,28 +63,40 @@ import static java.util.Objects.isNull;
 
 @Component
 @Slf4j
+@Getter
+@RequiredArgsConstructor
 public class CliInit {
 
+    @NonNull
     private final DomainService domainService;
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final ConversionResultService conversionResultService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
     private final ObjectMapper yamlMapper;
+    @NonNull
+    private final ConversionResultRepository conversionResultRepository;
+    @NonNull
+    private final RunStatusRepository runStatusRepository;
 
-    /**
-     * Initializes the CliInit class with required services and utilities.
-     *
-     * @param domainService the service responsible for managing domain-specific logic.
-     * @param executeSessionService the service responsible for managing execution sessions.
-     * @param yamlMapper the object mapper for parsing and generating YAML files.
-     */
-    public CliInit(
-            DomainService domainService,
-            ExecuteSessionService executeSessionService,
-            @Qualifier("yamlMapper") ObjectMapper yamlMapper
-    ) {
-        this.domainService = domainService;
-        this.executeSessionService = executeSessionService;
-        this.yamlMapper = yamlMapper;
-    }
+
+//    /**
+//     * Initializes the CliInit class with required services and utilities.
+//     *
+//     * @param domainService the service responsible for managing domain-specific logic.
+//     * @param executeSessionService the service responsible for managing execution sessions.
+//     * @param yamlMapper the object mapper for parsing and generating YAML files.
+//     */
+//    public CliInit(
+//            DomainService domainService,
+//            ExecuteSessionService executeSessionService,
+//            @Qualifier("yamlMapper") ObjectMapper yamlMapper
+//    ) {
+//        this.domainService = domainService;
+//        this.executeSessionService = executeSessionService;
+//        this.yamlMapper = yamlMapper;
+//    }
 
     /**
      * Initializes the HmsMirrorConfig object by loading the configuration information
@@ -150,6 +170,7 @@ public class CliInit {
             log.error("Couldn't locate configuration file: {}", fullConfigPath);
             throw new RuntimeException("Couldn't locate configuration file: " + fullConfigPath);
         }
+        getExecutionContextService().setHmsMirrorConfig(config);
         return config;
     }
 
@@ -177,32 +198,39 @@ public class CliInit {
         };
     }
 
-    private void loadTestData(ExecuteSession session) {
+    private void loadTestData() {
         log.info("Loading Test Data");
-        HmsMirrorConfig config = session.getConfig();
+        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+                new IllegalStateException("HmsMirrorConfig not set"));
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set"));
+        conversionResult.setMockTestDataset(Boolean.TRUE);
         String yamlCfgFile = null;
         String filename = config.getLoadTestDataFile();
         try {
-            log.info("Reconstituting Conversion from test data file: {}", filename);
-            log.info("Checking 'classpath' for test data file");
-            URL configURL = this.getClass().getResource(filename);
-            if (isNull(configURL)) {
-                log.info("Checking filesystem for test data file: {}", filename);
-                File conversionFile = new File(filename);
-                if (!conversionFile.exists()) {
-                    log.error("Couldn't locate test data file: {}", filename);
-                    throw new RuntimeException("Couldn't locate test data file: " + filename);
-                }
-                configURL = conversionFile.toURI().toURL();
-            }
+            DBMirrorTest dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
+            getConversionResultService().loadDBMirrorTest(dbMirrorTest);
 
-            yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-            ConversionResult conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(yamlCfgFile);
-            // Set Config Databases;
-            Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
-            config.setDatabases(databases);
-            // Replace the conversion in the session.
-            session.setConversionResult(conversionResult);
+            //            log.info("Reconstituting Conversion from test data file: {}", filename);
+//            log.info("Checking 'classpath' for test data file");
+//            URL configURL = this.getClass().getResource(filename);
+//            if (isNull(configURL)) {
+//                log.info("Checking filesystem for test data file: {}", filename);
+//                File conversionFile = new File(filename);
+//                if (!conversionFile.exists()) {
+//                    log.error("Couldn't locate test data file: {}", filename);
+//                    throw new RuntimeException("Couldn't locate test data file: " + filename);
+//                }
+//                configURL = conversionFile.toURI().toURL();
+//            }
+//
+//            yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
+//            ConversionResult conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(yamlCfgFile);
+//            // Set Config Databases;
+//            Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
+//            config.setDatabases(databases);
+//            // Replace the conversion in the session.
+//            session.setConversionResult(conversionResult);
         } catch (UnrecognizedPropertyException upe) {
             // Appears that the file isn't a Conversion file, so try to load it as a DBMirror file.
             try {
@@ -226,8 +254,8 @@ public class CliInit {
         }
     }
 
-    private DBMirror loadDBMirrorFromFile(String filename) {
-        DBMirror dbMirror = null;
+    private DBMirrorTest loadDBMirrorFromFile(String filename) {
+        DBMirrorTest dbMirror = null;
         try {
             log.info("Reconstituting DBMirror from file: {}", filename);
             log.info("Checking 'classpath' for DBMirror file");
@@ -242,7 +270,7 @@ public class CliInit {
                 configURL = conversionFile.toURI().toURL();
             }
             String yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-            dbMirror = yamlMapper.readerFor(DBMirror.class).readValue(yamlCfgFile);
+            dbMirror = yamlMapper.readerFor(DBMirrorTest.class).readValue(yamlCfgFile);
         } catch (UnrecognizedPropertyException upe) {
             log.error("There may have been a breaking change in the configuration since the previous " +
                     "release. Review the note below and remove the 'Unrecognized field' from the configuration and try " +
@@ -268,46 +296,35 @@ public class CliInit {
     @Bean
     // Needs to happen after all the configs have been set.
     @Order(15)
-    public CommandLineRunner conversionPostProcessing(HmsMirrorConfig config,
-                                                      SessionManager sessionManager,
-                                                      @Value("${hms-mirror.concurrency.max-threads}") Integer maxThreads) {
+    public CommandLineRunner conversionPostProcessing() {
         return args -> {
-            // TODO: Need to review this process for redundancy.
-//            ExecuteSession session;
-//            try {
-                // Create a session for the CLI.  It will be the 'current' session. prefix 'cli-' with timestamp.
-                log.info("Creating Session for CLI");
-                DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
-                String cliSessionId = "cli-" + dtf.format(new Date());
-                ExecuteSession session = sessionManager.createSession(cliSessionId, config);
-//                sessionManager.startSession(maxThreads);
-//            } catch (SessionException e) {
-//                log.error("Issue creating session or starting session");
-//                throw new RuntimeException(e);
-//            }
+            // Create a session for the CLI.  It will be the 'current' session. prefix 'cli-' with timestamp.
+            log.info("Creating Session for CLI");
+            DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
+            String cliSessionId = "cli-" + dtf.format(new Date());
 
-//            session = sessionManager.getCurrentSession();
+            HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+                    new IllegalStateException("HmsMirrorConfig not set"));
+            ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, "cliSessionId");
+            getExecutionContextService().setConversionResult(conversionResult);
+            RunStatus runStatus = conversionResult.getRunStatus();
+            getExecutionContextService().setRunStatus(runStatus);
 
-//            HmsMirrorConfig config = sessionManager.getCurrentSession().getConfig();
-
-            ConversionResult conversionResult = null;
             log.info("Post Processing Conversion");
             if (config.isLoadingTestData()) {
                 // Load Test Data.
-                loadTestData(session);
-
-                conversionResult = executeSessionService.getSession().getConversionResult();
-
-                // Clean up the test data to match the configuration.
-                ConversionResultHelper.removeWorkingData(conversionResult, config);
-
-            } else {
-                conversionResult = executeSessionService.getSession().getConversionResult();
+                conversionResult.setMockTestDataset(Boolean.TRUE);
+                loadTestData();
             }
+
+            getConversionResultRepository().save(conversionResult);
+            getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
+
             // Remove Tables from Map.
-            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
-                dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
-            }
+            // TODO: Account for this eventually.
+//            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
+//                dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
+//            }
         };
     }
 

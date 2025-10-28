@@ -212,7 +212,7 @@ public class TranslatorService {
         log.debug("Translating table location for table: {} from: {}", tableMirror.getName(), originalLocation);
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -473,7 +473,7 @@ public class TranslatorService {
                                           String originalLocation, String newLocation, int level,
                                           boolean consolidateSourceTables, TableMirror tableMirror) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -551,7 +551,7 @@ public class TranslatorService {
     public Map<String, Map<TableType, String>> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -666,7 +666,7 @@ public class TranslatorService {
         String partitionSpec = request.getPartitionSpec();
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -737,7 +737,7 @@ public class TranslatorService {
     public GlobalLocationMapResult processGlobalLocationMapImpl(String originalLocation, boolean isExternalTable) {
         try {
             ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-            ConfigLiteDto config = conversionResult.getConfigLite();
+            ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
             RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -948,7 +948,7 @@ public class TranslatorService {
     private void validateLocationForDistcp(String originalLocation, TableMirror tableMirror) {
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 

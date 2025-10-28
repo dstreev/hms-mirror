@@ -15,7 +15,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class JobDto {
+public class JobDto implements Cloneable {
 
     @Schema(description = "Unique identifier for the job", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
     private UUID id = UUID.randomUUID();
@@ -53,6 +53,10 @@ public class JobDto {
     private String loadTestDataFile = null;
     private boolean skipLinkCheck = Boolean.FALSE;
 
+    @JsonIgnore
+    public String getKey() {
+        return this.getName() + "-" + this.id.toString();
+    }
 //    private boolean replace = Boolean.FALSE;
 
 //    @Schema(description = "Flag to indicate if this job should reset the right table")
@@ -96,7 +100,7 @@ public class JobDto {
      *
      * @return A deep clone of this JobDto
      */
-    public JobDto deepClone() {
+    public JobDto clone() throws CloneNotSupportedException {
         JobDto clone = new JobDto();
 
         // Copy immutable and primitive fields

@@ -15,10 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.repository.impl;
+package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +31,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Implementation of DBMirrorRepository that persists DBMirror instances to RocksDB.
@@ -52,7 +56,7 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
     }
 
     @Override
-    public Map<String, DBMirror> findByConversionResult(String conversionResultKey) throws RocksDBException {
+    public Map<String, DBMirror> findByKey(String conversionResultKey) throws RepositoryException {
         Map<String, DBMirror> result = new HashMap<>();
         String prefix = conversionResultKey + DATABASE_PREFIX;
 
@@ -86,13 +90,13 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
 
     @Override
     public DBMirror save(String conversionResultKey, String databaseName, DBMirror dbMirror)
-            throws RocksDBException {
+            throws RepositoryException {
         String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
         return save(compositeKey, dbMirror);
     }
 
     @Override
-    public void deleteByConversionResult(String conversionResultKey) throws RocksDBException {
+    public void deleteByKey(String conversionResultKey) throws RepositoryException {
         String prefix = conversionResultKey + DATABASE_PREFIX;
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
@@ -109,6 +113,32 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
                 rocksDB.delete(columnFamily, iterator.key());
                 iterator.next();
             }
+        } catch (RocksDBException e) {
+            // todo: missing id.
+            throw new RepositoryException("Failed to delete entity: " , e);
         }
+    }
+
+    @Override
+    public boolean deleteByName(String conversionResultKey, String databaseName) throws RepositoryException {
+        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
+        log.debug("Deleting DBMirror by composite key: {}", compositeKey);
+        return deleteById(compositeKey);
+    }
+
+    @Override
+    public List<String> listNamesByKey(String conversionResultKey) throws RepositoryException {
+        String prefix = conversionResultKey + DATABASE_PREFIX;
+        List<String> databaseNames = findKeySuffixesByPrefix(prefix);
+        log.debug("Found {} database names for ConversionResult key: {}", databaseNames.size(), conversionResultKey);
+        return databaseNames;
+    }
+
+    @Override
+    public Optional<DBMirror> findByName(String conversionResultKey, String databaseName)
+            throws RepositoryException {
+        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
+        log.debug("Finding DBMirror by composite key: {}", compositeKey);
+        return findById(compositeKey);
     }
 }

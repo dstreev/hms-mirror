@@ -15,10 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.repository.impl;
+package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,7 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public ConnectionDto save(String id, ConnectionDto connectionDto) throws RocksDBException {
+    public ConnectionDto save(String id, ConnectionDto connectionDto) throws RepositoryException {
         connectionDto.setId(id);
         connectionDto.setModified(LocalDateTime.now());
         
@@ -59,7 +60,7 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public Optional<ConnectionDto> findDefaultConnection() throws RocksDBException {
+    public Optional<ConnectionDto> findDefaultConnection() throws RepositoryException {
         Map<String, ConnectionDto> all = findAll();
         return all.values().stream()
                 .filter(ConnectionDto::isDefault)
@@ -67,7 +68,7 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
+    public List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RepositoryException {
         Map<String, ConnectionDto> all = findAll();
         return all.values().stream()
                 .filter(conn -> environment.equals(conn.getEnvironment()))
@@ -75,7 +76,7 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public void setAsDefault(String connectionId) throws RocksDBException {
+    public void setAsDefault(String connectionId) throws RepositoryException {
         // First, unset all other defaults
         Map<String, ConnectionDto> all = findAll();
         for (Map.Entry<String, ConnectionDto> entry : all.entrySet()) {
@@ -98,7 +99,7 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public boolean testConnection(String connectionId) throws RocksDBException {
+    public boolean testConnection(String connectionId) throws RepositoryException {
         Optional<ConnectionDto> connectionOpt = findById(connectionId);
         if (connectionOpt.isEmpty()) {
             throw new RocksDBException("Connection not found: " + connectionId);

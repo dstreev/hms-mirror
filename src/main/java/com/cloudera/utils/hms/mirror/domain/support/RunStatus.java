@@ -48,8 +48,9 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
     private Date start = null;
     private Date end = null;
 
-    @Schema(description = "This identifies the sessionId that is running/ran for this status.")
-    private String sessionId;
+    @JsonIgnore
+    private String conversionResultKey;
+
     private String comment;
     @JsonIgnore
     private Messages errors = null;//new Messages(150);

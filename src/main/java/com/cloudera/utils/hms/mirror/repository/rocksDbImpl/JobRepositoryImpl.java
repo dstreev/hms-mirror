@@ -15,10 +15,11 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.repository.impl;
+package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.repository.JobRepository;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,12 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
     }
 
     @Override
-    public JobDto save(String id, JobDto jobDto) throws RocksDBException {
+    public JobDto save(JobDto jobDto) throws RepositoryException {
+        return save(jobDto.getKey(), jobDto);
+    }
+
+    @Override
+    public JobDto save(String id, JobDto jobDto) throws RepositoryException {
         // Set timestamps
         String currentTime = LocalDateTime.now().format(dateFormatter);
         if (jobDto.getCreatedDate() == null) {
@@ -66,7 +72,7 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
     }
 
     @Override
-    public List<JobDto> findAllSortedByName() throws RocksDBException {
+    public List<JobDto> findAllSortedByName() throws RepositoryException {
         Map<String, JobDto> allJobs = findAll();
         return allJobs.values().stream()
                 .sorted(Comparator.comparing(JobDto::getName))

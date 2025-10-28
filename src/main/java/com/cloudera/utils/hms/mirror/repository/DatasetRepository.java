@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
-import org.rocksdb.RocksDBException;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
 
@@ -32,7 +32,7 @@ public interface DatasetRepository extends RocksDBRepository<DatasetDto, String>
      * Find all datasets and return them as a list sorted by name.
      *
      * @return List of all datasets sorted by name
-     * @throws RocksDBException if there's an error accessing RocksDB
+     * @throws RepositoryException if there's an error accessing the repository
      */
-    List<DatasetDto> findAllSortedByName() throws RocksDBException;
+    List<DatasetDto> findAllSortedByName() throws RepositoryException;
 }

@@ -17,10 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.connections;
 
-import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
@@ -28,8 +25,6 @@ import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
 import com.cloudera.utils.hms.util.ConfigUtils;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
@@ -42,7 +37,6 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
-import java.util.Set;
 
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -99,7 +93,7 @@ public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements Con
                             // We need to review any property overrides for the environment to see
                             //   if they're trying to set the queue. EG tez.queue.name or mapred.job.queue.name
                             String queueOverride = ConfigUtils.getQueuePropertyOverride(environment,
-                                    conversionResult.getConfigLite().getOptimization().getOverrides());
+                                    conversionResult.getConfig().getOptimization().getOverrides());
                             if (queueOverride != null) {
                                 connProperties.put("connectionInitSqls", queueOverride);
                             }

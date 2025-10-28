@@ -27,6 +27,8 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.domain.testdata.DBMirrorTest;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.util.NamespaceUtils;
@@ -36,12 +38,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import lombok.Generated;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -67,6 +67,149 @@ public class ConversionResultService {
 
     @NonNull
     private final ExecutionContextService executionContextService;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.ConfigurationRepository configurationRepository;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.DatasetRepository datasetRepository;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.ConnectionRepository connectionRepository;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.JobRepository jobRepository;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.TableMirrorRepository tableMirrorRepository;
+    @NonNull
+    private final com.cloudera.utils.hms.mirror.repository.DBMirrorRepository dbMirrorRepository;
+
+    /**
+     * This method uses a job ID to look up the JobDto from the repository and build out a fully resolved
+     * ConversionResult object. It delegates to the {@link #fromJob(JobDto)} method.
+     *
+     * @param jobKey The ID of the job to look up
+     * @return A fully populated ConversionResult with deep clones of all referenced objects
+     * @throws RuntimeException if job is not found or repository access fails
+     */
+    public ConversionResult fromJob(String jobKey) {
+        if (isBlank(jobKey)) {
+            throw new IllegalArgumentException("Job ID cannot be null or blank");
+        }
+
+        log.debug("Looking up JobDto by ID: {}", jobKey);
+
+        try {
+            Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
+            if (jobOpt.isPresent()) {
+                JobDto job = jobOpt.get();
+                log.debug("Found JobDto with ID: {}", jobKey);
+                return fromJob(job);
+            } else {
+                log.error("Job with ID '{}' not found in repository", jobKey);
+                throw new IllegalStateException("Job with ID '" + jobKey + "' not found");
+            }
+        } catch (com.cloudera.utils.hms.mirror.exceptions.RepositoryException e) {
+            log.error("Repository error while looking up JobDto with ID: {}", jobKey, e);
+            throw new RuntimeException("Failed to load job from repository", e);
+        }
+    }
+
+    /**
+     * This method uses a JobDto object to build out a fully resolved ConversionResult object that has the clones of the
+     * references kept in the JobDto to Connections, Dataset, Config, etc.  It also makes a clone of the JobDto and sets
+     * the job field in the conversionResult.
+     *
+     * @param job The JobDto containing references to configuration, dataset, and connections
+     * @return A fully populated ConversionResult with deep clones of all referenced objects
+     * @throws RuntimeException if required references are missing or repository access fails
+     */
+    public ConversionResult fromJob(JobDto job) {
+        if (isNull(job)) {
+            throw new IllegalArgumentException("JobDto cannot be null");
+        }
+
+        log.debug("Building ConversionResult from JobDto: {}", job.getId());
+
+        ConversionResult conversionResult = new ConversionResult();
+        RunStatus runStatus = new RunStatus();
+        conversionResult.setRunStatus(runStatus);
+
+        try {
+            // Load and deep clone the configuration
+            if (!isBlank(job.getConfigReference())) {
+                log.debug("Loading config reference: {}", job.getConfigReference());
+                ConfigLiteDto config = configurationRepository.findById(job.getConfigReference())
+                        .orElseThrow(() -> {
+                            log.warn("Config reference '{}' not found in repository", job.getConfigReference());
+                            return new IllegalStateException("Config reference '" + job.getConfigReference() + "' not found");
+                        })
+                        .clone();
+                conversionResult.setConfig(config);
+                log.debug("Config loaded and cloned successfully");
+            } else {
+                log.warn("No config reference provided in JobDto");
+            }
+
+            // Load and deep clone the dataset
+            if (!isBlank(job.getDatasetReference())) {
+                log.debug("Loading dataset reference: {}", job.getDatasetReference());
+                DatasetDto dataset = datasetRepository.findById(job.getDatasetReference())
+                        .orElseThrow(() -> {
+                            log.warn("Dataset reference '{}' not found in repository", job.getDatasetReference());
+                            return new IllegalStateException("Dataset reference '" + job.getDatasetReference() + "' not found");
+                        })
+                        .clone();
+                conversionResult.setDataset(dataset);
+                log.debug("Dataset loaded and cloned successfully");
+            } else {
+                log.warn("No dataset reference provided in JobDto");
+            }
+
+            // Load and clone the LEFT connection
+            if (!isBlank(job.getLeftConnectionReference())) {
+                log.debug("Loading left connection reference: {}", job.getLeftConnectionReference());
+                com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto leftConn =
+                        connectionRepository.findById(job.getLeftConnectionReference())
+                                .orElseThrow(() -> {
+                                    log.warn("Left connection reference '{}' not found in repository", job.getLeftConnectionReference());
+                                    return new IllegalStateException("Left connection reference '" + job.getLeftConnectionReference() + "' not found");
+                                })
+                                .clone();
+                conversionResult.setConnection(Environment.LEFT, leftConn);
+                log.debug("Left connection loaded and cloned successfully");
+            } else {
+                log.warn("No left connection reference provided in JobDto");
+            }
+
+            // Load and clone the RIGHT connection
+            if (!isBlank(job.getRightConnectionReference())) {
+                log.debug("Loading right connection reference: {}", job.getRightConnectionReference());
+                com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto rightConn =
+                        connectionRepository.findById(job.getRightConnectionReference())
+                                .orElseThrow(() -> {
+                                    log.warn("Right connection reference '{}' not found in repository", job.getRightConnectionReference());
+                                    return new IllegalStateException("Right connection reference '" + job.getRightConnectionReference() + "' not found");
+                                })
+                                .clone();
+                conversionResult.setConnection(Environment.RIGHT, rightConn);
+                log.debug("Right connection loaded and cloned successfully");
+            } else {
+                log.warn("No right connection reference provided in JobDto");
+            }
+
+            // Deep clone the JobDto itself and set it in the conversionResult
+            JobDto clonedJob = job.clone();
+            conversionResult.setJob(clonedJob);
+            log.debug("JobDto cloned and set in ConversionResult");
+
+            log.info("ConversionResult successfully built from JobDto: {}", job.getId());
+            return conversionResult;
+
+        } catch (com.cloudera.utils.hms.mirror.exceptions.RepositoryException e) {
+            log.error("Repository error while loading references for JobDto: {}", job.getId(), e);
+            throw new RuntimeException("Failed to load references from repository", e);
+        } catch (CloneNotSupportedException e) {
+            log.error("Failed to clone objects for JobDto: {}", job.getId(), e);
+            throw new RuntimeException("Failed to clone objects", e);
+        }
+    }
 
 //    private final ExecuteSessionService executeSessionService;
 
@@ -102,25 +245,16 @@ public class ConversionResultService {
 //    }
 
     public DBMirror getDatabase(String database) {
-        ConversionResult conversionResult = executionContextService.getConversionResult();
+        ConversionResult conversionResult = executionContextService.getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
         // TODO: Go to the ConversionResult Repo and get the DBMirror from persistence.
 
         return null;
     }
 
-    public List<String> getDatabaseTableList(String database) {
-        ConversionResult conversionResult = executionContextService.getConversionResult();
-        DBMirror dbMirror = conversionResult.getDatabases().get(database);
-        if (nonNull(dbMirror)) {
-            // TODO: Fix: Needs to come from Repo as these are disconnected for Scale.
-//            return new ArrayList<>(dbMirror.getTableMirrors().keySet());
-        } else {
-            return new ArrayList<>();
-        }
-    }
-
     public boolean convertManaged() {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
         if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
                 !conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
             return Boolean.TRUE;
@@ -130,7 +264,8 @@ public class ConversionResultService {
     }
 
     public String getResolvedDB(String database) {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
         String rtn = null;
         // Set Local Value for adjustments
         String lclDb = database;
@@ -145,7 +280,8 @@ public class ConversionResultService {
     }
 
     public boolean possibleConversions() {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
         boolean conversions = Boolean.FALSE;
         if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() &&
                 (nonNull(conversionResult.getConnection(Environment.RIGHT)) &&
@@ -162,8 +298,9 @@ public class ConversionResultService {
      */
     public String getTargetNamespace() throws RequiredConfigurationException {
         String rtn = null;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
             rtn = config.getTransfer().getTargetNamespace();
         } else if (nonNull(conversionResult.getConnection(Environment.RIGHT))
@@ -186,7 +323,8 @@ public class ConversionResultService {
      */
     public Boolean legacyMigration() {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
 
         if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive() !=
                 conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()) {
@@ -206,12 +344,66 @@ public class ConversionResultService {
         return et;
     }
 
+    /*
+
+     */
+    public boolean loadDBMirrorTest(DBMirrorTest dbMirrorTest) {
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
+        // Add the DatabaseSpec
+        DatasetDto dataset = null;
+        if (isNull(conversionResult.getDataset())) {
+            dataset = new DatasetDto();
+            conversionResult.setDataset(dataset);
+        } else {
+            dataset = conversionResult.getDataset();
+        }
+
+        dbSpec.setDatabaseName(dbMirrorTest.getName());
+
+        DBMirror dbMirror = new DBMirror();
+        dbMirror.setName(dbMirrorTest.getName());
+
+        dbMirror.getProperties().putAll(dbMirrorTest.getProperties());
+        try {
+            dbMirror = getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        dbMirrorTest.getTableMirrors().forEach((tableName,tableMirror) -> {
+            dbSpec.getTables().add(tableName);
+            TableMirror toSaveTblMirror = new TableMirror();
+            toSaveTblMirror.setName(tableName);
+            tableMirror.getEnvironments().forEach((env,et) -> {
+                try {
+                    EnvironmentTable toSaveEnvTbl = et.clone();
+                    // Cleanup any previous run values.
+                    toSaveEnvTbl.getSql().clear();
+                    toSaveEnvTbl.getCleanUpSql().clear();
+                    toSaveEnvTbl.getIssues().clear();
+                    toSaveEnvTbl.getErrors().clear();
+                    toSaveTblMirror.getEnvironments().put(env, toSaveEnvTbl);
+                } catch (CloneNotSupportedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            try {
+                getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), toSaveTblMirror);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+    }
 
     public Boolean AVROCheck(TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
         Boolean relative = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         // Check for AVRO
@@ -813,7 +1005,6 @@ public class ConversionResultService {
      * @param conversionResult The conversion result to add the database to
      * @param database         The database name
      * @return The DBMirror for the database
-     */
     public DBMirror addDatabase(ConversionResult conversionResult, String database) {
         if (conversionResult.getDatabases().containsKey(database)) {
             return conversionResult.getDatabases().get(database);
@@ -824,6 +1015,7 @@ public class ConversionResultService {
             return dbs;
         }
     }
+     */
 
     /**
      * Retrieves a database from the conversion result.
@@ -831,8 +1023,9 @@ public class ConversionResultService {
      * @param conversionResult The conversion result containing databases
      * @param database         The database name
      * @return The DBMirror for the database, or null if not found
-     */
     public DBMirror getDatabase(ConversionResult conversionResult, String database) {
         return conversionResult.getDatabases().get(database);
     }
+     */
+
 }

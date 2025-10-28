@@ -28,10 +28,8 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.exceptions.*;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.util.DatabaseUtils;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import lombok.Getter;
@@ -45,7 +43,6 @@ import java.sql.Connection;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
@@ -79,6 +76,8 @@ public class DatabaseService {
     private final ConfigService configService;
     @NonNull
     private final CliEnvironment cliEnvironment;
+    @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
 
 
     public static final Set<String> skipList = new HashSet<String>(Arrays.asList(DB_LOCATION, DB_MANAGED_LOCATION, COMMENT, DB_NAME, OWNER_NAME, OWNER_TYPE));
@@ -410,7 +409,7 @@ public class DatabaseService {
         log.info("Building DB Statements for {}", dbMirror.getName());
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -937,7 +936,7 @@ public class DatabaseService {
     public boolean build() {
         boolean rtn = true;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -953,7 +952,15 @@ public class DatabaseService {
         for (DatasetDto.DatabaseSpec dbSpec : conversionResult.getDataset().getDatabases()) {
             String database = dbSpec.getDatabaseName();
             log.info("Building Database commands: {}", database);
-            DBMirror dbMirror = getConversionResultService().getDatabase(database);
+
+            DBMirror dbMirror = null;
+            try {
+                Optional<DBMirror> dbMRepo = getDbMirrorRepository().findByName(conversionResult.getKey(), database);
+                dbMirror = dbMRepo.orElseThrow(() ->
+                        new IllegalStateException("Couldn't locate DBMirror" + database + " in repository."));
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
             try {
                 rtn = buildDBStatements(dbMirror);
             } catch (RuntimeException rte) {
@@ -986,7 +993,7 @@ public class DatabaseService {
     public boolean execute() {
         boolean rtn = true;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -1255,7 +1262,7 @@ public class DatabaseService {
         Connection conn = null;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();
         RunStatus runStatus = conversionResult.getRunStatus();

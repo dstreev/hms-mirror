@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import org.rocksdb.RocksDBException;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
 
@@ -28,11 +28,13 @@ import java.util.List;
  */
 public interface JobRepository extends RocksDBRepository<JobDto, String> {
 
+    JobDto save(JobDto jobDto) throws RepositoryException;
+
     /**
      * Find all jobs and return them as a list sorted by name.
      *
      * @return List of all jobs sorted by name
-     * @throws RocksDBException if there's an error accessing RocksDB
+     * @throws RepositoryException if there's an error accessing the repository
      */
-    List<JobDto> findAllSortedByName() throws RocksDBException;
+    List<JobDto> findAllSortedByName() throws RepositoryException;
 }

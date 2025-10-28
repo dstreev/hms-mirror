@@ -31,11 +31,15 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.mirror.core.api.TableOperations;
 import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -60,20 +64,31 @@ import static java.util.Objects.nonNull;
 @Getter
 @Setter
 @Slf4j
+@RequiredArgsConstructor
 public class TableService {
     private final DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
     private final DateFormat tdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
+    @NonNull
     private final ConfigService configService;
+    @NonNull
     private final ExecutionContextService executionContextService;
+    @NonNull
     private final ConversionResultService conversionResultService;
+    @NonNull
     private final ConnectionPoolService connectionPoolService;
+    @NonNull
     private final QueryDefinitionsService queryDefinitionsService;
+    @NonNull
     private final TranslatorService translatorService;
+    @NonNull
     private final StatsCalculatorService statsCalculatorService;
+    @NonNull
     private final TableOperations tableOperations;  // NEW: Core business logic injection
-    private final SessionManager sessionManager;
+    @NonNull
     private final CliEnvironment cliEnvironment;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
 
 
     // Assuming your logger is already defined, e.g.
@@ -110,19 +125,19 @@ public class TableService {
     protected void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
         // NEW: Delegate to core business logic instead of doing it inline
         ValidationResult result = validateTableFilterImpl(conversionResult, dbMirror, tableMirror, environment);
-        
+
         // Handle the result in Spring-specific way (side effects, metrics, etc.)
         if (!result.isValid()) {
             log.warn("Table filter validation failed: {}", result.getMessage());
             tableMirror.setRemove(Boolean.TRUE);
             tableMirror.setRemoveReason(result.getMessage());
-            
+
             // Log errors for debugging
             result.getErrors().forEach(error -> log.error("Filter error: {}", error));
         } else {
@@ -134,14 +149,14 @@ public class TableService {
                 }
             }
         }
-        
+
         log.trace("Table filter checked for table: {} - Valid: {}", tableMirror, result.isValid());
     }
 
     private ValidationResult validateTableFilterImpl(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         try {
             // Get configuration through the infrastructure abstraction
-            ConfigLiteDto config = conversionResult.getConfigLite();
+            ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
 
             EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
@@ -218,7 +233,7 @@ public class TableService {
             // ...existing logic to get the statement...
             StringBuilder createStatementBldr = new StringBuilder();
             ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-            ConfigLiteDto config = conversionResult.getConfigLite();
+            ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
             RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -264,49 +279,46 @@ public class TableService {
         log.info("Starting to get table definition for {}", tableId);
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
         DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
 
         // Fetch Table Definition
         // TODO: Fix for Test Data
-//        if (session.getConversionResult().getConfigLite().isLoadingTestData()) {
-//            log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
-//        } else {
+        if (conversionResult.isMockTestDataset()) {
+            log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
+        } else {
             log.debug("Loading schema from catalog for {}", tableId);
             loadSchemaFromCatalog(dbMirror, tableMirror, environment);
-//        }
+        }
         log.debug("Checking table filter for {}", tableId);
         checkTableFilter(dbMirror, tableMirror, environment);
+
         if (!tableMirror.isRemove()
-            // TODO: Fix for Test Data
-//                && !session.getConversionResult().getConfigLite().isLoadingTestData()
+                && !conversionResult.isMockTestDataset()
         ) {
             log.debug("Table is not marked for removal. Proceeding with data strategy checks for {}", tableId);
             handleDataStrategy(tableMirror, environment, environmentTable, tableId);
-        }
-        Boolean partitioned = TableUtils.isPartitioned(environmentTable);
-        if (environment == Environment.LEFT && partitioned
-                && !tableMirror.isRemove()
-                // TODO: Fix for Test Data
-//                && !session.getConversionResult().getConfigLite().isLoadingTestData()
-        ) {
-            log.debug("Table is partitioned. Checking metadata details for {}", tableId);
-            if (config.loadMetadataDetails()) {
-                log.debug("Loading partition metadata directly for {}", tableId);
-                loadTablePartitionMetadataDirect(dbMirror, tableMirror, environment);
+            Boolean partitioned = TableUtils.isPartitioned(environmentTable);
+            if (environment == Environment.LEFT && partitioned) {
+                log.debug("Table is partitioned. Checking metadata details for {}", tableId);
+                if (config.loadMetadataDetails()) {
+                    log.debug("Loading partition metadata directly for {}", tableId);
+                    loadTablePartitionMetadataDirect(dbMirror, tableMirror, environment);
+                }
             }
-        }
-        Integer partLimit = databaseSpec.getFilter().getMaxPartitions();//.getFilter().getTblPartitionLimit();
-        if (partLimit != null && partLimit > 0) {
-            log.debug("Checking partition count filter for {}", tableId);
-            if (environmentTable.getPartitions().size() > partLimit) {
-                log.info("Table partition count exceeds limit for {}. Limit: {}, Actual: {}",
-                        tableId, partLimit, environmentTable.getPartitions().size());
-                tableMirror.setRemove(Boolean.TRUE);
-                tableMirror.setRemoveReason("The table partition count exceeds the specified table filter partition limit: " +
-                        partLimit + " < " + environmentTable.getPartitions().size());
+
+            Integer partLimit = databaseSpec.getFilter().getMaxPartitions();//.getFilter().getTblPartitionLimit();
+            if (partLimit != null && partLimit > 0) {
+                log.debug("Checking partition count filter for {}", tableId);
+                if (environmentTable.getPartitions().size() > partLimit) {
+                    log.info("Table partition count exceeds limit for {}. Limit: {}, Actual: {}",
+                            tableId, partLimit, environmentTable.getPartitions().size());
+                    tableMirror.setRemove(Boolean.TRUE);
+                    tableMirror.setRemoveReason("The table partition count exceeds the specified table filter partition limit: " +
+                            partLimit + " < " + environmentTable.getPartitions().size());
+                }
             }
         }
         log.info("Completed table definition for {}", tableId);
@@ -316,7 +328,7 @@ public class TableService {
     private void handleDataStrategy(TableMirror tableMirror, Environment environment,
                                     EnvironmentTable environmentTable, String tableId) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -349,14 +361,18 @@ public class TableService {
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTableMetadata(DBMirror dbMirror, TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> getTableMetadata(ConversionResult conversionResult, DBMirror dbMirror,
+                                                            TableMirror tableMirror) {
         log.info("Fetching table metadata asynchronously for table: {}", tableMirror.getName());
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+
         ReturnStatus rtn = new ReturnStatus();
         // Preset and overwrite the status when an issue or anomoly occurs.
         rtn.setStatus(ReturnStatus.Status.SUCCESS);
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+//        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -423,29 +439,41 @@ public class TableService {
                 rtn.setStatus(ReturnStatus.Status.ERROR);
                 rtn.setException(e);
                 return rtn;
+            } finally {
+                // Save the latest copy of TableMirror
+                try {
+                    getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), tableMirror);
+                } catch (RepositoryException e) {
+                    throw new RuntimeException(e);
+                }
+                // Clear Threads hook to these objects.
+                getExecutionContextService().reset();
             }
         });
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTables(DBMirror dbMirror) {
+    public CompletableFuture<ReturnStatus> getTables(ConversionResult conversionResult, DBMirror dbMirror) {
         log.info("Fetching tables asynchronously for DBMirror: {}", dbMirror.getName());
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+
         return CompletableFuture.supplyAsync(() -> {
             ReturnStatus rtn = new ReturnStatus();
             try {
                 // ...logic...
-                ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-                ConfigLiteDto config = conversionResult.getConfigLite();
+//                ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+                ConfigLiteDto config = conversionResult.getConfig();
                 JobDto job = conversionResult.getJob();
                 RunStatus runStatus = conversionResult.getRunStatus();
                 log.debug("Getting tables for Database {}", dbMirror.getName());
                 try {
-                    getTables(dbMirror, Environment.LEFT);
+                    getTablesInner(dbMirror, Environment.LEFT);
                     if (job.isSync()) {
                         // Get the tables on the RIGHT side.  Used to determine if a table has been dropped on the LEFT
                         // and later needs to be removed on the RIGHT.
                         try {
-                            getTables(dbMirror, Environment.RIGHT);
+                            getTablesInner(dbMirror, Environment.RIGHT);
                         } catch (SQLException se) {
                             // OK, if the db doesn't exist yet.
                         }
@@ -466,17 +494,19 @@ public class TableService {
                 rtn.setStatus(ReturnStatus.Status.ERROR);
                 rtn.setException(e);
                 return rtn;
+            } finally {
+                getExecutionContextService().reset();
             }
         });
     }
 
-    public void getTables(DBMirror dbMirror, Environment environment) throws SQLException {
+    private void getTablesInner(DBMirror dbMirror, Environment environment) throws SQLException {
         log.info("Fetching tables for DBMirror: {} in environment: {}", dbMirror.getName(), environment);
         Connection conn = null;
         String database = null;
         try {
             ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-            ConfigLiteDto config = conversionResult.getConfigLite();
+            ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
             RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -523,7 +553,7 @@ public class TableService {
     private List<String> buildShowStatements(Environment environment) {
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -552,7 +582,7 @@ public class TableService {
         if (tableName == null) return;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
         DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
@@ -613,7 +643,7 @@ public class TableService {
 
     private String getRemovalReason(String tableName) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -643,7 +673,7 @@ public class TableService {
         EnvironmentTable environmentTable = tableMirror.getEnvironmentTable(environment);
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -755,7 +785,7 @@ public class TableService {
         ResultSet resultSet = null;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -887,7 +917,7 @@ public class TableService {
         ResultSet resultSet = null;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
         ConnectionDto connection = conversionResult.getConnection(environment);
@@ -938,7 +968,7 @@ public class TableService {
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
@@ -1020,7 +1050,7 @@ public class TableService {
         Boolean rtn = Boolean.TRUE;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();
         RunStatus runStatus = conversionResult.getRunStatus();

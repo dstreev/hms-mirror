@@ -79,7 +79,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
         log.debug("Table: {} buildout EXPORT_IMPORT Definition", tableMirror.getName());
@@ -137,7 +137,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfigLite();
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         log.debug("Database: {} buildout EXPORT_IMPORT SQL", tableMirror.getName());
 
