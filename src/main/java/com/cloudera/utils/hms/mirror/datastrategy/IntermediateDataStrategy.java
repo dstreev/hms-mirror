@@ -67,7 +67,8 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto configLite = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
@@ -187,7 +188,8 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     @Override
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
 
         BuildWhat buildWhat = whatToBuild(dbMirror, tableMirror);
 
@@ -298,7 +300,8 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     @Override
     public BuildWhat whatToBuild(DBMirror dbMirror, TableMirror tableMirror) {
         BuildWhat buildWhat = new BuildWhat();
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto configLite = conversionResult.getConfig();
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
@@ -346,7 +349,8 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     @Override
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
@@ -397,7 +401,8 @@ public class IntermediateDataStrategy extends DataStrategyBase {
     @Override
     public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto configLite = conversionResult.getConfig();
 
         rtn = getTableService().runTableSql(tableMirror, Environment.LEFT);

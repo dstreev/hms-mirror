@@ -244,13 +244,13 @@ public class ConversionResultService {
 //        return sb.toString();
 //    }
 
-    public DBMirror getDatabase(String database) {
-        ConversionResult conversionResult = executionContextService.getConversionResult().orElseThrow(() ->
-                new IllegalStateException("ConversionResult not set."));
-        // TODO: Go to the ConversionResult Repo and get the DBMirror from persistence.
-
-        return null;
-    }
+//    public DBMirror getDatabase(String database) {
+//        ConversionResult conversionResult = executionContextService.getConversionResult().orElseThrow(() ->
+//                new IllegalStateException("ConversionResult not set."));
+//        // TODO: Go to the ConversionResult Repo and get the DBMirror from persistence.
+//
+//        return null;
+//    }
 
     public boolean convertManaged() {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
@@ -347,7 +347,7 @@ public class ConversionResultService {
     /*
 
      */
-    public boolean loadDBMirrorTest(DBMirrorTest dbMirrorTest) {
+    public void loadDBMirrorTest(DBMirrorTest dbMirrorTest) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
         DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
@@ -362,12 +362,12 @@ public class ConversionResultService {
 
         dbSpec.setDatabaseName(dbMirrorTest.getName());
 
-        DBMirror dbMirror = new DBMirror();
+        final DBMirror dbMirror = new DBMirror();
         dbMirror.setName(dbMirrorTest.getName());
 
         dbMirror.getProperties().putAll(dbMirrorTest.getProperties());
         try {
-            dbMirror = getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
+            getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
         } catch (RepositoryException e) {
             throw new RuntimeException(e);
         }

@@ -83,7 +83,8 @@ public class DistCpService {
      * @param outputDir The directory where the generated files will be written
      */
     public void buildAllDistCpReports(String outputDir) {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -261,7 +262,8 @@ public class DistCpService {
             String database, Environment environment,
             int consolidationLevel, boolean consolidateTablesForDistcp) {
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();

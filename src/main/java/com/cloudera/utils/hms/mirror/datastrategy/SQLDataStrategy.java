@@ -74,7 +74,8 @@ public class SQLDataStrategy extends DataStrategyBase {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {}.{} buildout SQL Definition", dbMirror.getName(), tableMirror.getName());
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -181,7 +182,8 @@ public class SQLDataStrategy extends DataStrategyBase {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SQL SQL", tableMirror.getName());
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -270,7 +272,8 @@ public class SQLDataStrategy extends DataStrategyBase {
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -326,7 +329,8 @@ public class SQLDataStrategy extends DataStrategyBase {
     public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         log.info("SQLDataStrategy -> Table: {} execute", tableMirror.getName());
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();

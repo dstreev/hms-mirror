@@ -21,6 +21,7 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
@@ -299,15 +300,19 @@ public class DatabaseService {
     public boolean loadEnvironmentVars() {
         boolean rtn = Boolean.TRUE;
         // TODO: Fix
-        /*
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is null"));
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is null"));
+
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
         List<Environment> environments = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         for (Environment environment : environments) {
-            if (hmsMirrorConfig.getCluster(environment) != null) {
+            if (conversionResult.getConnection(environment) != null) {
                 Connection conn = null;
                 Statement stmt = null;
                 // Clear current variables.
-                hmsMirrorConfig.getCluster(environment).getEnvVars().clear();
+                conversionResult.getConnection(environment).getEnvVars().clear();
                 log.info("Loading {} Environment Variables", environment);
                 try {
                     conn = getConnectionPoolService().getHS2EnvironmentConnection(environment);
@@ -319,27 +324,27 @@ public class DatabaseService {
                         ResultSet rs = stmt.executeQuery(MirrorConf.GET_ENV_VARS);
                         while (rs.next()) {
                             String envVarSet = rs.getString(1);
-                            hmsMirrorConfig.getCluster(environment).addEnvVar(envVarSet);
+                            conversionResult.getConnection(environment).getHs2EnvSets().add(envVarSet);
                         }
                     }
                 } catch (SQLException se) {
                     // Issue
                     rtn = Boolean.FALSE;
                     log.error("Issue getting database connections", se);
-                    executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue getting database connections");
+                    runStatus.addError(MISC_ERROR, environment + ":Issue getting database connections");
                 } finally {
                     if (conn != null) {
                         try {
                             conn.close();
                         } catch (SQLException e) {
                             log.error("Issue closing LEFT database connections", e);
-                            executeSessionService.getSession().addError(MISC_ERROR, environment + ":Issue closing database connections");
+                            runStatus.addError(MISC_ERROR, environment + ":Issue closing database connections");
                         }
                     }
                 }
             }
         }
-        */
+
         return rtn;
     }
 
@@ -408,7 +413,8 @@ public class DatabaseService {
 //        Config config = Context.getInstance().getConfig();
         log.info("Building DB Statements for {}", dbMirror.getName());
         boolean rtn = Boolean.TRUE; // assume all good till we find otherwise.
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is null"));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -935,7 +941,8 @@ public class DatabaseService {
 
     public boolean build() {
         boolean rtn = true;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is not set."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -992,7 +999,8 @@ public class DatabaseService {
 
     public boolean execute() {
         boolean rtn = true;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is not set."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -1007,7 +1015,13 @@ public class DatabaseService {
         for (DatasetDto.DatabaseSpec dbSpec : conversionResult.getDataset().getDatabases()) {
             String database = dbSpec.getDatabaseName();
             log.info("Executing Database Commands for: {}", database);
-            DBMirror dbMirror = getConversionResultService().getDatabase(database);
+            DBMirror dbMirror = null;
+            try {
+                dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                        new IllegalStateException("Couldn't locate DBMirror" + dbSpec.getDatabaseName() + " in repository."));
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
 
             if (rtn) {
                 if (!runDatabaseSql(dbMirror, Environment.LEFT)) {
@@ -1261,7 +1275,8 @@ public class DatabaseService {
         // Open the connections and ensure we are running this on the "RIGHT" cluster.
         Connection conn = null;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is not set."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();

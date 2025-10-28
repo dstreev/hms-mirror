@@ -198,61 +198,61 @@ public class CliInit {
         };
     }
 
-    private void loadTestData() {
-        log.info("Loading Test Data");
-        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-                new IllegalStateException("HmsMirrorConfig not set"));
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
-                new IllegalStateException("ConversionResult not set"));
-        conversionResult.setMockTestDataset(Boolean.TRUE);
-        String yamlCfgFile = null;
-        String filename = config.getLoadTestDataFile();
-        try {
-            DBMirrorTest dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
-            getConversionResultService().loadDBMirrorTest(dbMirrorTest);
-
-            //            log.info("Reconstituting Conversion from test data file: {}", filename);
-//            log.info("Checking 'classpath' for test data file");
-//            URL configURL = this.getClass().getResource(filename);
-//            if (isNull(configURL)) {
-//                log.info("Checking filesystem for test data file: {}", filename);
-//                File conversionFile = new File(filename);
-//                if (!conversionFile.exists()) {
-//                    log.error("Couldn't locate test data file: {}", filename);
-//                    throw new RuntimeException("Couldn't locate test data file: " + filename);
-//                }
-//                configURL = conversionFile.toURI().toURL();
-//            }
+//    private void loadTestData() {
+//        log.info("Loading Test Data");
+//        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+//                new IllegalStateException("HmsMirrorConfig not set"));
+//        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+//                new IllegalStateException("ConversionResult not set"));
+//        conversionResult.setMockTestDataset(Boolean.TRUE);
+//        String yamlCfgFile = null;
+//        String filename = config.getLoadTestDataFile();
+//        try {
+//            DBMirrorTest dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
+//            getConversionResultService().loadDBMirrorTest(dbMirrorTest);
 //
-//            yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-//            ConversionResult conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(yamlCfgFile);
-//            // Set Config Databases;
-//            Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
-//            config.setDatabases(databases);
-//            // Replace the conversion in the session.
-//            session.setConversionResult(conversionResult);
-        } catch (UnrecognizedPropertyException upe) {
-            // Appears that the file isn't a Conversion file, so try to load it as a DBMirror file.
-            try {
-                DBMirror dbMirror = loadDBMirrorFromFile(config.getLoadTestDataFile());
-                // Reset the work for debug session.
-                dbMirror.stripWork();
-                ConversionResult conversionResult = new ConversionResult();
-                conversionResult.getDatabases().put(dbMirror.getName(), dbMirror);
-                // Set Config Databases;
-                Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
-                config.setDatabases(databases);
-                // Replace the conversion in the session.
-                session.setConversionResult(conversionResult);
-            } catch (Throwable t2) {
-                log.error(t2.getMessage(), t2);
-                throw t2;
-            }
-        } catch (Throwable t) {
-            log.error("Issue loading test data", t);
-            throw new RuntimeException(t);
-        }
-    }
+//            //            log.info("Reconstituting Conversion from test data file: {}", filename);
+////            log.info("Checking 'classpath' for test data file");
+////            URL configURL = this.getClass().getResource(filename);
+////            if (isNull(configURL)) {
+////                log.info("Checking filesystem for test data file: {}", filename);
+////                File conversionFile = new File(filename);
+////                if (!conversionFile.exists()) {
+////                    log.error("Couldn't locate test data file: {}", filename);
+////                    throw new RuntimeException("Couldn't locate test data file: " + filename);
+////                }
+////                configURL = conversionFile.toURI().toURL();
+////            }
+////
+////            yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
+////            ConversionResult conversionResult = yamlMapper.readerFor(ConversionResult.class).readValue(yamlCfgFile);
+////            // Set Config Databases;
+////            Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
+////            config.setDatabases(databases);
+////            // Replace the conversion in the session.
+////            session.setConversionResult(conversionResult);
+//        } catch (UnrecognizedPropertyException upe) {
+//            // Appears that the file isn't a Conversion file, so try to load it as a DBMirror file.
+//            try {
+//                DBMirrorTest dbMirror = loadDBMirrorFromFile(config.getLoadTestDataFile());
+//                // Reset the work for debug session.
+//                dbMirror.stripWork();
+//                ConversionResult conversionResult = new ConversionResult();
+//                conversionResult.getDatabases().put(dbMirror.getName(), dbMirror);
+//                // Set Config Databases;
+//                Set<String> databases = new TreeSet<>(conversionResult.getDatabases().keySet());
+//                config.setDatabases(databases);
+//                // Replace the conversion in the session.
+//                session.setConversionResult(conversionResult);
+//            } catch (Throwable t2) {
+//                log.error(t2.getMessage(), t2);
+//                throw t2;
+//            }
+//        } catch (Throwable t) {
+//            log.error("Issue loading test data", t);
+//            throw new RuntimeException(t);
+//        }
+//    }
 
     private DBMirrorTest loadDBMirrorFromFile(String filename) {
         DBMirrorTest dbMirror = null;
@@ -360,7 +360,8 @@ public class CliInit {
             hmsMirrorConfig.setOutputDirectory(value);
             // Identify it as being set by the user.
             hmsMirrorConfig.setUserSetOutputDirectory(userSetOutputDir);
-            executeSessionService.setReportOutputDirectory(value, false);
+            // TODO: Fix
+//            executeSessionService.setReportOutputDirectory(value, false);
 
             File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
 

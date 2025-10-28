@@ -65,7 +65,8 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
     @Override
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         JobDto job = conversionResult.getJob();
 
         /*
@@ -103,7 +104,8 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
     @Override
     public Boolean execute(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.TRUE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         JobDto job = conversionResult.getJob();
         /*
         Check environment is Hive 3.

@@ -75,7 +75,8 @@ public class CommonDataStrategy extends DataStrategyBase {
     @Override
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         log.debug("Table: {} buildout COMMON Definition", tableMirror.getName());
@@ -166,7 +167,8 @@ public class CommonDataStrategy extends DataStrategyBase {
     @Override
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         log.debug("Table: {} buildout COMMON SQL", tableMirror.getName());
 

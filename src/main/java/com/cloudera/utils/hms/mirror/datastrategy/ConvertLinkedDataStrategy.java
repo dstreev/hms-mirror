@@ -72,7 +72,8 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
     @Override
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
 //        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);

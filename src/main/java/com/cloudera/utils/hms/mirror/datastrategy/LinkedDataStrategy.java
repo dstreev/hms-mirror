@@ -60,7 +60,8 @@ public class LinkedDataStrategy extends DataStrategyBase {
     @Override
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         JobDto job = conversionResult.getJob();
 
         log.debug("Table: {} buildout LINKED Definition", tableMirror.getName());

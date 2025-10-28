@@ -128,7 +128,7 @@ public class TransferService {
                         }
                         break;
                     default:
-                        dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
+                        dataStrategy = getDataStrategyService().getDefaultDataStrategy(job.getStrategy());
                         if (dataStrategy.build(dbMirror, tableMirror)) {
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);
                         } else {
@@ -273,9 +273,13 @@ public class TransferService {
     public CompletableFuture<ReturnStatus> execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
         ReturnStatus rtn = new ReturnStatus();
         rtn.setTableMirror(tableMirror);
+        getExecutionContextService().reset();
+        getExecutionContextService().setConversionResult(conversionResult);
+        RunStatus runStatus = conversionResult.getRunStatus();
+        getExecutionContextService().setRunStatus(runStatus);
 
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
 
         Date start = new Date();
         log.info("Processing migration for {}.{}", dbMirror.getName(), tableMirror.getName());
@@ -285,13 +289,13 @@ public class TransferService {
         // Set Database to Transfer DB.
         tableMirror.setPhaseState(PhaseState.APPLYING_SQL);
 
-        tableMirror.setStrategy(config.getDataStrategy());
+        tableMirror.setStrategy(job.getStrategy());
 
         tableMirror.incPhase();
-        tableMirror.addStep("Processing TRANSFER", config.getDataStrategy().toString());
+        tableMirror.addStep("Processing TRANSFER", job.getStrategy().toString());
         try {
             DataStrategy dataStrategy = null;
-            switch (config.getDataStrategy()) {
+            switch (job.getStrategy()) {
                 case HYBRID:
                     if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
                         if (hybridAcidDowngradeInPlaceDataStrategy.execute(dbMirror, tableMirror)) {
@@ -309,7 +313,7 @@ public class TransferService {
                     }
                     break;
                 default:
-                    dataStrategy = getDataStrategyService().getDefaultDataStrategy(config);
+                    dataStrategy = getDataStrategyService().getDefaultDataStrategy(job.getStrategy());
                     if (dataStrategy.execute(dbMirror, tableMirror)) {
                         rtn.setStatus(ReturnStatus.Status.SUCCESS);
                     } else {

@@ -90,41 +90,14 @@ public class TableService {
     @NonNull
     private final TableMirrorRepository tableMirrorRepository;
 
-
-    // Assuming your logger is already defined, e.g.
-    // private static final Logger log = LoggerFactory.getLogger(TableService.class);
-
-    public TableService(
-            ConfigService configService,
-            ExecutionContextService executionContextService,
-            ConversionResultService conversionResultService,
-            ConnectionPoolService connectionPoolService,
-            QueryDefinitionsService queryDefinitionsService,
-            TranslatorService translatorService,
-            StatsCalculatorService statsCalculatorService,
-            TableOperations tableOperations,  // NEW: Inject core business logic
-            SessionManager sessionManager,
-            CliEnvironment cliEnvironment) {
-        log.debug("Initializing TableService with provided service dependencies and core business logic");
-        this.configService = configService;
-        this.executionContextService = executionContextService;
-        this.conversionResultService = conversionResultService;
-        this.connectionPoolService = connectionPoolService;
-        this.queryDefinitionsService = queryDefinitionsService;
-        this.translatorService = translatorService;
-        this.statsCalculatorService = statsCalculatorService;
-        this.tableOperations = tableOperations;  // NEW
-        this.sessionManager = sessionManager;
-        this.cliEnvironment = cliEnvironment;
-    }
-
     /**
      * Checks the table filter using the new core business logic.
      * This method now delegates to the pure business logic layer.
      */
     protected void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -232,7 +205,8 @@ public class TableService {
         try {
             // ...existing logic to get the statement...
             StringBuilder createStatementBldr = new StringBuilder();
-            ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+            ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                    new IllegalStateException("No ConversionResult found in the execution context."));
             ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
             RunStatus runStatus = conversionResult.getRunStatus();
@@ -278,7 +252,8 @@ public class TableService {
         log.info("Fetching table definition for table: {} in environment: {}", tableMirror.getName(), environment);
         log.info("Starting to get table definition for {}", tableId);
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -327,7 +302,8 @@ public class TableService {
 
     private void handleDataStrategy(TableMirror tableMirror, Environment environment,
                                     EnvironmentTable environmentTable, String tableId) {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -505,7 +481,8 @@ public class TableService {
         Connection conn = null;
         String database = null;
         try {
-            ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+            ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                    new IllegalStateException("ConversionResult is null.  Unable to continue."));
             ConfigLiteDto config = conversionResult.getConfig();
             JobDto job = conversionResult.getJob();
             RunStatus runStatus = conversionResult.getRunStatus();
@@ -552,7 +529,8 @@ public class TableService {
 
     private List<String> buildShowStatements(Environment environment) {
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -581,7 +559,8 @@ public class TableService {
     private void handleTableName(DBMirror dbMirror, String tableName) {
         if (tableName == null) return;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -611,7 +590,13 @@ public class TableService {
 
         if (addTable) {
             // Add to DBMirror for processing.
-            // TODO: Fix
+            TableMirror tableMirror = new TableMirror();
+            tableMirror.setName(tableName);
+            try {
+                getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), tableMirror);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
 //            TableMirror tableMirror = dbMirror.addTable(tableName);
 //            String uniqueStr = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
 //            tableMirror.setUnique(uniqueStr);
@@ -642,7 +627,8 @@ public class TableService {
     }
 
     private String getRemovalReason(String tableName) {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -672,7 +658,8 @@ public class TableService {
         String database = resolveDatabaseName(dbMirror, tableMirror, environment);
         EnvironmentTable environmentTable = tableMirror.getEnvironmentTable(environment);
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -784,7 +771,8 @@ public class TableService {
         Statement stmt = null;
         ResultSet resultSet = null;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -916,7 +904,8 @@ public class TableService {
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -967,7 +956,8 @@ public class TableService {
         //  smallfiles across the board.
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -1049,7 +1039,8 @@ public class TableService {
     public Boolean runTableSql(List<Pair> sqlList, TableMirror tblMirror, Environment environment) {
         Boolean rtn = Boolean.TRUE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();

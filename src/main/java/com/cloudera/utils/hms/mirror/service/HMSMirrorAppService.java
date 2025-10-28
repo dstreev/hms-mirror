@@ -158,6 +158,8 @@ public class HMSMirrorAppService {
     public CompletableFuture<Boolean> run(ConversionResult conversionResult) {
         // Add the conversionResult to the current context.
         getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+
         // Save the ConversionResult object.
         try {
             getConversionResultRepository().save(conversionResult);
@@ -178,14 +180,20 @@ public class HMSMirrorAppService {
         return theWork;
     }
 
-    private Boolean theWork() {
-        Boolean rtn = Boolean.TRUE;
-
+    /**
+     * Initializes the execution context and prepares the ConversionResult for processing.
+     * Sets up comment, start time, and initial progress status.
+     *
+     * @return ConversionResult from the execution context
+     * @throws IllegalStateException if ConversionResult is not set in thread context
+     */
+    private ConversionResult initializeExecutionContext() {
         // Validate that we are in the same thread and that the conversionResult is set.
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult is not set in the current thread context."));
 
-        RunStatus runStatus = conversionResult.getRunStatus();
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is not set in the current thread context"));
 
         // Transfer the Comment.
         if (runStatus.getComment() != null) {
@@ -197,12 +205,24 @@ public class HMSMirrorAppService {
         // Reset Start time to the actual 'execution' start time.
         runStatus.setStart(new Date());
         runStatus.setProgress(ProgressEnum.STARTED);
-        OperationStatistics stats = runStatus.getOperationStatistics();
         log.info("Starting HMSMirrorAppService.run()");
+
+        return conversionResult;
+    }
+
+    /**
+     * Validates the application configuration.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return true if configuration is valid, false otherwise
+     */
+    private Boolean validateConfiguration(ConversionResult conversionResult, RunStatus runStatus) {
         runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.IN_PROGRESS);
         if (configService.validate()) {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
-    } else {
+            return Boolean.TRUE;
+        } else {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
             reportWriterService.wrapup();
             runStatus.setProgress(ProgressEnum.FAILED);
@@ -218,11 +238,20 @@ public class HMSMirrorAppService {
             }
             return Boolean.FALSE;
         }
+    }
 
+    /**
+     * Sets up database connections and initializes the Kerberos environment.
+     * Skipped for mock test datasets.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return true if connections are successfully established, false otherwise
+     */
+    private Boolean setupConnections(ConversionResult conversionResult, RunStatus runStatus) {
         if (!conversionResult.isMockTestDataset()) {
-            try {// Refresh the connections pool.
+            try {
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.IN_PROGRESS);
-
                 configService.validateForConnections();
                 runStatus.setStage(StageEnum.VALIDATE_CONNECTION_CONFIG, CollectionEnum.COMPLETED);
 
@@ -239,7 +268,6 @@ public class HMSMirrorAppService {
                     runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
                     runStatus.setProgress(ProgressEnum.FAILED);
                     connectionPoolService.close();
-                    runStatus.setProgress(ProgressEnum.FAILED);
                     return Boolean.FALSE;
                 }
             } catch (SQLException sqle) {
@@ -289,128 +317,24 @@ public class HMSMirrorAppService {
             throw new RuntimeException(e);
         }
 
-        // Correct the load data issue ordering.
-        if (conversionResult.isMockTestDataset() &&
-                (!conversionResult.getConfig().loadMetadataDetails() && conversionResult.getJob().getStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
-            // Remove Partition Data to ensure we don't use it.  Sets up a clean run like we're starting from scratch.
-            log.info("Resetting Partition Data for Test Data Load");
-            Map<String, DBMirror> dbMirrors = null;
-            try {
-                dbMirrors = getDbMirrorRepository().findByKey(conversionResult.getKey());
+        return Boolean.TRUE;
+    }
 
-                dbMirrors.forEach((dbName, dbMirror) -> {
-                    runStatus.getOperationStatistics().getCounts().incrementDatabases();
-                    Map<String, TableMirror> tableMirrors = null;
-                    try {
-                        tableMirrors = getTableMirrorRepository().
-                                findByDatabase(conversionResult.getKey(), dbName);
-                    } catch (RepositoryException e) {
-                        throw new RuntimeException(e);
-                    }
-                    tableMirrors.forEach((tablName, tableMirror) -> {
-                        runStatus.getOperationStatistics().getCounts().incrementTables();
-                        // Since we are asking NOT to loadMetadataDetails, we need to remove the partition data.
-                        for (EnvironmentTable et : tableMirror.getEnvironments().values()) {
-                            et.getPartitions().clear();
-                            try {
-                                getTableMirrorRepository().save(conversionResult.getKey(), dbName, tableMirror);
-                            } catch (RepositoryException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                    });
-                });
-            } catch (RepositoryException e) {
-                throw new RuntimeException(e);
-            }
-
-        }
-
-        try {
-            getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
-        } catch (RepositoryException e) {
-            throw new RuntimeException(e);
-        }
-
-        log.info("Starting Application Workflow");
-        log.info("Debug: isMockTestDataset={}, isDatabaseOnly={}", conversionResult.isMockTestDataset(), conversionResult.getJob().isDatabaseOnly());
-        runStatus.setProgress(ProgressEnum.IN_PROGRESS);
-
-        Date startTime = new Date();
-        runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.IN_PROGRESS);
-
-        /*
-        I believe this has already been covered above.
-        if (conversionResult.isMockTestDataset()) {
-            // TODO: Need to rework whole test data loading.
-            log.info("Loading Test Data.  Skipping Database Collection.");
-            Set<String> databases = new TreeSet<>();
-            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
-                stats.getCounts().incrementDatabases();
-                databases.add(dbMirror.getName());
-            }
-//            String[] dbs = databases.toArray(new String[0]);
-            conversionResult.getDataset().setDatabases(databases);
-        }
-         */
-
-        /*
-        TODO: I don't think this is relevant anymore because of the Datasets concept.
-
-        else if (!isBlank(conversionResult.getDataset().getFilter().getDbRegEx())) {
-            // Look for the dbRegEx.
-            log.info("Using dbRegEx: {}", conversionResult.getDataset().getFilter().getDbRegEx());
-            Connection conn = null;
-            Statement stmt = null;
-            Set<String> databases = new TreeSet<>();
-            try {
-                log.info("Getting LEFT Cluster Connection");
-                conn = connectionPoolService.getHS2EnvironmentConnection(Environment.LEFT);
-                //getConfig().getCluster(Environment.LEFT).getConnection();
-                if (nonNull(conn)) {
-                    log.info("Retrieved LEFT Cluster Connection");
-                    stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(MirrorConf.SHOW_DATABASES);
-                    while (rs.next()) {
-                        String db = rs.getString(1);
-                        Matcher matcher = conversionResult.getDataset().getFilter().getDbFilterPattern().matcher(db);
-                        if (matcher.find()) {
-                            stats.getCounts().incrementDatabases();
-                            databases.add(db);
-                        }
-                    }
-                    conversionResult.getDataset().setDatabases(databases);
-                }
-            } catch (SQLException se) {
-                // Issue
-                log.error("Issue getting databases for dbRegEx", se);
-                stats.getFailures().incrementDatabases();
-                runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.ERRORED);
-                runStatus.addError(MISC_ERROR, "LEFT:Issue getting databases for dbRegEx");
-                reportWriterService.wrapup();
-                connectionPoolService.close();
-                runStatus.setProgress(ProgressEnum.FAILED);
-                return Boolean.FALSE;
-            } finally {
-                if (nonNull(conn)) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        log.error("Issue closing connections for LEFT", e);
-                        runStatus.addError(MISC_ERROR, "LEFT:Issue closing connections.");
-                    }
-                }
-            }
-        }
-        runStatus.setStage(StageEnum.GATHERING_DATABASES, CollectionEnum.COMPLETED);
-        log.info("Start Processing for databases: {}", String.join(",", conversionResult.getDataset().getDatabases()));
-         */
-
+    /**
+     * Loads environment variables from the database clusters.
+     * Skipped for mock test datasets.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return true if environment variables loaded successfully, false otherwise
+     */
+    private Boolean loadEnvironmentVariables(ConversionResult conversionResult, RunStatus runStatus) {
         if (!conversionResult.isMockTestDataset()) {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.IN_PROGRESS);
-            rtn = databaseService.loadEnvironmentVars();
+            Boolean rtn = databaseService.loadEnvironmentVars();
             if (rtn) {
                 runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.COMPLETED);
+                return Boolean.TRUE;
             } else {
                 runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.ERRORED);
                 reportWriterService.wrapup();
@@ -420,33 +344,26 @@ public class HMSMirrorAppService {
             }
         } else {
             runStatus.setStage(StageEnum.ENVIRONMENT_VARS, CollectionEnum.SKIPPED);
+            return Boolean.TRUE;
         }
+    }
 
-        /*
-        TODO: I don't think this is relevant anymore because of the Datasets concept.
-        if (isNull(conversionResult.getDataset().getDatabases()) || conversionResult.getDataset().getDatabases().isEmpty()) {
-            log.error("No databases specified OR found if you used dbRegEx");
-            runStatus.addError(MISC_ERROR, "No databases specified OR found if you used dbRegEx");
-            connectionPoolService.close();
-            runStatus.setProgress(ProgressEnum.FAILED);
-            return Boolean.FALSE;
-        }
-        */
-
+    /**
+     * Discovers databases from the dataset and creates DBMirror instances.
+     * Retrieves database definitions from LEFT and RIGHT clusters.
+     * Skipped for mock test datasets.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return list of futures for table collection operations
+     */
+    private List<CompletableFuture<ReturnStatus>> discoverDatabases(ConversionResult conversionResult, RunStatus runStatus) {
         List<CompletableFuture<ReturnStatus>> gtf = new ArrayList<>();
-        // ========================================
-        // Get the Database definitions for the LEFT and RIGHT clusters.
-        // ========================================
+        Boolean rtn = Boolean.TRUE;
+
         log.info("RunStatus Stage: {} is {}", StageEnum.DATABASES, runStatus.getStage(StageEnum.DATABASES));
         if (!conversionResult.isMockTestDataset()) {
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.IN_PROGRESS);
-            // From the DatasetDto, iterate through the DatabaseSpecs and build out the DBMirror instances and table list.
-
-            // If there is a table list in the DatabaseSpec, go ahead and create the DBMirror instance and the TableMirror
-            //    instances based on that list.
-
-            // If there is a table filter, we need to get a connection to the cluster and get the list of tables that
-            //    meet the filter criteria.
 
             for (DatasetDto.DatabaseSpec database : conversionResult.getDataset().getDatabases()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
@@ -454,13 +371,12 @@ public class HMSMirrorAppService {
                 dbMirror.setKey(conversionResult.getKey());
                 dbMirror.setName(database.getDatabaseName());
 
-//                        conversionResultService.addDatabase(conversionResult, database);
                 try {
                     // Get the Database definitions for the LEFT and RIGHT clusters.
-                    if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) { //getConfig().getCluster(Environment.LEFT).getDatabase(config, dbMirror)) {
+                    if (getDatabaseService().getDatabase(dbMirror, Environment.LEFT)) {
                         getDatabaseService().getDatabase(dbMirror, Environment.RIGHT);
                     } else {
-                        // LEFT DB doesn't exists.
+                        // LEFT DB doesn't exist.
                         dbMirror.addIssue(Environment.LEFT, "DB doesn't exist. Check permissions for user running process");
                         runStatus.getOperationStatistics().getFailures().incrementDatabases();
                         rtn = Boolean.FALSE;
@@ -473,7 +389,7 @@ public class HMSMirrorAppService {
                     reportWriterService.wrapup();
                     connectionPoolService.close();
                     runStatus.setProgress(ProgressEnum.FAILED);
-                    return Boolean.FALSE;
+                    return null;
                 } catch (RuntimeException rte) {
                     log.error("Runtime Issue", rte);
                     runStatus.addError(MISC_ERROR, rte.getMessage());
@@ -482,16 +398,16 @@ public class HMSMirrorAppService {
                     reportWriterService.wrapup();
                     connectionPoolService.close();
                     runStatus.setProgress(ProgressEnum.FAILED);
-                    return Boolean.FALSE;
+                    return null;
                 }
 
                 try {
-                    dbMirror = getDbMirrorRepository().save(conversionResult.getKey(),dbMirror);
+                    dbMirror = getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
                 } catch (RepositoryException e) {
                     throw new RuntimeException(e);
                 }
 
-                // Build out the table in a database.
+                // Build out the table list in a database (launches async table collection)
                 if (!conversionResult.getJob().isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
                     CompletableFuture<ReturnStatus> gt = getTableService().getTables(conversionResult, dbMirror);
@@ -501,7 +417,37 @@ public class HMSMirrorAppService {
 
             runStatus.setStage(StageEnum.DATABASES, CollectionEnum.COMPLETED);
 
-            // Wait for all the CompletableFutures to finish.
+            try {
+                getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+
+        } else {
+            log.warn("DAVID DEBUG: Skipping database and table stages for test data");
+            runStatus.setStage(StageEnum.DATABASES, CollectionEnum.SKIPPED);
+            runStatus.setStage(StageEnum.TABLES, CollectionEnum.SKIPPED);
+        }
+
+        return gtf;
+    }
+
+    /**
+     * Collects tables by waiting for table collection futures to complete.
+     * Checks success/failure status of table collection operations.
+     * Skipped for database-only migrations or mock test datasets.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param gtf list of table collection futures
+     * @return true if table collection succeeded, false otherwise
+     */
+    private Boolean collectTables(ConversionResult conversionResult, RunStatus runStatus,
+                                   List<CompletableFuture<ReturnStatus>> gtf) {
+        Boolean rtn = Boolean.TRUE;
+
+        if (!conversionResult.isMockTestDataset() && !conversionResult.getJob().isDatabaseOnly()) {
+            // Wait for all the CompletableFutures to finish. These were collecting the Databases and Table list.
             CompletableFuture.allOf(gtf.toArray(new CompletableFuture[0])).join();
 
             // Check that all the CompletableFutures in 'gtf' passed with ReturnStatus.Status.SUCCESS.
@@ -536,16 +482,22 @@ public class HMSMirrorAppService {
                 runStatus.setProgress(ProgressEnum.FAILED);
                 return Boolean.FALSE;
             }
-        } else {
-            log.warn("DAVID DEBUG: Skipping database and table stages for test data");
-            runStatus.setStage(StageEnum.DATABASES, CollectionEnum.SKIPPED);
-            runStatus.setStage(StageEnum.TABLES, CollectionEnum.SKIPPED);
         }
 
-        // TODO: Translator not yet migrated to ConversionResult - accessing through session for now
-//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        return rtn;
+    }
+
+    /**
+     * Builds the Global Location Map from warehouse plans if configured.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return true if GLM build succeeded, false otherwise
+     */
+    private Boolean buildGlobalLocationMap(ConversionResult conversionResult, RunStatus runStatus) {
         if (conversionResult.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
             runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.SKIPPED);
+            return Boolean.TRUE;
         } else {
             try {
                 int defaultConsolidationLevel = 1;
@@ -559,6 +511,7 @@ public class HMSMirrorAppService {
                     runStatus.setStage(StageEnum.GLM_BUILD, CollectionEnum.SKIPPED);
                 }
 
+                return Boolean.TRUE;
             } catch (EncryptionException | SessionException | RequiredConfigurationException | MismatchException e) {
                 log.error("Issue validating configuration", e);
                 runStatus.addError(RUNTIME_EXCEPTION, e.getMessage());
@@ -575,9 +528,20 @@ public class HMSMirrorAppService {
                 return Boolean.FALSE;
             }
         }
+    }
 
+    /**
+     * Builds database DDL for migration.
+     * Skipped for VIEW migrations.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @return true if database building succeeded, false otherwise
+     */
+    private Boolean buildDatabases(ConversionResult conversionResult, RunStatus runStatus) {
         runStatus.setStage(StageEnum.BUILDING_DATABASES, CollectionEnum.IN_PROGRESS);
-        // Don't build DB with VIEW Migrations.
+        Boolean rtn = Boolean.TRUE;
+
         if (!conversionResult.getConfig().getMigrateVIEW().isOn()) {
             if (getDatabaseService().build()) {
                 runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
@@ -603,8 +567,20 @@ public class HMSMirrorAppService {
             );
         }
 
-        // Process the SQL for the Databases;
+        return rtn;
+    }
+
+    /**
+     * Processes (executes) database DDL SQL statements.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param rtn current success status
+     * @return true if database processing succeeded, false otherwise
+     */
+    private Boolean processDatabases(ConversionResult conversionResult, RunStatus runStatus, Boolean rtn) {
         runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.IN_PROGRESS);
+
         if (rtn) {
             if (conversionResult.getJobExecution().isExecute()) {
                 if (getDatabaseService().execute()) {
@@ -619,243 +595,120 @@ public class HMSMirrorAppService {
             } else {
                 runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.SKIPPED);
             }
+
             // Set error if issue during processing.
             if (!rtn)
                 runStatus.addError(MessageCode.PROCESSING_DATABASES_ISSUE);
-
         } else {
             runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.SKIPPED);
         }
 
-        // Shortcut.  Only DB's.
+        return rtn;
+    }
+
+    /**
+     * Loads table metadata and builds migration plans.
+     * This is the most complex stage that handles table metadata loading, migration building,
+     * and iterative completion checking.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param gtf list of futures from table collection
+     * @param rtn current success status
+     * @return Set of migration executions ready for processing, or null if failed
+     */
+    private Set<ReturnStatus> loadTableMetadataAndBuild(ConversionResult conversionResult, RunStatus runStatus,
+                                                         List<CompletableFuture<ReturnStatus>> gtf, Boolean rtn) {
+        if (conversionResult.getJob().isDatabaseOnly()) {
+            return new HashSet<>();
+        }
+
         log.warn("DEBUG: Processing tables: isDatabaseOnly={}, isLoadingTestData={}, collectedDbs={}",
-                conversionResult.getJob().isDatabaseOnly(), conversionResult.isMockTestDataset(), conversionResult.getDatabases().keySet());
-        if (!conversionResult.getJob().isDatabaseOnly()) {
-            log.warn("DEBUG: Entering table processing section");
-            Set<String> collectedDbs = conversionResult.getDatabases().keySet();
-            // ========================================
-            // Get the table METADATA for the tables collected in the databases.
-            // ========================================
-            List<CompletableFuture<ReturnStatus>> migrationFuture = new ArrayList<>();
+                conversionResult.getJob().isDatabaseOnly(), conversionResult.isMockTestDataset(),
+                conversionResult.getDatabases().keySet());
+        log.warn("DEBUG: Entering table processing section");
 
-            runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.IN_PROGRESS);
-            if (rtn) {
-                for (String database : collectedDbs) {
-                    DBMirror dbMirror = null;
-                    try {
-                        // Load from DBMirror Repository.
-                        dbMirror = dbMirrorRepository.findByName(conversionResult.getKey(), database).orElseThrow(() ->
-                                new IllegalStateException("DBMirror Not Found"));
-                    } catch (RepositoryException e) {
-                        throw new RuntimeException(e);
-                    }
-                    Set<String> tables = dbMirror.getTableMirrors().keySet();
-                    for (String table : tables) {
-                        TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
-                        gtf.add(tableService.getTableMetadata(conversionResult, dbMirror, tableMirror));
-                    }
+        Set<String> collectedDbs = conversionResult.getDatabases().keySet();
+        List<CompletableFuture<ReturnStatus>> migrationFuture = new ArrayList<>();
+
+        runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.IN_PROGRESS);
+        if (rtn) {
+            for (String database : collectedDbs) {
+                DBMirror dbMirror;
+                try {
+                    // Load from DBMirror Repository.
+                    dbMirror = dbMirrorRepository.findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                            new IllegalStateException("DBMirror Not Found"));
+                } catch (RepositoryException e) {
+                    throw new RuntimeException(e);
                 }
-
-                runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.IN_PROGRESS);
-
-                // Go through the Futures and check status.
-                // When SUCCESSFUL, move on to the next step.
-                // ========================================
-                // Check that a tables metadata has been retrieved.  When it has (ReturnStatus.Status.CALCULATED_SQL),
-                // move on to the NEXTSTEP and actual do the transfer.
-                // ========================================
-                // TODO: This could cause things to back up and stay in memory before they are processed. Need to review.
-//                CompletableFuture.allOf(gtf.toArray(new CompletableFuture[0])).join();
-
-                // Wait for all CompletableFutures to complete
-                while (!gtf.isEmpty()) {
-                    Iterator<CompletableFuture<ReturnStatus>> iterator = gtf.iterator();
-                    while (iterator.hasNext()) {
-                        CompletableFuture<ReturnStatus> future = iterator.next();
-                        if (future.isDone()) {
-                            try {
-                                ReturnStatus returnStatus = future.get();
-                                TableMirror lclTableMirror = returnStatus.getTableMirror();
-                                DBMirror lclDBMirror = returnStatus.getDbMirror();
-
-                                if (lclTableMirror.isRemove()) {
-                                    // Add to list of tables to be removed.
-                                    lclDBMirror.getFilteredOut().put(lclTableMirror.getName(), lclTableMirror.getRemoveReason());
-                                    // Remove the table from persistence.
-                                    try {
-                                        getTableMirrorRepository().deleteByName(conversionResult.getKey(), lclDBMirror.getName(), lclTableMirror.getName());
-                                    } catch (RepositoryException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                } else {
-                                    // Save the TableMirrors.
-                                    try {
-                                        getTableMirrorRepository().save(conversionResult.getKey(), lclDBMirror.getName(), lclTableMirror);
-                                    } catch (RepositoryException re) {
-                                        throw new RuntimeException(re);
-                                    }
-
-                                    if (nonNull(returnStatus)) {
-                                        switch (returnStatus.getStatus()) {
-                                            case SUCCESS:
-                                                runStatus.getOperationStatistics().getCounts().incrementTables();
-                                                // Trigger next step and set status.
-                                                // TODO: Next Step
-                                                future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-                                                // Launch the next step, which is the transfer.
-                                                runStatus.getOperationStatistics().getSuccesses().incrementTables();
-
-                                                migrationFuture.add(getTransferService().build(conversionResult, lclDBMirror, lclTableMirror));
-                                                break;
-                                            case ERROR:
-                                                runStatus.getOperationStatistics().getCounts().incrementTables();
-                                                future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-                                                break;
-                                            case FATAL:
-                                                runStatus.getOperationStatistics().getCounts().incrementTables();
-                                                runStatus.getOperationStatistics().getFailures().incrementTables();
-                                                rtn = Boolean.FALSE;
-                                                future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-                                                log.error("FATAL: ", future.get().getException());
-                                            case NEXTSTEP:
-                                                break;
-                                            case SKIP:
-                                                runStatus.getOperationStatistics().getCounts().incrementTables();
-                                                // Set for tables that are being removed.
-                                                runStatus.getOperationStatistics().getSkipped().incrementTables();
-                                                future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-                                                break;
-                                        }
-                                    }
-                                }
-                            } catch (InterruptedException | ExecutionException | RuntimeException e) {
-                                log.error("Interrupted Table collection", e);
-                                rtn = Boolean.FALSE;
-                            }
-                            iterator.remove();
-                        }
-                    }
-
-                    // If there are still futures pending, sleep briefly to avoid busy waiting
-                    if (!gtf.isEmpty()) {
-                        try {
-                            Thread.sleep(100); // Sleep for 100ms between checks
-                        } catch (InterruptedException e) {
-                            log.warn("Thread interrupted while waiting for futures to complete", e);
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
+                Set<String> tables = dbMirror.getTableMirrors().keySet();
+                for (String table : tables) {
+                    TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
+                    gtf.add(tableService.getTableMetadata(conversionResult, dbMirror, tableMirror));
                 }
-
-                // Replaced with above to allow the list to purge itself as items are handled.
-                // Check that all the CompletableFutures in 'gtf' passed with ReturnStatus.Status.SUCCESS.
-//                for (CompletableFuture<ReturnStatus> sf : gtf) {
-//                    try {
-//                        ReturnStatus returnStatus = sf.get();
-//                        TableMirror tableMirror = returnStatus.getTableMirror();
-//                        DBMirror lclDBMirror = returnStatus.getDbMirror();
-//                        // Save the TableMirrors.
-//                        try {
-//                            getTableMirrorRepository().save(conversionResult.getKey(), lclDBMirror.getName(), tableMirror);
-//                        } catch (RepositoryException re) {
-//                            throw new RuntimeException(re);
-//                        }
-//
-//                        if (nonNull(returnStatus)) {
-//                            switch (returnStatus.getStatus()) {
-//                                case SUCCESS:
-//                                    runStatus.getOperationStatistics().getCounts().incrementTables();
-//                                    // Trigger next step and set status.
-//                                    // TODO: Next Step
-//                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-//                                    // Launch the next step, which is the transfer.
-//                                    runStatus.getOperationStatistics().getSuccesses().incrementTables();
-//
-//                                    migrationFuture.add(getTransferService().build(conversionResult, sf.get().getDbMirror(), sf.get().getTableMirror()));
-//                                    break;
-//                                case ERROR:
-//                                    runStatus.getOperationStatistics().getCounts().incrementTables();
-//                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-//                                    break;
-//                                case FATAL:
-//                                    runStatus.getOperationStatistics().getCounts().incrementTables();
-//                                    runStatus.getOperationStatistics().getFailures().incrementTables();
-//                                    rtn = Boolean.FALSE;
-//                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-//                                    log.error("FATAL: ", sf.get().getException());
-//                                case NEXTSTEP:
-//                                    break;
-//                                case SKIP:
-//                                    runStatus.getOperationStatistics().getCounts().incrementTables();
-//                                    // Set for tables that are being removed.
-//                                    runStatus.getOperationStatistics().getSkipped().incrementTables();
-//                                    sf.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-//                                    break;
-//                            }
-//                        }
-//                    } catch (InterruptedException | ExecutionException | RuntimeException e) {
-//                        log.error("Interrupted Table collection", e);
-//                        rtn = Boolean.FALSE;
-//                    }
-//                }
-
-                if (rtn) {
-                    runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.COMPLETED);
-                } else {
-                    runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.ERRORED);
-                    runStatus.addError(MessageCode.COLLECTING_TABLE_DEFINITIONS);
-                }
-
-                gtf.clear(); // reset
-
-                // Remove the tables that are marked for removal.
-//                for (String database : collectedDbs) {
-//                    DBMirror dbMirror = conversionResultService.getDatabase(conversionResult, database);
-//                    Set<String> tables = dbMirror.getTableMirrors().keySet();
-//                    for (String table : tables) {
-//                        TableMirror tableMirror = dbMirror.getTableMirrors().get(table);
-//                        if (tableMirror.isRemove()) {
-//                            // Setup the filtered out tables so they can be reported w/ reason.
-////                        stats.getSkipped().incrementTables();
-//                            log.info("Table: {}.{} is being removed from further processing. Reason: {}", dbMirror.getName(), table, tableMirror.getRemoveReason());
-//                            dbMirror.getFilteredOut().put(table, tableMirror.getRemoveReason());
-//                        }
-//                    }
-//                    log.info("Removing tables marked for removal from further processing.");
-//                    dbMirror.getTableMirrors().values().removeIf(TableMirror::isRemove);
-//                    log.info("Tables marked for removal have been removed from further processing.");
-//                }
-
-            } else {
-                runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.SKIPPED);
-                runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.SKIPPED);
             }
 
-            Set<ReturnStatus> migrationExecutions = new HashSet<>();
+            runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.IN_PROGRESS);
 
-            // Check the Migration Futures are done.
-//            CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
-
-            while (!migrationFuture.isEmpty()) {
-                Iterator<CompletableFuture<ReturnStatus>> iterator =migrationFuture.iterator();
+            // Wait for all CompletableFutures to complete
+            while (!gtf.isEmpty()) {
+                Iterator<CompletableFuture<ReturnStatus>> iterator = gtf.iterator();
                 while (iterator.hasNext()) {
                     CompletableFuture<ReturnStatus> future = iterator.next();
                     if (future.isDone()) {
                         try {
-                            ReturnStatus rs = future.get();
-                            if (nonNull(rs)) {
-                                TableMirror tableMirror = rs.getTableMirror();
-                                // Only push SUCCESSFUL tables to the migrationExecutions list.
-                                if (rs.getStatus() == ReturnStatus.Status.SUCCESS) {
-                                    // Success means add table the execution list.
-                                    migrationExecutions.add(rs);
+                            ReturnStatus returnStatus = future.get();
+                            TableMirror lclTableMirror = returnStatus.getTableMirror();
+                            DBMirror lclDBMirror = returnStatus.getDbMirror();
+
+                            if (lclTableMirror.isRemove()) {
+                                // Add to list of tables to be removed.
+                                lclDBMirror.getFilteredOut().put(lclTableMirror.getName(), lclTableMirror.getRemoveReason());
+                                // Remove the table from persistence.
+                                try {
+                                    getTableMirrorRepository().deleteByName(conversionResult.getKey(), lclDBMirror.getName(), lclTableMirror.getName());
+                                } catch (RepositoryException e) {
+                                    throw new RuntimeException(e);
                                 }
                             } else {
-                                log.error("ReturnStatus is NULL in migration build");
+                                // Save the TableMirrors.
+                                try {
+                                    getTableMirrorRepository().save(conversionResult.getKey(), lclDBMirror.getName(), lclTableMirror);
+                                } catch (RepositoryException re) {
+                                    throw new RuntimeException(re);
+                                }
+
+                                if (nonNull(returnStatus)) {
+                                    switch (returnStatus.getStatus()) {
+                                        case SUCCESS:
+                                            runStatus.getOperationStatistics().getCounts().incrementTables();
+                                            future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                            runStatus.getOperationStatistics().getSuccesses().incrementTables();
+                                            migrationFuture.add(getTransferService().build(conversionResult, lclDBMirror, lclTableMirror));
+                                            break;
+                                        case ERROR:
+                                            runStatus.getOperationStatistics().getCounts().incrementTables();
+                                            future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                            break;
+                                        case FATAL:
+                                            runStatus.getOperationStatistics().getCounts().incrementTables();
+                                            runStatus.getOperationStatistics().getFailures().incrementTables();
+                                            rtn = Boolean.FALSE;
+                                            future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                            log.error("FATAL: ", future.get().getException());
+                                        case NEXTSTEP:
+                                            break;
+                                        case SKIP:
+                                            runStatus.getOperationStatistics().getCounts().incrementTables();
+                                            runStatus.getOperationStatistics().getSkipped().incrementTables();
+                                            future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                            break;
+                                    }
+                                }
                             }
                         } catch (InterruptedException | ExecutionException | RuntimeException e) {
-                            log.error("Interrupted Building Migrations", e);
+                            log.error("Interrupted Table collection", e);
                             rtn = Boolean.FALSE;
                         }
                         iterator.remove();
@@ -863,7 +716,7 @@ public class HMSMirrorAppService {
                 }
 
                 // If there are still futures pending, sleep briefly to avoid busy waiting
-                if (!migrationFuture.isEmpty()) {
+                if (!gtf.isEmpty()) {
                     try {
                         Thread.sleep(100); // Sleep for 100ms between checks
                     } catch (InterruptedException e) {
@@ -874,138 +727,186 @@ public class HMSMirrorAppService {
                 }
             }
 
-            // Check that all the CompletableFutures in 'migrationFuture' passed with ReturnStatus.Status.SUCCESS.
-//            for (CompletableFuture<ReturnStatus> sf : migrationFuture) {
-//                try {
-//                    ReturnStatus rs = sf.get();
-//                    if (nonNull(rs)) {
-//                        TableMirror tableMirror = rs.getTableMirror();
-//                        // Only push SUCCESSFUL tables to the migrationExecutions list.
-//                        if (rs.getStatus() == ReturnStatus.Status.SUCCESS) {
-//                            // Success means add table the execution list.
-//                            migrationExecutions.add(rs);
-//                        }
-//                    } else {
-//                        log.error("ReturnStatus is NULL in migration build");
-//                    }
-//                } catch (InterruptedException | ExecutionException | RuntimeException e) {
-//                    log.error("Interrupted Building Migrations", e);
-//                    rtn = Boolean.FALSE;
-//                }
-//            }
-
             if (rtn) {
-                runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.COMPLETED);
+                runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.COMPLETED);
             } else {
-                runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.ERRORED);
+                runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.ERRORED);
+                runStatus.addError(MessageCode.COLLECTING_TABLE_DEFINITIONS);
             }
 
-            migrationFuture.clear(); // reset
+            gtf.clear(); // reset
+        } else {
+            runStatus.setStage(StageEnum.LOAD_TABLE_METADATA, CollectionEnum.SKIPPED);
+            runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.SKIPPED);
+        }
 
-            // Save RunStatus
-            try {
-                getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
-            } catch (RepositoryException e) {
-                throw new RuntimeException(e);
+        Set<ReturnStatus> migrationExecutions = new HashSet<>();
+
+        // Check the Migration Futures are done.
+        while (!migrationFuture.isEmpty()) {
+            Iterator<CompletableFuture<ReturnStatus>> iterator = migrationFuture.iterator();
+            while (iterator.hasNext()) {
+                CompletableFuture<ReturnStatus> future = iterator.next();
+                if (future.isDone()) {
+                    try {
+                        ReturnStatus rs = future.get();
+                        if (nonNull(rs)) {
+                            // Only push SUCCESSFUL tables to the migrationExecutions list.
+                            if (rs.getStatus() == ReturnStatus.Status.SUCCESS) {
+                                migrationExecutions.add(rs);
+                            }
+                        } else {
+                            log.error("ReturnStatus is NULL in migration build");
+                        }
+                    } catch (InterruptedException | ExecutionException | RuntimeException e) {
+                        log.error("Interrupted Building Migrations", e);
+                        rtn = Boolean.FALSE;
+                    }
+                    iterator.remove();
+                }
             }
 
-            // Validate the SET statements.
-            runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.IN_PROGRESS);
+            // If there are still futures pending, sleep briefly to avoid busy waiting
+            if (!migrationFuture.isEmpty()) {
+                try {
+                    Thread.sleep(100); // Sleep for 100ms between checks
+                } catch (InterruptedException e) {
+                    log.warn("Thread interrupted while waiting for futures to complete", e);
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+
+        if (rtn) {
+            runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.COMPLETED);
+        } else {
+            runStatus.setStage(StageEnum.BUILDING_TABLES, CollectionEnum.ERRORED);
+        }
+
+        migrationFuture.clear(); // reset
+
+        // Save RunStatus
+        try {
+            getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        return migrationExecutions;
+    }
+
+    /**
+     * Validates environment SET SQL statements for each database.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param rtn current success status
+     * @return true if validation succeeded, false otherwise
+     */
+    private Boolean validateEnvironmentSets(ConversionResult conversionResult, RunStatus runStatus, Boolean rtn) {
+        Set<String> collectedDbs = conversionResult.getDatabases().keySet();
+        runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.IN_PROGRESS);
+
+        if (rtn) {
+            // Check the Unique SET statements.
+            for (String database : collectedDbs) {
+                DBMirror dbMirror = null;//conversionResultService.getDatabase(database);
+                try {
+                    dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                            new IllegalStateException("DBMirror Not Found for  " + database));
+                } catch (RepositoryException e) {
+                    throw new RuntimeException(e);
+                }
+                if (!databaseService.checkSqlStatements(dbMirror)) {
+                    rtn = Boolean.FALSE;
+                }
+            }
             if (rtn) {
-                // Check the Unique SET statements.
-                for (String database : collectedDbs) {
-                    DBMirror dbMirror = conversionResultService.getDatabase(conversionResult, database);
-                    if (!databaseService.checkSqlStatements(dbMirror)) {
+                runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.COMPLETED);
+            } else {
+                runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.ERRORED);
+                runStatus.addError(MessageCode.VALIDATE_SQL_STATEMENT_ISSUE);
+            }
+        } else {
+            runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.SKIPPED);
+        }
+
+        return rtn;
+    }
+
+    /**
+     * Executes table migration SQL statements.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param rtn current success status
+     * @param migrationExecutions set of migrations ready for execution
+     * @return true if execution succeeded, false otherwise
+     */
+    private Boolean executeTables(ConversionResult conversionResult, RunStatus runStatus, Boolean rtn,
+                                  Set<ReturnStatus> migrationExecutions) {
+        runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.IN_PROGRESS);
+
+        if (rtn) {
+            if (conversionResult.getJobExecution().isExecute()) {
+                List<CompletableFuture<ReturnStatus>> migrationFuture = new ArrayList<>();
+                // Using the migrationExecute List, create futures for the table executions.
+                for (ReturnStatus returnStatus : migrationExecutions) {
+                    migrationFuture.add(getTransferService().execute(conversionResult, returnStatus.getDbMirror(), returnStatus.getTableMirror()));
+                }
+
+                // Wait for all the CompletableFutures to finish.
+                CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
+                // Check that all the CompletableFutures in 'migrationFuture' passed with ReturnStatus.Status.SUCCESS.
+                for (CompletableFuture<ReturnStatus> sf : migrationFuture) {
+                    try {
+                        ReturnStatus rs = sf.get();
+                        if (nonNull(rs)) {
+                            TableMirror tableMirror = rs.getTableMirror();
+                            if (rs.getStatus() == ReturnStatus.Status.ERROR) {
+                                // Check if the table was removed, so that's not a processing error.
+                                if (tableMirror != null) {
+                                    if (!tableMirror.isRemove()) {
+                                        rtn = Boolean.FALSE;
+                                    }
+                                }
+                            }
+                        } else {
+                            log.error("ReturnStatus is NULL in migrationFuture");
+                        }
+                    } catch (InterruptedException | ExecutionException | RuntimeException e) {
+                        log.error("Interrupted Migration Executions", e);
                         rtn = Boolean.FALSE;
                     }
                 }
+
+                // If still TRUE, then we're good.
                 if (rtn) {
-                    runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.COMPLETED);
+                    runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.COMPLETED);
                 } else {
-                    runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.ERRORED);
-                    runStatus.addError(MessageCode.VALIDATE_SQL_STATEMENT_ISSUE);
-
-                }
-            } else {
-                runStatus.setStage(StageEnum.VALIDATING_ENVIRONMENT_SETS, CollectionEnum.SKIPPED);
-            }
-
-            // Moving up.
-//            // Process the SQL for the Databases;
-//            runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.IN_PROGRESS);
-//            if (rtn) {
-//                if (conversionResult.getJobExecution().isExecute()) {
-//                    if (getDatabaseService().execute()) {
-//                        runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
-//                        runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.COMPLETED);
-//                    } else {
-//                        runStatus.addError(MessageCode.DATABASE_CREATION);
-//                        runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.ERRORED);
-//                        runStatus.getOperationStatistics().getFailures().incrementDatabases();
-//                        rtn = Boolean.FALSE;
-//                    }
-//                } else {
-//                    runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.SKIPPED);
-//                }
-//                // Set error if issue during processing.
-//                if (!rtn)
-//                    runStatus.addError(MessageCode.PROCESSING_DATABASES_ISSUE);
-//
-//            } else {
-//                runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.SKIPPED);
-//            }
-
-            // Process the SQL for the Tables;
-
-            runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.IN_PROGRESS);
-            if (rtn) {
-                if (conversionResult.getJobExecution().isExecute()) {
-                    // Using the migrationExecute List, create futures for the table executions.
-                    for (ReturnStatus returnStatus : migrationExecutions) {
-                        migrationFuture.add(getTransferService().execute(conversionResult, returnStatus.getDbMirror(), returnStatus.getTableMirror()));
-                    }
-
-                    // Wait for all the CompletableFutures to finish.
-                    CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
-                    // Check that all the CompletableFutures in 'migrationFuture' passed with ReturnStatus.Status.SUCCESS.
-                    for (CompletableFuture<ReturnStatus> sf : migrationFuture) {
-                        try {
-                            ReturnStatus rs = sf.get();
-                            if (nonNull(rs)) {
-                                TableMirror tableMirror = rs.getTableMirror();
-                                if (rs.getStatus() == ReturnStatus.Status.ERROR) {
-                                    // Check if the table was removed, so that's not a processing error.
-                                    if (tableMirror != null) {
-                                        if (!tableMirror.isRemove()) {
-                                            rtn = Boolean.FALSE;
-                                        }
-                                    }
-                                }
-                            } else {
-                                log.error("ReturnStatus is NULL in migrationFuture");
-                            }
-                        } catch (InterruptedException | ExecutionException | RuntimeException e) {
-                            log.error("Interrupted Migration Executions", e);
-                            rtn = Boolean.FALSE;
-                        }
-                    }
-
-                    // If still TRUE, then we're good.
-                    if (rtn) {
-                        runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.COMPLETED);
-                    } else {
-                        runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.ERRORED);
-                        runStatus.addError(MessageCode.PROCESSING_TABLES_ISSUE);
-                    }
-                } else {
-                    runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.SKIPPED);
+                    runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.ERRORED);
+                    runStatus.addError(MessageCode.PROCESSING_TABLES_ISSUE);
                 }
             } else {
                 runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.SKIPPED);
             }
-
+        } else {
+            runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.SKIPPED);
         }
 
+        return rtn;
+    }
+
+    /**
+     * Cleans up environment connections and saves reports.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     * @param rtn current success status
+     * @return final success status
+     */
+    private Boolean cleanupAndSaveReports(ConversionResult conversionResult, RunStatus runStatus, Boolean rtn) {
         // Clean up Environment for Reports.
         switch (conversionResult.getJob().getStrategy()) {
             case STORAGE_MIGRATION:
@@ -1049,5 +950,130 @@ public class HMSMirrorAppService {
         }
 
         return rtn;
+    }
+
+    /**
+     * Prepares test dataset by clearing partition data for STORAGE_MIGRATION strategy.
+     * Only executed for mock test datasets.
+     *
+     * @param conversionResult the conversion result context
+     * @param runStatus the run status tracker
+     */
+    private void prepareTestDataset(ConversionResult conversionResult, RunStatus runStatus) {
+        if (conversionResult.isMockTestDataset() &&
+                (!conversionResult.getConfig().loadMetadataDetails() &&
+                conversionResult.getJob().getStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
+            // Remove Partition Data to ensure we don't use it. Sets up a clean run like we're starting from scratch.
+            log.info("Resetting Partition Data for Test Data Load");
+            Map<String, DBMirror> dbMirrors;
+            try {
+                dbMirrors = getDbMirrorRepository().findByKey(conversionResult.getKey());
+
+                dbMirrors.forEach((dbName, dbMirror) -> {
+                    runStatus.getOperationStatistics().getCounts().incrementDatabases();
+                    Map<String, TableMirror> tableMirrors;
+                    try {
+                        tableMirrors = getTableMirrorRepository().
+                                findByDatabase(conversionResult.getKey(), dbName);
+                    } catch (RepositoryException e) {
+                        throw new RuntimeException(e);
+                    }
+                    tableMirrors.forEach((tablName, tableMirror) -> {
+                        runStatus.getOperationStatistics().getCounts().incrementTables();
+                        // Since we are asking NOT to loadMetadataDetails, we need to remove the partition data.
+                        for (EnvironmentTable et : tableMirror.getEnvironments().values()) {
+                            et.getPartitions().clear();
+                            try {
+                                getTableMirrorRepository().save(conversionResult.getKey(), dbName, tableMirror);
+                            } catch (RepositoryException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
+                });
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        try {
+            getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Main workflow orchestration method that coordinates all stages of the HMS migration process.
+     * This method has been refactored to delegate to specific stage methods for better maintainability.
+     *
+     * @return true if the workflow completed successfully, false otherwise
+     */
+    private Boolean theWork() {
+        Boolean rtn = Boolean.TRUE;
+
+        // Stage 1: Initialize execution context
+        ConversionResult conversionResult = initializeExecutionContext();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+        // Stage 2: Validate configuration
+        if (!validateConfiguration(conversionResult, runStatus)) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 3: Setup database connections
+        if (!setupConnections(conversionResult, runStatus)) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 4: Prepare test datasets if needed
+        prepareTestDataset(conversionResult, runStatus);
+
+        // Stage 5: Initialize workflow
+        log.info("Starting Application Workflow");
+        log.info("Debug: isMockTestDataset={}, isDatabaseOnly={}", conversionResult.isMockTestDataset(), conversionResult.getJob().isDatabaseOnly());
+        runStatus.setProgress(ProgressEnum.IN_PROGRESS);
+
+        // Stage 6: Load environment variables
+        if (!loadEnvironmentVariables(conversionResult, runStatus)) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 7: Discover databases and collect tables
+        List<CompletableFuture<ReturnStatus>> gtf = discoverDatabases(conversionResult, runStatus);
+        if (gtf == null) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 8: Collect tables
+        if (!collectTables(conversionResult, runStatus, gtf)) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 9: Build global location map
+        if (!buildGlobalLocationMap(conversionResult, runStatus)) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 10: Build databases
+        rtn = buildDatabases(conversionResult, runStatus);
+
+        // Stage 11: Process databases
+        rtn = processDatabases(conversionResult, runStatus, rtn);
+
+        // Stage 12: Load table metadata and build migrations
+        Set<ReturnStatus> migrationExecutions = loadTableMetadataAndBuild(conversionResult, runStatus, gtf, rtn);
+        if (migrationExecutions == null) {
+            return Boolean.FALSE;
+        }
+
+        // Stage 13: Validate environment sets
+        rtn = validateEnvironmentSets(conversionResult, runStatus, rtn);
+
+        // Stage 14: Execute tables
+        rtn = executeTables(conversionResult, runStatus, rtn, migrationExecutions);
+
+        // Stage 15: Cleanup and save reports
+        return cleanupAndSaveReports(conversionResult, runStatus, rtn);
     }
 }

@@ -65,7 +65,8 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY Definition", tableMirror.getName());
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         EnvironmentTable let = null;
@@ -212,7 +213,8 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
         log.debug("Table: {} buildout SCHEMA_ONLY SQL", tableMirror.getName());
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
 
         String useDb = null;

@@ -72,7 +72,7 @@ public class DataStrategyService {
         strategies.put(DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE, exportImportAcidDowngradeInPlaceDataStrategy);
     }
 
-    public DataStrategy getDefaultDataStrategy(HmsMirrorConfig config) {
-        return strategies.getOrDefault(config.getDataStrategy(), defaultStrategy);
+    public DataStrategy getDefaultDataStrategy(DataStrategyEnum dataStrategy) {
+        return strategies.getOrDefault(dataStrategy, defaultStrategy);
     }
 }

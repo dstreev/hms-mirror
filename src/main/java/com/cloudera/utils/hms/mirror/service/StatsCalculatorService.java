@@ -114,7 +114,8 @@ public class StatsCalculatorService {
      */
     public String getDistributedPartitionElements(EnvironmentTable envTable) {
         StringBuilder sb = new StringBuilder();
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
 
         ConfigLiteDto config = conversionResult.getConfig();
 
@@ -159,7 +160,8 @@ public class StatsCalculatorService {
      */
     protected Long getPartitionDistributionRatio(EnvironmentTable envTable) {
         Long ratio = 0L;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
 
         if (!config.getOptimization().isSkipStatsCollection()) {
@@ -190,7 +192,8 @@ public class StatsCalculatorService {
      */
     public void setSessionOptions(ConnectionDto connection, EnvironmentTable controlEnv, EnvironmentTable applyEnv) {
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
 
         ConfigLiteDto hmsMirrorConfig = conversionResult.getConfig();
 

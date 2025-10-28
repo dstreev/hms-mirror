@@ -91,7 +91,8 @@ public class ExportCircularResolveService extends DataStrategyBase {
     public Boolean buildOutExportImportSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
         Boolean rtn = Boolean.FALSE;
 
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();

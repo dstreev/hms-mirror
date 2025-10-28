@@ -193,7 +193,8 @@ public abstract class DataStrategyBase implements DataStrategy {
 //
     public Boolean buildTableSchema(CopySpec copySpec, DBMirror dbMirror) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
@@ -560,7 +561,8 @@ public abstract class DataStrategyBase implements DataStrategy {
 
     protected Boolean buildMigrationSql(DBMirror dbMirror, TableMirror tableMirror, Environment originalEnv, Environment sourceEnv, Environment targetEnv) {
         Boolean rtn = Boolean.TRUE;
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
@@ -703,7 +705,8 @@ public abstract class DataStrategyBase implements DataStrategy {
     }
 
     public Boolean isACIDInPlace(TableMirror tableMirror, Environment environment) {
-        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
 
 
