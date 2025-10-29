@@ -145,7 +145,7 @@ public class DistCpService {
                     FileWriter distcpSourceFW = null;
 
                     Map<String, Map<String, Set<String>>> distcpPlans = buildDistcpListForDatabase(
-                            config, originalDatabase, distcpEnv, 1, 
+                            originalDatabase, distcpEnv, 1,
                             config.getTransfer().getStorageMigration().isConsolidateTablesForDistcp());
                     
                     if (!distcpPlans.isEmpty()) {

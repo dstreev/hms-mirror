@@ -142,22 +142,44 @@ public class ExecuteSession implements Cloneable {
     public ExecuteSession clone() {
         try {
             ExecuteSession clone = (ExecuteSession) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Deep copy mutable objects to ensure clone independence
+
+            // Clone AtomicInteger counter
+            clone.counter = new AtomicInteger(counter.get());
+
+            // Clone config if present
             if (nonNull(config)) {
                 clone.config = config.clone();
-                // resolvedConfig is a derived object, so we don't need to clone it.
             }
+
+            // Clone connections if present
             if (nonNull(connections)) {
                 clone.connections = connections.clone();
             }
-//            if (nonNull(conversion)) {
-//                clone.conversion = conversion.clone();
-//            }
+
+            // Clone runStatus if present
             if (nonNull(runStatus)) {
                 clone.runStatus = runStatus.clone();
             }
-//            clone.cliEnvironment = cliEnvironment; // This isn't a cloneable object. Just establish the reference.
-            // Don't clone the other parts: runStatus, cliEnvironment, conversion, runResults
+
+            // Deep copy subRunStatuses list
+            if (nonNull(subRunStatuses)) {
+                clone.subRunStatuses = new ArrayList<>();
+                for (RunStatus rs : subRunStatuses) {
+                    clone.subRunStatuses.add(rs.clone());
+                }
+            }
+
+            // ConversionRequest - clone if it has a public clone method
+            if (nonNull(conversionRequest)) {
+                clone.conversionRequest = conversionRequest.clone();
+            }
+
+            // ConversionResult - share reference (represents current conversion work)
+            // Note: ConversionResult doesn't currently have a public clone() method
+            clone.conversionResult = conversionResult;
+
+            // String sessionId is immutable, primitives are copied by value
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

@@ -48,13 +48,14 @@ public class TransferConfig implements Cloneable {
     public TransferConfig clone() {
         try {
             TransferConfig clone = (TransferConfig) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Deep copy mutable objects to ensure clone independence
             if (nonNull(storageMigration)) {
                 clone.storageMigration = storageMigration.clone();
             }
             if (nonNull(warehouse)) {
                 clone.warehouse = warehouse.clone();
             }
+            // All other fields are Strings (immutable) - no additional copying needed
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

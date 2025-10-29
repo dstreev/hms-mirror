@@ -291,24 +291,43 @@ public class DatasetManagementService {
                     if (dbSpec.getDatabaseName() == null || dbSpec.getDatabaseName().trim().isEmpty()) {
                         errors.add(prefix + "Database name is required");
                     }
-                    
+
                     // Check that database has either tables OR filter, but not both
+                    // NOTE: A database can have warehouse config or location mappings without tables/filters
                     boolean hasTables = dbSpec.getTables() != null && !dbSpec.getTables().isEmpty();
                     boolean hasFilter = dbSpec.getFilter() != null;
-                    
-                    if (!hasTables && !hasFilter) {
-                        errors.add(prefix + "Must specify either a table list or filter criteria");
+                    boolean hasWarehouseConfig = dbSpec.getWarehouse() != null &&
+                        (dbSpec.getWarehouse().getManagedDirectory() != null ||
+                         dbSpec.getWarehouse().getExternalDirectory() != null);
+                    boolean hasLocationMappings = dbSpec.getUserGlobalLocationMap() != null &&
+                        !dbSpec.getUserGlobalLocationMap().isEmpty();
+                    boolean hasNamingConfig = dbSpec.getDbPrefix() != null || dbSpec.getDbRename() != null;
+
+                    // Database must have at least one configuration type
+                    if (!hasTables && !hasFilter && !hasWarehouseConfig && !hasLocationMappings && !hasNamingConfig) {
+                        errors.add(prefix + "Must specify at least one configuration (tables, filter, warehouse, location mappings, or naming options)");
                     } else if (hasTables && hasFilter) {
-                        errors.add(prefix + "Cannot specify both table list and filter criteria");
+                        errors.add(prefix + "Cannot specify both table list and filter criteria (they are mutually exclusive)");
+                    }
+
+                    // Validate that dbPrefix and dbRename are mutually exclusive
+                    if (dbSpec.getDbPrefix() != null && !dbSpec.getDbPrefix().trim().isEmpty() &&
+                        dbSpec.getDbRename() != null && !dbSpec.getDbRename().trim().isEmpty()) {
+                        errors.add(prefix + "Cannot specify both dbPrefix and dbRename (they are mutually exclusive)");
                     }
                     
                     // Validate filter if present
                     if (hasFilter) {
                         DatasetDto.TableFilter filter = dbSpec.getFilter();
-                        if ((filter.getIncludeRegEx() == null || filter.getIncludeRegEx().trim().isEmpty()) &&
-                            (filter.getExcludeRegEx() == null || filter.getExcludeRegEx().trim().isEmpty()) &&
-                            (filter.getTableTypes() == null || filter.getTableTypes().isEmpty())) {
-                            errors.add(prefix + "Filter must specify at least one criteria (include pattern, exclude pattern, or table types)");
+                        boolean hasIncludePattern = filter.getIncludeRegEx() != null && !filter.getIncludeRegEx().trim().isEmpty();
+                        boolean hasExcludePattern = filter.getExcludeRegEx() != null && !filter.getExcludeRegEx().trim().isEmpty();
+                        boolean hasTableTypes = filter.getTableTypes() != null && !filter.getTableTypes().isEmpty();
+                        boolean hasSizeConstraints = (filter.getMinSizeMb() > 0) || (filter.getMaxSizeMb() > 0);
+                        boolean hasPartitionConstraints = (filter.getMinPartitions() > 0) || (filter.getMaxPartitions() > 0);
+
+                        if (!hasIncludePattern && !hasExcludePattern && !hasTableTypes &&
+                            !hasSizeConstraints && !hasPartitionConstraints) {
+                            errors.add(prefix + "Filter must specify at least one criteria (include/exclude pattern, table types, size constraints, or partition constraints)");
                         }
                     }
                 }

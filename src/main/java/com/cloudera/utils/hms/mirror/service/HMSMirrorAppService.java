@@ -270,34 +270,34 @@ public class HMSMirrorAppService {
                     connectionPoolService.close();
                     return Boolean.FALSE;
                 }
-            } catch (SQLException sqle) {
-                log.error("Issue refreshing connections pool", sqle);
-                runStatus.addError(CONNECTION_ISSUE, sqle.getMessage());
-                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
-                connectionPoolService.close();
-                runStatus.setProgress(ProgressEnum.FAILED);
-                return Boolean.FALSE;
-            } catch (URISyntaxException e) {
-                log.error("URI issue with connections pool", e);
-                runStatus.addError(CONNECTION_ISSUE, e.getMessage());
-                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
-                connectionPoolService.close();
-                runStatus.setProgress(ProgressEnum.FAILED);
-                return Boolean.FALSE;
-            } catch (SessionException se) {
-                log.error("Issue with Session", se);
-                runStatus.addError(SESSION_ISSUE, se.getMessage());
-                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
-                connectionPoolService.close();
-                runStatus.setProgress(ProgressEnum.FAILED);
-                return Boolean.FALSE;
-            } catch (EncryptionException ee) {
-                log.error("Issue with Decryption", ee);
-                runStatus.addError(ENCRYPTION_ISSUE, ee.getMessage());
-                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
-                connectionPoolService.close();
-                runStatus.setProgress(ProgressEnum.FAILED);
-                return Boolean.FALSE;
+//            } catch (SQLException sqle) {
+//                log.error("Issue refreshing connections pool", sqle);
+//                runStatus.addError(CONNECTION_ISSUE, sqle.getMessage());
+//                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
+//                connectionPoolService.close();
+//                runStatus.setProgress(ProgressEnum.FAILED);
+//                return Boolean.FALSE;
+//            } catch (URISyntaxException e) {
+//                log.error("URI issue with connections pool", e);
+//                runStatus.addError(CONNECTION_ISSUE, e.getMessage());
+//                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
+//                connectionPoolService.close();
+//                runStatus.setProgress(ProgressEnum.FAILED);
+//                return Boolean.FALSE;
+//            } catch (SessionException se) {
+//                log.error("Issue with Session", se);
+//                runStatus.addError(SESSION_ISSUE, se.getMessage());
+//                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
+//                connectionPoolService.close();
+//                runStatus.setProgress(ProgressEnum.FAILED);
+//                return Boolean.FALSE;
+//            } catch (EncryptionException ee) {
+//                log.error("Issue with Decryption", ee);
+//                runStatus.addError(ENCRYPTION_ISSUE, ee.getMessage());
+//                runStatus.setStage(StageEnum.CONNECTION, CollectionEnum.ERRORED);
+//                connectionPoolService.close();
+//                runStatus.setProgress(ProgressEnum.FAILED);
+//                return Boolean.FALSE;
             } catch (RuntimeException rte) {
                 log.error("Runtime Issue", rte);
                 runStatus.addError(SESSION_ISSUE, rte.getMessage());

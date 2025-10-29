@@ -59,7 +59,8 @@ public class StorageMigration implements Cloneable {
     public StorageMigration clone() {
         try {
             StorageMigration clone = (StorageMigration) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // All fields are enums (singleton instances) and primitives (copied by value).
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

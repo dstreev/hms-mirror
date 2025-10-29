@@ -46,16 +46,16 @@ public class DatasetDto implements Cloneable {
 
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
     private String name;
-    
+
     @Schema(description = "Optional description of the dataset", example = "Production analytics databases for migration")
     private String description;
 
     @Schema(description = "List of databases included in this dataset")
     private List<DatabaseSpec> databases = new ArrayList<>();
-    
+
     @Schema(description = "Creation timestamp")
     private String createdDate;
-    
+
     @Schema(description = "Last modification timestamp")
     private String modifiedDate;
 
@@ -184,7 +184,7 @@ public class DatasetDto implements Cloneable {
     @Setter
     @Schema(description = "Database specification within a dataset")
     public static class DatabaseSpec {
-        
+
         @Schema(description = "Database name", required = true, example = "analytics_db")
         private String databaseName;
 
@@ -204,10 +204,10 @@ public class DatasetDto implements Cloneable {
 
         @Schema(description = "Specific list of tables to include (if not using filters)")
         private List<String> tables = new ArrayList<>();
-        
+
         @Schema(description = "Table filter configuration (if not specifying explicit table list)")
         private TableFilter filter;
-        
+
         @Schema(description = "Warehouse configuration for the database with managed and external directories")
         private Warehouse warehouse = new Warehouse(WarehouseSource.PLAN, null, null);
 
@@ -244,7 +244,7 @@ public class DatasetDto implements Cloneable {
 
             // Deep clone filter
             if (this.filter != null) {
-                clone.filter = this.filter.deepClone();
+                clone.filter = this.filter.clone();
             }
 
             // Deep clone warehouse
@@ -269,29 +269,29 @@ public class DatasetDto implements Cloneable {
     @Getter
     @Setter
     @Schema(description = "Filter criteria for selecting tables within a database")
-    public static class TableFilter {
-        
-        @Schema(description = "Regular expression pattern for table names to include", 
-               example = "fact_.*|dim_.*")
+    public static class TableFilter implements Cloneable {
+
+        @Schema(description = "Regular expression pattern for table names to include",
+                example = "fact_.*|dim_.*")
         private String includeRegEx;
-        
-        @Schema(description = "Regular expression pattern for table names to exclude", 
-               example = ".*_temp|.*_staging")
+
+        @Schema(description = "Regular expression pattern for table names to exclude",
+                example = ".*_temp|.*_staging")
         private String excludeRegEx;
-        
-        @Schema(description = "Filter for table types", 
-               example = "EXTERNAL_TABLE,MANAGED_TABLE")
+
+        @Schema(description = "Filter for table types",
+                example = "EXTERNAL_TABLE,MANAGED_TABLE")
         private List<String> tableTypes = new ArrayList<>();
-        
+
         @Schema(description = "Minimum number of partitions (0 = no minimum)", example = "0")
         private int minPartitions = 0;
-        
-        @Schema(description = "Maximum number of partitions (0 = no maximum)", example = "0")  
+
+        @Schema(description = "Maximum number of partitions (0 = no maximum)", example = "0")
         private int maxPartitions = 0;
-        
+
         @Schema(description = "Minimum table size in bytes (0 = no minimum)", example = "0")
         private long minSizeMb = 0L;
-        
+
         @Schema(description = "Maximum table size in bytes (0 = no maximum)", example = "0")
         private long maxSizeMb = 0L;
 
@@ -322,22 +322,27 @@ public class DatasetDto implements Cloneable {
          *
          * @return A deep clone of this TableFilter
          */
-        public TableFilter deepClone() {
-            TableFilter clone = new TableFilter();
+        public TableFilter clone() {
+            TableFilter clone = null;
+            try {
+                clone = (TableFilter) super.clone();
 
-            // Copy primitive and immutable fields
-            clone.includeRegEx = this.includeRegEx;
-            clone.excludeRegEx = this.excludeRegEx;
-            clone.minPartitions = this.minPartitions;
-            clone.maxPartitions = this.maxPartitions;
-            clone.minSizeMb = this.minSizeMb;
-            clone.maxSizeMb = this.maxSizeMb;
+                // Copy primitive and immutable fields
+                clone.includeRegEx = this.includeRegEx;
+                clone.excludeRegEx = this.excludeRegEx;
+                clone.minPartitions = this.minPartitions;
+                clone.maxPartitions = this.maxPartitions;
+                clone.minSizeMb = this.minSizeMb;
+                clone.maxSizeMb = this.maxSizeMb;
 
-            // Deep clone tableTypes list
-            if (this.tableTypes != null) {
-                clone.tableTypes = new ArrayList<>(this.tableTypes);
-            } else {
-                clone.tableTypes = new ArrayList<>();
+                // Deep clone tableTypes list
+                if (this.tableTypes != null) {
+                    clone.tableTypes = new ArrayList<>(this.tableTypes);
+                } else {
+                    clone.tableTypes = new ArrayList<>();
+                }
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError("Clone not supported", e);
             }
 
             return clone;

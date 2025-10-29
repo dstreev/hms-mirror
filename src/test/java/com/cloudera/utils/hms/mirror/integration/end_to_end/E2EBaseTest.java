@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
+import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,8 +65,28 @@ public class E2EBaseTest {
 
     protected DomainService domainService;
     protected HMSMirrorAppService hmsMirrorAppService;
-    protected ExecuteSessionService executeSessionService;
-    //HMSMirrorAppService;
+    protected ExecutionContextService executionContextService;
+//    protected ExecuteSessionService executeSessionService;
+
+    @Autowired
+    public void setDomainService(DomainService domainService) {
+        this.domainService = domainService;
+    }
+
+    @Autowired
+    public void setExecutionContextService(ExecutionContextService executionContextService) {
+        this.executionContextService = executionContextService;
+    }
+//    @Autowired
+//    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
+//        this.executeSessionService = executeSessionService;
+//    }
+
+    @Autowired
+    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
+        this.hmsMirrorAppService = hmsMirrorAppService;
+    }
+
 
     protected HmsMirrorConfig getConfig() {
         return executeSessionService.getSession().getConfig();
@@ -175,21 +196,6 @@ public class E2EBaseTest {
 
     protected Long getWarningCode() {
         return hmsMirrorAppService.getWarningCode();
-    }
-
-    @Autowired
-    public void setDomainService(DomainService domainService) {
-        this.domainService = domainService;
-    }
-
-    @Autowired
-    public void setExecuteSessionService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-    }
-
-    @Autowired
-    public void setHmsMirrorAppService(HMSMirrorAppService hmsMirrorAppService) {
-        this.hmsMirrorAppService = hmsMirrorAppService;
     }
 
     protected void validateTableIsACID(String database, String table, Environment environment) {

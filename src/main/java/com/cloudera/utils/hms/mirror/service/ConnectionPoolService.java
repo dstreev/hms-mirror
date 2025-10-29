@@ -176,7 +176,7 @@ public class ConnectionPoolService {
 //        boolean rtn = init();
 //        return rtn;
 //    }
-    public boolean init() throws SQLException, SessionException, EncryptionException, URISyntaxException {
+    public boolean init() {
         // Set Session Connections.
         boolean rtn = Boolean.TRUE;
         ConversionResult conversionResult = getConversionResult();
@@ -213,7 +213,7 @@ public class ConnectionPoolService {
         return rtn && msRtn && nsRtn;
     }
 
-    protected boolean initHcfsNamespaces() throws SessionException {
+    protected boolean initHcfsNamespaces() {
         AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
         ConversionResult conversionResult = getConversionResult();
 //        ExecuteSession session = getConversionResult();
@@ -259,7 +259,7 @@ public class ConnectionPoolService {
         return rtn;
     }
 
-    protected boolean initMetastoreDirect() throws SQLException, SessionException, EncryptionException {
+    protected boolean initMetastoreDirect() {
         AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
         ConversionResult conversionResult = getConversionResult();
 
@@ -296,7 +296,7 @@ public class ConnectionPoolService {
         return rtn.get();
     }
 
-    protected void initConnectionsSetup() throws SQLException, SessionException, EncryptionException, URISyntaxException {
+    protected void initConnectionsSetup() {
         // Close and reset the connections.
 
         ConversionResult conversionResult = getConversionResult();
@@ -334,7 +334,7 @@ public class ConnectionPoolService {
     }
 
     //    @Override
-    protected boolean initHS2() throws SQLException, SessionException, EncryptionException {
+    protected boolean initHS2() {
         AtomicBoolean rtn = new AtomicBoolean(Boolean.TRUE);
         ConversionResult conversionResult = getConversionResult();
 //        Connections connections = conversionResult.getConnections();
@@ -380,7 +380,11 @@ public class ConnectionPoolService {
                         // Run the overrides;
                         for (String o : overrides) {
                             log.info("Running Override: {} on {} connection", o, environment);
-                            stmt.execute(o);
+                            try {
+                                stmt.execute(o);
+                            } catch (SQLException se) {
+                                log.warn("Error running override: {} on {} connection", o, environment, se);
+                            }
                         }
 
                         // Create an array of strings with various settings to run.
@@ -392,7 +396,12 @@ public class ConnectionPoolService {
                         for (String s : sessionSets) {
                             connection.getHs2EnvSets().add(s);
                             log.info("Running session check: {} on {} connection", s, environment);
-                            stmt.execute(s);
+                            try {
+                                stmt.execute(s);
+                            } catch (SQLException se) {
+                                log.warn("Error running session check: {} on {} connection", s, environment, se);
+                            }
+
                         }
 
                         log.info("HS2 Connection validated (resources) for {}", environment);

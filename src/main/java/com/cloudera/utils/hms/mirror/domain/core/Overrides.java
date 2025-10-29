@@ -32,8 +32,25 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Overrides {
+public class Overrides implements Cloneable {
     private Map<String, Map<SideType, String>> properties = new TreeMap<String, Map<SideType, String>>();
+
+    @Override
+    public Overrides clone() {
+        try {
+            Overrides clone = (Overrides) super.clone();
+            // Deep copy the nested Map structure
+            if (properties != null) {
+                clone.properties = new TreeMap<>();
+                for (Map.Entry<String, Map<SideType, String>> entry : properties.entrySet()) {
+                    clone.properties.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+                }
+            }
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 
     public void addProperty(String key, String value, SideType side) {
         // Don't save unless key is present and not blank.

@@ -271,13 +271,13 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Size Limit (bytes)
+                              Max Size (MB)
                             </label>
                             <input
                               type="number"
-                              value={database.filter.tblSizeLimit || ''}
+                              value={database.filter?.maxSizeMb || ''}
                               onChange={(e) => updateDatabase(dbIndex, {
-                                filter: { ...database.filter, tblSizeLimit: parseInt(e.target.value) || 0 }
+                                filter: { ...database.filter, maxSizeMb: parseInt(e.target.value) || 0 }
                               })}
                               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                               placeholder="0 = no limit"
@@ -286,13 +286,13 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Partition Limit
+                              Max Partitions
                             </label>
                             <input
                               type="number"
-                              value={database.filter.tblPartitionLimit || ''}
+                              value={database.filter?.maxPartitions || ''}
                               onChange={(e) => updateDatabase(dbIndex, {
-                                filter: { ...database.filter, tblPartitionLimit: parseInt(e.target.value) || 0 }
+                                filter: { ...database.filter, maxPartitions: parseInt(e.target.value) || 0 }
                               })}
                               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                               placeholder="0 = no limit"
@@ -315,10 +315,14 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           </svg>
                         </div>
                         <div className="ml-2">
-                          <p className="text-xs text-blue-800 font-medium">Object Storage Migration</p>
+                          <p className="text-xs text-blue-800 font-medium">Database-Specific Warehouse Locations</p>
                           <p className="text-xs text-blue-700 mt-1">
-                            If migrating to object storage systems like <strong>Ozone</strong> or <strong>S3</strong>,
-                            define specific Managed and External directories that map to your usage strategies for these storage systems.
+                            By setting these values, the system will configure <strong>database-specific warehouse locations that override the system default warehouse locations</strong>.
+                            This is <strong>highly recommended</strong> when migrating to object storage systems like <strong>Ozone</strong> or <strong>S3</strong>,
+                            allowing you to define specific Managed and External directories that map to your usage strategies for these storage systems.
+                          </p>
+                          <p className="text-xs text-blue-700 mt-2">
+                            <strong>Important:</strong> Paths must start with <code className="bg-blue-100 px-1 rounded">/</code> and will be appended to the target namespace during migration.
                           </p>
                         </div>
                       </div>
@@ -337,6 +341,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           placeholder="/warehouse/managed"
                         />
+                        <p className="mt-1 text-xs text-gray-500">Must start with /</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -351,6 +356,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           placeholder="/warehouse/external"
                         />
+                        <p className="mt-1 text-xs text-gray-500">Must start with /</p>
                       </div>
                     </div>
                   </div>
@@ -399,6 +405,9 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                             These mappings are applied <strong>before</strong> system-level translations and should only be used with precision and understanding.
                             They override default location translation behavior during migration.
                           </p>
+                          <p className="text-xs text-amber-700 mt-2">
+                            <strong>Important:</strong> All paths must start with <code className="bg-amber-100 px-1 rounded">/</code> and will be appended to the target namespace during migration.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -426,6 +435,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                                   className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
                                   placeholder="/warehouse/tablespace/external/hive"
                                 />
+                                <p className="mt-1 text-xs text-gray-500">Must start with /</p>
                               </div>
                               <button
                                 type="button"
@@ -461,6 +471,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                                   className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
                                   placeholder="/warehouse/tablespace/external/hive"
                                 />
+                                <p className="mt-1 text-xs text-gray-500">Must start with /</p>
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -480,6 +491,7 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                                   className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xs"
                                   placeholder="/warehouse/tablespace/managed/hive"
                                 />
+                                <p className="mt-1 text-xs text-gray-500">Must start with /</p>
                               </div>
                             </div>
                           </div>
@@ -507,6 +519,9 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                           <p className="text-xs text-yellow-700 mt-1">
                             These options modify database naming during migration. Use only for testing purposes.
                           </p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            <strong>Mutual Exclusivity:</strong> When you enter a value in one field, the other field will be automatically cleared. Both fields can be blank, or only one can have a value.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -519,7 +534,15 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         <input
                           type="text"
                           value={database.dbPrefix || ''}
-                          onChange={(e) => updateDatabase(dbIndex, { dbPrefix: e.target.value || undefined })}
+                          onChange={(e) => {
+                            const value = e.target.value.trim();
+                            // Clear dbRename if setting dbPrefix (mutual exclusivity)
+                            if (value) {
+                              updateDatabase(dbIndex, { dbPrefix: value, dbRename: undefined });
+                            } else {
+                              updateDatabase(dbIndex, { dbPrefix: undefined });
+                            }
+                          }}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           placeholder="test_"
                         />
@@ -532,7 +555,15 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         <input
                           type="text"
                           value={database.dbRename || ''}
-                          onChange={(e) => updateDatabase(dbIndex, { dbRename: e.target.value || undefined })}
+                          onChange={(e) => {
+                            const value = e.target.value.trim();
+                            // Clear dbPrefix if setting dbRename (mutual exclusivity)
+                            if (value) {
+                              updateDatabase(dbIndex, { dbRename: value, dbPrefix: undefined });
+                            } else {
+                              updateDatabase(dbIndex, { dbRename: undefined });
+                            }
+                          }}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           placeholder="new_database_name"
                         />

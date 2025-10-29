@@ -17,11 +17,8 @@
 
 package com.cloudera.utils.hms.mirror.cli.config;
 
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResultHelper;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.domain.testdata.DBMirrorTest;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
@@ -29,7 +26,6 @@ import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
-import com.cloudera.utils.hms.mirror.service.SessionManager;
 import com.cloudera.utils.hms.mirror.util.HmsMirrorConfigConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -56,8 +52,6 @@ import java.nio.file.FileSystems;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
-import java.util.TreeSet;
 
 import static java.util.Objects.isNull;
 
@@ -171,6 +165,7 @@ public class CliInit {
             throw new RuntimeException("Couldn't locate configuration file: " + fullConfigPath);
         }
         getExecutionContextService().setHmsMirrorConfig(config);
+
         return config;
     }
 
@@ -190,7 +185,7 @@ public class CliInit {
     @Order(5)
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename")
-    public CommandLineRunner loadTestData(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
+    public CommandLineRunner setTestDataFile(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
         return args -> {
             // String quotes from the filename.
             String adjustedFilename = filename.replaceAll("^\"|\"$", "");
@@ -314,14 +309,15 @@ public class CliInit {
             if (config.isLoadingTestData()) {
                 // Load Test Data.
                 conversionResult.setMockTestDataset(Boolean.TRUE);
-                loadTestData();
+                DBMirrorTest dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
+                getConversionResultService().loadDBMirrorTest(dbMirrorTest);
             }
 
             getConversionResultRepository().save(conversionResult);
             getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
 
             // Remove Tables from Map.
-            // TODO: Account for this eventually.
+            // TODO: Account for this eventually. I think this is already done in the 'theWork' process.
 //            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
 //                dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
 //            }

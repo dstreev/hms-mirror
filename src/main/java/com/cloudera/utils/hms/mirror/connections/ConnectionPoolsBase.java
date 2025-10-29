@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
@@ -170,29 +171,29 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
         return metastoreDirectDataSources.get(environment);
     }
 
-    protected void initHS2Drivers() throws SQLException, SessionException {
+    protected void initHS2Drivers() {
         Set<Environment> environments = new HashSet<>();
         environments.add(Environment.LEFT);
         environments.add(Environment.RIGHT);
 
-        conversionResult.getConnections().forEach((environment, connection) -> {
-           Driver driver = driverUtilsService.getHs2Driver(connection, environment);
-            try {
-                DriverManager.deregisterDriver(driver);
-            } catch (SQLException throwables) {
-                log.error(throwables.getMessage(), throwables);
-                throw throwables;
-            }
-            hs2Drivers.put(environment, driver);
+        conversionResult.getConnections().forEach(this::accept);
+    }
 
-
-        });
+    private void accept(Environment environment, ConnectionDto connection) {
+        Driver driver = driverUtilsService.getHs2Driver(connection, environment);
+        try {
+            DriverManager.deregisterDriver(driver);
+        } catch (SQLException se) {
+            log.error(se.getMessage(), se);
+            throw new RuntimeException("SQL issue getting driver for " + environment + " connection: ", se);
+        }
+        hs2Drivers.put(environment, driver);
     }
 
 
-    protected abstract void initHS2PooledDataSources() throws SessionException, EncryptionException;
+    protected abstract void initHS2PooledDataSources();
 
-    protected void initMetastoreDataSources() throws SessionException, EncryptionException, SQLException, URISyntaxException {
+    protected void initMetastoreDataSources() {
         // Metastore Direct
         conversionResult.getConnections().forEach((environment, connection) -> {
             if (nonNull(connection) && !isBlank(connection.getMetastoreDirectUri())) {
@@ -235,7 +236,7 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                     log.info("{} - Metastore Direct JDBC Driver Version: {}", environment, version);
                 } catch (SQLException | URISyntaxException e) {
                     log.error("Issue getting Metastore Direct JDBC JarFile details", e);
-                    throw e;
+                    throw new RuntimeException("Issue initializing the Metastore Datasource for " + environment, e);
                 }
 
                 // Test Connection.
@@ -251,7 +252,7 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                             throw new RuntimeException(e);
                         }
                     } else {
-                        throw new RuntimeException(t);
+                        throw new RuntimeException("Issue getting metastore connection for " + environment, t);
                     }
                 }
             }
@@ -259,10 +260,12 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
 
     }
 
-    public synchronized void init() throws SQLException, SessionException, EncryptionException, URISyntaxException {
+    public synchronized void init() {
         // TODO: Fix to handle test data load. (Don't init connections).
+        //       I Think we should handle this outside of the ConnectionPoolsBase by ensuring we don't
+        //       call these methods during test data load.
 //        if (!executeSession.getConfig().isLoadingTestData()) {
-            try {
+//            try {
                 switch (connectionState) {
                     case DISCONNECTED:
                     case ERROR:
@@ -279,12 +282,11 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                         break;
                 }
                 connectionState = ConnectionState.CONNECTED;
-            } catch (SQLException | SessionException | EncryptionException | URISyntaxException e) {
-                connectionState = ConnectionState.ERROR;
-                throw e;
-            }
-//        }
-    }
-
+//            } catch (SessionException | EncryptionException e) {
+//                connectionState = ConnectionState.ERROR;
+//                throw e;
+//            }
+        }
+//    }
 
 }

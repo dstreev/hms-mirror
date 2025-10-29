@@ -126,11 +126,7 @@ public class SQLDataStrategy extends DataStrategyBase {
             // If the temp cluster doesn't exist, create it as a clone of the LEFT.
             if (isNull(conversionResult.getConnection(Environment.SHADOW))) {
                 ConnectionDto shadowCluster = null;
-                try {
-                    shadowCluster = conversionResult.getConnection(Environment.LEFT).clone();
-                } catch (CloneNotSupportedException e) {
-                    throw new RuntimeException(e);
-                }
+                shadowCluster = conversionResult.getConnection(Environment.LEFT).clone();
                 conversionResult.getConnections().put(Environment.SHADOW, shadowCluster);
             }
 

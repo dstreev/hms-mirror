@@ -39,6 +39,6 @@ public interface ConnectionPools {
 
     Connection getMetastoreDirectEnvironmentConnection(Environment environment) throws SQLException;
 
-    void init() throws SQLException, SessionException, EncryptionException, URISyntaxException;
+    void init();
 
 }

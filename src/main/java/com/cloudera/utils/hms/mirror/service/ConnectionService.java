@@ -18,10 +18,10 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.RocksDBException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -36,12 +36,12 @@ public class ConnectionService {
 
     private final ConnectionRepository connectionRepository;
 
-    public List<ConnectionDto> getAllConnections() throws RocksDBException {
+    public List<ConnectionDto> getAllConnections() throws RepositoryException {
         Map<String, ConnectionDto> connectionMap = connectionRepository.findAll();
         return new ArrayList<>(connectionMap.values());
     }
 
-    public List<ConnectionDto> getFilteredConnections(String search, String environment, String status) throws RocksDBException {
+    public List<ConnectionDto> getFilteredConnections(String search, String environment, String status) throws RepositoryException {
         List<ConnectionDto> connectionDtos = getAllConnections();
         
         return connectionDtos.stream()
@@ -52,11 +52,11 @@ public class ConnectionService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<ConnectionDto> getConnectionById(String id) throws RocksDBException {
+    public Optional<ConnectionDto> getConnectionById(String id) throws RepositoryException {
         return connectionRepository.findById(id);
     }
 
-    public ConnectionDto createConnection(ConnectionDto connectionDto) throws RocksDBException {
+    public ConnectionDto createConnection(ConnectionDto connectionDto) throws RepositoryException {
         // Use the connection name as the key in RocksDB
         String id = connectionDto.getName();
         
@@ -76,7 +76,7 @@ public class ConnectionService {
         return connectionRepository.save(id, connectionDto);
     }
 
-    public ConnectionDto updateConnection(String id, ConnectionDto connectionDto) throws RocksDBException {
+    public ConnectionDto updateConnection(String id, ConnectionDto connectionDto) throws RepositoryException {
         Optional<ConnectionDto> existingOpt = connectionRepository.findById(id);
         if (existingOpt.isEmpty()) {
             throw new RuntimeException("Connection not found: " + id);
@@ -89,7 +89,7 @@ public class ConnectionService {
         return connectionRepository.save(id, connectionDto);
     }
 
-    public boolean deleteConnection(String id) throws RocksDBException {
+    public boolean deleteConnection(String id) throws RepositoryException {
         Optional<ConnectionDto> connectionOpt = connectionRepository.findById(id);
         if (connectionOpt.isEmpty()) {
             return false;
@@ -97,72 +97,60 @@ public class ConnectionService {
         
         ConnectionDto connectionDto = connectionOpt.get();
         boolean wasDeleted = connectionRepository.deleteById(id);
-        
-        // If we deleted the default connection, set another one as default
-        if (wasDeleted && connectionDto.isDefault()) {
-            List<ConnectionDto> remaining = getAllConnections();
-            if (!remaining.isEmpty()) {
-                connectionRepository.setAsDefault(remaining.get(0).getId());
-            }
-        }
-        
+
         return wasDeleted;
     }
 
-    public Optional<ConnectionDto> getDefaultConnection() throws RocksDBException {
+    public Optional<ConnectionDto> getDefaultConnection() throws RepositoryException {
         return connectionRepository.findDefaultConnection();
     }
 
-    public void setDefaultConnection(String id) throws RocksDBException {
-        connectionRepository.setAsDefault(id);
-    }
-
-    public boolean testConnection(String id) throws RocksDBException {
+    public boolean testConnection(String id) throws RepositoryException {
         return connectionRepository.testConnection(id);
     }
 
-    public List<ConnectionDto> getConnectionsByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
-        return connectionRepository.findByEnvironment(environment);
-    }
-
-    public ConnectionDto duplicateConnection(String sourceId, String newName) throws RocksDBException {
-        Optional<ConnectionDto> sourceOpt = connectionRepository.findById(sourceId);
-        if (sourceOpt.isEmpty()) {
-            throw new RuntimeException("Source connection not found: " + sourceId);
-        }
-        
-        ConnectionDto source = sourceOpt.get();
-        ConnectionDto duplicate = ConnectionDto.builder()
-                .name(newName)
-                .description(source.getDescription() + " (Copy)")
-                .environment(source.getEnvironment())
-                .platformType(source.getPlatformType())
-                .hcfsNamespace(source.getHcfsNamespace())
-                .hs2Uri(source.getHs2Uri())
-                .hs2Username(source.getHs2Username())
-                .hs2Password(source.getHs2Password())
-//                .hs2DriverClassName(source.getHs2DriverClassName())
-//                .hs2JarFile(source.getHs2JarFile())
-//                .hs2Disconnected(source.isHs2Disconnected())
-                .hs2ConnectionProperties(source.getHs2ConnectionProperties())
-                .metastoreDirectEnabled(source.isMetastoreDirectEnabled())
-                .metastoreDirectUri(source.getMetastoreDirectUri())
-                .metastoreDirectType(source.getMetastoreDirectType())
-                .metastoreDirectUsername(source.getMetastoreDirectUsername())
-                .metastoreDirectPassword(source.getMetastoreDirectPassword())
-                .metastoreDirectMinConnections(source.getMetastoreDirectMinConnections())
-                .metastoreDirectMaxConnections(source.getMetastoreDirectMaxConnections())
-                .partitionDiscoveryAuto(source.isPartitionDiscoveryAuto())
-                .partitionDiscoveryInitMSCK(source.isPartitionDiscoveryInitMSCK())
-                .partitionBucketLimit(source.getPartitionBucketLimit())
-                .createIfNotExists(source.isCreateIfNotExists())
-                .enableAutoTableStats(source.isEnableAutoTableStats())
-                .enableAutoColumnStats(source.isEnableAutoColumnStats())
-                .isDefault(false)
-                .build();
-        
-        return createConnection(duplicate);
-    }
+//    public List<ConnectionDto> getConnectionsByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
+//        return connectionRepository.findByEnvironment(environment);
+//    }
+//
+//    public ConnectionDto duplicateConnection(String sourceId, String newName) throws RocksDBException {
+//        Optional<ConnectionDto> sourceOpt = connectionRepository.findById(sourceId);
+//        if (sourceOpt.isEmpty()) {
+//            throw new RuntimeException("Source connection not found: " + sourceId);
+//        }
+//
+//        ConnectionDto source = sourceOpt.get();
+//        ConnectionDto duplicate = ConnectionDto.builder()
+//                .name(newName)
+//                .description(source.getDescription() + " (Copy)")
+//                .environment(source.getEnvironment())
+//                .platformType(source.getPlatformType())
+//                .hcfsNamespace(source.getHcfsNamespace())
+//                .hs2Uri(source.getHs2Uri())
+//                .hs2Username(source.getHs2Username())
+//                .hs2Password(source.getHs2Password())
+////                .hs2DriverClassName(source.getHs2DriverClassName())
+////                .hs2JarFile(source.getHs2JarFile())
+////                .hs2Disconnected(source.isHs2Disconnected())
+//                .hs2ConnectionProperties(source.getHs2ConnectionProperties())
+//                .metastoreDirectEnabled(source.isMetastoreDirectEnabled())
+//                .metastoreDirectUri(source.getMetastoreDirectUri())
+//                .metastoreDirectType(source.getMetastoreDirectType())
+//                .metastoreDirectUsername(source.getMetastoreDirectUsername())
+//                .metastoreDirectPassword(source.getMetastoreDirectPassword())
+//                .metastoreDirectMinConnections(source.getMetastoreDirectMinConnections())
+//                .metastoreDirectMaxConnections(source.getMetastoreDirectMaxConnections())
+//                .partitionDiscoveryAuto(source.isPartitionDiscoveryAuto())
+//                .partitionDiscoveryInitMSCK(source.isPartitionDiscoveryInitMSCK())
+//                .partitionBucketLimit(source.getPartitionBucketLimit())
+//                .createIfNotExists(source.isCreateIfNotExists())
+//                .enableAutoTableStats(source.isEnableAutoTableStats())
+//                .enableAutoColumnStats(source.isEnableAutoColumnStats())
+//                .isDefault(false)
+//                .build();
+//
+//        return createConnection(duplicate);
+//    }
 
     private boolean matchesSearch(ConnectionDto conn, String search) {
         if (search == null || search.trim().isEmpty()) {
@@ -210,6 +198,7 @@ public class ConnectionService {
         return a.getName().compareToIgnoreCase(b.getName());
     }
 
+    /*
     private String generateConnectionId(String name) {
         String baseId = name.toLowerCase()
                 .replaceAll("[^a-z0-9]", "_")
@@ -234,4 +223,5 @@ public class ConnectionService {
         
         return id;
     }
+     */
 }

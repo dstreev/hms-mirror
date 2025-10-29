@@ -14,16 +14,19 @@ export interface DatabaseSpecDto {
   tables: string[];
   filter?: TableFilterDto;
   warehouse: WarehouseDto;
+  userGlobalLocationMap?: Record<string, Record<string, string>>;
+  dbPrefix?: string;
+  dbRename?: string;
 }
 
 export interface TableFilterDto {
-  includePattern?: string;
-  excludePattern?: string;
+  includeRegEx?: string;
+  excludeRegEx?: string;
   tableTypes?: string[];
   minPartitions?: number;
   maxPartitions?: number;
-  minSizeBytes?: number;
-  maxSizeBytes?: number;
+  minSizeMb?: number;
+  maxSizeMb?: number;
 }
 
 export interface WarehouseDto {
@@ -67,16 +70,22 @@ class DatasetApi extends BaseApi {
         databaseName: db.databaseName,
         tables: db.tables,
         filter: db.filter ? {
-          includePattern: db.filter.tblRegEx,
-          excludePattern: db.filter.tblExcludeRegEx,
-          minSizeBytes: db.filter.tblSizeLimit,
-          maxPartitions: db.filter.tblPartitionLimit
+          includeRegEx: db.filter.tblRegEx,
+          excludeRegEx: db.filter.tblExcludeRegEx,
+          tableTypes: db.filter.tableTypes,
+          minPartitions: db.filter.minPartitions,
+          maxPartitions: db.filter.maxPartitions,
+          minSizeMb: db.filter.minSizeMb,
+          maxSizeMb: db.filter.maxSizeMb
         } : undefined,
         warehouse: {
           source: db.warehouse.warehouseSource,
           managedDirectory: db.warehouse.managedDirectory,
           externalDirectory: db.warehouse.externalDirectory
-        }
+        },
+        userGlobalLocationMap: db.userGlobalLocationMap,
+        dbPrefix: db.dbPrefix,
+        dbRename: db.dbRename
       }))
     };
   }
@@ -89,16 +98,22 @@ class DatasetApi extends BaseApi {
         databaseName: db.databaseName,
         tables: db.tables,
         filter: db.filter ? {
-          tblRegEx: db.filter.includePattern,
-          tblExcludeRegEx: db.filter.excludePattern,
-          tblSizeLimit: db.filter.minSizeBytes,
-          tblPartitionLimit: db.filter.maxPartitions
+          tblRegEx: db.filter.includeRegEx,
+          tblExcludeRegEx: db.filter.excludeRegEx,
+          tableTypes: db.filter.tableTypes,
+          minPartitions: db.filter.minPartitions,
+          maxPartitions: db.filter.maxPartitions,
+          minSizeMb: db.filter.minSizeMb,
+          maxSizeMb: db.filter.maxSizeMb
         } : undefined,
         warehouse: {
           warehouseSource: db.warehouse.source as any,
           managedDirectory: db.warehouse.managedDirectory,
           externalDirectory: db.warehouse.externalDirectory
-        }
+        },
+        userGlobalLocationMap: db.userGlobalLocationMap,
+        dbPrefix: db.dbPrefix,
+        dbRename: db.dbRename
       }))
     };
   }
@@ -133,21 +148,24 @@ class DatasetApi extends BaseApi {
   async saveDataset(formData: DatasetFormData): Promise<{ success: boolean; message?: string; operation?: string }> {
     try {
       const dto = this.mapFormDataToDto(formData);
+      console.log('Saving dataset - DTO being sent:', JSON.stringify(dto, null, 2));
       const response = await this.post<DatasetResponse>('/datasets', dto);
-      
+
       if (response?.status === 'SUCCESS') {
         return {
           success: true,
           operation: response.operation || 'saved'
         };
       } else {
+        console.error('Save dataset failed with response:', response);
         return {
           success: false,
           message: response?.message || 'Failed to save dataset'
         };
       }
     } catch (error: any) {
-      console.error('Failed to save dataset:', error);
+      console.error('Failed to save dataset - error:', error);
+      console.error('Error response data:', error.response?.data);
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Network error occurred while saving dataset'

@@ -73,14 +73,19 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Getter
 public class ExportCircularResolveService extends DataStrategyBase {
 
+    @NonNull
+    private final WarehouseService warehouseService;
+
     public ExportCircularResolveService(@NonNull ConversionResultService conversionResultService,
                                         @NonNull ExecutionContextService executionContextService,
                                         @NonNull StatsCalculatorService statsCalculatorService,
                                         @NonNull CliEnvironment cliEnvironment,
                                         @NonNull TranslatorService translatorService,
-                                        @NonNull FeatureService featureService) {
+                                        @NonNull FeatureService featureService,
+                                        @NonNull WarehouseService warehouseService) {
         super(conversionResultService, executionContextService, statsCalculatorService, cliEnvironment,
                 translatorService, featureService);
+        this.warehouseService = warehouseService;
     }
 
     @Override
@@ -104,7 +109,7 @@ public class ExportCircularResolveService extends DataStrategyBase {
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         String leftNamespace = TableUtils.getLocation(let.getName(), let.getDefinition());
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
-        Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
+        Warehouse warehouse = getWarehouseService().getWarehousePlan(dbMirror.getName());
         try {
             // LEFT Export to directory
             String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());

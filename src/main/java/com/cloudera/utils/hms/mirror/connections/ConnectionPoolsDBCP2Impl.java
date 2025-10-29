@@ -51,7 +51,7 @@ public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements Con
         super(driverUtilsService, conversionResult, passwordService, connectionPoolService);
     }
 
-    protected void initHS2PooledDataSources() throws SessionException, EncryptionException {
+    protected void initHS2PooledDataSources() {
         conversionResult.getConnections().forEach((environment, connection) -> {
             if (!connection.isHs2Connected()) {
                 Driver lclDriver = getHS2EnvironmentDriver(environment);
@@ -145,7 +145,7 @@ public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements Con
     }
 
     @Override
-    protected void initMetastoreDataSources() throws SessionException, EncryptionException {
+    protected void initMetastoreDataSources() {
         // Metastore Direct
         conversionResult.getConnections().forEach((environment, connection) -> {
             if (nonNull(connection) && !isBlank(connection.getMetastoreDirectUri())) {

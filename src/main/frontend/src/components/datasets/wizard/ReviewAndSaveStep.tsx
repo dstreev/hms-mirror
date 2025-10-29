@@ -2,6 +2,14 @@ import React from 'react';
 import { DatasetWizardStepProps } from '../../../types/Dataset';
 
 const ReviewAndSaveStep: React.FC<DatasetWizardStepProps> = ({ formData }) => {
+  // Debug logging
+  console.log('ReviewAndSaveStep formData:', formData);
+  formData.databases.forEach((db, idx) => {
+    console.log(`Database ${idx} userGlobalLocationMap:`, db.userGlobalLocationMap);
+    console.log(`Database ${idx} dbPrefix:`, db.dbPrefix);
+    console.log(`Database ${idx} dbRename:`, db.dbRename);
+  });
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 rounded-lg p-6">
@@ -72,11 +80,11 @@ const ReviewAndSaveStep: React.FC<DatasetWizardStepProps> = ({ formData }) => {
                       {database.filter.tblExcludeRegEx && (
                         <div>Exclude: <code className="bg-gray-100 px-1 rounded">{database.filter.tblExcludeRegEx}</code></div>
                       )}
-                      {database.filter.tblSizeLimit && database.filter.tblSizeLimit > 0 && (
-                        <div>Size limit: {database.filter.tblSizeLimit} bytes</div>
+                      {database.filter.maxSizeMb && database.filter.maxSizeMb > 0 && (
+                        <div>Max size: {database.filter.maxSizeMb} MB</div>
                       )}
-                      {database.filter.tblPartitionLimit && database.filter.tblPartitionLimit > 0 && (
-                        <div>Partition limit: {database.filter.tblPartitionLimit}</div>
+                      {database.filter.maxPartitions && database.filter.maxPartitions > 0 && (
+                        <div>Max partitions: {database.filter.maxPartitions}</div>
                       )}
                     </div>
                   </div>
@@ -84,7 +92,7 @@ const ReviewAndSaveStep: React.FC<DatasetWizardStepProps> = ({ formData }) => {
 
                 {/* Warehouse */}
                 {(database.warehouse.managedDirectory || database.warehouse.externalDirectory) && (
-                  <div>
+                  <div className="mb-3">
                     <span className="text-sm font-medium text-gray-600">Warehouse:</span>
                     <div className="mt-1 text-xs text-gray-600 space-y-1">
                       {database.warehouse.managedDirectory && (
@@ -97,10 +105,50 @@ const ReviewAndSaveStep: React.FC<DatasetWizardStepProps> = ({ formData }) => {
                   </div>
                 )}
 
+                {/* Location Mappings */}
+                {database.userGlobalLocationMap && typeof database.userGlobalLocationMap === 'object' &&
+                 Object.keys(database.userGlobalLocationMap).length > 0 && (
+                  <div className="mb-3">
+                    <span className="text-sm font-medium text-gray-600">Location Mappings ({Object.keys(database.userGlobalLocationMap).length}):</span>
+                    <div className="mt-1 space-y-2">
+                      {Object.entries(database.userGlobalLocationMap).map(([sourcePath, mappings], idx) => (
+                        <div key={idx} className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
+                          <div className="font-medium text-gray-700 mb-1">Source: <code className="bg-white px-1 rounded">{sourcePath}</code></div>
+                          <div className="pl-2 space-y-1 text-gray-600">
+                            {mappings?.EXTERNAL_TABLE && mappings.EXTERNAL_TABLE.trim() !== '' && (
+                              <div>External → <code className="bg-white px-1 rounded">{mappings.EXTERNAL_TABLE}</code></div>
+                            )}
+                            {mappings?.MANAGED_TABLE && mappings.MANAGED_TABLE.trim() !== '' && (
+                              <div>Managed → <code className="bg-white px-1 rounded">{mappings.MANAGED_TABLE}</code></div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Database Naming Options */}
+                {((database.dbPrefix && database.dbPrefix.trim() !== '') ||
+                  (database.dbRename && database.dbRename.trim() !== '')) && (
+                  <div className="mb-3">
+                    <span className="text-sm font-medium text-gray-600">Database Naming:</span>
+                    <div className="mt-1 text-xs text-gray-600 space-y-1">
+                      {database.dbPrefix && database.dbPrefix.trim() !== '' && (
+                        <div>Prefix: <code className="bg-yellow-100 px-1 rounded">{database.dbPrefix}</code></div>
+                      )}
+                      {database.dbRename && database.dbRename.trim() !== '' && (
+                        <div>Rename to: <code className="bg-yellow-100 px-1 rounded">{database.dbRename}</code></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* No configuration indicator */}
-                {database.tables.length === 0 && !database.filter && !database.warehouse.managedDirectory && !database.warehouse.externalDirectory && (
+                {database.tables.length === 0 && !database.filter && !database.warehouse.managedDirectory && !database.warehouse.externalDirectory &&
+                 (!database.userGlobalLocationMap || Object.keys(database.userGlobalLocationMap).length === 0) && !database.dbPrefix && !database.dbRename && (
                   <div className="text-xs text-gray-500 italic">
-                    No tables or filters configured
+                    No configuration specified
                   </div>
                 )}
               </div>
@@ -121,21 +169,33 @@ const ReviewAndSaveStep: React.FC<DatasetWizardStepProps> = ({ formData }) => {
 {`name: ${formData.name}
 description: ${formData.description}
 databases:`}
-{formData.databases.map((database, index) => (
-`
+{formData.databases.map((database, index) => {
+  const hasManagedDir = database.warehouse?.managedDirectory && database.warehouse.managedDirectory.trim() !== '';
+  const hasExternalDir = database.warehouse?.externalDirectory && database.warehouse.externalDirectory.trim() !== '';
+  const hasLocationMappings = database.userGlobalLocationMap && Object.keys(database.userGlobalLocationMap).length > 0;
+  const hasDbPrefix = database.dbPrefix && database.dbPrefix.trim() !== '';
+  const hasDbRename = database.dbRename && database.dbRename.trim() !== '';
+
+  return `
   - databaseName: ${database.databaseName}
     tables:${database.tables.length > 0 ? database.tables.map(table => `
       - ${table}`).join('') : ' []'}${database.filter ? `
     filter:${database.filter.tblRegEx ? `
-      tblRegEx: "${database.filter.tblRegEx}"` : ''}${database.filter.tblExcludeRegEx ? `
-      tblExcludeRegEx: "${database.filter.tblExcludeRegEx}"` : ''}${database.filter.tblSizeLimit ? `
-      tblSizeLimit: ${database.filter.tblSizeLimit}` : ''}${database.filter.tblPartitionLimit ? `
-      tblPartitionLimit: ${database.filter.tblPartitionLimit}` : ''}` : ''}
+      includeRegEx: "${database.filter.tblRegEx}"` : ''}${database.filter.tblExcludeRegEx ? `
+      excludeRegEx: "${database.filter.tblExcludeRegEx}"` : ''}${database.filter.maxSizeMb && database.filter.maxSizeMb > 0 ? `
+      maxSizeMb: ${database.filter.maxSizeMb}` : ''}${database.filter.maxPartitions && database.filter.maxPartitions > 0 ? `
+      maxPartitions: ${database.filter.maxPartitions}` : ''}` : ''}
     warehouse:
-      warehouseSource: PLAN${database.warehouse.managedDirectory ? `
-      managedDirectory: "${database.warehouse.managedDirectory}"` : ''}${database.warehouse.externalDirectory ? `
-      externalDirectory: "${database.warehouse.externalDirectory}"` : ''}`
-)).join('')}
+      warehouseSource: PLAN${hasManagedDir ? `
+      managedDirectory: "${database.warehouse.managedDirectory}"` : ''}${hasExternalDir ? `
+      externalDirectory: "${database.warehouse.externalDirectory}"` : ''}${hasLocationMappings ? `
+    userGlobalLocationMap:${Object.entries(database.userGlobalLocationMap).map(([sourcePath, mappings]) => `
+      "${sourcePath}":${mappings.EXTERNAL_TABLE ? `
+        EXTERNAL_TABLE: "${mappings.EXTERNAL_TABLE}"` : ''}${mappings.MANAGED_TABLE ? `
+        MANAGED_TABLE: "${mappings.MANAGED_TABLE}"` : ''}`).join('')}` : ''}${hasDbPrefix ? `
+    dbPrefix: "${database.dbPrefix}"` : ''}${hasDbRename ? `
+    dbRename: "${database.dbRename}"` : ''}`;
+}).join('')}
             </code>
           </pre>
         </div>

@@ -47,7 +47,11 @@ public class HiveServer2Config implements Cloneable {
     public HiveServer2Config clone() {
         try {
             HiveServer2Config clone = (HiveServer2Config) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Deep copy mutable Properties object to ensure clone independence
+            if (connectionProperties != null) {
+                clone.connectionProperties = (Properties) connectionProperties.clone();
+            }
+            // Strings are immutable, primitive boolean is copied by value - no additional copying needed
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

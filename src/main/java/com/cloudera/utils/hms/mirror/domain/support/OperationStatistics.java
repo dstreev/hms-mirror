@@ -31,11 +31,24 @@ public class OperationStatistics implements Cloneable{
     @Override
     public OperationStatistics clone() {
         try {
-            OperationStatistics clone = (OperationStatistics) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Note: The OperationStatistic fields are final and share AtomicInteger references
+            // after super.clone(). For true independence, create a new OperationStatistics
+            // and use getters to populate independent statistics objects.
+            OperationStatistics clone = new OperationStatistics();
+            // Deep copy each statistic to ensure independence using getters
+            clone.getCounts().getDatabases().set(this.getCounts().getDatabases().get());
+            clone.getCounts().getTables().set(this.getCounts().getTables().get());
+            clone.getSkipped().getDatabases().set(this.getSkipped().getDatabases().get());
+            clone.getSkipped().getTables().set(this.getSkipped().getTables().get());
+            clone.getIssues().getDatabases().set(this.getIssues().getDatabases().get());
+            clone.getIssues().getTables().set(this.getIssues().getTables().get());
+            clone.getFailures().getDatabases().set(this.getFailures().getDatabases().get());
+            clone.getFailures().getTables().set(this.getFailures().getTables().get());
+            clone.getSuccesses().getDatabases().set(this.getSuccesses().getDatabases().get());
+            clone.getSuccesses().getTables().set(this.getSuccesses().getTables().get());
             return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+        } catch (Exception e) {
+            throw new AssertionError(e);
         }
     }
 

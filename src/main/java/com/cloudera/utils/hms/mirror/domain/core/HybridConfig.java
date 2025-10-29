@@ -31,7 +31,8 @@ public class HybridConfig implements Cloneable {
     public HybridConfig clone() {
         try {
             HybridConfig clone = (HybridConfig) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // All fields are primitives (int, long), which are copied by value automatically.
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

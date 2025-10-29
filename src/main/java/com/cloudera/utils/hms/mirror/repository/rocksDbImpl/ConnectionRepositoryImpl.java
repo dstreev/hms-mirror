@@ -76,33 +76,10 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public void setAsDefault(String connectionId) throws RepositoryException {
-        // First, unset all other defaults
-        Map<String, ConnectionDto> all = findAll();
-        for (Map.Entry<String, ConnectionDto> entry : all.entrySet()) {
-            ConnectionDto conn = entry.getValue();
-            if (conn.isDefault()) {
-                conn.setDefault(false);
-                save(entry.getKey(), conn);
-            }
-        }
-        
-        // Set the specified connection as default
-        Optional<ConnectionDto> targetConnection = findById(connectionId);
-        if (targetConnection.isPresent()) {
-            ConnectionDto conn = targetConnection.get();
-            conn.setDefault(true);
-            save(connectionId, conn);
-        } else {
-            throw new RocksDBException("Connection not found: " + connectionId);
-        }
-    }
-
-    @Override
     public boolean testConnection(String connectionId) throws RepositoryException {
         Optional<ConnectionDto> connectionOpt = findById(connectionId);
         if (connectionOpt.isEmpty()) {
-            throw new RocksDBException("Connection not found: " + connectionId);
+            throw new RepositoryException("Connection not found: " + connectionId);
         }
         
         ConnectionDto connectionDto = connectionOpt.get();

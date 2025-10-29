@@ -56,7 +56,9 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
 
     @Override
     public JobDto save(JobDto jobDto) throws RepositoryException {
-        return save(jobDto.getKey(), jobDto);
+        // Use the job name as the key for consistency with list and load operations
+        // The getKey() method returns name-uuid which should not be used as the storage key
+        return save(jobDto.getName(), jobDto);
     }
 
     @Override

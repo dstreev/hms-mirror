@@ -25,7 +25,7 @@ import lombok.Setter;
 
 /**
  * Lightweight DTO for HMS Mirror Configuration storage in RocksDB.
- * This is a simplified configuration object that contains essential configuration 
+ * This is a simplified configuration object that contains essential configuration
  * properties but excludes complex cluster and acceptance objects to maintain
  * clean separation between lite and full configuration representations.
  */
@@ -116,56 +116,60 @@ public class ConfigLiteDto implements Cloneable {
      *
      * @return A deep clone of this ConfigLiteDto
      */
-    public ConfigLiteDto clone() throws CloneNotSupportedException {
-        ConfigLiteDto clone = (ConfigLiteDto) super.clone();
+    public ConfigLiteDto clone() {
+        ConfigLiteDto clone = null;
+        try {
+            clone = (ConfigLiteDto) super.clone();
 
-        // Copy primitive and immutable fields
-        clone.name = this.name;
-        clone.description = this.description;
-        clone.migrateNonNative = this.migrateNonNative;
-        clone.createIfNotExists = this.createIfNotExists;
-        clone.enableAutoTableStats = this.enableAutoTableStats;
-        clone.enableAutoColumnStats = this.enableAutoColumnStats;
-        clone.saveWorkingTables = this.saveWorkingTables;
-        clone.copyAvroSchemaUrls = this.copyAvroSchemaUrls;
-//        clone.loadTestDataFile = this.loadTestDataFile;
-        clone.forceExternalLocation = this.forceExternalLocation;
+            // Copy primitive and immutable fields
+            clone.name = this.name;
+            clone.description = this.description;
+            clone.migrateNonNative = this.migrateNonNative;
+            clone.createIfNotExists = this.createIfNotExists;
+            clone.enableAutoTableStats = this.enableAutoTableStats;
+            clone.enableAutoColumnStats = this.enableAutoColumnStats;
+            clone.saveWorkingTables = this.saveWorkingTables;
+            clone.copyAvroSchemaUrls = this.copyAvroSchemaUrls;
+            clone.forceExternalLocation = this.forceExternalLocation;
 
-        // Deep clone sub-configuration objects using their existing clone() methods
-        if (this.icebergConversion != null) {
-            clone.icebergConversion = this.icebergConversion.clone();
-        } else {
-            clone.icebergConversion = new IcebergConversion();
-        }
+            // Deep clone sub-configuration objects using their existing clone() methods
+            if (this.icebergConversion != null) {
+                clone.icebergConversion = this.icebergConversion.clone();
+            } else {
+                clone.icebergConversion = new IcebergConversion();
+            }
 
-        if (this.migrateACID != null) {
-            clone.migrateACID = this.migrateACID.clone();
-        } else {
-            clone.migrateACID = new MigrateACID();
-        }
+            if (this.migrateACID != null) {
+                clone.migrateACID = this.migrateACID.clone();
+            } else {
+                clone.migrateACID = new MigrateACID();
+            }
 
-        if (this.migrateVIEW != null) {
-            clone.migrateVIEW = this.migrateVIEW.clone();
-        } else {
-            clone.migrateVIEW = new MigrateVIEW();
-        }
+            if (this.migrateVIEW != null) {
+                clone.migrateVIEW = this.migrateVIEW.clone();
+            } else {
+                clone.migrateVIEW = new MigrateVIEW();
+            }
 
-        if (this.optimization != null) {
-            clone.optimization = this.optimization.clone();
-        } else {
-            clone.optimization = new Optimization();
-        }
+            if (this.optimization != null) {
+                clone.optimization = this.optimization.clone();
+            } else {
+                clone.optimization = new Optimization();
+            }
 
-        if (this.transfer != null) {
-            clone.transfer = this.transfer.clone();
-        } else {
-            clone.transfer = new TransferConfig();
-        }
+            if (this.transfer != null) {
+                clone.transfer = this.transfer.clone();
+            } else {
+                clone.transfer = new TransferConfig();
+            }
 
-        if (this.ownershipTransfer != null) {
-            clone.ownershipTransfer = this.ownershipTransfer.clone();
-        } else {
-            clone.ownershipTransfer = new TransferOwnership();
+            if (this.ownershipTransfer != null) {
+                clone.ownershipTransfer = this.ownershipTransfer.clone();
+            } else {
+                clone.ownershipTransfer = new TransferOwnership();
+            }
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported", e);
         }
 
         return clone;

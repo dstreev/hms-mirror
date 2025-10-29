@@ -80,7 +80,8 @@ public class MigrateACID implements Cloneable {
     public MigrateACID clone() {
         try {
             MigrateACID clone = (MigrateACID) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // All fields are boolean primitives and Integer (immutable), copied by value automatically.
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

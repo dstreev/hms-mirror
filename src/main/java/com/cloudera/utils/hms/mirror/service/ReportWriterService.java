@@ -99,6 +99,8 @@ public class ReportWriterService {
     }
 
     public void writeReport() {
+        /*
+        TODO: Needs to be reworked for ConversionResult.
         ExecuteSession session = executeSessionService.getSession();
         HmsMirrorConfig config = session.getConfig();
         RunStatus runStatus = session.getRunStatus();
@@ -324,6 +326,7 @@ public class ReportWriterService {
             }
         }
 //        }
+         */
 
     }
 }

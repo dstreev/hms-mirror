@@ -47,7 +47,11 @@ public class Optimization implements Cloneable {
     public Optimization clone() {
         try {
             Optimization clone = (Optimization) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Deep copy mutable Overrides object to ensure clone independence
+            if (overrides != null) {
+                clone.overrides = overrides.clone();
+            }
+            // All other fields are boolean primitives, copied by value automatically
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

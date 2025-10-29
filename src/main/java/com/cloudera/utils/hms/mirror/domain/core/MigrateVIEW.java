@@ -33,7 +33,8 @@ public class MigrateVIEW implements Cloneable {
     public MigrateVIEW clone() {
         try {
             MigrateVIEW clone = (MigrateVIEW) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // All fields are boolean primitives, which are copied by value automatically.
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

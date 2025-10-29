@@ -8,12 +8,14 @@ import {
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  PlayIcon
+  PlayIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { jobApi, JobListResponse } from '../../services/api/jobApi';
 import { Job } from '../../types/Job';
 import JobFilters, { JobListFilters } from './JobFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import JobSummaryDialog from './JobSummaryDialog';
 
 const JobsBuildPage: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +33,10 @@ const JobsBuildPage: React.FC = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    job: Job | null;
+  }>({ isOpen: false, job: null });
+  const [summaryDialog, setSummaryDialog] = useState<{
     isOpen: boolean;
     job: Job | null;
   }>({ isOpen: false, job: null });
@@ -181,6 +187,15 @@ const JobsBuildPage: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteDialog({ isOpen: false, job: null });
+  };
+
+  const handleSummaryClick = (job: Job, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSummaryDialog({ isOpen: true, job });
+  };
+
+  const handleSummaryClose = () => {
+    setSummaryDialog({ isOpen: false, job: null });
   };
 
   const formatDate = (dateString?: string) => {
@@ -417,6 +432,15 @@ const JobsBuildPage: React.FC = () => {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
+                      onClick={(e) => handleSummaryClick(job, e)}
+                      className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
+                      title="View job summary"
+                    >
+                      <DocumentTextIcon className="h-4 w-4 mr-1" />
+                      Summary
+                    </button>
+
+                    <button
                       onClick={() => handleEditJob(job)}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       title="Edit job"
@@ -461,6 +485,15 @@ const JobsBuildPage: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
+
+      {/* Job Summary Dialog */}
+      {summaryDialog.isOpen && summaryDialog.job && (
+        <JobSummaryDialog
+          isOpen={summaryDialog.isOpen}
+          job={summaryDialog.job}
+          onClose={handleSummaryClose}
+        />
+      )}
     </div>
   );
 };

@@ -36,7 +36,7 @@ import java.util.Map;
 
 /**
  * Implementation of TableMirrorRepository that persists TableMirror instances to RocksDB.
- *
+ * <p>
  * Keys are composite: "conversionResultKey/database/databaseName/table/tableName"
  * Values are TableMirror instances serialized as YAML.
  */
@@ -47,9 +47,10 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
         implements TableMirrorRepository {
 
     public TableMirrorRepositoryImpl(RocksDB rocksDB,
-                                      @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
-                                      @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<TableMirror>() {});
+                                     @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
+                                     @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<TableMirror>() {
+        });
     }
 
     @Override
@@ -119,8 +120,11 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
                 if (!key.startsWith(prefix)) {
                     break;
                 }
-
-                rocksDB.delete(columnFamily, iterator.key());
+                try {
+                    rocksDB.delete(columnFamily, iterator.key());
+                } catch (RocksDBException e) {
+                    throw new RepositoryException("Failed to delete entity: ", e);
+                }
                 iterator.next();
             }
         }

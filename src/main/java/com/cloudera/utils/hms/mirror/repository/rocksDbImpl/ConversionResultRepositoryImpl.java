@@ -225,7 +225,11 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
         // Second pass: delete collected keys
         for (String key : keysToDelete) {
-            rocksDB.delete(columnFamily, key.getBytes());
+            try {
+                rocksDB.delete(columnFamily, key.getBytes());
+            } catch (RocksDBException e) {
+                throw new RepositoryException(e);
+            }
             deletedCount++;
         }
 

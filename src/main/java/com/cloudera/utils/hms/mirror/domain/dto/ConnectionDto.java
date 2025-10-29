@@ -56,7 +56,7 @@ public class ConnectionDto implements Cloneable {
 
     // Platform configuration
     private PlatformType platformType;
-    
+
     // Core configuration
     private String hcfsNamespace;
     private ConnectionStatus hcfsStatus = ConnectionStatus.NOT_CONFIGURED;
@@ -87,7 +87,7 @@ public class ConnectionDto implements Cloneable {
     private Integer metastoreDirectMaxConnections;
     private Map<String, String> metastoreDirectConnectionProperties;
     private String metastoreDirectVersion;
-    
+
     // Partition discovery settings (flattened)
     private boolean partitionDiscoveryAuto;
     private boolean partitionDiscoveryInitMSCK;
@@ -108,13 +108,13 @@ public class ConnectionDto implements Cloneable {
 
     // System fields
     private ConnectionTestResults testResults;
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime created;
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
-    
+
     private boolean isDefault;
 
     public void reset() {
@@ -156,25 +156,30 @@ public class ConnectionDto implements Cloneable {
      * @throws CloneNotSupportedException if cloning is not supported
      */
     @Override
-    public ConnectionDto clone() throws CloneNotSupportedException {
+    public ConnectionDto clone() {
         // Start with a shallow clone (copies all primitive and immutable fields)
-        ConnectionDto clone = (ConnectionDto) super.clone();
+        ConnectionDto clone = null;
+        try {
+            clone = (ConnectionDto) super.clone();
 
-        // Now deep clone mutable objects to avoid shared references
+            // Now deep clone mutable objects to avoid shared references
 
-        // Deep clone hs2ConnectionProperties map
-        if (this.hs2ConnectionProperties != null) {
-            clone.hs2ConnectionProperties = new HashMap<>(this.hs2ConnectionProperties);
-        }
+            // Deep clone hs2ConnectionProperties map
+            if (this.hs2ConnectionProperties != null) {
+                clone.hs2ConnectionProperties = new HashMap<>(this.hs2ConnectionProperties);
+            }
 
-        // Deep clone metastoreDirectConnectionProperties map
-        if (this.metastoreDirectConnectionProperties != null) {
-            clone.metastoreDirectConnectionProperties = new HashMap<>(this.metastoreDirectConnectionProperties);
-        }
+            // Deep clone metastoreDirectConnectionProperties map
+            if (this.metastoreDirectConnectionProperties != null) {
+                clone.metastoreDirectConnectionProperties = new HashMap<>(this.metastoreDirectConnectionProperties);
+            }
 
-        // Deep clone testResults
-        if (this.testResults != null) {
-            clone.testResults = this.testResults.clone();
+            // Deep clone testResults
+            if (this.testResults != null) {
+                clone.testResults = this.testResults.clone();
+            }
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported", e);
         }
 
         return clone;
@@ -191,10 +196,10 @@ public class ConnectionDto implements Cloneable {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ConnectionTestResults implements Cloneable {
         private TestStatus status;
-        
+
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         private LocalDateTime lastTested;
-        
+
         private Double duration;
         private String errorMessage;
         private String details;

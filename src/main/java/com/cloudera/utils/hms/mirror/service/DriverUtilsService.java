@@ -157,7 +157,7 @@ public class DriverUtilsService {
     // This is a shim process that allows us to load a Hive Driver from
     // a jar File, via a new ClassLoader.
     @SuppressWarnings("unchecked")
-    public Driver getHs2Driver(ConnectionDto connection, Environment environment) throws SessionException {
+    public Driver getHs2Driver(ConnectionDto connection, Environment environment) {
         Driver hiveShim = null;
         try {
             String jarFile = buildDriverClasspath(connection.getHs2DriverType());
@@ -169,7 +169,7 @@ public class DriverUtilsService {
                     jarFiles[i] = new File(files[i]);
                     if (!jarFiles[i].exists()) {
                         log.error("Jarfile: " + files[i] + " can't be located.");
-                        throw new SessionException("Jarfile: " + files[i] + " can't be located.");
+                        throw new AssertionError("Jarfile: " + files[i] + " can't be located.");
                     }
                     urls[i] = jarFiles[i].toURI().toURL();
                 }

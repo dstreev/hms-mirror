@@ -50,7 +50,7 @@ public class ConnectionPoolsHybridImpl extends ConnectionPoolsBase implements Co
         super(driverUtilsService, conversionResult, passwordService, connectionPoolService);
     }
 
-    protected void initHS2PooledDataSources() throws SessionException, EncryptionException {
+    protected void initHS2PooledDataSources() {
 
         conversionResult.getConnections().forEach((environment, connection) -> {
             if (!connection.isHs2Connected()) {

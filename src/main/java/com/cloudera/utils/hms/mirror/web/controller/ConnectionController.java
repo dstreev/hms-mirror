@@ -18,8 +18,12 @@
 package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.cloudera.utils.hms.mirror.service.ConnectionService;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.RocksDBException;
@@ -35,12 +39,16 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/connections")
+@Getter
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
 @RequiredArgsConstructor
 @Slf4j
 public class ConnectionController {
 
+    @NonNull
     private final ConnectionService connectionService;
+    @NonNull
+    private final ConnectionRepository connectionRepository;
 
     private Map<String, Object> convertConnectionToMap(ConnectionDto conn) {
         Map<String, Object> connData = new HashMap<>();
@@ -149,7 +157,7 @@ public class ConnectionController {
                      search, environment, status);
             
             // Step 1: Try to retrieve connections from service
-            List<ConnectionDto> connectionDtos = connectionService.getFilteredConnections(search, environment, status);
+            List<ConnectionDto> connectionDtos = getConnectionService().getFilteredConnections(search, environment, status);
             log.info("Successfully retrieved {} connections from service", connectionDtos.size());
             
             // Step 2: Try to create a minimal response with just count first
@@ -268,13 +276,13 @@ public class ConnectionController {
             
             return ResponseEntity.ok(response);
             
-        } catch (RocksDBException e) {
-            log.error("RocksDB error retrieving connections", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to retrieve connections: " + e.getMessage());
-            errorResponse.put("connections", List.of());
-            errorResponse.put("count", 0);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+//        } catch (RocksDBException e) {
+//            log.error("RocksDB error retrieving connections", e);
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("error", "Failed to retrieve connections: " + e.getMessage());
+//            errorResponse.put("connections", List.of());
+//            errorResponse.put("count", 0);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         } catch (Exception e) {
             log.error("Unexpected error in getConnections", e);
             Map<String, Object> errorResponse = new HashMap<>();
@@ -290,7 +298,7 @@ public class ConnectionController {
         try {
             log.info("Getting connection by ID: {}", id);
             
-            Optional<ConnectionDto> connection = connectionService.getConnectionById(id);
+            Optional<ConnectionDto> connection = getConnectionService().getConnectionById(id);
             if (connection.isPresent()) {
                 Map<String, Object> connectionData = convertConnectionToMap(connection.get());
                 return ResponseEntity.ok(connectionData);
@@ -300,7 +308,7 @@ public class ConnectionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
             }
             
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error retrieving connection {}", id, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to retrieve connection: " + e.getMessage());
@@ -314,7 +322,7 @@ public class ConnectionController {
             log.info("Creating new connection: {}", request.getName());
             
             ConnectionDto connectionDto = request.toConnection();
-            ConnectionDto savedConnectionDto = connectionService.createConnection(connectionDto);
+            ConnectionDto savedConnectionDto = getConnectionService().createConnection(connectionDto);
             
             Map<String, Object> response = new HashMap<>();
             response.put("connection", savedConnectionDto);
@@ -322,7 +330,7 @@ public class ConnectionController {
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error creating connection", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to create connection: " + e.getMessage());
@@ -341,7 +349,7 @@ public class ConnectionController {
             log.info("Updating connection: {}", id);
             
             ConnectionDto connectionDto = request.toConnection();
-            ConnectionDto updatedConnectionDto = connectionService.updateConnection(id, connectionDto);
+            ConnectionDto updatedConnectionDto = getConnectionService().updateConnection(id, connectionDto);
             
             Map<String, Object> response = new HashMap<>();
             response.put("connection", updatedConnectionDto);
@@ -349,7 +357,7 @@ public class ConnectionController {
             
             return ResponseEntity.ok(response);
             
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error updating connection {}", id, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to update connection: " + e.getMessage());
@@ -372,7 +380,7 @@ public class ConnectionController {
         try {
             log.info("Deleting connection: {}", id);
             
-            boolean deleted = connectionService.deleteConnection(id);
+            boolean deleted = getConnectionRepository().deleteById(id);
             Map<String, Object> response = new HashMap<>();
             
             if (deleted) {
@@ -383,7 +391,7 @@ public class ConnectionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
             
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error deleting connection {}", id, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to delete connection: " + e.getMessage());
@@ -396,14 +404,14 @@ public class ConnectionController {
         try {
             log.info("Testing connection: {}", id);
             
-            boolean testResult = connectionService.testConnection(id);
+            boolean testResult = getConnectionService().testConnection(id);
             Map<String, Object> response = new HashMap<>();
             response.put("success", testResult);
             response.put("message", testResult ? "Connection test successful" : "Connection test failed");
             
             return ResponseEntity.ok(response);
             
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error testing connection {}", id, e);
             Map<String, Object> errorResponse = new HashMap<>();
             if (e.getMessage() != null && e.getMessage().contains("not found")) {
@@ -416,6 +424,7 @@ public class ConnectionController {
         }
     }
 
+    /*
     @PostMapping(value = "/{id}/set-default", produces = "application/json")
     public ResponseEntity<Map<String, Object>> setDefaultConnection(@PathVariable("id") String id) {
         try {
@@ -439,23 +448,24 @@ public class ConnectionController {
             }
         }
     }
+     */
 
-    @GetMapping(value = "/default", produces = "application/json")
-    public ResponseEntity<ConnectionDto> getDefaultConnection() {
-        try {
-            log.info("Getting default connection");
-            
-            Optional<ConnectionDto> defaultConnection = connectionService.getDefaultConnection();
-            if (defaultConnection.isPresent()) {
-                return ResponseEntity.ok(defaultConnection.get());
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-            
-        } catch (RocksDBException e) {
-            log.error("Error retrieving default connection", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+//    @GetMapping(value = "/default", produces = "application/json")
+//    public ResponseEntity<ConnectionDto> getDefaultConnection() {
+//        try {
+//            log.info("Getting default connection");
+//
+//            Optional<ConnectionDto> defaultConnection = getConnectionService().getDefaultConnection();
+//            if (defaultConnection.isPresent()) {
+//                return ResponseEntity.ok(defaultConnection.get());
+//            } else {
+//                return ResponseEntity.notFound().build();
+//            }
+//
+//        } catch (RocksDBException e) {
+//            log.error("Error retrieving default connection", e);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
 
 }

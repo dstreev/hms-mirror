@@ -22,7 +22,7 @@ import lombok.Getter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
-public class OperationStatistic {
+public class OperationStatistic implements Cloneable {
     private final AtomicInteger databases = new AtomicInteger(0);
     private final AtomicInteger tables = new AtomicInteger(0);
 
@@ -37,5 +37,31 @@ public class OperationStatistic {
     public void reset() {
         databases.set(0);
         tables.set(0);
+    }
+
+    @Override
+    public OperationStatistic clone() {
+        try {
+            OperationStatistic clone = (OperationStatistic) super.clone();
+            // Note: AtomicInteger fields are final and cannot be reassigned.
+            // However, since this is a statistics object, the shallow copy of AtomicInteger
+            // references means both objects share the same counters, which is typically
+            // not desired for a true clone. Consider using a copy constructor pattern instead
+            // if true independence is needed.
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
+    /**
+     * Creates a new OperationStatistic with copied values from this instance.
+     * This provides true independence from the original object.
+     */
+    public OperationStatistic deepCopy() {
+        OperationStatistic copy = new OperationStatistic();
+        copy.databases.set(this.databases.get());
+        copy.tables.set(this.tables.get());
+        return copy;
     }
 }

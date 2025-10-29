@@ -504,34 +504,26 @@ public class TranslatorService {
      * @param source the source location to be mapped
      * @param target the target location to map to
      * @throws SessionException if an error occurs while closing the session or accessing the session configuration
-    // WAS UNUSED
+     */
     public void addGlobalLocationMap(TableType type, String source, String target) throws SessionException {
         // Don't reload if running.
-        executeSessionService.closeSession();
-
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        hmsMirrorConfig.getTranslator().addUserGlobalLocationMap(type, source, target);
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set in the current thread context."));
+        conversionResult.getTranslator().addUserGlobalLocationMap(type, source, target);
     }
-     */
 
-    /*
-    // WAS UNUSED
     public void removeGlobalLocationMap(String source, TableType type) throws SessionException {
         // Don't reload if running.
-        executeSessionService.closeSession();
-
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        hmsMirrorConfig.getTranslator().removeUserGlobalLocationMap(source, type);
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set in the current thread context."));
+        conversionResult.getTranslator().removeUserGlobalLocationMap(source, type);
     }
-     */
 
-    /*
-    // WAS UNUSED
     public Map<String, Map<TableType, String>> getGlobalLocationMap() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        return hmsMirrorConfig.getTranslator().getOrderedGlobalLocationMap();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set in the current thread context."));
+        return conversionResult.getTranslator().getOrderedGlobalLocationMap();
     }
-     */
 
     /**
      * Constructs a Global Location Map (GLM) from the provided warehouse plans and source mappings.
@@ -547,8 +539,6 @@ public class TranslatorService {
      * and values are maps of table types to their corresponding target paths.
      * @throws MismatchException If there are mismatches in the warehouse plans or source mappings.
      * @throws SessionException  If there are issues with the execution session.
-     */ /*
-
      */
     public Map<String, Map<TableType, String>> buildGlobalLocationMapFromWarehousePlansAndSources(boolean dryrun, int consolidationLevel) throws MismatchException, SessionException {
 

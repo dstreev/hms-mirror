@@ -100,31 +100,36 @@ public class JobDto implements Cloneable {
      *
      * @return A deep clone of this JobDto
      */
-    public JobDto clone() throws CloneNotSupportedException {
-        JobDto clone = new JobDto();
+    public JobDto clone() {
+        JobDto clone = null;
+        try {
+            clone = (JobDto) super.clone();
 
-        // Copy immutable and primitive fields
-        clone.id = (this.id != null) ? UUID.fromString(this.id.toString()) : UUID.randomUUID();
-        clone.name = this.name;
-        clone.description = this.description;
-        clone.createdDate = this.createdDate;
-        clone.modifiedDate = this.modifiedDate;
-        clone.datasetReference = this.datasetReference;
-        clone.configReference = this.configReference;
-        clone.leftConnectionReference = this.leftConnectionReference;
-        clone.rightConnectionReference = this.rightConnectionReference;
-        clone.strategy = this.strategy; // enum is immutable
-        clone.databaseOnly = this.databaseOnly;
-        clone.disasterRecovery = this.disasterRecovery;
-        clone.sync = this.sync;
-        clone.loadTestDataFile = this.loadTestDataFile;
-        clone.skipLinkCheck = this.skipLinkCheck;
+            // Copy immutable and primitive fields
+//            clone.id = (this.id != null) ? UUID.fromString(this.id.toString()) : UUID.randomUUID();
+//            clone.name = this.name;
+//            clone.description = this.description;
+//            clone.createdDate = this.createdDate;
+//            clone.modifiedDate = this.modifiedDate;
+//            clone.datasetReference = this.datasetReference;
+//            clone.configReference = this.configReference;
+//            clone.leftConnectionReference = this.leftConnectionReference;
+//            clone.rightConnectionReference = this.rightConnectionReference;
+//            clone.strategy = this.strategy; // enum is immutable
+//            clone.databaseOnly = this.databaseOnly;
+//            clone.disasterRecovery = this.disasterRecovery;
+//            clone.sync = this.sync;
+//            clone.loadTestDataFile = this.loadTestDataFile;
+//            clone.skipLinkCheck = this.skipLinkCheck;
 
-        // Deep clone hybrid config
-        if (this.hybrid != null) {
-            clone.hybrid = this.hybrid.clone();
-        } else {
-            clone.hybrid = new HybridConfig();
+            // Deep clone hybrid config
+            if (this.hybrid != null) {
+                clone.hybrid = this.hybrid.clone();
+            } else {
+                clone.hybrid = new HybridConfig();
+            }
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Clone not supported", e);
         }
 
         return clone;

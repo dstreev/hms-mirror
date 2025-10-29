@@ -74,8 +74,8 @@ public class ServiceTestBase {
 
     WarehouseService warehouseService;
 
-    @Mock
-    LocationTranslator locationTranslator;
+//    @Mock
+//    LocationTranslator locationTranslator;
 
     TranslatorService translatorService;
 

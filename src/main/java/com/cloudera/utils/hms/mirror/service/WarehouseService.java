@@ -18,8 +18,12 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.core.WarehouseMapBuilder;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import lombok.Getter;
@@ -63,7 +67,6 @@ public class WarehouseService {
      * @param managed  the managed warehouse location.
      * @return the created {@link Warehouse} plan.
      * @throws RequiredConfigurationException if external or managed locations are blank or identical.
-     */
     public Warehouse addWarehousePlan(String database, String external, String managed)
             throws RequiredConfigurationException {
         if (isBlank(external) || isBlank(managed)) {
@@ -72,25 +75,34 @@ public class WarehouseService {
         if (external.equals(managed)) {
             throw new RequiredConfigurationException(EXTERNAL_AND_MANAGED_LOCATIONS_DIFFERENT);
         }
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        WarehouseMapBuilder mapBuilder = getWarehouseMapBuilder(config);
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set in the current thread context."));
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        WarehouseMapBuilder mapBuilder = getWarehouseMapBuilder(conversionResult);
         mapBuilder.addWarehousePlan(database, external, managed);
-        config.getDatabases().add(database);
+
+        // TODO: Need to fix IF this is still relevant.
+//        config.getDatabases().add(database);
         return mapBuilder.addWarehousePlan(database, external, managed);
     }
+     */
 
     /**
      * Removes a warehouse plan for a given database.
      *
      * @param database the name of the database whose warehouse plan will be removed.
      * @return the removed {@link Warehouse} plan, or null if not found.
-     */
     public Warehouse removeWarehousePlan(String database) {
         HmsMirrorConfig config = executeSessionService.getSession().getConfig();
         getWarehouseMapBuilder(config).removeWarehousePlan(database);
         config.getDatabases().remove(database);
         return getWarehouseMapBuilder(config).removeWarehousePlan(database);
     }
+     */
 
     /**
      * Retrieves a warehouse plan for the given database, with fallbacks to configuration or hive environment.
@@ -100,21 +112,27 @@ public class WarehouseService {
      * @throws MissingDataPointException if a plan cannot be found or built using available configuration.
      */
     public Warehouse getWarehousePlan(String database) throws MissingDataPointException {
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        WarehouseMapBuilder warehouseMapBuilder = getWarehouseMapBuilder(config);
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set in the current thread context."));
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
+        RunStatus runStatus = conversionResult.getRunStatus();
+
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        WarehouseMapBuilder warehouseMapBuilder = getWarehouseMapBuilder(conversionResult);
         Warehouse warehouse = warehouseMapBuilder.getWarehousePlans().get(database);
 
         if (isNull(warehouse)) {
-            ExecuteSession session = executeSessionService.getSession();
-            if (nonNull(session.getConfig().getTransfer().getWarehouse())) {
-                warehouse = session.getConfig().getTransfer().getWarehouse();
+//            ExecuteSession session = executeSessionService.getSession();
+            if (nonNull(config.getTransfer().getWarehouse())) {
+                warehouse = config.getTransfer().getWarehouse();
             }
             if (nonNull(warehouse) &&
                     (isBlank(warehouse.getExternalDirectory()) || isBlank(warehouse.getManagedDirectory()))) {
                 warehouse = null;
             }
             if (isNull(warehouse)) {
-                switch (config.getDataStrategy()) {
+                switch (job.getStrategy()) {
                     case DUMP:
                         return null;
                     case SCHEMA_ONLY:
@@ -123,15 +141,15 @@ public class WarehouseService {
                     case SQL:
                     case COMMON:
                     case LINKED:
-                        warehouse = config.getCluster(Environment.RIGHT).getEnvironmentWarehouse();
+                        warehouse = conversionResult.getConnection(Environment.RIGHT).getWarehouse(); // TODO: Check this. getEnvironmentWarehouse();
                         if (nonNull(warehouse)) {
-                            session.addWarning(WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV);
+                            runStatus.addWarning(WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV);
                         } else {
-                            session.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                            runStatus.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
                         }
                         break;
                     default:
-                        session.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
+                        runStatus.addWarning(WAREHOUSE_DIRECTORIES_NOT_DEFINED);
                 }
             }
         }
@@ -148,17 +166,20 @@ public class WarehouseService {
      * @return a map of database names to {@link Warehouse} plans.
      */
     public Map<String, Warehouse> getWarehousePlans() {
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        return getWarehouseMapBuilder(config).getWarehousePlans();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        return getWarehouseMapBuilder(conversionResult).getWarehousePlans();
     }
 
     /**
      * Removes all defined warehouse plans.
-     */
     public void clearWarehousePlans() {
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        getWarehouseMapBuilder(config).clearWarehousePlan();
+//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+        getWarehouseMapBuilder(conversionResult).clearWarehousePlan();
     }
+     */
 
     /**
      * Retrieves the {@link WarehouseMapBuilder} instance from the configuration.
@@ -166,7 +187,7 @@ public class WarehouseService {
      * @param config the HMS mirror configuration.
      * @return the {@link WarehouseMapBuilder} for the current configuration.
      */
-    private WarehouseMapBuilder getWarehouseMapBuilder(HmsMirrorConfig config) {
-        return config.getTranslator().getWarehouseMapBuilder();
+    private WarehouseMapBuilder getWarehouseMapBuilder(ConversionResult conversionResult) {
+        return conversionResult.getTranslator().getWarehouseMapBuilder();
     }
 }

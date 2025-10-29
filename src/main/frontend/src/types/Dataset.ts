@@ -17,8 +17,11 @@ export interface DatabaseSpec {
 export interface TableFilter {
   tblRegEx?: string;
   tblExcludeRegEx?: string;
-  tblSizeLimit?: number;
-  tblPartitionLimit?: number;
+  tableTypes?: string[];
+  minPartitions?: number;
+  maxPartitions?: number;
+  minSizeMb?: number;
+  maxSizeMb?: number;
 }
 
 export interface Warehouse {
@@ -45,14 +48,20 @@ export const createDefaultDatabaseSpec = (): DatabaseSpec => ({
     warehouseSource: WarehouseSource.PLAN,
     managedDirectory: '',
     externalDirectory: ''
-  }
+  },
+  userGlobalLocationMap: undefined,
+  dbPrefix: undefined,
+  dbRename: undefined
 });
 
 export const DEFAULT_TABLE_FILTER: TableFilter = {
   tblRegEx: '',
   tblExcludeRegEx: '',
-  tblSizeLimit: 0,
-  tblPartitionLimit: 0
+  tableTypes: [],
+  minPartitions: 0,
+  maxPartitions: 0,
+  minSizeMb: 0,
+  maxSizeMb: 0
 };
 
 export interface DatasetWizardStepProps {

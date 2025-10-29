@@ -70,7 +70,7 @@ public abstract class TranslatorTestBase {
 
     WarehouseService warehouseService;
 
-    LocationTranslator locationTranslator;
+//    LocationTranslator locationTranslator;
 
     TranslatorService translatorService;
 

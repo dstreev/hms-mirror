@@ -30,10 +30,10 @@ import com.cloudera.utils.hms.mirror.domain.support.ConversionRequest;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.RocksDBException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -65,12 +65,17 @@ public class JobManagementService {
     public Map<String, Object> listJobs() {
         log.debug("Listing all jobs");
         try {
-            List<JobDto> jobs = jobRepository.findAllSortedByName();
+            // Get all jobs with their RocksDB keys
+            Map<String, JobDto> jobsMap = jobRepository.findAll();
             List<Map<String, Object>> jobsList = new ArrayList<>();
 
-            for (JobDto jobDto : jobs) {
+            for (Map.Entry<String, JobDto> entry : jobsMap.entrySet()) {
+                String rocksDbKey = entry.getKey();  // This is the actual key used in RocksDB
+                JobDto jobDto = entry.getValue();
+
                 Map<String, Object> jobInfo = new HashMap<>();
-                jobInfo.put("jobKey", jobDto.getName());
+                // Use the actual RocksDB key, not just the name
+                jobInfo.put("jobKey", rocksDbKey);
                 jobInfo.put("name", jobDto.getName());
                 jobInfo.put("description", jobDto.getDescription());
                 jobInfo.put("createdDate", jobDto.getCreatedDate());
@@ -86,10 +91,18 @@ public class JobManagementService {
                 jobsList.add(jobInfo);
             }
 
+            // Sort by name
+            jobsList.sort((a, b) -> {
+                String nameA = (String) a.get("name");
+                String nameB = (String) b.get("name");
+                return nameA.compareTo(nameB);
+            });
+
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("jobs", jobsList);
             result.put("count", jobsList.size());
+            log.debug("Listed {} jobs", jobsList.size());
             return result;
 
         } catch (Exception e) {
@@ -108,27 +121,36 @@ public class JobManagementService {
      * @return Map containing the job load results
      */
     public Map<String, Object> loadJob(String jobKey) {
-        log.debug("Loading job: {}", jobKey);
+        log.info("Loading job with key: {}", jobKey);
         try {
             Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
 
             Map<String, Object> result = new HashMap<>();
             if (jobOpt.isPresent()) {
+                JobDto job = jobOpt.get();
+                log.info("Successfully loaded job: {} (id: {})", job.getName(), job.getId());
                 result.put("status", "SUCCESS");
-                result.put("job", jobOpt.get());
+                result.put("job", job);
                 result.put("jobKey", jobKey);
             } else {
+                log.warn("Job not found with key: {}", jobKey);
                 result.put("status", "NOT_FOUND");
                 result.put("message", "Job not found: " + jobKey);
             }
 
             return result;
 
-        } catch (RocksDBException e) {
-            log.error("Error loading job {}", jobKey, e);
+        } catch (RepositoryException e) {
+            log.error("RepositoryException loading job with key: {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to load job: " + e.getMessage());
+            return errorResult;
+        } catch (Exception e) {
+            log.error("Unexpected error loading job with key: {}", jobKey, e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("status", "ERROR");
+            errorResult.put("message", "Unexpected error loading job: " + e.getMessage());
             return errorResult;
         }
     }
@@ -141,7 +163,8 @@ public class JobManagementService {
      * @return Map containing the save operation results
      */
     public Map<String, Object> saveJob(String jobKey, JobDto jobDto) {
-        log.debug("Saving job: {}", jobKey);
+        log.info("Saving job with key: {} (jobDto.name: {}, jobDto.id: {})",
+                jobKey, jobDto.getName(), jobDto.getId());
         try {
             JobDto savedJob = jobRepository.save(jobKey, jobDto);
 
@@ -150,10 +173,11 @@ public class JobManagementService {
             result.put("message", "Job saved successfully");
             result.put("jobKey", jobKey);
             result.put("job", savedJob);
+            log.info("Successfully saved job with key: {}", jobKey);
             return result;
 
         } catch (Exception e) {
-            log.error("Error saving job {}", jobKey, e);
+            log.error("Error saving job with key: {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to save job: " + e.getMessage());
@@ -189,7 +213,7 @@ public class JobManagementService {
                 return result;
             }
 
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error updating job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -221,7 +245,7 @@ public class JobManagementService {
 
             return result;
 
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("Error deleting job {}", jobKey, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
@@ -491,7 +515,7 @@ public class JobManagementService {
             log.debug("ConversionResult built successfully from job: {}", jobDto.getName());
             return conversionResult;
 
-        } catch (RocksDBException e) {
+        } catch (RepositoryException e) {
             log.error("RocksDB error building ConversionResult from jobId {}", jobId, e);
             return null;
         } catch (Exception e) {

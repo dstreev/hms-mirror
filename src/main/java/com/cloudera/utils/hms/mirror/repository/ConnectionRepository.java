@@ -47,14 +47,6 @@ public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, S
     List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RepositoryException;
 
     /**
-     * Set a connection as the default.
-     *
-     * @param connectionId The ID of the connection to set as default
-     * @throws RepositoryException if there's an error accessing the repository
-     */
-    void setAsDefault(String connectionId) throws RepositoryException;
-
-    /**
      * Test a connection.
      *
      * @param connectionId The ID of the connection to test

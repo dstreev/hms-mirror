@@ -61,7 +61,12 @@ public class Filter implements Cloneable {
     public Filter clone() {
         try {
             Filter clone = (Filter) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Deep copy mutable List to ensure clone independence
+            if (dbPropertySkipList != null) {
+                clone.dbPropertySkipList = new ArrayList<>(dbPropertySkipList);
+            }
+            // Pattern objects are immutable, derived Set will be reconstructed on access
+            // Strings are immutable, primitives are copied by value - no additional copying needed
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

@@ -31,7 +31,8 @@ public class WarehouseConfig implements Cloneable {
     public WarehouseConfig clone() {
         try {
             WarehouseConfig clone = (WarehouseConfig) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // All fields are Strings, which are immutable in Java.
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
