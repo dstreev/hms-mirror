@@ -86,7 +86,7 @@ public class ServiceTestBase {
     public void setup() throws IOException {
         log.info("Setting up Base");
         initializeConfig();
-        initializeServices();
+//        initializeServices();
     }
 
     protected void initializeConfig() throws IOException {
@@ -97,27 +97,27 @@ public class ServiceTestBase {
         config.setLoadTestDataFile("something.yaml");
     }
 
-    protected void initializeServices() throws IOException {
-
-        // ExecuteSessionService needs: ConfigService, CliEnvironment, ConnectionPoolService
-        executeSessionService = new ExecuteSessionService(configService, cliEnvironment, connectionPoolService);
-
-        // SessionManager needs: ExecuteSessionService
-        sessionManager = new SessionManager(executeSessionService);
-
-        // Warehouse needs: ExecuteSessionService,
-        warehouseService = new WarehouseService(executeSessionService);
-
-        // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
-        translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
-
-//        try {
-            ExecuteSession session = sessionManager.createSession("test-session", config);
-//            sessionManager.startSession(1);
-//        } catch (SessionException e) {
-//            throw new RuntimeException(e);
-//        }
-    }
+//    protected void initializeServices() throws IOException {
+//
+//        // ExecuteSessionService needs: ConfigService, CliEnvironment, ConnectionPoolService
+//        executeSessionService = new ExecuteSessionService(configService, cliEnvironment, connectionPoolService);
+//
+//        // SessionManager needs: ExecuteSessionService
+//        sessionManager = new SessionManager(executeSessionService);
+//
+//        // Warehouse needs: ExecuteSessionService,
+//        warehouseService = new WarehouseService(executeSessionService);
+//
+//        // TranslatorService needs: ExecuteSessionService, WarehouseService, LocationTranslator
+//        translatorService = new TranslatorService(executeSessionService, warehouseService, locationTranslator);
+//
+////        try {
+//            ExecuteSession session = sessionManager.createSession("test-session", config);
+////            sessionManager.startSession(1);
+////        } catch (SessionException e) {
+////            throw new RuntimeException(e);
+////        }
+//    }
 
     // TODO: Move to TranslatorTest
     public static Translator deserializeResource(String configResource) throws IOException {

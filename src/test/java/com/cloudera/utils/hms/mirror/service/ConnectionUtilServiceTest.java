@@ -43,17 +43,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class ConnectionUtilServiceTest {
 
-    private ConnectionUtilService connectionUtilService;
-
     @TempDir
-    Path tempDriverDir;
+    private Path tempDriverDir;
+
+    private DriverUtilsService driverUtilsService;
+    private ConnectionUtilService connectionUtilService;
 
     @BeforeEach
     void setUp() throws IOException {
-        connectionUtilService = new ConnectionUtilService();
-        // Set the driver base directory to our temp directory for testing
-        connectionUtilService.setDriverBaseDirectory(tempDriverDir.toString());
-        connectionUtilService.init();
+        // Create and configure DriverUtilsService
+        driverUtilsService = new DriverUtilsService();
+        driverUtilsService.setDriverBaseDirectory(tempDriverDir.toString());
+        driverUtilsService.init();
+
+        // Create ConnectionUtilService with the configured DriverUtilsService
+        connectionUtilService = new ConnectionUtilService(driverUtilsService);
 
         // Create test driver directory structure and mock JAR files
         createTestDriverStructure();
@@ -109,14 +113,15 @@ public class ConnectionUtilServiceTest {
 
     @Test
     void testDriverBaseDirectoryInit() {
-        assertThat(connectionUtilService.getDriverBaseDirectory()).isEqualTo(tempDriverDir.toString());
+        // Verify that the temp driver directory was created
+        assertThat(tempDriverDir).exists().isDirectory();
     }
 
     @ParameterizedTest
     @EnumSource(PlatformType.class)
     void testGetAvailableDriverTypesForEachPlatform(PlatformType platformType) {
         // Get available driver types for each platform
-        List<DriverType> driverTypes = connectionUtilService.getAvailableDriverTypes(platformType);
+        List<DriverType> driverTypes = driverUtilsService.getAvailableDriverTypes(platformType);
 
         // Assert that we get at least one driver type for each platform
         assertThat(driverTypes)
@@ -138,7 +143,7 @@ public class ConnectionUtilServiceTest {
     @EnumSource(DriverType.class)
     void testBuildDriverClasspathForEachDriverType(DriverType driverType) {
         // Build classpath for each driver type
-        String classpath = connectionUtilService.buildDriverClasspath(driverType);
+        String classpath = driverUtilsService.buildDriverClasspath(driverType);
 
         // Classpath should not be null (though it may be empty if no JARs exist)
         assertThat(classpath).isNotNull();
@@ -205,7 +210,7 @@ public class ConnectionUtilServiceTest {
             // Ignore
         }
 
-        String classpath = connectionUtilService.buildDriverClasspath(driverType);
+        String classpath = driverUtilsService.buildDriverClasspath(driverType);
 
         assertThat(classpath)
                 .as("Classpath should be empty for non-existent driver directory")
@@ -231,7 +236,7 @@ public class ConnectionUtilServiceTest {
                 .isNotNull();
 
         // If JARs exist for this platform, verify jarFile is not empty
-        List<DriverType> driverTypes = connectionUtilService.getAvailableDriverTypes(PlatformType.CDP7_3);
+        List<DriverType> driverTypes = driverUtilsService.getAvailableDriverTypes(PlatformType.CDP7_3);
         if (!driverTypes.isEmpty()) {
             boolean anyDriverHasJars = driverTypes.stream()
                     .anyMatch(dt -> {
@@ -271,7 +276,7 @@ public class ConnectionUtilServiceTest {
         // For example, HDP3 is supported by CDP_7_1_9_HIVE_DRIVER
         PlatformType platformType = PlatformType.HDP3;
 
-        List<DriverType> driverTypes = connectionUtilService.getAvailableDriverTypes(platformType);
+        List<DriverType> driverTypes = driverUtilsService.getAvailableDriverTypes(platformType);
 
         assertThat(driverTypes)
                 .as("HDP3 should have at least one available driver")
@@ -279,7 +284,7 @@ public class ConnectionUtilServiceTest {
 
         // Build classpath for all drivers
         for (DriverType driverType : driverTypes) {
-            String classpath = connectionUtilService.buildDriverClasspath(driverType);
+            String classpath = driverUtilsService.buildDriverClasspath(driverType);
             assertThat(classpath).isNotNull();
             System.out.println("HDP3 - DriverType " + driverType + " classpath: " +
                     (classpath.isEmpty() ? "(empty)" : classpath));
@@ -336,7 +341,7 @@ public class ConnectionUtilServiceTest {
         String driverPath = "hive/3";
         createDriverJars(driverPath, "jar1.jar", "jar2.jar", "jar3.jar");
 
-        String classpath = connectionUtilService.buildDriverClasspath(DriverType.APACHE_HIVE_3);
+        String classpath = driverUtilsService.buildDriverClasspath(DriverType.APACHE_HIVE_3);
 
         String[] entries = classpath.split(File.pathSeparator);
         assertThat(entries)

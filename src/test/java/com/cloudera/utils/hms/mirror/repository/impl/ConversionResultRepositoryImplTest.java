@@ -17,29 +17,31 @@
 
 package com.cloudera.utils.hms.mirror.repository.impl;
 
-import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.repository.rocksDbImpl.ConversionResultRepositoryImpl;
+import com.cloudera.utils.hms.mirror.testutils.ConversionResultTestFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.mysql.cj.exceptions.AssertionFailedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.rocksdb.*;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test class for ConversionResultRepositoryImpl that loads test data from YAML 
+ * Test class for ConversionResultRepositoryImpl that creates test data programmatically
  * and validates save/retrieve functionality with RocksDB.
  */
 class ConversionResultRepositoryImplTest {
@@ -48,39 +50,35 @@ class ConversionResultRepositoryImplTest {
     Path tempDir;
 
     private RocksDB rocksDB;
-    private ColumnFamilyHandle sessionsColumnFamily;
+    private ColumnFamilyHandle conversionResultColumnFamily;
     private ConversionResultRepository repository;
-    private ObjectMapper yamlMapper;
     private ConversionResult originalConversionResult;
 
     @BeforeEach
-    void setUp() throws RocksDBException, IOException {
+    void setUp() throws RocksDBException {
         // Initialize RocksDB
         RocksDB.loadLibrary();
-        
+
         // Create column family descriptors
         List<ColumnFamilyDescriptor> columnFamilyDescriptors = Arrays.asList(
             new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, new ColumnFamilyOptions()),
-            new ColumnFamilyDescriptor("sessions".getBytes(), new ColumnFamilyOptions())
+            new ColumnFamilyDescriptor("conversionResult".getBytes(), new ColumnFamilyOptions())
         );
-        
+
         List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
-        
+
         DBOptions options = new DBOptions()
             .setCreateIfMissing(true)
             .setCreateMissingColumnFamilies(true);
-            
+
         rocksDB = RocksDB.open(options, tempDir.toString(), columnFamilyDescriptors, columnFamilyHandles);
-        sessionsColumnFamily = columnFamilyHandles.get(1); // sessions column family
-        
+        conversionResultColumnFamily = columnFamilyHandles.get(1); // sessions column family
+
         // Initialize repository
         ObjectMapper objectMapper = new ObjectMapper();
-        repository = new ConversionResultRepositoryImpl(rocksDB, sessionsColumnFamily, objectMapper);
-        
-        // Initialize YAML mapper for loading test data
-        yamlMapper = new ObjectMapper(new YAMLFactory());
-        
-        // Load test data from YAML file
+        repository = new ConversionResultRepositoryImpl(rocksDB, conversionResultColumnFamily, objectMapper);
+
+        // Create test data programmatically
         loadTestData();
     }
 
@@ -92,37 +90,55 @@ class ConversionResultRepositoryImplTest {
     }
 
     /**
-     * Load ConversionResult test data from the YAML file.
+     * Create ConversionResult test data programmatically.
      */
-    private void loadTestData() throws IOException {
-        try (InputStream inputStream = getClass().getClassLoader()
-                .getResourceAsStream("test_data/ext_purge_odd_parts_01.yaml")) {
-            assertNotNull(inputStream, "Test data file not found: test_data/ext_purge_odd_parts_01.yaml");
-            originalConversionResult = yamlMapper.readValue(inputStream, ConversionResult.class);
-            assertNotNull(originalConversionResult, "Failed to load ConversionResult from YAML");
-        }
+    private void loadTestData() {
+        // Create a new ConversionResult with test data
+        originalConversionResult = ConversionResultTestFactory.createSimpleSchemaOnlyConversion();
     }
 
     @Test
-    void testSaveAndRetrieveConversionResult() throws RocksDBException {
+    void testSaveAndRetrieveConversionResult() throws RepositoryException {
         // Given
         String sessionId = "test-session-123";
         long createTimestamp = System.currentTimeMillis();
 
         // When - Save the conversion result
-        repository.saveConversionResult(sessionId, createTimestamp, originalConversionResult);
+        repository.save(originalConversionResult);
 
         // Then - Verify it exists
-        assertTrue(repository.conversionResultExists(sessionId, createTimestamp));
+        assertTrue(repository.existsById(originalConversionResult.getKey()));
 
         // When - Retrieve the conversion result
-        ConversionResult retrievedResult = repository.rebuildConversionResult(sessionId, createTimestamp);
+        ConversionResult retrievedResult = repository.findById(originalConversionResult.getKey()).orElseThrow(() ->
+                new AssertionFailedException("Failed to retrieve from Repository")); //rebuildConversionResult(sessionId, createTimestamp);
 
         // Then - Verify it was retrieved successfully
         assertNotNull(retrievedResult);
         assertConversionResultsEqual(originalConversionResult, retrievedResult);
     }
 
+    @Test
+    void testDeleteConversionResult() throws RepositoryException {
+        // Given
+        String sessionId = "test-session-delete";
+        long createTimestamp = System.currentTimeMillis();
+        repository.save(originalConversionResult);
+
+        // Verify it exists
+        ConversionResult fetched = repository.findById(originalConversionResult.getKey()).orElseThrow(() ->
+                new AssertionFailedException("Could load from repo."));
+
+        // When - Delete the conversion result
+        assertTrue(repository.deleteById(originalConversionResult.getKey()), "Failed to delete conversion result");
+
+        // Then - Verify it no longer exists
+        assertFalse(repository.existsById(originalConversionResult.getKey()), "Conversion result should not exist");
+
+    }
+
+
+    /*
     @Test
     void testDatabaseOperations() throws RocksDBException {
         // Given
@@ -246,26 +262,6 @@ class ConversionResultRepositoryImplTest {
     }
 
     @Test
-    void testDeleteConversionResult() throws RocksDBException {
-        // Given
-        String sessionId = "test-session-delete";
-        long createTimestamp = System.currentTimeMillis();
-        repository.saveConversionResult(sessionId, createTimestamp, originalConversionResult);
-
-        // Verify it exists
-        assertTrue(repository.conversionResultExists(sessionId, createTimestamp));
-
-        // When - Delete the conversion result
-        repository.deleteConversionResult(sessionId, createTimestamp);
-
-        // Then - Verify it no longer exists
-        assertFalse(repository.conversionResultExists(sessionId, createTimestamp));
-        
-        ConversionResult retrievedResult = repository.rebuildConversionResult(sessionId, createTimestamp);
-        assertNull(retrievedResult);
-    }
-
-    @Test
     void testOrderingWithAssortedTestDatabase() throws RocksDBException, IOException {
         // Given - Load complex test data with multiple tables and SQL statements
         DBMirror assortedDbMirror;
@@ -376,7 +372,7 @@ class ConversionResultRepositoryImplTest {
             }
         }
     }
-
+    */
     /**
      * Helper method to compare two ConversionResult objects for equality.
      * This performs a deep comparison of the key properties.

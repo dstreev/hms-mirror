@@ -165,6 +165,7 @@ class SimplifiedTableOperationsTest {
         System.out.println("=== Table Existence Check Demo Complete ===\n");
     }
 
+    /* Moved to TableService
     @Test
     @DisplayName("Should demonstrate table filter validation")
     void demonstrateTableFilterValidation() {
@@ -198,6 +199,7 @@ class SimplifiedTableOperationsTest {
         
         System.out.println("=== Table Filter Validation Demo Complete ===\n");
     }
+     */
 
     @Test
     @DisplayName("Should demonstrate SQL generation for table migration")

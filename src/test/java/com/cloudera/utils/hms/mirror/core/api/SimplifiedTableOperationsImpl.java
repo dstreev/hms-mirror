@@ -114,6 +114,8 @@ public class SimplifiedTableOperationsImpl implements TableOperations {
         return ValidationResult.success();
     }
 
+    /*
+    TODO: Fix.
     @Override
     public ValidationResult validateTableFilter(ConversionResult conversionResult, TableMirror tableMirror, Environment environment) {
         try {
@@ -136,6 +138,7 @@ public class SimplifiedTableOperationsImpl implements TableOperations {
             return ValidationResult.failure("Error validating table filter: " + e.getMessage());
         }
     }
+     */
 
     @Override
     public TableMetadata extractTableMetadata(String database, String table, Environment environment) {

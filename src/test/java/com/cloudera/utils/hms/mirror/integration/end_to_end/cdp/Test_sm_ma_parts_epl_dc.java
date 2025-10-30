@@ -83,26 +83,31 @@ public class Test_sm_ma_parts_epl_dc extends E2EBaseTest {
         Boolean foundOddPart = Boolean.FALSE;
 //        Boolean foundOddPart2 = Boolean.FALSE;
 
-        for (Pair pair : getConversion().getDatabase("assort_test_db")
-                .getTableMirrors().get("acid_03")
-                .getEnvironmentTable(Environment.LEFT).getSql()) {
-            if (pair.getDescription().trim().equals("Alter Table Location")) {
-                assertEquals("ALTER TABLE acid_03 SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03\"", pair.getAction(), "Location doesn't match");
-                foundAT = Boolean.TRUE;
-            }
-            if (pair.getDescription().trim().equals("Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location")) {
-                assertEquals("ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"",
-                        pair.getAction(), "Location doesn't match");
-                foundOddPart = Boolean.TRUE;
-            }
+        validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_03", "Alter Table Location",
+                "ALTER TABLE acid_03 SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03\"");
+        validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_03", "Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location",
+                "ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"");
+
+//        for (Pair pair : getConversion().getDatabase("assort_test_db")
+//                .getTableMirrors().get("acid_03")
+//                .getEnvironmentTable(Environment.LEFT).getSql()) {
+//            if (pair.getDescription().trim().equals("Alter Table Location")) {
+//                assertEquals("ALTER TABLE acid_03 SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03\"", pair.getAction(), "Location doesn't match");
+//                foundAT = Boolean.TRUE;
+//            }
+//            if (pair.getDescription().trim().equals("Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location")) {
+//                assertEquals("ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"",
+//                        pair.getAction(), "Location doesn't match");
+//                foundOddPart = Boolean.TRUE;
+//            }
 //            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location")) {
 //                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
 //                        "(`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"", pair.getAction());
 //                foundOddPart2 = Boolean.TRUE;
 //            }
-        }
-        assertEquals(Boolean.TRUE, foundAT, "Alter Table Location not found");
-        assertEquals(Boolean.TRUE, foundOddPart, "Alter Odd Part Location not found");
+//        }
+//        assertEquals(Boolean.TRUE, foundAT, "Alter Table Location not found");
+//        assertEquals(Boolean.TRUE, foundOddPart, "Alter Odd Part Location not found");
 //        assertEquals("Alter Odd Part 2 Location not found", Boolean.TRUE, foundOddPart2);
     }
 

@@ -94,7 +94,7 @@ public class TableService {
      * Checks the table filter using the new core business logic.
      * This method now delegates to the pure business logic layer.
      */
-    protected void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
+    public void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));

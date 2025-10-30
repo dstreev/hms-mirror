@@ -42,7 +42,7 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
      * @return The TableMirror instance, or null if not found
      * @throws RepositoryException if there's an error accessing the repository
      */
-    TableMirror findByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException;
+    java.util.Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException;
 
     /**
      * Find all TableMirror instances for a specific database within a ConversionResult.

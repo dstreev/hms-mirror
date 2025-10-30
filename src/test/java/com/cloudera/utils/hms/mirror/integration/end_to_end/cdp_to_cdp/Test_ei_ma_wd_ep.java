@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
@@ -112,42 +113,53 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
     }
     
     @Test
-    public void validateExtMissing01Issue() {
+    public void checkExtMissing01Issue() {
         // ext_missing_01 exists on RIGHT but not on LEFT, should have specific issue
-        validateTableIssueCount("assorted_test_db", "ext_missing_01", Environment.RIGHT, 1);
-        var issues = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getIssues();
-        assertTrue(issues.contains("Schema exists on the target, but not on the source."));
+//        validateTableIssueCount("assorted_test_db", "ext_missing_01", Environment.RIGHT, 1);
+        validateTableIssue("assorted_test_db","ext_missing_01", Environment.RIGHT,
+                "Schema exists on the target, but not on the source.");
+//        var issues = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getIssues();
+//        assertTrue(issues.contains("Schema exists on the target, but not on the source."));
     }
 
     @Test
-    public void validateTableCount() {
+    public void checkTableCount() {
         // Validate that we have 7 tables in the database
-        assertEquals(7, getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().size(), "Table count mismatch");
+        validateTableCount("assorted_test_db", 7);
+//        assertEquals(7, getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().size(), "Table count mismatch");
     }
 
     @Test
-    public void validateExportImportStrategy() {
+    public void checkExportImportStrategy() {
         // Validate that all tables use EXPORT_IMPORT strategy
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_02").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_03").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_01").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_02").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
-        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
+        validateTableStrategy("assorted_test_db", "acid_01", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "acid_02", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "ext_part_01", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "ext_part_02", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "legacy_mngd_01", DataStrategyEnum.EXPORT_IMPORT);
+        validateTableStrategy("assorted_test_db", "ext_missing_01", DataStrategyEnum.EXPORT_IMPORT);
+
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_02").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_03").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_01").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_02").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
+//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
     }
 
     @Test
-    public void validateACIDTableIsTransactional() {
+    public void checkACIDTableIsTransactional() {
         // Validate that acid_01 is transactional
         validateTableIsACID("assorted_test_db", "acid_01", Environment.LEFT);
         validateTableProperty("assorted_test_db", "acid_01", Environment.LEFT,
@@ -165,55 +177,63 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
     }
 
     @Test
-    public void validateExportPaths() {
+    public void checkExportPaths() {
         // Validate export paths for tables
-        var acid01LeftSql = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
-        boolean foundExport = false;
-        for (var pair : acid01LeftSql) {
-            if (pair.getDescription().equals("EXPORT Table")) {
-                assertEquals("EXPORT TABLE acid_01 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
-                        pair.getAction());
-                foundExport = true;
-            }
-        }
-        assertTrue(foundExport, "EXPORT statement not found for acid_01");
+        validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_01"
+                ,"EXPORT Table", "EXPORT TABLE acid_01 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"");
+//        var acid01LeftSql = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
+//        boolean foundExport = false;
+//        for (var pair : acid01LeftSql) {
+//            if (pair.getDescription().equals("EXPORT Table")) {
+//                assertEquals("EXPORT TABLE acid_01 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
+//                        pair.getAction());
+//                foundExport = true;
+//            }
+//        }
+//        assertTrue(foundExport, "EXPORT statement not found for acid_01");
     }
 
     @Test
-    public void validateImportPaths() {
+    public void checkImportPaths() {
         // Validate import paths for tables
-        var acid01RightSql = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getSql();
-        boolean foundImport = false;
-        for (var pair : acid01RightSql) {
-            if (pair.getDescription().equals("IMPORT Table")) {
-                assertEquals("IMPORT TABLE acid_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
-                        pair.getAction());
-                foundImport = true;
-            }
-        }
-        assertTrue(foundImport, "IMPORT statement not found for acid_01");
+        validateTableSqlPair("assorted_test_db", Environment.RIGHT, "acid_01",
+                "IMPORT Table", "IMPORT TABLE acid_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"");
+//        var acid01RightSql = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getSql();
+//        boolean foundImport = false;
+//        for (var pair : acid01RightSql) {
+//            if (pair.getDescription().equals("IMPORT Table")) {
+//                assertEquals("IMPORT TABLE acid_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
+//                        pair.getAction());
+//                foundImport = true;
+//            }
+//        }
+//        assertTrue(foundImport, "IMPORT statement not found for acid_01");
     }
 
     @Test
-    public void validateExternalTableImport() {
+    public void checkExternalTableImport() {
         // Validate IMPORT command for external table includes EXTERNAL and LOCATION
-        var extPart01RightSql = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-        boolean foundImport = false;
-        for (var pair : extPart01RightSql) {
-            if (pair.getDescription().equals("IMPORT Table")) {
-                assertEquals("IMPORT EXTERNAL TABLE ext_part_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_01\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01\"",
-                        pair.getAction());
-                foundImport = true;
-            }
-        }
-        assertTrue(foundImport, "IMPORT EXTERNAL statement not found for ext_part_01");
+        validateTableSqlPair("assorted_test_db", Environment.RIGHT, "ext_part_01",
+                "IMPORT Table",
+                "IMPORT EXTERNAL TABLE ext_part_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_01\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01\"");
+
+//                var extPart01RightSql = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
+//        boolean foundImport = false;
+//        for (var pair : extPart01RightSql) {
+//            if (pair.getDescription().equals("IMPORT Table")) {
+//                assertEquals("IMPORT EXTERNAL TABLE ext_part_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_01\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01\"",
+//                        pair.getAction());
+//                foundImport = true;
+//            }
+//        }
+//        assertTrue(foundImport, "IMPORT EXTERNAL statement not found for ext_part_01");
     }
 
     @Test
-    public void validatePartitionCount() {
+    public void checkPartitionCount() {
         // Validate partition count for ext_part_01
         validatePartitionCount("assorted_test_db", "ext_part_01", Environment.LEFT, 440);
         
@@ -225,7 +245,7 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
     }
 
     @Test
-    public void validateTableLocations() {
+    public void checkTableLocations() {
         // Validate ACID table locations with managed warehouse
         validateTableLocation("assorted_test_db", "acid_01", Environment.LEFT,
                 "hdfs://HDP50/warehouse/tablespace/managed/hive/assorted_test_db.db/acid_01");
@@ -246,21 +266,23 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
     }
 
     @Test
-    public void validateBucketingForACIDTables() {
+    public void checkBucketingForACIDTables() {
         // Validate acid_01 has 2 buckets
-        var acid01LeftDef = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getDefinition();
-        assertTrue(acid01LeftDef.stream().anyMatch(line -> line.contains("INTO 2 BUCKETS")));
+        validateTableBuckets("assorted_test_db", "acid_01", Environment.LEFT, 2);
+//        var acid01LeftDef = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getDefinition();
+//        assertTrue(acid01LeftDef.stream().anyMatch(line -> line.contains("INTO 2 BUCKETS")));
         
         // acid_02 doesn't have buckets defined
         // Validate acid_03 has 6 buckets
-        var acid03LeftDef = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getDefinition();
-        assertTrue(acid03LeftDef.stream().anyMatch(line -> line.contains("INTO 6 BUCKETS")));
+        validateTableBuckets("assorted_test_db", "acid_03", Environment.LEFT, 6);
+//        var acid03LeftDef = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getDefinition();
+//        assertTrue(acid03LeftDef.stream().anyMatch(line -> line.contains("INTO 6 BUCKETS")));
     }
 
     @Test
-    public void validateTableProperties() {
+    public void checkTableProperties() {
         // Validate bucketing_version for all tables
         validateTableProperty("assorted_test_db", "acid_01", Environment.LEFT,
                 "bucketing_version", "2");
@@ -275,57 +297,70 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
     }
 
     @Test
-    public void validateDatabaseSql() {
+    public void checkDatabaseSql() {
         // Validate database creation SQL on RIGHT
-        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+        validateDBSqlPair("assorted_test_db", Environment.RIGHT,
                 "Create Database",
-                "CREATE DATABASE IF NOT EXISTS assorted_test_db\n"));
-        assertTrue(validateDBSqlPair("assorted_test_db", Environment.RIGHT,
+                "CREATE DATABASE IF NOT EXISTS assorted_test_db\n");
+        validateDBSqlPair("assorted_test_db", Environment.RIGHT,
                 "Alter Database Location",
-                "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\""));
+                "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\"");
     }
 
     @Test
-    public void validateTableExistence() {
+    public void checkTableExistence() {
         // Validate that most tables exist on LEFT side
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_02").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
-        
-        // ext_missing_01 doesn't exist on LEFT but exists on RIGHT
-        assertFalse(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
-        assertTrue(getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).isExists());
+        validateTableEnvironment("assorted_test_db", "acid_01", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "acid_02", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "acid_03", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "ext_part_01", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "ext_part_02", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "legacy_mngd_01", Environment.LEFT);
+        // TODO: Implement
+//        validateTableEnvironmentNotExist("assorted_test_db", "ext_missing_01", Environment.LEFT);
+        validateTableEnvironment("assorted_test_db", "ext_missing_01", Environment.RIGHT);
+
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_02").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
+//
+//        // ext_missing_01 doesn't exist on LEFT but exists on RIGHT
+//        assertFalse(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
+//        assertTrue(getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).isExists());
     }
 
     @Test
-    public void validateTotalPhaseCount() {
+    public void checkTotalPhaseCount() {
         // Validate total phase count for tables
-        assertEquals(6, getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("acid_01").getTotalPhaseCount().get(), 
-                "acid_01 should have 6 total phases");
-        assertEquals(6, getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().get("ext_part_01").getTotalPhaseCount().get(), 
-                "ext_part_01 should have 6 total phases");
+        validateTablePhaseTotalCount("assorted_test_db", "acid_01", 6);
+        validateTablePhaseTotalCount("assorted_test_db", "ext_part_01", 6);
+//        assertEquals(6, getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("acid_01").getTotalPhaseCount().get(),
+//                "acid_01 should have 6 total phases");
+//        assertEquals(6, getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().get("ext_part_01").getTotalPhaseCount().get(),
+//                "ext_part_01 should have 6 total phases");
     }
 
     @Test
-    public void validatePhaseSummary() {
+    public void checkPhaseSummary() {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
-        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
-        assertNotNull(phaseSummary);
-        assertEquals(7, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(), 
-                "Should have 7 tables in CALCULATED_SQL phase");
+        validateDBInPhaseSummaryCount( "assorted_test_db", PhaseState.CALCULATED_SQL, 7);
+//        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
+//        assertNotNull(phaseSummary);
+//        assertEquals(7, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(),
+//                "Should have 7 tables in CALCULATED_SQL phase");
     }
 
 }

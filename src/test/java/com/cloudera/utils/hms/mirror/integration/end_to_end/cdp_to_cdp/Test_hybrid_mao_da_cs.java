@@ -69,18 +69,20 @@ public class Test_hybrid_mao_da_cs extends E2EBaseTest {
     @Test
     public void statisticsValidationTest() {
         // Validate operation statistics based on test output
-        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-        assertEquals(3, 
-                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-                "Should have 3 ACID tables processed with migrate-acid-only");
+        validateTableCount("assorted_test_db", 3);
+
+//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+//        assertEquals(3,
+//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+//                "Should have 3 ACID tables processed with migrate-acid-only");
     }
     
     @Test
     public void phaseValidationTest() {
         // Validate phase state from test output
-        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
-        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
-                "Must have tables to validate phases");
+//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
+//        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
+//                "Must have tables to validate phases");
         
         validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
         validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);

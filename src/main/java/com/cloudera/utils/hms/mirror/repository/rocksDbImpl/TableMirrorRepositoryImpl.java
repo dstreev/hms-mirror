@@ -54,10 +54,10 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
     }
 
     @Override
-    public TableMirror findByName(String conversionResultKey, String databaseName, String tableName)
+    public java.util.Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName)
             throws RepositoryException {
         String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
-        return findById(compositeKey).orElse(null);
+        return findById(compositeKey);
     }
 
     @Override

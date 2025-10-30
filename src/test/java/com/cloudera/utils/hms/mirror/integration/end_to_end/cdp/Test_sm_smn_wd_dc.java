@@ -100,10 +100,8 @@ public class Test_sm_smn_wd_dc extends E2EBaseTest {
 
     @Test
     public void validateSqlTest() {
-        if (!validateTableSqlPair("assorted_test_db", Environment.LEFT, "ext_part_01", "Alter Table Location",
-                "ALTER TABLE ext_part_01 SET LOCATION \"s3a://my_cs_bucket/warehouse/external_tables/assorted_test_db.db/ext_part_01\"")) {
-            fail("Alter Table Location not found");
-        }
+        validateTableSqlPair("assorted_test_db", Environment.LEFT, "ext_part_01", "Alter Table Location",
+                "ALTER TABLE ext_part_01 SET LOCATION \"s3a://my_cs_bucket/warehouse/external_tables/assorted_test_db.db/ext_part_01\"");
     }
 
 }

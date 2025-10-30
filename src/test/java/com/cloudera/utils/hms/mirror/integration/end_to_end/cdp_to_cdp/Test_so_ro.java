@@ -18,6 +18,8 @@
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,56 +71,64 @@ public class Test_so_ro extends E2EBaseTest {
     @Test
     public void statisticsValidationTest() {
         // Validate operation statistics based on test output
-        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-        assertEquals(4, 
-                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-                "Should have 4 tables discovered in read-only mode");
+        validateTableCount("assorted_test_db", 4);
+//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+//        assertEquals(4,
+//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+//                "Should have 4 tables discovered in read-only mode");
     }
-    
+
     @Test
     public void phaseValidationTest() {
         // Validate phase state from test output - read-only reaches CALCULATED_SQL
-        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
-        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
-                "Must have tables to validate phases");
-        
-        String firstTable = getConversion().getDatabase("assorted_test_db")
-                .getTableMirrors().keySet().iterator().next();
+//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
+//        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
+//                "Must have tables to validate phases");
+
+        Map<String, TableMirror> TableMap = null;
+        try {
+            TableMap = getTableMirrorRepository().findByDatabase(getConversion().getKey(), "assorted_test_db");
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+        String firstTable = TableMap.keySet().iterator().next();
+//        String firstTable = getConversion().getDatabase("assorted_test_db")
+//                .getTableMirrors().keySet().iterator().next();
         validatePhase("assorted_test_db", firstTable, PhaseState.CALCULATED_SQL);
     }
-    
+
     @Test
     public void readOnlyModeValidationTest() {
         // In read-only mode, RIGHT environment should not have SQL generated
-        assertNotNull(getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_01"),
-                "acid_01 should be discovered");
+//        assertNotNull(getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_01"),
+//                "acid_01 should be discovered");
         // Validate ACID tables are identified
         validateTableIsACID("assorted_test_db", "acid_01", Environment.LEFT);
         validateTableIsACID("assorted_test_db", "acid_02", Environment.LEFT);
         validateTableIsACID("assorted_test_db", "acid_03", Environment.LEFT);
     }
-    
+
     @Test
     public void tableIssueValidationTest() {
         // Validate no errors in read-only mode
         validateTableIssueCount("assorted_test_db", "acid_01", Environment.LEFT, 0);
         validateTableIssueCount("assorted_test_db", "acid_02", Environment.LEFT, 0);
         validateTableIssueCount("assorted_test_db", "acid_03", Environment.LEFT, 0);
-        
+
         // Non-ACID tables should also have no issues in read-only
-        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
-            validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.LEFT, 0);
-        }
+//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
+        validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.LEFT, 0);
+//        }
     }
-    
-    @Test 
+
+    @Test
     public void tableLocationValidationTest() {
         // Validate table locations for discovered tables
-        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
+//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
             // External partitioned table should have location
             validateTableLocation("assorted_test_db", "ext_part_01", Environment.LEFT,
                     "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01");
-        }
+//        }
     }
 
 

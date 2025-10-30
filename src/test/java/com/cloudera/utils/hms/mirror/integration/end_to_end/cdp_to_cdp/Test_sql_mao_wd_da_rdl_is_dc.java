@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import com.cloudera.utils.hms.util.TableUtils;
@@ -115,10 +116,11 @@ public class Test_sql_mao_wd_da_rdl_is_dc extends E2EBaseTest {
     @Test
     public void statisticsValidationTest() {
         // Validate operation statistics based on test output
-        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-        assertEquals(3, 
-                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-                "Should have 3 ACID tables processed with migrate-acid-only");
+        validateTableCount("assorted_test_db", 3);
+//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
+//        assertEquals(3,
+//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
+//                "Should have 3 ACID tables processed with migrate-acid-only");
     }
     
     @Test
@@ -148,8 +150,8 @@ public class Test_sql_mao_wd_da_rdl_is_dc extends E2EBaseTest {
     @Test
     public void sqlStrategyValidationTest() {
         // Validate SQL data strategy is being used
-        assertEquals("SQL", 
-                getConfig().getDataStrategy().toString(),
+        assertEquals(DataStrategyEnum.SQL,
+                getConversion().getJob().getStrategy(),
                 "Data strategy should be SQL");
     }
 }
