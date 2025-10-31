@@ -1,4 +1,7 @@
 export interface DatasetFormData {
+  // Hidden field for updates
+  key?: string;
+
   name: string;
   description: string;
   databases: DatabaseSpec[];

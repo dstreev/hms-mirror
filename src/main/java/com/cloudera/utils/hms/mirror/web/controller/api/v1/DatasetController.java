@@ -64,7 +64,7 @@ public class DatasetController {
         log.info("DatasetController.getDatasets() called");
         
         try {
-            Map<String, Object> result = datasetManagementService.listDatasets();
+            Map<String, Object> result = datasetManagementService.list();
             
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
@@ -82,34 +82,34 @@ public class DatasetController {
         }
     }
 
-    @GetMapping(value = "/{datasetName}", produces = "application/json")
-    @Operation(summary = "Get dataset by name", 
-               description = "Retrieves a specific HMS Mirror dataset by name")
+    @GetMapping(value = "/{key}", produces = "application/json")
+    @Operation(summary = "Get dataset by key",
+               description = "Retrieves a specific HMS Mirror dataset by key")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dataset retrieved successfully"),
         @ApiResponse(responseCode = "404", description = "Dataset not found"),
         @ApiResponse(responseCode = "500", description = "Failed to retrieve dataset")
     })
     public ResponseEntity<Map<String, Object>> getDataset(
-            @Parameter(description = "Dataset name", required = true)
-            @PathVariable String datasetName) {
-        
-        log.info("DatasetController.getDataset() called - name: {}", datasetName);
-        
+            @Parameter(description = "Dataset key", required = true)
+            @PathVariable String key) {
+
+        log.info("DatasetController.getDataset() called - key: {}", key);
+
         try {
-            Map<String, Object> result = datasetManagementService.loadDataset(datasetName);
-            
+            Map<String, Object> result = datasetManagementService.load(key);
+
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
             } else if ("NOT_FOUND".equals(result.get("status"))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
             } else {
-                log.error("Failed to load dataset {}: {}", datasetName, result.get("message"));
+                log.error("Failed to load dataset {}: {}", key, result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
-            log.error("Error retrieving dataset {}", datasetName, e);
+            log.error("Error retrieving dataset {}", key, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", "error");
             errorResponse.put("message", "Failed to retrieve dataset: " + e.getMessage());
@@ -143,18 +143,16 @@ public class DatasetController {
             }
             
             // Validate dataset first
-            Map<String, Object> validationResult = datasetManagementService.validateDataset(datasetDto);
+            Map<String, Object> validationResult = datasetManagementService.validate(datasetDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
-            
+
             // Check if dataset already exists
-            boolean isUpdate = datasetManagementService.datasetExists(datasetDto.getName());
+            boolean isUpdate = datasetManagementService.exists(datasetDto.getKey());
             
             // Save the dataset
-            Map<String, Object> result = datasetManagementService.saveDataset(
-                datasetDto.getName(),
-                datasetDto);
+            Map<String, Object> result = datasetManagementService.save(datasetDto);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 HttpStatus status = isUpdate ? HttpStatus.OK : HttpStatus.CREATED;
@@ -175,8 +173,8 @@ public class DatasetController {
         }
     }
 
-    @PutMapping(value = "/{datasetName}", consumes = "application/json", produces = "application/json")
-    @Operation(summary = "Update existing dataset", 
+    @PutMapping(value = "/{key}", consumes = "application/json", produces = "application/json")
+    @Operation(summary = "Update existing dataset",
                description = "Updates an existing HMS Mirror dataset")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dataset updated successfully"),
@@ -185,38 +183,38 @@ public class DatasetController {
         @ApiResponse(responseCode = "500", description = "Failed to update dataset")
     })
     public ResponseEntity<Map<String, Object>> updateDataset(
-            @Parameter(description = "Dataset name", required = true)
-            @PathVariable String datasetName,
+            @Parameter(description = "Dataset key", required = true)
+            @PathVariable String key,
             @Parameter(description = "Updated dataset data", required = true)
             @RequestBody DatasetDto datasetDto) {
-        
-        log.info("DatasetController.updateDataset() called - name: {}", datasetName);
+
+        log.info("DatasetController.updateDataset() called - key: {}", key);
 
         try {
             // Validate dataset first
-            Map<String, Object> validationResult = datasetManagementService.validateDataset(datasetDto);
+            Map<String, Object> validationResult = datasetManagementService.validate(datasetDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
-            
-            // Ensure the DTO has the correct name from the path
-            datasetDto.setName(datasetName);
+
+            // Ensure the DTO has the correct key from the path
+            datasetDto.setKey(key);
 
             // Update the dataset
-            Map<String, Object> result = datasetManagementService.updateDataset(datasetName, datasetDto);
-            
+            Map<String, Object> result = datasetManagementService.update(datasetDto);
+
             if ("SUCCESS".equals(result.get("status"))) {
                 result.put("operation", "updated");
                 return ResponseEntity.ok(result);
             } else if ("NOT_FOUND".equals(result.get("status"))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
             } else {
-                log.error("Failed to update dataset {}: {}", datasetName, result.get("message"));
+                log.error("Failed to update dataset {}: {}", key, result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
-            log.error("Error updating dataset {}", datasetName, e);
+            log.error("Error updating dataset {}", key, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", "error");
             errorResponse.put("message", "Failed to update dataset: " + e.getMessage());
@@ -224,8 +222,8 @@ public class DatasetController {
         }
     }
 
-    @DeleteMapping(value = "/{datasetName}", produces = "application/json")
-    @Operation(summary = "Delete dataset", 
+    @DeleteMapping(value = "/{key}", produces = "application/json")
+    @Operation(summary = "Delete dataset",
                description = "Deletes a specific HMS Mirror dataset")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dataset deleted successfully"),
@@ -233,25 +231,25 @@ public class DatasetController {
         @ApiResponse(responseCode = "500", description = "Failed to delete dataset")
     })
     public ResponseEntity<Map<String, Object>> deleteDataset(
-            @Parameter(description = "Dataset name", required = true)
-            @PathVariable String datasetName) {
-        
-        log.info("DatasetController.deleteDataset() called - name: {}", datasetName);
-        
+            @Parameter(description = "Dataset key", required = true)
+            @PathVariable String key) {
+
+        log.info("DatasetController.deleteDataset() called - key: {}", key);
+
         try {
-            Map<String, Object> result = datasetManagementService.deleteDataset(datasetName);
-            
+            Map<String, Object> result = datasetManagementService.delete(key);
+
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
             } else if ("NOT_FOUND".equals(result.get("status"))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
             } else {
-                log.error("Failed to delete dataset {}: {}", datasetName, result.get("message"));
+                log.error("Failed to delete dataset {}: {}", key, result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
-            log.error("Error deleting dataset {}", datasetName, e);
+            log.error("Error deleting dataset {}", key, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", "error");
             errorResponse.put("message", "Failed to delete dataset: " + e.getMessage());
@@ -274,7 +272,7 @@ public class DatasetController {
         log.info("DatasetController.validateDataset() called - name: {}", datasetDto.getName());
         
         try {
-            Map<String, Object> result = datasetManagementService.validateDataset(datasetDto);
+            Map<String, Object> result = datasetManagementService.validate(datasetDto);
             
             if ("success".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);

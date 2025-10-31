@@ -2,6 +2,7 @@ import BaseApi from './baseApi';
 import { DatasetFormData } from '../../types/Dataset';
 
 export interface DatasetDto {
+  key?: string;
   name: string;
   description: string;
   databases: DatabaseSpecDto[];
@@ -64,6 +65,7 @@ class DatasetApi extends BaseApi {
 
   private mapFormDataToDto(formData: DatasetFormData): DatasetDto {
     return {
+      key: formData.key, // Preserve key for updates
       name: formData.name,
       description: formData.description,
       databases: formData.databases.map(db => ({
@@ -92,6 +94,7 @@ class DatasetApi extends BaseApi {
 
   private mapDtoToFormData(dto: DatasetDto): DatasetFormData {
     return {
+      key: dto.key, // Preserve key for updates
       name: dto.name,
       description: dto.description,
       databases: dto.databases.map(db => ({
@@ -127,19 +130,19 @@ class DatasetApi extends BaseApi {
     }
   }
 
-  async getDataset(datasetName: string): Promise<DatasetFormData | null> {
+  async getDataset(datasetKey: string): Promise<DatasetFormData | null> {
     try {
-      const response = await this.get<DatasetResponse>(`/datasets/${datasetName}`);
-      console.log(`getDataset response for ${datasetName}:`, response);
+      const response = await this.get<DatasetResponse>(`/datasets/${datasetKey}`);
+      console.log(`getDataset response for ${datasetKey}:`, response);
 
       if (response?.status === 'SUCCESS' && response.data) {
         return this.mapDtoToFormData(response.data);
       }
 
-      console.warn(`Dataset ${datasetName} not found or invalid response:`, response);
+      console.warn(`Dataset ${datasetKey} not found or invalid response:`, response);
       return null;
     } catch (error: any) {
-      console.error(`Failed to fetch dataset ${datasetName}:`, error);
+      console.error(`Failed to fetch dataset ${datasetKey}:`, error);
       console.error('Error details:', error.response?.data || error.message);
       return null;
     }
@@ -173,11 +176,11 @@ class DatasetApi extends BaseApi {
     }
   }
 
-  async updateDataset(datasetName: string, formData: DatasetFormData): Promise<{ success: boolean; message?: string }> {
+  async updateDataset(datasetKey: string, formData: DatasetFormData): Promise<{ success: boolean; message?: string }> {
     try {
       const dto = this.mapFormDataToDto(formData);
-      const response = await this.put<DatasetResponse>(`/datasets/${datasetName}`, dto);
-      
+      const response = await this.put<DatasetResponse>(`/datasets/${datasetKey}`, dto);
+
       if (response?.status === 'SUCCESS') {
         return { success: true };
       } else {
@@ -187,7 +190,7 @@ class DatasetApi extends BaseApi {
         };
       }
     } catch (error: any) {
-      console.error(`Failed to update dataset ${datasetName}:`, error);
+      console.error(`Failed to update dataset ${datasetKey}:`, error);
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Network error occurred while updating dataset'
@@ -195,10 +198,10 @@ class DatasetApi extends BaseApi {
     }
   }
 
-  async deleteDataset(datasetName: string): Promise<{ success: boolean; message?: string }> {
+  async deleteDataset(datasetKey: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await this.delete<DatasetResponse>(`/datasets/${datasetName}`);
-      
+      const response = await this.delete<DatasetResponse>(`/datasets/${datasetKey}`);
+
       if (response?.status === 'SUCCESS') {
         return { success: true };
       } else {
@@ -208,7 +211,7 @@ class DatasetApi extends BaseApi {
         };
       }
     } catch (error: any) {
-      console.error(`Failed to delete dataset ${datasetName}:`, error);
+      console.error(`Failed to delete dataset ${datasetKey}:`, error);
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Network error occurred while deleting dataset'

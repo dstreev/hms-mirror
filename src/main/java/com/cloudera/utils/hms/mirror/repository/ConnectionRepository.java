@@ -37,6 +37,8 @@ public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, S
      */
     Optional<ConnectionDto> findDefaultConnection() throws RepositoryException;
 
+    ConnectionDto save(ConnectionDto connectionDto) throws RepositoryException;
+
     /**
      * Find all connections for a specific environment.
      *

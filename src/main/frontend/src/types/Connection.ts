@@ -74,7 +74,7 @@ export interface ConnectionTestResults {
 }
 
 export interface Connection {
-  id: string;
+  key: string;
   name: string;
   description?: string;
   environment?: 'DEV' | 'TEST' | 'PROD' | 'UAT' | 'STAGING';
@@ -85,11 +85,14 @@ export interface Connection {
 }
 
 export interface ConnectionFormData {
+  // Hidden field for updates
+  key?: string;
+
   // Basic Information
   name: string;
   description: string;
   environment: 'DEV' | 'TEST' | 'PROD' | 'UAT' | 'STAGING' | '';
-  
+
   // Platform Configuration
   platformType: 'HDP2' | 'HDP3' | 'CDP7_1' | 'CDP7_2' | 'CDH5' | 'CDH6' | 'APACHE' | 'EMR' | 'GENERIC' | '';
   hcfsNamespace: string;

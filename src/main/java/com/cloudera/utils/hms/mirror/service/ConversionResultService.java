@@ -27,7 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.domain.testdata.DBMirrorTest;
+import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
@@ -125,7 +125,7 @@ public class ConversionResultService {
             throw new IllegalArgumentException("JobDto cannot be null");
         }
 
-        log.debug("Building ConversionResult from JobDto: {}", job.getId());
+        log.debug("Building ConversionResult from JobDto: {}", job.getKey());
 
         ConversionResult conversionResult = new ConversionResult();
         RunStatus runStatus = new RunStatus();
@@ -199,14 +199,14 @@ public class ConversionResultService {
             conversionResult.setJob(clonedJob);
             log.debug("JobDto cloned and set in ConversionResult");
 
-            log.info("ConversionResult successfully built from JobDto: {}", job.getId());
+            log.info("ConversionResult successfully built from JobDto: {}", job.getKey());
             return conversionResult;
 
         } catch (com.cloudera.utils.hms.mirror.exceptions.RepositoryException e) {
-            log.error("Repository error while loading references for JobDto: {}", job.getId(), e);
+            log.error("Repository error while loading references for JobDto: {}", job.getKey(), e);
             throw new RuntimeException("Failed to load references from repository", e);
         } catch (CloneNotSupportedException e) {
-            log.error("Failed to clone objects for JobDto: {}", job.getId(), e);
+            log.error("Failed to clone objects for JobDto: {}", job.getKey(), e);
             throw new RuntimeException("Failed to clone objects", e);
         }
     }
@@ -347,10 +347,9 @@ public class ConversionResultService {
     /*
 
      */
-    public void loadDBMirrorTest(DBMirrorTest dbMirrorTest) {
+    public void loadLegacyConversionWrapperForTestData(LegacyConversionWrapper legacyConversionWrapper) {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-        DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
         // Add the DatabaseSpec
         DatasetDto dataset = null;
         if (isNull(conversionResult.getDataset())) {
@@ -360,42 +359,40 @@ public class ConversionResultService {
             dataset = conversionResult.getDataset();
         }
 
-        dbSpec.setDatabaseName(dbMirrorTest.getName());
-
-        final DBMirror dbMirror = new DBMirror();
-        dbMirror.setName(dbMirrorTest.getName());
-
-        dbMirror.getProperties().putAll(dbMirrorTest.getProperties());
-        try {
-            getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
-        } catch (RepositoryException e) {
-            throw new RuntimeException(e);
-        }
-
-        dbMirrorTest.getTableMirrors().forEach((tableName,tableMirror) -> {
-            dbSpec.getTables().add(tableName);
-            TableMirror toSaveTblMirror = new TableMirror();
-            toSaveTblMirror.setName(tableName);
-            tableMirror.getEnvironments().forEach((env,et) -> {
-                try {
-                    EnvironmentTable toSaveEnvTbl = et.clone();
-                    // Cleanup any previous run values.
-                    toSaveEnvTbl.getSql().clear();
-                    toSaveEnvTbl.getCleanUpSql().clear();
-                    toSaveEnvTbl.getIssues().clear();
-                    toSaveEnvTbl.getErrors().clear();
-                    toSaveTblMirror.getEnvironments().put(env, toSaveEnvTbl);
-                } catch (CloneNotSupportedException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+        legacyConversionWrapper.getDatabases().forEach((dbName, dbMirror) -> {
+            // Break apart the tables.
+            Map<String, TableMirror> tableMirrorHolder = new HashMap<>();//
+            // Make new map
+            tableMirrorHolder.putAll(dbMirror.getTableMirrors());
+            // Remove tables from DBMirror
+            dbMirror.getTableMirrors().clear();
+            // Persist the DBMirror
             try {
-                getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), toSaveTblMirror);
+                dbMirror = getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
             } catch (RepositoryException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to load references from repository", e);
             }
-        });
 
+            DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
+            dbSpec.setDatabaseName(dbName);
+            DBMirror finalDbMirror = dbMirror;
+            tableMirrorHolder.forEach((tableName, tableMirror) -> {
+                // Persist each table.
+                tableMirror.getEnvironments().forEach((env, et) -> {
+                    // Cleanup any previous run values.
+                    et.getSql().clear();
+                    et.getCleanUpSql().clear();
+                    et.getIssues().clear();
+                    et.getErrors().clear();
+                });
+                try {
+                    getTableMirrorRepository().save(conversionResult.getKey(), dbName, tableMirror);
+                } catch (RepositoryException e) {
+                    throw new RuntimeException("Failed to load references from repository", e);
+                }
+                dbSpec.getTables().add(tableName);
+            });
+        });
     }
 
     public Boolean AVROCheck(TableMirror tableMirror) {
@@ -492,8 +489,8 @@ public class ConversionResultService {
      * Generates cleanup SQL script for a specific environment and database.
      *
      * @param conversionResult The conversion result containing database mirrors
-     * @param environment     The target environment
-     * @param database        The database name
+     * @param environment      The target environment
+     * @param database         The database name
      * @return SQL cleanup script as a string, or null if no cleanup is needed
      */
     public String executeCleanUpSql(ConversionResult conversionResult, Environment environment, String database) {
@@ -534,8 +531,8 @@ public class ConversionResultService {
      * Generates execution SQL script for a specific environment and database.
      *
      * @param conversionResult The conversion result containing database mirrors
-     * @param environment     The target environment
-     * @param database        The database name
+     * @param environment      The target environment
+     * @param database         The database name
      * @return SQL execution script as a string, or null if no SQL is needed
      */
     public String executeSql(ConversionResult conversionResult, Environment environment, String database) {
@@ -578,7 +575,7 @@ public class ConversionResultService {
      * Generates a detailed report for a specific database.
      *
      * @param conversionResult      The conversion result containing database information
-     * @param database             The database name
+     * @param database              The database name
      * @param executeSessionService The session service providing configuration and status
      * @return Markdown report as a string
      * @throws JsonProcessingException if there's an error processing JSON/YAML
@@ -1006,14 +1003,14 @@ public class ConversionResultService {
      * @param database         The database name
      * @return The DBMirror for the database
     public DBMirror addDatabase(ConversionResult conversionResult, String database) {
-        if (conversionResult.getDatabases().containsKey(database)) {
-            return conversionResult.getDatabases().get(database);
-        } else {
-            DBMirror dbs = new DBMirror();
-            dbs.setName(database);
-            conversionResult.getDatabases().put(database, dbs);
-            return dbs;
-        }
+    if (conversionResult.getDatabases().containsKey(database)) {
+    return conversionResult.getDatabases().get(database);
+    } else {
+    DBMirror dbs = new DBMirror();
+    dbs.setName(database);
+    conversionResult.getDatabases().put(database, dbs);
+    return dbs;
+    }
     }
      */
 
@@ -1024,7 +1021,7 @@ public class ConversionResultService {
      * @param database         The database name
      * @return The DBMirror for the database, or null if not found
     public DBMirror getDatabase(ConversionResult conversionResult, String database) {
-        return conversionResult.getDatabases().get(database);
+    return conversionResult.getDatabases().get(database);
     }
      */
 

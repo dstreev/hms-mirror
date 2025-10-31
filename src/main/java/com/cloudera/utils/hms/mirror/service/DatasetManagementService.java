@@ -47,7 +47,7 @@ public class DatasetManagementService {
      *
      * @return Map containing dataset listing results
      */
-    public Map<String, Object> listDatasets() {
+    public Map<String, Object> list() {
         log.debug("Listing all datasets");
         try {
             List<DatasetDto> datasets = datasetRepository.findAllSortedByName();
@@ -73,30 +73,30 @@ public class DatasetManagementService {
     }
 
     /**
-     * Loads a specific dataset by name.
+     * Loads a specific dataset by key.
      *
-     * @param datasetName The dataset name
+     * @param key The dataset key
      * @return Map containing the dataset load results
      */
-    public Map<String, Object> loadDataset(String datasetName) {
-        log.debug("Loading dataset: {}", datasetName);
+    public Map<String, Object> load(String key) {
+        log.debug("Loading dataset: {}", key);
         try {
-            Optional<DatasetDto> datasetOpt = datasetRepository.findById(datasetName);
+            Optional<DatasetDto> datasetOpt = datasetRepository.findById(key);
 
             Map<String, Object> result = new HashMap<>();
             if (datasetOpt.isPresent()) {
                 result.put("status", "SUCCESS");
                 result.put("data", datasetOpt.get());
-                result.put("name", datasetName);
+                result.put("key", key);
             } else {
                 result.put("status", "NOT_FOUND");
-                result.put("message", "Dataset not found: " + datasetName);
+                result.put("message", "Dataset not found: " + key);
             }
 
             return result;
 
         } catch (Exception e) {
-            log.error("Error loading dataset {}", datasetName, e);
+            log.error("Error loading dataset {}", key, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to load dataset: " + e.getMessage());
@@ -107,24 +107,23 @@ public class DatasetManagementService {
     /**
      * Saves a dataset using the DatasetDto format.
      *
-     * @param datasetName The dataset name
      * @param datasetDto  The dataset DTO to save
      * @return Map containing the save operation results
      */
-    public Map<String, Object> saveDataset(String datasetName, DatasetDto datasetDto) {
-        log.debug("Saving dataset: {}", datasetName);
+    public Map<String, Object> save(DatasetDto datasetDto) {
+        log.debug("Saving dataset: {}", datasetDto.getName());
         try {
             // Save using repository (timestamps and name are handled by repository layer)
-            datasetRepository.save(datasetName, datasetDto);
+            datasetRepository.save(datasetDto);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Dataset saved successfully");
-            result.put("name", datasetName);
+            result.put("name", datasetDto.getName());
             return result;
 
         } catch (Exception e) {
-            log.error("Error saving dataset {}", datasetName, e);
+            log.error("Error saving dataset {}", datasetDto.getName(), e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to save dataset: " + e.getMessage());
@@ -135,34 +134,33 @@ public class DatasetManagementService {
     /**
      * Updates an existing dataset.
      *
-     * @param datasetName The dataset name
      * @param datasetDto  The updated dataset DTO
      * @return Map containing the update operation results
      */
-    public Map<String, Object> updateDataset(String datasetName, DatasetDto datasetDto) {
-        log.debug("Updating dataset: {}", datasetName);
+    public Map<String, Object> update(DatasetDto datasetDto) {
+        log.debug("Updating dataset: {}", datasetDto.getKey());
         try {
             // Check if dataset exists first
-            Optional<DatasetDto> existingDatasetOpt = datasetRepository.findById(datasetName);
+            Optional<DatasetDto> existingDatasetOpt = datasetRepository.findById(datasetDto.getKey());
             Map<String, Object> result = new HashMap<>();
 
             if (existingDatasetOpt.isPresent()) {
                 // Preserve original creation date if it exists
                 DatasetDto existingDataset = existingDatasetOpt.get();
-                if (existingDataset.getCreatedDate() != null) {
-                    datasetDto.setCreatedDate(existingDataset.getCreatedDate());
+                if (existingDataset.getCreated() != null) {
+                    datasetDto.setCreated(existingDataset.getCreated());
                 }
 
                 // Save the updated dataset
-                return saveDataset(datasetName, datasetDto);
+                return save(datasetDto);
             } else {
                 result.put("status", "NOT_FOUND");
-                result.put("message", "Dataset not found: " + datasetName);
+                result.put("message", "Dataset not found: " + datasetDto.getKey());
                 return result;
             }
 
         } catch (Exception e) {
-            log.error("Error updating dataset {}", datasetName, e);
+            log.error("Error updating dataset {}", datasetDto.getKey(), e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to update dataset: " + e.getMessage());
@@ -171,32 +169,32 @@ public class DatasetManagementService {
     }
 
     /**
-     * Deletes a dataset by name.
+     * Deletes a dataset by key.
      *
-     * @param datasetName The dataset name
+     * @param key The dataset key
      * @return Map containing the delete operation results
      */
-    public Map<String, Object> deleteDataset(String datasetName) {
-        log.debug("Deleting dataset: {}", datasetName);
+    public Map<String, Object> delete(String key) {
+        log.debug("Deleting dataset: {}", key);
         try {
             // Check if the dataset exists first
             Map<String, Object> result = new HashMap<>();
 
-            if (datasetRepository.existsById(datasetName)) {
+            if (datasetRepository.existsById(key)) {
                 // Delete the dataset
-                datasetRepository.deleteById(datasetName);
+                datasetRepository.deleteById(key);
                 result.put("status", "SUCCESS");
                 result.put("message", "Dataset deleted successfully");
-                result.put("name", datasetName);
+                result.put("key", key);
             } else {
                 result.put("status", "NOT_FOUND");
-                result.put("message", "Dataset not found: " + datasetName);
+                result.put("message", "Dataset not found: " + key);
             }
 
             return result;
 
         } catch (Exception e) {
-            log.error("Error deleting dataset {}", datasetName, e);
+            log.error("Error deleting dataset {}", key, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to delete dataset: " + e.getMessage());
@@ -211,11 +209,11 @@ public class DatasetManagementService {
      * @param targetDatasetName The target dataset name
      * @return Map containing the copy operation results
      */
-    public Map<String, Object> copyDataset(String sourceDatasetName, String targetDatasetName) {
+    public Map<String, Object> copy(String sourceDatasetName, String targetDatasetName) {
         log.debug("Copying dataset from {} to {}", sourceDatasetName, targetDatasetName);
         try {
             // Load source dataset
-            Map<String, Object> loadResult = loadDataset(sourceDatasetName);
+            Map<String, Object> loadResult = load(sourceDatasetName);
             
             if (!"SUCCESS".equals(loadResult.get("status"))) {
                 return loadResult; // Return the error from loading
@@ -232,11 +230,11 @@ public class DatasetManagementService {
                 " (Copy of " + sourceDatasetName + ")"
             );
             targetDataset.setDatabases(sourceDataset.getDatabases());
-            targetDataset.setCreatedDate(null); // Will be set by repository
-            targetDataset.setModifiedDate(null); // Will be set by repository
+            targetDataset.setCreated(null); // Will be set by repository
+            targetDataset.setModified(null); // Will be set by repository
             
             // Save the copied dataset
-            return saveDataset(targetDatasetName, targetDataset);
+            return save(targetDataset);
             
         } catch (Exception e) {
             log.error("Error copying dataset from {} to {}", sourceDatasetName, targetDatasetName, e);
@@ -250,15 +248,15 @@ public class DatasetManagementService {
     /**
      * Checks if a dataset exists.
      *
-     * @param datasetName The dataset name
+     * @param key The dataset key
      * @return true if the dataset exists, false otherwise
      */
-    public boolean datasetExists(String datasetName) {
-        log.debug("Checking if dataset exists: {}", datasetName);
+    public boolean exists(String key) {
+        log.debug("Checking if dataset exists: {}", key);
         try {
-            return datasetRepository.existsById(datasetName);
+            return datasetRepository.existsById(key);
         } catch (Exception e) {
-            log.warn("Error checking dataset existence {}", datasetName, e);
+            log.warn("Error checking dataset existence {}", key, e);
             return false;
         }
     }
@@ -269,7 +267,7 @@ public class DatasetManagementService {
      * @param datasetDto The dataset DTO to validate
      * @return Map containing validation results
      */
-    public Map<String, Object> validateDataset(DatasetDto datasetDto) {
+    public Map<String, Object> validate(DatasetDto datasetDto) {
         log.debug("Validating dataset: {}", datasetDto.getName());
         Map<String, Object> result = new HashMap<>();
         List<String> errors = new ArrayList<>();

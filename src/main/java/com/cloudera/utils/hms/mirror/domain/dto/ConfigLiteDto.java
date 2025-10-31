@@ -18,10 +18,15 @@
 package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 /**
  * Lightweight DTO for HMS Mirror Configuration storage in RocksDB.
@@ -35,11 +40,31 @@ import lombok.Setter;
 @Schema(description = "Lightweight Configuration DTO for storage and API transfer")
 public class ConfigLiteDto implements Cloneable {
 
+    private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
+
+    // This would be the top level Key for the RocksDB columnFamily.
+    private String key = null;
+//    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
+    public String getKey() {
+        if (key == null) {
+            if (name == null) {
+                throw new IllegalStateException("name is required");
+            } else {
+                key = name;
+            }
+        }
+        return key;
+    }
+
     // Basic configuration
     private String name;
     private String description;
-    private String createdDate;
-    private String modifiedDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime created;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime modified;
 
     // Feature flags
     private boolean migrateNonNative = Boolean.FALSE;

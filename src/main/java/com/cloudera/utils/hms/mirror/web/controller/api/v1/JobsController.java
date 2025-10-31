@@ -74,16 +74,16 @@ public class JobsController {
         
         try {
             // Validate job data first
-            Map<String, Object> validationResult = jobManagementService.validateJob(jobDto);
+            Map<String, Object> validationResult = jobManagementService.validate(jobDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
             
             // Check if job already exists
-            boolean isUpdate = jobManagementService.jobExists(jobKey);
+            boolean isUpdate = jobManagementService.exists(jobKey);
             
             // Save the job
-            Map<String, Object> result = jobManagementService.saveJob(jobKey, jobDto);
+            Map<String, Object> result = jobManagementService.save(jobDto);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 HttpStatus status = isUpdate ? HttpStatus.OK : HttpStatus.CREATED;
@@ -118,7 +118,7 @@ public class JobsController {
         log.info("JobsController.getJob() called - key: {}", jobKey);
         
         try {
-            Map<String, Object> result = jobManagementService.loadJob(jobKey);
+            Map<String, Object> result = jobManagementService.load(jobKey);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
@@ -147,7 +147,7 @@ public class JobsController {
         log.info("JobsController.getJobs() called");
 
         try {
-            Map<String, Object> result = jobManagementService.listJobs();
+            Map<String, Object> result = jobManagementService.list();
 
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
@@ -180,7 +180,7 @@ public class JobsController {
         log.info("JobsController.deleteJob() called - key: {}", jobKey);
 
         try {
-            Map<String, Object> result = jobManagementService.deleteJob(jobKey);
+            Map<String, Object> result = jobManagementService.delete(jobKey);
 
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);

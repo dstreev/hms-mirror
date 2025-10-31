@@ -22,6 +22,14 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
   const [loadingPlatformTypes, setLoadingPlatformTypes] = useState(true);
 
   useEffect(() => {
+    console.log('🎨 [BasicInfoStep] Component mounted/updated');
+    console.log('🎨 [BasicInfoStep] isEditMode:', isEditMode);
+    console.log('🎨 [BasicInfoStep] formData:', formData);
+    console.log('🎨 [BasicInfoStep] formData.name:', formData.name);
+    console.log('🎨 [BasicInfoStep] formData.description:', formData.description);
+  }, [formData, isEditMode]);
+
+  useEffect(() => {
     // Fetch platform types from the API
     const fetchPlatformTypes = async () => {
       try {

@@ -17,6 +17,7 @@ import DatasetFilters, { DatasetListFilters } from './DatasetFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 
 interface DatasetSummary {
+  key: string;
   name: string;
   description: string;
   databaseCount: number;
@@ -56,7 +57,8 @@ const ListDatasetsPage: React.FC = () => {
       
       if (response && response.status === 'SUCCESS' && response.data) {
         const datasetSummaries: DatasetSummary[] = Object.entries(response.data).map(([name, dataset]) => ({
-          name,
+          key: dataset.key || name, // Use key from dataset, fallback to name
+          name: dataset.name || name,
           description: dataset.description || '',
           databaseCount: dataset.databases?.length || 0,
           totalTables: dataset.databases?.reduce((total, db) => total + (db.tables?.length || 0), 0) || 0,
@@ -76,12 +78,12 @@ const ListDatasetsPage: React.FC = () => {
     }
   };
 
-  const handleEditDataset = async (datasetName: string) => {
+  const handleEditDataset = async (datasetKey: string, datasetName: string) => {
     try {
       setActionLoading(datasetName);
       setError(null);
 
-      const dataset = await datasetApi.getDataset(datasetName);
+      const dataset = await datasetApi.getDataset(datasetKey);
       if (dataset) {
         // Navigate to dataset wizard with the loaded data
         navigate('/datasets/edit', { state: { dataset, mode: 'edit' } });
@@ -107,7 +109,7 @@ const ListDatasetsPage: React.FC = () => {
       setError(null);
       setActionLoading(deleteDialog.dataset.name);
 
-      const result = await datasetApi.deleteDataset(deleteDialog.dataset.name);
+      const result = await datasetApi.deleteDataset(deleteDialog.dataset.key);
       if (result.success) {
         // Close dialog and refresh list
         setDeleteDialog({ isOpen: false, dataset: null });
@@ -130,11 +132,11 @@ const ListDatasetsPage: React.FC = () => {
     setDeleteDialog({ isOpen: false, dataset: null });
   };
 
-  const handleCopyDataset = async (datasetName: string) => {
+  const handleCopyDataset = async (datasetKey: string, datasetName: string) => {
     try {
       setActionLoading(datasetName);
       // Load the full dataset data from the backend
-      const dataset = await datasetApi.getDataset(datasetName);
+      const dataset = await datasetApi.getDataset(datasetKey);
 
       if (dataset) {
         // Navigate to Dataset Wizard with copy mode - clear the name for user to provide new name
@@ -389,7 +391,7 @@ const ListDatasetsPage: React.FC = () => {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => handleEditDataset(dataset.name)}
+                      onClick={() => handleEditDataset(dataset.key, dataset.name)}
                       disabled={actionLoading === dataset.name}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Edit dataset"
@@ -399,7 +401,7 @@ const ListDatasetsPage: React.FC = () => {
                     </button>
 
                     <button
-                      onClick={() => handleCopyDataset(dataset.name)}
+                      onClick={() => handleCopyDataset(dataset.key, dataset.name)}
                       disabled={actionLoading === dataset.name}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Copy dataset"

@@ -12,6 +12,9 @@ import WizardProgress from '../connections/wizard/WizardProgress';
 import SearchableInput from '../common/SearchableInput';
 
 interface JobFormData {
+  // Hidden field for updates
+  key?: string;
+
   name: string;
   description?: string;
   datasetReference: string;
@@ -77,6 +80,8 @@ const JobBuildWizard: React.FC = () => {
   const [rightConnectionSearchQuery, setRightConnectionSearchQuery] = useState('');
 
   const [jobData, setJobData] = useState<JobFormData>({
+    // Preserve key in edit mode, but not in copy mode
+    key: (editMode && !copyMode) ? existingJobKey : undefined,
     name: copyMode ? '' : (existingJob?.name || ''),
     description: existingJob?.description || '',
     datasetReference: existingJob?.datasetReference || '',

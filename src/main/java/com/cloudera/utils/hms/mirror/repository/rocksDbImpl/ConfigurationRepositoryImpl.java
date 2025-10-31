@@ -35,7 +35,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * RocksDB implementation of ConfigurationRepository.
@@ -55,18 +58,47 @@ public class ConfigurationRepositoryImpl extends AbstractRocksDBRepository<Confi
     }
 
     @Override
-    public ConfigLiteDto save(String id, ConfigLiteDto configLiteDto) throws RepositoryException {
+    public ConfigLiteDto save(ConfigLiteDto configLiteDto) throws RepositoryException {
         // Set timestamps
-        String currentTime = LocalDateTime.now().format(dateFormatter);
-        if (configLiteDto.getCreatedDate() == null) {
-            configLiteDto.setCreatedDate(currentTime);
+        LocalDateTime currentTime = LocalDateTime.now();
+        if (configLiteDto.getCreated() == null) {
+            configLiteDto.setCreated(currentTime);
         }
-        configLiteDto.setModifiedDate(currentTime);
+        configLiteDto.setModified(currentTime);
+
 
         // Ensure configuration name matches the id
-        configLiteDto.setName(id);
+        if (isBlank(configLiteDto.getKey())) {
+            throw new RuntimeException("Configuration key cannot be null or blank");
+        }
 
-        return super.save(id, configLiteDto);
+        return super.save(configLiteDto.getKey(), configLiteDto);
+    }
+
+    @Override
+    public Optional<ConfigLiteDto> findById(String key) throws RepositoryException {
+        // Call parent implementation to get the entity
+        Optional<ConfigLiteDto> result = super.findById(key);
+
+        // If entity exists, ensure the key is set (it's not stored in the JSON value)
+        if (result.isPresent()) {
+            ConfigLiteDto config = result.get();
+            config.setKey(key);
+            return Optional.of(config);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, ConfigLiteDto> findAll() throws RepositoryException {
+        // Call parent implementation
+        Map<String, ConfigLiteDto> allConfigurations = super.findAll();
+
+        // Set the key on each configuration (keys are not stored in the JSON value)
+        allConfigurations.forEach((key, config) -> config.setKey(key));
+
+        return allConfigurations;
     }
 
     @Override

@@ -42,7 +42,7 @@ import java.util.Map;
 public class SampleDataInitializationService {
 
     private final SampleDataProperties sampleDataProperties;
-    private final ConnectionService connectionService;
+    private final ConnectionManagementService connectionManagementService;
     private final DatasetManagementService datasetManagementService;
     private final ConfigurationManagementService configurationManagementService;
 
@@ -203,14 +203,16 @@ public class SampleDataInitializationService {
 
         for (ConnectionDto connectionDto : connectionDtos) {
             try {
-                connectionService.createConnection(connectionDto);
-                log.debug("Created sample connection: {}", connectionDto.getName());
-            } catch (Exception e) {
-                if (e.getMessage().contains("already exists")) {
+                Map<String, Object> result = connectionManagementService.save(connectionDto);
+                if ("SUCCESS".equals(result.get("status"))) {
+                    log.debug("Created sample connection: {}", connectionDto.getName());
+                } else if (result.get("message") != null && result.get("message").toString().contains("already exists")) {
                     log.debug("Connection {} already exists, skipping", connectionDto.getName());
                 } else {
-                    log.warn("Failed to create connection: {}", connectionDto.getName(), e);
+                    log.warn("Failed to create connection: {} - {}", connectionDto.getName(), result.get("message"));
                 }
+            } catch (Exception e) {
+                log.warn("Failed to create connection: {}", connectionDto.getName(), e);
             }
         }
     }
@@ -240,7 +242,7 @@ public class SampleDataInitializationService {
 
         for (DatasetDto dataset : datasets) {
             try {
-                Map<String, Object> result = datasetManagementService.saveDataset(dataset.getName(), dataset);
+                Map<String, Object> result = datasetManagementService.save(dataset);
                 if ("SUCCESS".equals(result.get("status"))) {
                     log.debug("Created sample dataset: {}", dataset.getName());
                 } else {
@@ -276,7 +278,7 @@ public class SampleDataInitializationService {
 
             for (ConfigLiteDto config : configurations) {
                 try {
-                    Map<String, Object> result = configurationManagementService.saveConfiguration(config.getName(), config);
+                    Map<String, Object> result = configurationManagementService.save(config);
                     if ("SUCCESS".equals(result.get("status"))) {
                         log.debug("Created sample configuration: {}", config.getName());
                     } else {

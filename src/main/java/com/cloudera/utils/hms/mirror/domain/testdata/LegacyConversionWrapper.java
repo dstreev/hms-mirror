@@ -17,12 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.domain.testdata;
 
-import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.util.NamespaceUtils;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -31,24 +28,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
-import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-
 @Getter
 @Setter
 @Slf4j
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DBMirrorTest implements Cloneable {
+public class LegacyConversionWrapper implements Cloneable {
 
-    @Schema(description = "The name of the database that will be created during migration.")
-    private String name;
-
-    private Map<Environment, Map<String, String>> properties = new TreeMap<>();
-
-    private Map<String, TableMirror> tableMirrors = null;
-
-    private Map<Environment, Map<String, Number>> environmentStatistics = new TreeMap<>();
+    private Map<String, DBMirror> databases = null;
 
 }

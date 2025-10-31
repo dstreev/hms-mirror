@@ -24,14 +24,15 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static java.util.Objects.nonNull;
@@ -43,12 +44,19 @@ For RocksDB persistence, save this into its own column family 'conversionResult'
 @Getter
 @Setter
 @Slf4j
-public class ConversionResult implements Cloneable {
+public class ConversionResult {
 
-    static final DateFormat df = new SimpleDateFormat("yyyyMMdd_HHmmss");
+    private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
+
     // This would be the top level Key for the RocksDB columnFamily.
-    private String key = df.format(new Date());
+    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
     // This would the value of the key about.  This can't be null.
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime created;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime modified;
 
     private final List<String> supportedFileSystems = new ArrayList<String>(Arrays.asList(
             "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs", "maprfs", "gs"

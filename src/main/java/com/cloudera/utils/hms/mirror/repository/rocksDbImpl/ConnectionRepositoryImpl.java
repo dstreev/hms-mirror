@@ -31,6 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +42,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<ConnectionDto, String> implements ConnectionRepository {
 
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
     public ConnectionRepositoryImpl(RocksDB rocksDB,
                                    @Qualifier("connectionsColumnFamily") ColumnFamilyHandle columnFamily,
                                    @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
@@ -48,15 +51,41 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     }
 
     @Override
-    public ConnectionDto save(String id, ConnectionDto connectionDto) throws RepositoryException {
-        connectionDto.setId(id);
-        connectionDto.setModified(LocalDateTime.now());
-        
+    public ConnectionDto save(ConnectionDto connectionDto) throws RepositoryException {
+
+        LocalDateTime currentTime = LocalDateTime.now();
         if (connectionDto.getCreated() == null) {
-            connectionDto.setCreated(LocalDateTime.now());
+            connectionDto.setCreated(currentTime);
         }
-        
-        return super.save(id, connectionDto);
+        connectionDto.setModified(currentTime);
+
+        return super.save(connectionDto.getKey(), connectionDto);
+    }
+
+    @Override
+    public Optional<ConnectionDto> findById(String key) throws RepositoryException {
+        // Call parent implementation to get the entity
+        Optional<ConnectionDto> result = super.findById(key);
+
+        // If entity exists, ensure the key is set (it's not stored in the JSON value)
+        if (result.isPresent()) {
+            ConnectionDto connection = result.get();
+            connection.setKey(key);
+            return Optional.of(connection);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, ConnectionDto> findAll() throws RepositoryException {
+        // Call parent implementation
+        Map<String, ConnectionDto> allConnections = super.findAll();
+
+        // Set the key on each connection (keys are not stored in the JSON value)
+        allConnections.forEach((key, connection) -> connection.setKey(key));
+
+        return allConnections;
     }
 
     @Override

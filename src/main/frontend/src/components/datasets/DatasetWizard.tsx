@@ -18,7 +18,7 @@ const DatasetWizard: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCopyMode, setIsCopyMode] = useState(false);
-  const [originalDatasetName, setOriginalDatasetName] = useState<string | null>(null);
+  const [originalDatasetKey, setOriginalDatasetKey] = useState<string | null>(null);
 
   const steps = [
     { 
@@ -43,17 +43,23 @@ const DatasetWizard: React.FC = () => {
     const state = location.state as { dataset?: DatasetFormData; mode?: string } | null;
     if (state?.dataset) {
       if (state.mode === 'edit') {
-        setFormData(state.dataset);
-        setIsEditMode(true);
-        setOriginalDatasetName(state.dataset.name);
-      } else if (state.mode === 'copy') {
-        // Copy mode: load data but clear the name
+        // Edit mode: preserve the key and all data
         setFormData({
           ...state.dataset,
+          key: state.dataset.key // Ensure key is preserved for updates
+        });
+        setIsEditMode(true);
+        setOriginalDatasetKey(state.dataset.key || null);
+      } else if (state.mode === 'copy') {
+        // Copy mode: load data but clear the name and don't copy key
+        const { key, ...datasetWithoutKey } = state.dataset;
+        setFormData({
+          ...datasetWithoutKey,
           name: '' // Clear name for copy mode
+          // Don't copy key - backend will generate new key for new dataset
         });
         setIsCopyMode(true);
-        setOriginalDatasetName(null);
+        setOriginalDatasetKey(null);
       }
     }
   }, [location.state]);
@@ -114,9 +120,9 @@ const DatasetWizard: React.FC = () => {
     setSaving(true);
     try {
       let result;
-      // Edit mode: update existing dataset
-      if (isEditMode && originalDatasetName && !isCopyMode) {
-        result = await datasetApi.updateDataset(originalDatasetName, formData);
+      // Edit mode: update existing dataset using the key
+      if (isEditMode && originalDatasetKey && !isCopyMode) {
+        result = await datasetApi.updateDataset(originalDatasetKey, formData);
       } else {
         // Create mode or copy mode: create new dataset
         result = await datasetApi.saveDataset(formData);

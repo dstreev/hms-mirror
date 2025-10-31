@@ -51,7 +51,7 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @return The saved DBMirror instance
      * @throws RepositoryException if there's an error accessing the repository
      */
-    DBMirror save(String conversionResultKey, String databaseName, DBMirror dbMirror) throws RepositoryException;
+    DBMirror save(String conversionResultKey, DBMirror dbMirror) throws RepositoryException;
 
     /**
      * Delete all DBMirror instances for a specific ConversionResult.

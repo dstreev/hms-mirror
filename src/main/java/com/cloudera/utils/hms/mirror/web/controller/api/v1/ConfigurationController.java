@@ -65,7 +65,7 @@ public class ConfigurationController {
         log.info("ConfigurationController.getConfigurations() called");
         
         try {
-            Map<String, Object> result = configurationManagementService.listConfigurations();
+            Map<String, Object> result = configurationManagementService.list();
             
             if ("success".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
@@ -98,7 +98,7 @@ public class ConfigurationController {
         log.info("ConfigurationController.getConfiguration() called - name: {}", configName);
         
         try {
-            Map<String, Object> result = configurationManagementService.loadConfiguration(configName);
+            Map<String, Object> result = configurationManagementService.load(configName);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 return ResponseEntity.ok(result);
@@ -144,18 +144,16 @@ public class ConfigurationController {
             }
             
             // Validate configuration first
-            Map<String, Object> validationResult = configurationManagementService.validateConfiguration(configDto);
+            Map<String, Object> validationResult = configurationManagementService.validate(configDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
             
             // Check if configuration already exists
-            boolean isUpdate = configurationManagementService.configurationExists(configDto.getName());
+            boolean isUpdate = configurationManagementService.exists(configDto.getName());
             
             // Save the configuration using the DTO version to preserve lite structure
-            Map<String, Object> result = configurationManagementService.saveConfiguration(
-                configDto.getName(),
-                configDto);
+            Map<String, Object> result = configurationManagementService.save(configDto);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 HttpStatus status = isUpdate ? HttpStatus.OK : HttpStatus.CREATED;
@@ -195,7 +193,7 @@ public class ConfigurationController {
 
         try {
             // Check if configuration exists
-            boolean configExists = configurationManagementService.configurationExists(configName);
+            boolean configExists = configurationManagementService.exists(configName);
             
             if (!configExists) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -208,8 +206,7 @@ public class ConfigurationController {
             configDto.setName(configName);
 
             // Update the configuration using the DTO version to preserve lite structure
-            Map<String, Object> result = configurationManagementService.saveConfiguration(
-                configName, configDto);
+            Map<String, Object> result = configurationManagementService.save(configDto);
             
             if ("SUCCESS".equals(result.get("status"))) {
                 result.put("operation", "updated");
@@ -243,7 +240,7 @@ public class ConfigurationController {
         log.info("ConfigurationController.deleteConfiguration() called - name: {}", configName);
         
         try {
-            Map<String, Object> result = configurationManagementService.deleteConfiguration(
+            Map<String, Object> result = configurationManagementService.delete(
                 configName);
             
             if ("SUCCESS".equals(result.get("status"))) {
@@ -293,7 +290,7 @@ public class ConfigurationController {
             }
             
             // Load source configuration
-            Map<String, Object> sourceResult = configurationManagementService.loadConfiguration(
+            Map<String, Object> sourceResult = configurationManagementService.load(
                 sourceConfigName);
             
             if (!"SUCCESS".equals(sourceResult.get("status"))) {
@@ -304,7 +301,7 @@ public class ConfigurationController {
             }
             
             // Check if target already exists
-            boolean targetExists = configurationManagementService.configurationExists(
+            boolean targetExists = configurationManagementService.exists(
                 targetConfigName);
             
             if (targetExists) {
@@ -333,8 +330,7 @@ public class ConfigurationController {
                 targetConfigDto.setMigrateNonNative(sourceConfig.isMigrateNonNative());
 
                 // Save the copied configuration
-                Map<String, Object> saveResult = configurationManagementService.saveConfiguration(
-                    targetConfigName, targetConfigDto);
+                Map<String, Object> saveResult = configurationManagementService.save(targetConfigDto);
                 
                 if ("SUCCESS".equals(saveResult.get("status"))) {
                     saveResult.put("operation", "copied");

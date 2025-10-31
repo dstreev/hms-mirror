@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
@@ -35,4 +36,7 @@ public interface ConfigurationRepository extends RocksDBRepository<ConfigLiteDto
      * @throws RepositoryException if there's an error accessing the repository
      */
     List<ConfigLiteDto> findAllSortedByName() throws RepositoryException;
+
+    ConfigLiteDto save(ConfigLiteDto configLiteDto) throws RepositoryException;
+
 }

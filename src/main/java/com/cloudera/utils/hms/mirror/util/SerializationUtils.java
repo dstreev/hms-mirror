@@ -38,7 +38,7 @@ public class SerializationUtils {
     }
 
     @Bean("yamlMapper")
-    public ObjectMapper YAMLMapper(@Value("${hms-mirror.config.yaml.codePointLimit}") int codePointLimit) {
+    public ObjectMapper yamlMapper(@Value("${hms-mirror.config.yaml.codePointLimit}") int codePointLimit) {
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setCodePointLimit(codePointLimit);
         YAMLFactory yamlFactory = YAMLFactory.builder().loaderOptions(loaderOptions).build();

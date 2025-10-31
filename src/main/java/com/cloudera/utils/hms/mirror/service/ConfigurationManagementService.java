@@ -17,18 +17,14 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.repository.ConfigurationRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Service for managing HMS Mirror Configuration persistence and retrieval.
@@ -48,7 +44,7 @@ public class ConfigurationManagementService {
      *
      * @return Map containing configuration listing results
      */
-    public Map<String, Object> listConfigurations() {
+    public Map<String, Object> list() {
         log.debug("Listing all configurations");
         try {
             List<ConfigLiteDto> configurations = configurationRepository.findAllSortedByName();
@@ -64,8 +60,8 @@ public class ConfigurationManagementService {
 
                 Map<String, Object> configInfo = new HashMap<>();
                 configInfo.put("name", config.getName());
-                configInfo.put("createdDate", config.getCreatedDate());
-                configInfo.put("modifiedDate", config.getModifiedDate());
+                configInfo.put("createdDate", config.getCreated());
+                configInfo.put("modifiedDate", config.getModified());
                 configInfo.put("description", config.getDescription());
                 configInfo.put("yamlConfig", ""); // Empty for now, can be populated if needed
 
@@ -96,7 +92,7 @@ public class ConfigurationManagementService {
      * @param configName   The configuration name
      * @return Map containing the configuration load results
      */
-    public Map<String, Object> loadConfiguration(String configName) {
+    public Map<String, Object> load(String configName) {
         log.debug("Loading configuration: {}", configName);
         try {
             Optional<ConfigLiteDto> configOpt = configurationRepository.findById(configName);
@@ -129,20 +125,20 @@ public class ConfigurationManagementService {
      * @param configDto    The configuration DTO to save
      * @return Map containing the save operation results
      */
-    public Map<String, Object> saveConfiguration(String configName, ConfigLiteDto configDto) {
-        log.debug("Saving configuration: {}", configName);
+    public Map<String, Object> save(ConfigLiteDto configDto) {
+        log.debug("Saving configuration: {}", configDto.getKey());
         try {
             // Save using repository (timestamps and name are handled by repository layer)
-            configurationRepository.save(configName, configDto);
+            configurationRepository.save(configDto);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Configuration saved successfully");
-            result.put("key", configName);
+            result.put("key", configDto.getKey());
             return result;
 
         } catch (Exception e) {
-            log.error("Error saving configuration {}", configName, e);
+            log.error("Error saving configuration {}", configDto.getKey(), e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to save configuration: " + e.getMessage());
@@ -156,7 +152,7 @@ public class ConfigurationManagementService {
      * @param configName   The configuration name
      * @return Map containing the delete operation results
      */
-    public Map<String, Object> deleteConfiguration(String configName) {
+    public Map<String, Object> delete(String configName) {
         log.debug("Deleting configuration: {}", configName);
         try {
             Map<String, Object> result = new HashMap<>();
@@ -189,7 +185,7 @@ public class ConfigurationManagementService {
      * @param configName   The configuration name
      * @return true if the configuration exists, false otherwise
      */
-    public boolean configurationExists(String configName) {
+    public boolean exists(String configName) {
         log.debug("Checking if configuration exists: {}", configName);
         try {
             return configurationRepository.existsById(configName);
@@ -222,7 +218,7 @@ public class ConfigurationManagementService {
      * @param configDto The configuration DTO to validate
      * @return Map containing validation results
      */
-    public Map<String, Object> validateConfiguration(ConfigLiteDto configDto) {
+    public Map<String, Object> validate(ConfigLiteDto configDto) {
         log.debug("Validating configuration: {}", configDto.getName());
         Map<String, Object> result = new HashMap<>();
         
@@ -253,8 +249,8 @@ public class ConfigurationManagementService {
      *
      * @return Map containing configuration listing results
      */
-    public Map<String, Object> listConfigurationsByStrategy() {
+    public Map<String, Object> listByStrategy() {
         log.debug("Listing configurations by strategy (legacy API)");
-        return listConfigurations();
+        return list();
     }
 }

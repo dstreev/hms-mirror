@@ -34,6 +34,7 @@ import org.springframework.stereotype.Repository;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -54,7 +55,7 @@ import java.util.List;
 public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<ConversionResult, String>
         implements ConversionResultRepository {
 
-    private static final DateFormat KEY_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd_HHmmss");
+    private static final DateFormat KEY_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
 
     public ConversionResultRepositoryImpl(RocksDB rocksDB,
                                           @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
@@ -69,7 +70,14 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
             conversionResult.setKey(KEY_DATE_FORMAT.format(new Date()));
         }
         log.debug("Saving ConversionResult with key: {}", conversionResult.getKey());
-        return save(conversionResult.getKey(), conversionResult);
+
+        LocalDateTime currentTime = LocalDateTime.now();
+        if (conversionResult.getCreated() == null) {
+            conversionResult.setCreated(currentTime);
+        }
+        conversionResult.setModified(currentTime);
+
+        return super.save(conversionResult.getKey(), conversionResult);
     }
 
     @Override

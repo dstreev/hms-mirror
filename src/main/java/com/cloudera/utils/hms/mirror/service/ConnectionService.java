@@ -28,12 +28,18 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * @deprecated Use ConnectionManagementService instead. This service delegates to
+ * ConnectionManagementService and exists only for backward compatibility.
+ */
 @Service
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
 @RequiredArgsConstructor
 @Slf4j
+@Deprecated
 public class ConnectionService {
 
+    private final ConnectionManagementService connectionManagementService;
     private final ConnectionRepository connectionRepository;
 
     public List<ConnectionDto> getAllConnections() throws RepositoryException {
@@ -43,7 +49,7 @@ public class ConnectionService {
 
     public List<ConnectionDto> getFilteredConnections(String search, String environment, String status) throws RepositoryException {
         List<ConnectionDto> connectionDtos = getAllConnections();
-        
+
         return connectionDtos.stream()
                 .filter(conn -> matchesSearch(conn, search))
                 .filter(conn -> matchesEnvironment(conn, environment))
@@ -52,51 +58,37 @@ public class ConnectionService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<ConnectionDto> getConnectionById(String id) throws RepositoryException {
-        return connectionRepository.findById(id);
+    public Optional<ConnectionDto> getConnectionByKey(String key) throws RepositoryException {
+        return connectionRepository.findById(key);
     }
 
     public ConnectionDto createConnection(ConnectionDto connectionDto) throws RepositoryException {
-        // Use the connection name as the key in RocksDB
-        String id = connectionDto.getName();
-        
         // Check if a connection with this name already exists
-        if (connectionRepository.existsById(id)) {
-            throw new RuntimeException("Connection with name '" + id + "' already exists");
+        if (connectionRepository.existsById(connectionDto.getKey())) {
+            throw new RuntimeException("Connection with name '" + connectionDto.getKey() + "' already exists");
         }
-        
-        connectionDto.setId(id);
-        
-        // If this is the first connection, make it default
-        if (getAllConnections().isEmpty()) {
-            connectionDto.setDefault(true);
-        }
-        
-        log.info("Saving connection to RocksDB with key: {}", id);
-        return connectionRepository.save(id, connectionDto);
+
+        log.info("Saving connection to RocksDB with key: {}", connectionDto.getKey());
+        return connectionRepository.save(connectionDto);
     }
 
-    public ConnectionDto updateConnection(String id, ConnectionDto connectionDto) throws RepositoryException {
-        Optional<ConnectionDto> existingOpt = connectionRepository.findById(id);
+    public ConnectionDto updateConnection(ConnectionDto connectionDto) throws RepositoryException {
+        Optional<ConnectionDto> existingOpt = connectionRepository.findById(connectionDto.getKey());
         if (existingOpt.isEmpty()) {
-            throw new RuntimeException("Connection not found: " + id);
+            throw new RuntimeException("Connection not found: " + connectionDto.getKey());
         }
-        
-        ConnectionDto existing = existingOpt.get();
-        connectionDto.setId(id);
-        connectionDto.setCreated(existing.getCreated());
-        
-        return connectionRepository.save(id, connectionDto);
+
+        return connectionRepository.save(connectionDto);
     }
 
-    public boolean deleteConnection(String id) throws RepositoryException {
-        Optional<ConnectionDto> connectionOpt = connectionRepository.findById(id);
+    public boolean deleteConnection(String key) throws RepositoryException {
+        Optional<ConnectionDto> connectionOpt = connectionRepository.findById(key);
         if (connectionOpt.isEmpty()) {
             return false;
         }
-        
+
         ConnectionDto connectionDto = connectionOpt.get();
-        boolean wasDeleted = connectionRepository.deleteById(id);
+        boolean wasDeleted = connectionRepository.deleteById(key);
 
         return wasDeleted;
     }
@@ -105,52 +97,9 @@ public class ConnectionService {
         return connectionRepository.findDefaultConnection();
     }
 
-    public boolean testConnection(String id) throws RepositoryException {
-        return connectionRepository.testConnection(id);
+    public boolean testConnection(String key) throws RepositoryException {
+        return connectionRepository.testConnection(key);
     }
-
-//    public List<ConnectionDto> getConnectionsByEnvironment(ConnectionDto.Environment environment) throws RocksDBException {
-//        return connectionRepository.findByEnvironment(environment);
-//    }
-//
-//    public ConnectionDto duplicateConnection(String sourceId, String newName) throws RocksDBException {
-//        Optional<ConnectionDto> sourceOpt = connectionRepository.findById(sourceId);
-//        if (sourceOpt.isEmpty()) {
-//            throw new RuntimeException("Source connection not found: " + sourceId);
-//        }
-//
-//        ConnectionDto source = sourceOpt.get();
-//        ConnectionDto duplicate = ConnectionDto.builder()
-//                .name(newName)
-//                .description(source.getDescription() + " (Copy)")
-//                .environment(source.getEnvironment())
-//                .platformType(source.getPlatformType())
-//                .hcfsNamespace(source.getHcfsNamespace())
-//                .hs2Uri(source.getHs2Uri())
-//                .hs2Username(source.getHs2Username())
-//                .hs2Password(source.getHs2Password())
-////                .hs2DriverClassName(source.getHs2DriverClassName())
-////                .hs2JarFile(source.getHs2JarFile())
-////                .hs2Disconnected(source.isHs2Disconnected())
-//                .hs2ConnectionProperties(source.getHs2ConnectionProperties())
-//                .metastoreDirectEnabled(source.isMetastoreDirectEnabled())
-//                .metastoreDirectUri(source.getMetastoreDirectUri())
-//                .metastoreDirectType(source.getMetastoreDirectType())
-//                .metastoreDirectUsername(source.getMetastoreDirectUsername())
-//                .metastoreDirectPassword(source.getMetastoreDirectPassword())
-//                .metastoreDirectMinConnections(source.getMetastoreDirectMinConnections())
-//                .metastoreDirectMaxConnections(source.getMetastoreDirectMaxConnections())
-//                .partitionDiscoveryAuto(source.isPartitionDiscoveryAuto())
-//                .partitionDiscoveryInitMSCK(source.isPartitionDiscoveryInitMSCK())
-//                .partitionBucketLimit(source.getPartitionBucketLimit())
-//                .createIfNotExists(source.isCreateIfNotExists())
-//                .enableAutoTableStats(source.isEnableAutoTableStats())
-//                .enableAutoColumnStats(source.isEnableAutoColumnStats())
-//                .isDefault(false)
-//                .build();
-//
-//        return createConnection(duplicate);
-//    }
 
     private boolean matchesSearch(ConnectionDto conn, String search) {
         if (search == null || search.trim().isEmpty()) {
@@ -172,11 +121,11 @@ public class ConnectionService {
         if (status == null || status.trim().isEmpty() || "all".equals(status)) {
             return true;
         }
-        
+
         ConnectionDto.ConnectionTestResults.TestStatus testStatus =
-                conn.getTestResults() != null ? conn.getTestResults().getStatus() : 
+                conn.getTestResults() != null ? conn.getTestResults().getStatus() :
                 ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
-        
+
         switch (status) {
             case "success":
                 return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS;
@@ -193,35 +142,8 @@ public class ConnectionService {
         // Default connections first
         if (a.isDefault() && !b.isDefault()) return -1;
         if (!a.isDefault() && b.isDefault()) return 1;
-        
+
         // Then by name
         return a.getName().compareToIgnoreCase(b.getName());
     }
-
-    /*
-    private String generateConnectionId(String name) {
-        String baseId = name.toLowerCase()
-                .replaceAll("[^a-z0-9]", "_")
-                .replaceAll("_+", "_")
-                .replaceAll("^_|_$", "");
-        
-        if (baseId.isEmpty()) {
-            baseId = "connection";
-        }
-        
-        String id = baseId;
-        int counter = 1;
-        
-        try {
-            while (connectionRepository.existsById(id)) {
-                id = baseId + "_" + counter++;
-            }
-        } catch (RocksDBException e) {
-            log.warn("Error checking for existing connection ID, using UUID fallback", e);
-            return UUID.randomUUID().toString();
-        }
-        
-        return id;
-    }
-     */
 }

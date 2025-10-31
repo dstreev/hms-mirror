@@ -35,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -58,19 +59,39 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
     public JobDto save(JobDto jobDto) throws RepositoryException {
         // Use the job name as the key for consistency with list and load operations
         // The getKey() method returns name-uuid which should not be used as the storage key
-        return save(jobDto.getName(), jobDto);
+        LocalDateTime currentTime = LocalDateTime.now();
+        if (jobDto.getCreated() == null) {
+            jobDto.setCreated(currentTime);
+        }
+        jobDto.setModified(currentTime);
+
+        return super.save(jobDto.getKey(), jobDto);
     }
 
     @Override
-    public JobDto save(String id, JobDto jobDto) throws RepositoryException {
-        // Set timestamps
-        String currentTime = LocalDateTime.now().format(dateFormatter);
-        if (jobDto.getCreatedDate() == null) {
-            jobDto.setCreatedDate(currentTime);
-        }
-        jobDto.setModifiedDate(currentTime);
+    public Optional<JobDto> findById(String key) throws RepositoryException {
+        // Call parent implementation to get the entity
+        Optional<JobDto> result = super.findById(key);
 
-        return super.save(id, jobDto);
+        // If entity exists, ensure the key is set (it's not stored in the JSON value)
+        if (result.isPresent()) {
+            JobDto job = result.get();
+            job.setKey(key);
+            return Optional.of(job);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, JobDto> findAll() throws RepositoryException {
+        // Call parent implementation
+        Map<String, JobDto> allJobs = super.findAll();
+
+        // Set the key on each job (keys are not stored in the JSON value)
+        allJobs.forEach((key, job) -> job.setKey(key));
+
+        return allJobs;
     }
 
     @Override

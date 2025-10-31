@@ -58,9 +58,10 @@ const NewConnectionWizard: React.FC = () => {
   // Load existing connection data in edit mode or copy mode
   useEffect(() => {
     if (isCopyMode && location.state?.connectionData) {
-      // Copy mode: load data from navigation state and clear name
+      // Copy mode: load data from navigation state and clear name (don't copy key)
       const connectionData = location.state.connectionData;
       const convertedFormData: ConnectionFormData = {
+        // Don't copy key for new connection
         name: '', // Clear name for copy mode
         description: connectionData.description || '',
         environment: connectionData.environment || 'DEV',
@@ -91,6 +92,7 @@ const NewConnectionWizard: React.FC = () => {
       const loadConnection = async () => {
         try {
           setLoading(true);
+          console.log('🔍 [Edit Mode] Fetching connection data for id:', id);
           const response = await fetch(`/hms-mirror/api/v1/connections/${id}`);
 
           if (!response.ok) {
@@ -98,9 +100,13 @@ const NewConnectionWizard: React.FC = () => {
           }
 
           const connectionData = await response.json();
+          console.log('📦 [Edit Mode] Raw API response:', connectionData);
+          console.log('📝 [Edit Mode] Extracted name:', connectionData.name);
+          console.log('📝 [Edit Mode] Extracted description:', connectionData.description);
 
           // Convert the flattened connection data back to form format
           const convertedFormData: ConnectionFormData = {
+            key: connectionData.key, // Preserve the key for updates
             name: connectionData.name || '',
             description: connectionData.description || '',
             environment: connectionData.environment || 'DEV',
@@ -126,15 +132,19 @@ const NewConnectionWizard: React.FC = () => {
             enableAutoColumnStats: connectionData.config?.enableAutoColumnStats || false
           };
 
+          console.log('✅ [Edit Mode] Converted form data:', convertedFormData);
+          console.log('✅ [Edit Mode] Form data name:', convertedFormData.name);
+          console.log('✅ [Edit Mode] Form data description:', convertedFormData.description);
           setFormData(convertedFormData);
+          console.log('✅ [Edit Mode] setFormData called successfully');
         } catch (error) {
-          console.error('Error loading connection:', error);
+          console.error('❌ [Edit Mode] Error loading connection:', error);
           setErrors({ general: 'Failed to load connection data' });
         } finally {
           setLoading(false);
         }
       };
-      
+
       loadConnection();
     }
   }, [isEditMode, id]);

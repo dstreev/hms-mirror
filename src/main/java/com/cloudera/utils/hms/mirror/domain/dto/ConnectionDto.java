@@ -35,10 +35,8 @@ import lombok.Builder;
 
 import java.sql.Driver;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -49,7 +47,22 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ConnectionDto implements Cloneable {
 
-    private String id;
+    private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
+
+    // This would be the top level Key for the RocksDB columnFamily.
+    private String key = null;
+    //    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
+    public String getKey() {
+        if (key == null) {
+            if (name == null) {
+                throw new IllegalStateException("name is required");
+            } else {
+                key = name;
+            }
+        }
+        return key;
+    }
+
     private String name;
     private String description;
     private Environment environment;

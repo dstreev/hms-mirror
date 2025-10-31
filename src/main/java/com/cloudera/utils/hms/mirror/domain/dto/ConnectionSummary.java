@@ -48,7 +48,7 @@ public class ConnectionSummary {
         }
 
         return ConnectionSummary.builder()
-                .id(connectionDto.getId())
+                .id(connectionDto.getKey())
                 .name(connectionDto.getName())
                 .description(connectionDto.getDescription())
                 .environment(connectionDto.getEnvironment() != null ? connectionDto.getEnvironment().name() : null)

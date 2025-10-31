@@ -57,8 +57,8 @@ public abstract class AbstractRocksDBRepository<T, ID> implements RocksDBReposit
         this.typeReference = typeReference;
     }
 
-    @Override
-    public T save(ID id, T entity) throws RepositoryException {
+//    @Override
+    protected T save(ID id, T entity) throws RepositoryException {
         try {
             byte[] key = serializeKey(id);
             byte[] value = objectMapper.writeValueAsBytes(entity);

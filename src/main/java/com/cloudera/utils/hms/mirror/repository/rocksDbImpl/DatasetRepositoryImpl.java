@@ -35,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -55,18 +56,41 @@ public class DatasetRepositoryImpl extends AbstractRocksDBRepository<DatasetDto,
     }
 
     @Override
-    public DatasetDto save(String id, DatasetDto datasetDto) throws RepositoryException {
+    public DatasetDto save(DatasetDto datasetDto) throws RepositoryException {
         // Set timestamps
-        String currentTime = LocalDateTime.now().format(dateFormatter);
-        if (datasetDto.getCreatedDate() == null) {
-            datasetDto.setCreatedDate(currentTime);
+        LocalDateTime currentTime = LocalDateTime.now();
+        if (datasetDto.getCreated() == null) {
+            datasetDto.setCreated(currentTime);
         }
-        datasetDto.setModifiedDate(currentTime);
+        datasetDto.setModified(currentTime);
 
-        // Ensure dataset name matches the id
-        datasetDto.setName(id);
+        return super.save(datasetDto.getKey(), datasetDto);
+    }
 
-        return super.save(id, datasetDto);
+    @Override
+    public Optional<DatasetDto> findById(String key) throws RepositoryException {
+        // Call parent implementation to get the entity
+        Optional<DatasetDto> result = super.findById(key);
+
+        // If entity exists, ensure the key is set (it's not stored in the JSON value)
+        if (result.isPresent()) {
+            DatasetDto dataset = result.get();
+            dataset.setKey(key);
+            return Optional.of(dataset);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, DatasetDto> findAll() throws RepositoryException {
+        // Call parent implementation
+        Map<String, DatasetDto> allDatasets = super.findAll();
+
+        // Set the key on each dataset (keys are not stored in the JSON value)
+        allDatasets.forEach((key, dataset) -> dataset.setKey(key));
+
+        return allDatasets;
     }
 
     @Override

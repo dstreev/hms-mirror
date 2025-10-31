@@ -120,7 +120,7 @@ const ConnectionsPage: React.FC = () => {
     try {
       setError(null);
       
-      const response = await fetch(`/hms-mirror/api/v1/connections/${deleteDialog.connection.id}`, {
+      const response = await fetch(`/hms-mirror/api/v1/connections/${deleteDialog.connection.key}`, {
         method: 'DELETE'
       });
       
@@ -145,7 +145,7 @@ const ConnectionsPage: React.FC = () => {
   const handleDuplicateClick = async (connection: Connection) => {
     try {
       // Load the full connection data from the backend
-      const response = await fetch(`/hms-mirror/api/v1/connections/${connection.id}`);
+      const response = await fetch(`/hms-mirror/api/v1/connections/${connection.key}`);
 
       if (!response.ok) {
         throw new Error('Failed to load connection');
@@ -342,12 +342,12 @@ const ConnectionsPage: React.FC = () => {
           <div className="space-y-4">
             {filteredConnections.map((connection) => (
               <ConnectionCard
-                key={connection.id}
+                key={connection.key}
                 connection={connection}
-                selected={selectedIds.includes(connection.id)}
-                onSelect={(selected) => handleConnectionSelect(connection.id, selected)}
-                onEdit={() => navigate(`/connections/edit/${connection.id}`)}
-                onTest={() => testConnection(connection.id)}
+                selected={selectedIds.includes(connection.key)}
+                onSelect={(selected) => handleConnectionSelect(connection.key, selected)}
+                onEdit={() => navigate(`/connections/edit/${connection.key}`)}
+                onTest={() => testConnection(connection.key)}
                 onDuplicate={() => handleDuplicateClick(connection)}
                 onDelete={() => handleDeleteClick(connection)}
               />

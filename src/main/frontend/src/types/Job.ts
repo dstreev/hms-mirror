@@ -14,6 +14,9 @@ export interface Job {
 }
 
 export interface JobFormData {
+  // Hidden field for updates
+  key?: string;
+
   name: string;
   description?: string;
   datasetReference: string;

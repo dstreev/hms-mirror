@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.JobExecution;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -59,6 +60,7 @@ public class HmsMirrorConfigConverter {
         result.setConnection(Environment.LEFT, toConnectionDto(config, Environment.LEFT));
         result.setConnection(Environment.RIGHT, toConnectionDto(config, Environment.RIGHT));
         result.setJob(toJobDto(config, jobName));
+        result.setJobExecution(toJobExecution(config));
 
         return result;
     }
@@ -358,6 +360,17 @@ public class HmsMirrorConfigConverter {
         dto.setSync(config.isSync());
 
         return dto;
+    }
+
+    /**
+
+     */
+    public static JobExecution toJobExecution(HmsMirrorConfig config) {
+        JobExecution jExec = new JobExecution();
+
+        jExec.setDryRun(!config.isExecute());
+
+        return jExec;
     }
 
     /**

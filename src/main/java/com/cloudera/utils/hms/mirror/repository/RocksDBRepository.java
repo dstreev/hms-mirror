@@ -40,7 +40,7 @@ public interface RocksDBRepository<T, ID> {
      * @return The saved entity
      * @throws RepositoryException if there's an error accessing the repository
      */
-    T save(ID id, T entity) throws RepositoryException;
+//    T save(ID id, T entity) throws RepositoryException;
 
     /**
      * Find an entity by its identifier.

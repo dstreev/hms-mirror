@@ -53,7 +53,7 @@ import java.util.*;
 public class JobManagementService {
 
     private final JobRepository jobRepository;
-    private final ConnectionService connectionService;
+    private final ConnectionManagementService connectionManagementService;
     private final DatasetManagementService datasetManagementService;
     private final ConfigurationManagementService configurationManagementService;
 
@@ -62,7 +62,7 @@ public class JobManagementService {
      *
      * @return Map containing job listing results
      */
-    public Map<String, Object> listJobs() {
+    public Map<String, Object> list() {
         log.debug("Listing all jobs");
         try {
             // Get all jobs with their RocksDB keys
@@ -78,8 +78,8 @@ public class JobManagementService {
                 jobInfo.put("jobKey", rocksDbKey);
                 jobInfo.put("name", jobDto.getName());
                 jobInfo.put("description", jobDto.getDescription());
-                jobInfo.put("createdDate", jobDto.getCreatedDate());
-                jobInfo.put("modifiedDate", jobDto.getModifiedDate());
+                jobInfo.put("createdDate", jobDto.getCreated());
+                jobInfo.put("modifiedDate", jobDto.getModified());
                 jobInfo.put("datasetReference", jobDto.getDatasetReference());
                 jobInfo.put("configReference", jobDto.getConfigReference());
                 jobInfo.put("leftConnectionReference", jobDto.getLeftConnectionReference());
@@ -120,7 +120,7 @@ public class JobManagementService {
      * @param jobKey The job key
      * @return Map containing the job load results
      */
-    public Map<String, Object> loadJob(String jobKey) {
+    public Map<String, Object> load(String jobKey) {
         log.info("Loading job with key: {}", jobKey);
         try {
             Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
@@ -128,7 +128,7 @@ public class JobManagementService {
             Map<String, Object> result = new HashMap<>();
             if (jobOpt.isPresent()) {
                 JobDto job = jobOpt.get();
-                log.info("Successfully loaded job: {} (id: {})", job.getName(), job.getId());
+                log.info("Successfully loaded job: {} (id: {})", job.getName(), job.getKey());
                 result.put("status", "SUCCESS");
                 result.put("job", job);
                 result.put("jobKey", jobKey);
@@ -162,22 +162,22 @@ public class JobManagementService {
      * @param jobDto The job DTO to save
      * @return Map containing the save operation results
      */
-    public Map<String, Object> saveJob(String jobKey, JobDto jobDto) {
-        log.info("Saving job with key: {} (jobDto.name: {}, jobDto.id: {})",
-                jobKey, jobDto.getName(), jobDto.getId());
+    public Map<String, Object> save(JobDto jobDto) {
+        log.info("Saving job with: (jobDto.name: {}, jobDto.key: {})",
+                jobDto.getName(), jobDto.getKey());
         try {
-            JobDto savedJob = jobRepository.save(jobKey, jobDto);
+            JobDto savedJob = jobRepository.save(jobDto);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", "SUCCESS");
             result.put("message", "Job saved successfully");
-            result.put("jobKey", jobKey);
+            result.put("jobKey", savedJob.getKey());
             result.put("job", savedJob);
-            log.info("Successfully saved job with key: {}", jobKey);
+            log.info("Successfully saved job with key: {}", savedJob.getKey());
             return result;
 
         } catch (Exception e) {
-            log.error("Error saving job with key: {}", jobKey, e);
+            log.error("Error saving job with key: {}", jobDto.getKey(), e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to save job: " + e.getMessage());
@@ -192,29 +192,29 @@ public class JobManagementService {
      * @param jobDto The updated job DTO
      * @return Map containing the update operation results
      */
-    public Map<String, Object> updateJob(String jobKey, JobDto jobDto) {
-        log.debug("Updating job: {}", jobKey);
+    public Map<String, Object> update(JobDto jobDto) {
+        log.debug("Updating job: {}", jobDto.getKey());
         try {
-            Optional<JobDto> existingJobOpt = jobRepository.findById(jobKey);
+            Optional<JobDto> existingJobOpt = jobRepository.findById(jobDto.getKey());
             Map<String, Object> result = new HashMap<>();
 
             if (existingJobOpt.isPresent()) {
                 // Preserve original creation date
                 JobDto existingJob = existingJobOpt.get();
-                if (existingJob.getCreatedDate() != null) {
-                    jobDto.setCreatedDate(existingJob.getCreatedDate());
+                if (existingJob.getCreated() != null) {
+                    jobDto.setCreated(existingJob.getCreated());
                 }
 
                 // Save the updated job
-                return saveJob(jobKey, jobDto);
+                return save(jobDto);
             } else {
                 result.put("status", "NOT_FOUND");
-                result.put("message", "Job not found: " + jobKey);
+                result.put("message", "Job not found: " + jobDto.getKey());
                 return result;
             }
 
         } catch (RepositoryException e) {
-            log.error("Error updating job {}", jobKey, e);
+            log.error("Error updating job {}", jobDto.getKey(), e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("status", "ERROR");
             errorResult.put("message", "Failed to update job: " + e.getMessage());
@@ -228,7 +228,7 @@ public class JobManagementService {
      * @param jobKey The job key
      * @return Map containing the delete operation results
      */
-    public Map<String, Object> deleteJob(String jobKey) {
+    public Map<String, Object> delete(String jobKey) {
         log.debug("Deleting job: {}", jobKey);
         try {
             boolean existed = jobRepository.deleteById(jobKey);
@@ -260,7 +260,7 @@ public class JobManagementService {
      * @param jobKey The job key
      * @return true if the job exists, false otherwise
      */
-    public boolean jobExists(String jobKey) {
+    public boolean exists(String jobKey) {
         log.debug("Checking if job exists: {}", jobKey);
         try {
             return jobRepository.existsById(jobKey);
@@ -276,7 +276,7 @@ public class JobManagementService {
      * @param jobDto The job DTO to validate
      * @return Map containing validation results
      */
-    public Map<String, Object> validateJob(JobDto jobDto) {
+    public Map<String, Object> validate(JobDto jobDto) {
         log.debug("Validating job: {}", jobDto.getName());
         Map<String, Object> result = new HashMap<>();
         List<String> errors = new ArrayList<>();
@@ -464,26 +464,28 @@ public class JobManagementService {
             log.debug("Found job: {}", jobDto.getName());
 
             // Fetch referenced DTOs
-            ConnectionDto leftConnection = connectionService.getConnectionById(jobDto.getLeftConnectionReference()).orElse(null);
-            if (leftConnection == null) {
+            Map<String, Object> leftConnResult = connectionManagementService.load(jobDto.getLeftConnectionReference());
+            if (!"SUCCESS".equals(leftConnResult.get("status"))) {
                 log.error("Left connection not found: {}", jobDto.getLeftConnectionReference());
                 return null;
             }
+            ConnectionDto leftConnection = (ConnectionDto) leftConnResult.get("data");
 
-            ConnectionDto rightConnection = connectionService.getConnectionById(jobDto.getRightConnectionReference()).orElse(null);
-            if (rightConnection == null) {
+            Map<String, Object> rightConnResult = connectionManagementService.load(jobDto.getRightConnectionReference());
+            if (!"SUCCESS".equals(rightConnResult.get("status"))) {
                 log.error("Right connection not found: {}", jobDto.getRightConnectionReference());
                 return null;
             }
+            ConnectionDto rightConnection = (ConnectionDto) rightConnResult.get("data");
 
-            Map<String, Object> datasetResult = datasetManagementService.loadDataset(jobDto.getDatasetReference());
+            Map<String, Object> datasetResult = datasetManagementService.load(jobDto.getDatasetReference());
             if (!"SUCCESS".equals(datasetResult.get("status"))) {
                 log.error("Dataset not found: {}", jobDto.getDatasetReference());
                 return null;
             }
             DatasetDto datasetDto = (DatasetDto) datasetResult.get("dataset");
 
-            Map<String, Object> configResult = configurationManagementService.loadConfiguration(jobDto.getConfigReference());
+            Map<String, Object> configResult = configurationManagementService.load(jobDto.getConfigReference());
             if (!"SUCCESS".equals(configResult.get("status"))) {
                 log.error("Configuration not found: {}", jobDto.getConfigReference());
                 return null;

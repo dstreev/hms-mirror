@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,8 +42,8 @@ import static java.util.Objects.nonNull;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DBMirror implements Cloneable {
 
-    @JsonIgnore
     private String key;
+
     @Schema(description = "The name of the database that will be created during migration.")
     private String name;
 
@@ -66,10 +67,8 @@ public class DBMirror implements Cloneable {
 
     /*
     Setting this to Ignore because we don't want it to be serialized as this could be a large object.
-
-    TODO: WIP, Leaving it for now because of all the dependencies
      */
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Map<String, TableMirror> tableMirrors = null;
 
     private Map<Environment, Map<String, Number>> environmentStatistics = new TreeMap<>();

@@ -2,12 +2,15 @@ package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.core.HybridConfig;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -17,20 +20,24 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class JobDto implements Cloneable {
 
-    @Schema(description = "Unique identifier for the job", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
-    private UUID id = UUID.randomUUID();
+    private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
-    @Schema(description = "Unique identifier for the job", example = "job-12345")
+    // This would be the top level Key for the RocksDB columnFamily.
+    @com.fasterxml.jackson.annotation.JsonAlias("id")  // Backward compatibility for old data stored with "id" field
+    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
+
+    @Schema(description = "Name for the job", example = "job-12345")
     private String name;
 
     @Schema(description = "Description of the job", example = "Migration job for production tables")
     private String description;
 
-    @Schema(description = "Creation timestamp")
-    private String createdDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime created;
 
-    @Schema(description = "Last modification timestamp")
-    private String modifiedDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime modified;
+
 
     @Schema(description = "A reference to the dataset used for this job")
     private String datasetReference;
@@ -53,10 +60,6 @@ public class JobDto implements Cloneable {
     private String loadTestDataFile = null;
     private boolean skipLinkCheck = Boolean.FALSE;
 
-    @JsonIgnore
-    public String getKey() {
-        return this.getName() + "-" + this.id.toString();
-    }
 //    private boolean replace = Boolean.FALSE;
 
 //    @Schema(description = "Flag to indicate if this job should reset the right table")

@@ -21,7 +21,6 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
@@ -38,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -143,9 +141,24 @@ public class HMSMirrorAppService {
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
 
+        initializeExecutionContext();
+
+        // Save the ConversionResult object.
+        try {
+            getConversionResultRepository().save(conversionResult);
+        } catch (RepositoryException e) {
+            log.error("Issue saving ConversionResult", e);
+        }
+        // Save the RunStatus object
+        try {
+            getRunStatusRepository().saveByKey(conversionResult.getKey(), conversionResult.getRunStatus());
+        } catch (RepositoryException e) {
+            log.error("Issue saving RunStatus", e);
+        }
+
         CompletableFuture<Boolean> theWork;
 
-        theWork = CompletableFuture.supplyAsync(this::theWork);
+        theWork = CompletableFuture.supplyAsync(() -> theWork(conversionResult));
 
         return theWork;
     }
@@ -160,6 +173,8 @@ public class HMSMirrorAppService {
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
 
+        initializeExecutionContext();
+
         // Save the ConversionResult object.
         try {
             getConversionResultRepository().save(conversionResult);
@@ -173,9 +188,8 @@ public class HMSMirrorAppService {
             log.error("Issue saving RunStatus", e);
         }
         CompletableFuture<Boolean> theWork;
-        RunStatus runStatus = conversionResult.getRunStatus();
 
-        theWork = CompletableFuture.supplyAsync(this::theWork);
+        theWork = CompletableFuture.supplyAsync(() -> theWork(conversionResult));
 
         return theWork;
     }
@@ -368,7 +382,7 @@ public class HMSMirrorAppService {
             for (DatasetDto.DatabaseSpec database : conversionResult.getDataset().getDatabases()) {
                 runStatus.getOperationStatistics().getCounts().incrementDatabases();
                 DBMirror dbMirror = new DBMirror();
-                dbMirror.setKey(conversionResult.getKey());
+//                dbMirror.setKey(conversionResult.getKey());
                 dbMirror.setName(database.getDatabaseName());
 
                 try {
@@ -1009,11 +1023,13 @@ public class HMSMirrorAppService {
      *
      * @return true if the workflow completed successfully, false otherwise
      */
-    private Boolean theWork() {
+    private Boolean theWork(ConversionResult conversionResult) {
         Boolean rtn = Boolean.TRUE;
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
 
         // Stage 1: Initialize execution context
-        ConversionResult conversionResult = initializeExecutionContext();
+//        ConversionResult conversionResult =
         RunStatus runStatus = conversionResult.getRunStatus();
 
         // Stage 2: Validate configuration

@@ -68,7 +68,7 @@ public class SystemConfigurationInitializationService {
 
             for (ConfigLiteDto config : configurations) {
                 try {
-                    Map<String, Object> result = configurationManagementService.saveConfiguration(config.getName(), config);
+                    Map<String, Object> result = configurationManagementService.save(config);
                     if ("SUCCESS".equals(result.get("status"))) {
                         log.debug("Created/updated system configuration: {}", config.getName());
                     } else {

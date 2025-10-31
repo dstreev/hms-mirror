@@ -20,16 +20,16 @@ package com.cloudera.utils.hms.mirror.domain.dto;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.TableType;
 import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -44,6 +44,22 @@ import java.util.regex.Pattern;
 @Schema(description = "Dataset configuration containing databases and table specifications")
 public class DatasetDto implements Cloneable {
 
+    private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
+
+    // This would be the top level Key for the RocksDB columnFamily.
+    private String key = null;
+    //    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
+    public String getKey() {
+        if (key == null) {
+            if (name == null) {
+                throw new IllegalStateException("name is required");
+            } else {
+                key = name;
+            }
+        }
+        return key;
+    }
+
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
     private String name;
 
@@ -53,11 +69,11 @@ public class DatasetDto implements Cloneable {
     @Schema(description = "List of databases included in this dataset")
     private List<DatabaseSpec> databases = new ArrayList<>();
 
-    @Schema(description = "Creation timestamp")
-    private String createdDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime created;
 
-    @Schema(description = "Last modification timestamp")
-    private String modifiedDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime modified;
 
     public DatabaseSpec getDatabase(String databaseName) {
         if (databaseName != null && databases != null) {
@@ -158,8 +174,6 @@ public class DatasetDto implements Cloneable {
         // Copy primitive and immutable fields
         clone.name = this.name;
         clone.description = this.description;
-        clone.createdDate = this.createdDate;
-        clone.modifiedDate = this.modifiedDate;
 
         // Deep clone databases list
         if (this.databases != null) {

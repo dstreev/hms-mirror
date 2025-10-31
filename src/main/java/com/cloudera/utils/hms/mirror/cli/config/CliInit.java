@@ -20,7 +20,7 @@ package com.cloudera.utils.hms.mirror.cli.config;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.domain.testdata.DBMirrorTest;
+import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
 import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
@@ -36,6 +36,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -68,6 +69,7 @@ public class CliInit {
     @NonNull
     private final ExecutionContextService executionContextService;
     @NonNull
+    @Qualifier("yamlMapper")
     private final ObjectMapper yamlMapper;
     @NonNull
     private final ConversionResultRepository conversionResultRepository;
@@ -107,8 +109,8 @@ public class CliInit {
     private HmsMirrorConfig initializeConfig(String configFilename) {
         HmsMirrorConfig config;
         log.info("Initializing Config.");
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        yamlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         URL cfgUrl = null;
         try {
             // Load file from classpath and convert to string
@@ -133,7 +135,7 @@ public class CliInit {
             }
 
             String yamlCfgFile = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
-            config = mapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
+            config = yamlMapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
             config.setConfigFilename(configFilename);
         } catch (IOException e) {
             log.error("IO Exception", e);
@@ -249,8 +251,8 @@ public class CliInit {
 //        }
 //    }
 
-    private DBMirrorTest loadDBMirrorFromFile(String filename) {
-        DBMirrorTest dbMirror = null;
+    private LegacyConversionWrapper loadDBMirrorFromFile(String filename) {
+        LegacyConversionWrapper dbMirror = null;
         try {
             log.info("Reconstituting DBMirror from file: {}", filename);
             log.info("Checking 'classpath' for DBMirror file");
@@ -265,7 +267,7 @@ public class CliInit {
                 configURL = conversionFile.toURI().toURL();
             }
             String yamlCfgFile = IOUtils.toString(configURL, StandardCharsets.UTF_8);
-            dbMirror = yamlMapper.readerFor(DBMirrorTest.class).readValue(yamlCfgFile);
+            dbMirror = yamlMapper.readerFor(LegacyConversionWrapper.class).readValue(yamlCfgFile);
         } catch (UnrecognizedPropertyException upe) {
             log.error("There may have been a breaking change in the configuration since the previous " +
                     "release. Review the note below and remove the 'Unrecognized field' from the configuration and try " +
@@ -309,8 +311,8 @@ public class CliInit {
             if (config.isLoadingTestData()) {
                 // Load Test Data.
                 conversionResult.setMockTestDataset(Boolean.TRUE);
-                DBMirrorTest dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
-                getConversionResultService().loadDBMirrorTest(dbMirrorTest);
+                LegacyConversionWrapper dbMirrorTest = loadDBMirrorFromFile(config.getLoadTestDataFile());
+                getConversionResultService().loadLegacyConversionWrapperForTestData(dbMirrorTest);
             }
 
             getConversionResultRepository().save(conversionResult);

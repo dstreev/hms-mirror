@@ -20,13 +20,12 @@ package com.cloudera.utils.hms.mirror.web.controller;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
-import com.cloudera.utils.hms.mirror.service.ConnectionService;
+import com.cloudera.utils.hms.mirror.service.ConnectionManagementService;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.rocksdb.RocksDBException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,13 +45,13 @@ import java.util.Optional;
 public class ConnectionController {
 
     @NonNull
-    private final ConnectionService connectionService;
+    private final ConnectionManagementService connectionManagementService;
     @NonNull
     private final ConnectionRepository connectionRepository;
 
     private Map<String, Object> convertConnectionToMap(ConnectionDto conn) {
         Map<String, Object> connData = new HashMap<>();
-        connData.put("id", conn.getId());
+        connData.put("key", conn.getKey());
         connData.put("name", conn.getName());
         connData.put("description", conn.getDescription());
         connData.put("environment", conn.getEnvironment() != null ? conn.getEnvironment().name() : null);
@@ -151,13 +150,28 @@ public class ConnectionController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "environment", required = false) String environment,
             @RequestParam(value = "status", required = false, defaultValue = "all") String status) {
-        
+
         try {
-            log.info("ConnectionController.getConnections() called - search: {}, environment: {}, status: {}", 
+            log.info("ConnectionController.getConnections() called - search: {}, environment: {}, status: {}",
                      search, environment, status);
-            
-            // Step 1: Try to retrieve connections from service
-            List<ConnectionDto> connectionDtos = getConnectionService().getFilteredConnections(search, environment, status);
+
+            // Use the management service which returns Map<String, Object>
+            Map<String, Object> result = connectionManagementService.listFiltered(search, environment, status);
+
+            // Check status and return appropriate HTTP status code
+            String resultStatus = (String) result.get("status");
+            if ("ERROR".equals(resultStatus)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", result.get("message"));
+                errorResponse.put("connections", List.of());
+                errorResponse.put("count", 0);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            }
+
+            // Transform the data into the legacy format for backward compatibility
+            @SuppressWarnings("unchecked")
+            Map<String, ConnectionDto> data = (Map<String, ConnectionDto>) result.get("data");
+            List<ConnectionDto> connectionDtos = data != null ? new java.util.ArrayList<>(data.values()) : List.of();
             log.info("Successfully retrieved {} connections from service", connectionDtos.size());
             
             // Step 2: Try to create a minimal response with just count first
@@ -173,7 +187,7 @@ public class ConnectionController {
             List<Map<String, Object>> detailedConnections = connectionDtos.stream()
                     .map(conn -> {
                         Map<String, Object> connData = new HashMap<>();
-                        connData.put("id", conn.getId());
+                        connData.put("key", conn.getKey());
                         connData.put("name", conn.getName());
                         connData.put("description", conn.getDescription());
                         connData.put("environment", conn.getEnvironment() != null ? conn.getEnvironment().name() : null);
@@ -293,134 +307,119 @@ public class ConnectionController {
         }
     }
 
-    @GetMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<Map<String, Object>> getConnection(@PathVariable("id") String id) {
-        try {
-            log.info("Getting connection by ID: {}", id);
-            
-            Optional<ConnectionDto> connection = getConnectionService().getConnectionById(id);
-            if (connection.isPresent()) {
-                Map<String, Object> connectionData = convertConnectionToMap(connection.get());
-                return ResponseEntity.ok(connectionData);
-            } else {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("error", "Connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-            }
-            
-        } catch (RepositoryException e) {
-            log.error("Error retrieving connection {}", id, e);
+    @GetMapping(value = "/{key}", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> getConnection(@PathVariable("key") String key) {
+        log.info("Getting connection by key: {}", key);
+
+        Map<String, Object> result = connectionManagementService.load(key);
+        String status = (String) result.get("status");
+
+        if ("SUCCESS".equals(status)) {
+            // Convert the connection data to the legacy format for backward compatibility
+            ConnectionDto connection = (ConnectionDto) result.get("data");
+            Map<String, Object> connectionData = convertConnectionToMap(connection);
+            return ResponseEntity.ok(connectionData);
+        } else if ("NOT_FOUND".equals(status)) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to retrieve connection: " + e.getMessage());
+            errorResponse.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } else {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", result.get("message"));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
     @PostMapping(produces = "application/json", consumes = "application/json")
     public ResponseEntity<Map<String, Object>> createConnection(@RequestBody ConnectionRequest request) {
-        try {
-            log.info("Creating new connection: {}", request.getName());
-            
-            ConnectionDto connectionDto = request.toConnection();
-            ConnectionDto savedConnectionDto = getConnectionService().createConnection(connectionDto);
-            
+        log.info("Creating new connection: {}", request.getName());
+
+        ConnectionDto connectionDto = request.toConnection();
+        Map<String, Object> result = connectionManagementService.save(connectionDto);
+        String status = (String) result.get("status");
+
+        if ("SUCCESS".equals(status)) {
             Map<String, Object> response = new HashMap<>();
-            response.put("connection", savedConnectionDto);
-            response.put("message", "Connection created successfully");
-            
+            response.put("message", result.get("message"));
+            response.put("key", result.get("key"));
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (RepositoryException e) {
-            log.error("Error creating connection", e);
+        } else {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to create connection: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            log.error("Unexpected error creating connection", e);
+            errorResponse.put("error", result.get("message"));
+            HttpStatus httpStatus = "NOT_FOUND".equals(status) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(httpStatus).body(errorResponse);
+        }
+    }
+
+    @PutMapping(value = "/{key}", produces = "application/json", consumes = "application/json")
+    public ResponseEntity<Map<String, Object>> updateConnection(@PathVariable("key") String key, @RequestBody ConnectionRequest request) {
+        log.info("Updating connection: {}", key);
+
+        ConnectionDto connectionDto = request.toConnection();
+        // Ensure the key from the path is set on the DTO
+        connectionDto.setKey(key);
+
+        Map<String, Object> result = connectionManagementService.update(connectionDto);
+        String status = (String) result.get("status");
+
+        if ("SUCCESS".equals(status)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", result.get("message"));
+            response.put("key", result.get("key"));
+            return ResponseEntity.ok(response);
+        } else if ("NOT_FOUND".equals(status)) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Unexpected error: " + e.getMessage());
+            errorResponse.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } else {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", result.get("message"));
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
-    @PutMapping(value = "/{id}", produces = "application/json", consumes = "application/json")
-    public ResponseEntity<Map<String, Object>> updateConnection(@PathVariable("id") String id, @RequestBody ConnectionRequest request) {
-        try {
-            log.info("Updating connection: {}", id);
-            
-            ConnectionDto connectionDto = request.toConnection();
-            ConnectionDto updatedConnectionDto = getConnectionService().updateConnection(id, connectionDto);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("connection", updatedConnectionDto);
-            response.put("message", "Connection updated successfully");
-            
+    @DeleteMapping(value = "/{key}", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> deleteConnection(@PathVariable("key") String key) {
+        log.info("Deleting connection: {}", key);
+
+        Map<String, Object> result = connectionManagementService.delete(key);
+        String status = (String) result.get("status");
+
+        Map<String, Object> response = new HashMap<>();
+        if ("SUCCESS".equals(status)) {
+            response.put("message", result.get("message"));
             return ResponseEntity.ok(response);
-            
-        } catch (RepositoryException e) {
-            log.error("Error updating connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to update connection: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            log.error("Unexpected error updating connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-                errorResponse.put("error", "Connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-            } else {
-                errorResponse.put("error", "Unexpected error: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-            }
+        } else if ("NOT_FOUND".equals(status)) {
+            response.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } else {
+            response.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    @DeleteMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<Map<String, Object>> deleteConnection(@PathVariable("id") String id) {
-        try {
-            log.info("Deleting connection: {}", id);
-            
-            boolean deleted = getConnectionRepository().deleteById(id);
-            Map<String, Object> response = new HashMap<>();
-            
-            if (deleted) {
-                response.put("message", "Connection deleted successfully");
-                return ResponseEntity.ok(response);
-            } else {
-                response.put("error", "Connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-            }
-            
-        } catch (RepositoryException e) {
-            log.error("Error deleting connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to delete connection: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
+    @PostMapping(value = "/{key}/test", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> testConnection(@PathVariable("key") String key) {
+        log.info("Testing connection: {}", key);
 
-    @PostMapping(value = "/{id}/test", produces = "application/json")
-    public ResponseEntity<Map<String, Object>> testConnection(@PathVariable("id") String id) {
-        try {
-            log.info("Testing connection: {}", id);
-            
-            boolean testResult = getConnectionService().testConnection(id);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", testResult);
-            response.put("message", testResult ? "Connection test successful" : "Connection test failed");
-            
+        Map<String, Object> result = connectionManagementService.test(key);
+        String status = (String) result.get("status");
+
+        Map<String, Object> response = new HashMap<>();
+        if ("SUCCESS".equals(status)) {
+            response.put("success", true);
+            response.put("message", result.get("message"));
             return ResponseEntity.ok(response);
-            
-        } catch (RepositoryException e) {
-            log.error("Error testing connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-                errorResponse.put("error", "Connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-            } else {
-                errorResponse.put("error", "Failed to test connection: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-            }
+        } else if ("FAILED".equals(status)) {
+            response.put("success", false);
+            response.put("message", result.get("message"));
+            return ResponseEntity.ok(response);
+        } else if ("NOT_FOUND".equals(status)) {
+            response.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } else {
+            response.put("error", result.get("message"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 

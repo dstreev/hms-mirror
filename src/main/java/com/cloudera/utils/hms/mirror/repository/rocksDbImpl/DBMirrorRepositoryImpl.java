@@ -31,11 +31,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Implementation of DBMirrorRepository that persists DBMirror instances to RocksDB.
@@ -89,10 +90,14 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
     }
 
     @Override
-    public DBMirror save(String conversionResultKey, String databaseName, DBMirror dbMirror)
+    public DBMirror save(String conversionResultKey, DBMirror dbMirror)
             throws RepositoryException {
-        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
-        return save(compositeKey, dbMirror);
+        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, dbMirror.getName());
+        // Don't reset it if it's already set.  Prevents from creating orphans.'
+        if (isBlank(dbMirror.getKey())) {
+            dbMirror.setKey(compositeKey);
+        }
+        return super.save(compositeKey, dbMirror);
     }
 
     @Override
