@@ -17,15 +17,15 @@
 
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import com.cloudera.utils.hms.mirror.repository.JobRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.JobRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -50,9 +50,16 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public JobRepositoryImpl(RocksDB rocksDB,
-                            @Qualifier("jobsColumnFamily") ColumnFamilyHandle columnFamily,
-                            @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<JobDto>() {});
+                             @Qualifier("jobsColumnFamily") ColumnFamilyHandle columnFamily,
+                             @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<JobDto>() {
+        });
+    }
+
+    @Override
+    public boolean delete(JobDto jobDto) throws RepositoryException {
+        // TODO: Need to cleanup the TableMirror References too.
+        return deleteById(jobDto.getKey());
     }
 
     @Override
@@ -65,33 +72,10 @@ public class JobRepositoryImpl extends AbstractRocksDBRepository<JobDto, String>
         }
         jobDto.setModified(currentTime);
 
-        return super.save(jobDto.getKey(), jobDto);
-    }
-
-    @Override
-    public Optional<JobDto> findById(String key) throws RepositoryException {
-        // Call parent implementation to get the entity
-        Optional<JobDto> result = super.findById(key);
-
-        // If entity exists, ensure the key is set (it's not stored in the JSON value)
-        if (result.isPresent()) {
-            JobDto job = result.get();
-            job.setKey(key);
-            return Optional.of(job);
+        if (jobDto.getKey() == null) {
+            throw new RepositoryException("JobDto does not have a key");
         }
-
-        return result;
-    }
-
-    @Override
-    public Map<String, JobDto> findAll() throws RepositoryException {
-        // Call parent implementation
-        Map<String, JobDto> allJobs = super.findAll();
-
-        // Set the key on each job (keys are not stored in the JSON value)
-        allJobs.forEach((key, job) -> job.setKey(key));
-
-        return allJobs;
+        return super.save(jobDto.getKey(), jobDto);
     }
 
     @Override

@@ -61,6 +61,7 @@ public class HmsMirrorConfigConverter {
         result.setConnection(Environment.RIGHT, toConnectionDto(config, Environment.RIGHT));
         result.setJob(toJobDto(config, jobName));
         result.setJobExecution(toJobExecution(config));
+        result.setTranslator(config.getTranslator().clone());
 
         return result;
     }

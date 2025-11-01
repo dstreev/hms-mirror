@@ -122,7 +122,7 @@ public class ConnectionManagementService {
     public Map<String, Object> load(String key) {
         log.debug("Loading connection: {}", key);
         try {
-            Optional<ConnectionDto> connectionOpt = connectionRepository.findById(key);
+            Optional<ConnectionDto> connectionOpt = connectionRepository.findByKey(key);
 
             Map<String, Object> result = new HashMap<>();
             if (connectionOpt.isPresent()) {
@@ -190,7 +190,7 @@ public class ConnectionManagementService {
         log.debug("Updating connection: {}", connectionDto.getKey());
         try {
             // Check if connection exists first
-            Optional<ConnectionDto> existingConnectionOpt = connectionRepository.findById(connectionDto.getKey());
+            Optional<ConnectionDto> existingConnectionOpt = connectionRepository.findByKey(connectionDto.getKey());
             Map<String, Object> result = new HashMap<>();
 
             if (existingConnectionOpt.isPresent()) {
@@ -257,15 +257,15 @@ public class ConnectionManagementService {
     }
 
     /**
-     * Tests a connection by key.
-     *
      * @param key The connection key to test
      * @return Map containing the test operation results
      */
     public Map<String, Object> test(String key) {
         log.debug("Testing connection: {}", key);
-        try {
-            boolean testResult = connectionRepository.testConnection(key);
+
+//        try {
+            // TODO: Fix Connection Test
+            boolean testResult = Boolean.FALSE; // connectionRepository.testConnection(key);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", testResult ? "SUCCESS" : "FAILED");
@@ -275,27 +275,27 @@ public class ConnectionManagementService {
 
             return result;
 
-        } catch (RepositoryException e) {
-            log.error("Error testing connection {}", key, e);
-            Map<String, Object> errorResult = new HashMap<>();
-
-            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-                errorResult.put("status", "NOT_FOUND");
-                errorResult.put("message", "Connection not found: " + key);
-            } else {
-                errorResult.put("status", "ERROR");
-                errorResult.put("message", "Failed to test connection: " + e.getMessage());
-            }
-
-            return errorResult;
-        }
+//        } catch (RepositoryException e) {
+//            log.error("Error testing connection {}", key, e);
+//            Map<String, Object> errorResult = new HashMap<>();
+//
+//            if (e.getMessage() != null && e.getMessage().contains("not found")) {
+//                errorResult.put("status", "NOT_FOUND");
+//                errorResult.put("message", "Connection not found: " + key);
+//            } else {
+//                errorResult.put("status", "ERROR");
+//                errorResult.put("message", "Failed to test connection: " + e.getMessage());
+//            }
+//
+//            return errorResult;
+//        }
     }
 
     /**
+     *
      * Gets the default connection.
      *
      * @return Map containing the default connection
-     */
     public Map<String, Object> getDefault() {
         log.debug("Getting default connection");
         try {
@@ -320,6 +320,7 @@ public class ConnectionManagementService {
             return errorResult;
         }
     }
+     */
 
     // ============================================================================
     // Internal helper methods (maintain existing functionality)

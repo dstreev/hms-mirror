@@ -81,7 +81,7 @@ public class DatasetManagementService {
     public Map<String, Object> load(String key) {
         log.debug("Loading dataset: {}", key);
         try {
-            Optional<DatasetDto> datasetOpt = datasetRepository.findById(key);
+            Optional<DatasetDto> datasetOpt = datasetRepository.findByKey(key);
 
             Map<String, Object> result = new HashMap<>();
             if (datasetOpt.isPresent()) {
@@ -141,7 +141,7 @@ public class DatasetManagementService {
         log.debug("Updating dataset: {}", datasetDto.getKey());
         try {
             // Check if dataset exists first
-            Optional<DatasetDto> existingDatasetOpt = datasetRepository.findById(datasetDto.getKey());
+            Optional<DatasetDto> existingDatasetOpt = datasetRepository.findByKey(datasetDto.getKey());
             Map<String, Object> result = new HashMap<>();
 
             if (existingDatasetOpt.isPresent()) {

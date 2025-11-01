@@ -44,11 +44,9 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class TableMirror implements Cloneable {
 //    @JsonIgnore
     private final List<Marker> steps = new ArrayList<Marker>();
-    /*
-    Use to indicate the tblMirror should be removed from processing, post setup.
-     */
-//    @JsonIgnore
-//    private String key;// = UUID.randomUUID().toString().replaceAll("-", "");
+
+    private String key;
+
     private String name;
     private Date start = new Date();
     @JsonIgnore

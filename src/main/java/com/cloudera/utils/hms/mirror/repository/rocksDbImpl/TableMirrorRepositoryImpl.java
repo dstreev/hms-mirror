@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
-import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +32,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,10 +55,15 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
     }
 
     @Override
+    public boolean delete(TableMirror tableMirror) throws RepositoryException {
+        return deleteById(tableMirror.getKey());
+    }
+
+    @Override
     public java.util.Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName)
             throws RepositoryException {
         String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
-        return findById(compositeKey);
+        return super.findByKey(compositeKey);
     }
 
     @Override
@@ -97,6 +103,16 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
     @Override
     public TableMirror save(String conversionResultKey, String databaseName, TableMirror tableMirror) throws RepositoryException {
         String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableMirror.getName());
+        tableMirror.setKey(compositeKey);
+        return save(compositeKey, tableMirror);
+    }
+
+    @Override
+    public TableMirror save(TableMirror tableMirror) throws RepositoryException {
+        String compositeKey = tableMirror.getKey();
+        if (compositeKey == null) {
+            throw new RepositoryException("TableMirror does not have a key for table: " + tableMirror.getName());
+        }
         return save(compositeKey, tableMirror);
     }
 
@@ -129,4 +145,15 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
             }
         }
     }
+
+    @Override
+    public List<String> listNamesByKey(String conversionResultKey, String databaseName) throws RepositoryException {
+        String prefix = conversionResultKey + DATABASE_PREFIX + databaseName;
+        List<String> tableNames = findKeySuffixesByPrefix(prefix);
+        log.debug("Found {} tableNames names for ConversionResult key: {} in Database: {}", tableNames.size()
+                , conversionResultKey, databaseName);
+        return tableNames;
+    }
+
+
 }

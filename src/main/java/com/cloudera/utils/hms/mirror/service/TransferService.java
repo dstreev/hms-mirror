@@ -23,7 +23,6 @@ import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hms.mirror.datastrategy.HybridAcidDowngradeInPlaceDataStrategy;
 import com.cloudera.utils.hms.mirror.datastrategy.HybridDataStrategy;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
@@ -31,7 +30,10 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
@@ -82,9 +84,13 @@ public class TransferService {
     private final HybridDataStrategy hybridDataStrategy;
     @NonNull
     private final HybridAcidDowngradeInPlaceDataStrategy hybridAcidDowngradeInPlaceDataStrategy;
+    @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
 
     @Async("jobThreadPool")
-    public CompletableFuture<ReturnStatus> build(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> build(ConversionResult conversionResult, String databaseName, String tableName) {
         ReturnStatus rtn = new ReturnStatus();
         // Set these for the new thread.
         getExecutionContextService().setConversionResult(conversionResult);
@@ -92,9 +98,27 @@ public class TransferService {
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
-        rtn.setTableMirror(tableMirror);
+        rtn.setTableName(tableName);
         RunStatus runStatus = conversionResult.getRunStatus();
         Warehouse warehouse = null;
+
+        DBMirror dbMirror = null;
+        try {
+            dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), databaseName).orElseThrow(() ->
+                    new IllegalStateException("Couldn't locate DBMirror "+ databaseName + " for Conversion Key: " + conversionResult.getKey()));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        TableMirror tableMirror = null;
+        try {
+            tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)
+                    .orElseThrow(() -> new IllegalStateException("Couldn't locate table " + databaseName + "." + tableName +
+                            " for Conversion Key: " + conversionResult.getKey()));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
         try {
             Date start = new Date();
             log.info("Building migration for {}.{}", dbMirror.getName(), tableMirror.getName());
@@ -264,15 +288,21 @@ public class TransferService {
             rtn.setException(mde);
         } finally {
             // Reset the thread context.
+            // Need to save any changes to Table Mirror.
+            try {
+                getTableMirrorRepository().save(tableMirror);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
             getExecutionContextService().reset();
         }
         return CompletableFuture.completedFuture(rtn);
     }
 
     @Async("jobThreadPool")
-    public CompletableFuture<ReturnStatus> execute(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror) {
+    public CompletableFuture<ReturnStatus> execute(ConversionResult conversionResult, String databaseName, String tableName) {
         ReturnStatus rtn = new ReturnStatus();
-        rtn.setTableMirror(tableMirror);
+        rtn.setTableName(tableName);
         getExecutionContextService().reset();
         getExecutionContextService().setConversionResult(conversionResult);
         RunStatus runStatus = conversionResult.getRunStatus();
@@ -282,7 +312,24 @@ public class TransferService {
         JobDto job = conversionResult.getJob();
 
         Date start = new Date();
-        log.info("Processing migration for {}.{}", dbMirror.getName(), tableMirror.getName());
+        log.info("Processing migration for {}.{}", databaseName, tableName);
+
+        DBMirror dbMirror = null;
+        try {
+            dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), databaseName).orElseThrow(() ->
+                    new IllegalStateException("Couldn't locate database + " + databaseName + " for Conversion Key: " + conversionResult.getKey()));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        TableMirror tableMirror = null;
+        try {
+            tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)
+                    .orElseThrow(() -> new IllegalStateException("Couldn't locate table: " + databaseName + "." +
+                            tableName + " for Conversion Key: " + conversionResult.getKey()));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
@@ -325,6 +372,13 @@ public class TransferService {
                 tableMirror.setPhaseState(PhaseState.PROCESSED);
             else
                 tableMirror.setPhaseState(PhaseState.ERROR);
+
+            try {
+                tableMirror = getTableMirrorRepository().save(tableMirror);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+
         } catch (ConnectionException ce) {
             tableMirror.addIssue(Environment.LEFT, "FAILURE (check logs):" + ce.getMessage());
             log.error("Connection Error", ce);

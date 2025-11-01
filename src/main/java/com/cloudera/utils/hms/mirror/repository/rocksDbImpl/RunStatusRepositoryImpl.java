@@ -17,15 +17,15 @@
 
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
-import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -38,11 +38,11 @@ import java.util.Optional;
 /**
  * RocksDB implementation of RunStatusRepository.
  * Handles persistence of RunStatus entities in RocksDB.
- *
+ * <p>
  * RunStatus objects are stored in the same column family as ConversionResult
  * (conversionResultColumnFamily) with composite keys in the format:
  * {conversionResultKey}/runStatus
- *
+ * <p>
  * This allows efficient association with ConversionResult objects by storing
  * them together in the same column family, enabling atomic operations and
  * maintaining data locality.
@@ -58,7 +58,14 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
     public RunStatusRepositoryImpl(RocksDB rocksDB,
                                    @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
                                    @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<RunStatus>() {});
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<RunStatus>() {
+        });
+    }
+
+    @Override
+    public boolean delete(RunStatus runStatus) throws RepositoryException {
+        // TODO: Need to cleanup the TableMirror References too.
+        return deleteById(runStatus.getKey());
     }
 
     /**
@@ -73,17 +80,26 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
     }
 
     @Override
-    public RunStatus saveByKey(String conversionResultKey, RunStatus runStatus) throws RepositoryException {
+    public RunStatus save(String conversionResultKey, RunStatus runStatus) throws RepositoryException {
         String compositeKey = buildCompositeKey(conversionResultKey);
+        runStatus.setKey(compositeKey);
         log.debug("Saving RunStatus with composite key: {}", compositeKey);
-        return save(compositeKey, runStatus);
+        return super.save(compositeKey, runStatus);
     }
 
+    @Override
+    public RunStatus save(RunStatus runStatus) throws RepositoryException {
+        String compositeKey = runStatus.getKey();
+        if (compositeKey == null) {
+            throw new RepositoryException("RunStatus does not have a key");
+        }
+        return super.save(compositeKey, runStatus);
+    }
     @Override
     public Optional<RunStatus> findByKey(String conversionResultKey) throws RepositoryException {
         String compositeKey = buildCompositeKey(conversionResultKey);
         log.debug("Finding RunStatus by composite key: {}", compositeKey);
-        return findById(compositeKey);
+        return this.findByKey(compositeKey);
     }
 
     @Override
@@ -105,22 +121,4 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
         return new ArrayList<>(allRunStatuses.values());
     }
 
-    /**
-     * Override save to ensure users understand the composite key pattern.
-     * Direct save() calls should use the full composite key format.
-     *
-     * @param id The full composite key: {conversionResultKey}/runStatus
-     * @param entity The RunStatus to save
-     * @return The saved RunStatus
-     * @throws RepositoryException if there's an error accessing RocksDB
-     */
-    @Override
-    public RunStatus save(String id, RunStatus entity) throws RepositoryException {
-        // Validate that the key follows the expected format
-        if (!id.contains(KEY_SEPARATOR + RUN_STATUS_SUFFIX)) {
-            log.warn("RunStatus key '{}' does not follow the expected composite key format. " +
-                    "Consider using saveByKey() instead.", id);
-        }
-        return super.save(id, entity);
-    }
 }

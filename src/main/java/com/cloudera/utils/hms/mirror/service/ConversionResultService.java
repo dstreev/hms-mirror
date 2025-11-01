@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
+import com.cloudera.utils.hms.mirror.domain.testdata.LegacyDBMirror;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
@@ -96,7 +97,7 @@ public class ConversionResultService {
         log.debug("Looking up JobDto by ID: {}", jobKey);
 
         try {
-            Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
+            Optional<JobDto> jobOpt = jobRepository.findByKey(jobKey);
             if (jobOpt.isPresent()) {
                 JobDto job = jobOpt.get();
                 log.debug("Found JobDto with ID: {}", jobKey);
@@ -135,7 +136,7 @@ public class ConversionResultService {
             // Load and deep clone the configuration
             if (!isBlank(job.getConfigReference())) {
                 log.debug("Loading config reference: {}", job.getConfigReference());
-                ConfigLiteDto config = configurationRepository.findById(job.getConfigReference())
+                ConfigLiteDto config = configurationRepository.findByKey(job.getConfigReference())
                         .orElseThrow(() -> {
                             log.warn("Config reference '{}' not found in repository", job.getConfigReference());
                             return new IllegalStateException("Config reference '" + job.getConfigReference() + "' not found");
@@ -150,7 +151,7 @@ public class ConversionResultService {
             // Load and deep clone the dataset
             if (!isBlank(job.getDatasetReference())) {
                 log.debug("Loading dataset reference: {}", job.getDatasetReference());
-                DatasetDto dataset = datasetRepository.findById(job.getDatasetReference())
+                DatasetDto dataset = datasetRepository.findByKey(job.getDatasetReference())
                         .orElseThrow(() -> {
                             log.warn("Dataset reference '{}' not found in repository", job.getDatasetReference());
                             return new IllegalStateException("Dataset reference '" + job.getDatasetReference() + "' not found");
@@ -166,7 +167,7 @@ public class ConversionResultService {
             if (!isBlank(job.getLeftConnectionReference())) {
                 log.debug("Loading left connection reference: {}", job.getLeftConnectionReference());
                 com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto leftConn =
-                        connectionRepository.findById(job.getLeftConnectionReference())
+                        connectionRepository.findByKey(job.getLeftConnectionReference())
                                 .orElseThrow(() -> {
                                     log.warn("Left connection reference '{}' not found in repository", job.getLeftConnectionReference());
                                     return new IllegalStateException("Left connection reference '" + job.getLeftConnectionReference() + "' not found");
@@ -182,7 +183,7 @@ public class ConversionResultService {
             if (!isBlank(job.getRightConnectionReference())) {
                 log.debug("Loading right connection reference: {}", job.getRightConnectionReference());
                 com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto rightConn =
-                        connectionRepository.findById(job.getRightConnectionReference())
+                        connectionRepository.findByKey(job.getRightConnectionReference())
                                 .orElseThrow(() -> {
                                     log.warn("Right connection reference '{}' not found in repository", job.getRightConnectionReference());
                                     return new IllegalStateException("Right connection reference '" + job.getRightConnectionReference() + "' not found");
@@ -359,6 +360,7 @@ public class ConversionResultService {
             dataset = conversionResult.getDataset();
         }
 
+        DatasetDto finalDataset = dataset;
         legacyConversionWrapper.getDatabases().forEach((dbName, dbMirror) -> {
             // Break apart the tables.
             Map<String, TableMirror> tableMirrorHolder = new HashMap<>();//
@@ -374,6 +376,7 @@ public class ConversionResultService {
             }
 
             DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
+            finalDataset.getDatabases().add(dbSpec);
             dbSpec.setDatabaseName(dbName);
             DBMirror finalDbMirror = dbMirror;
             tableMirrorHolder.forEach((tableName, tableMirror) -> {
@@ -574,19 +577,22 @@ public class ConversionResultService {
     /**
      * Generates a detailed report for a specific database.
      *
-     * @param conversionResult      The conversion result containing database information
-     * @param database              The database name
-     * @param executeSessionService The session service providing configuration and status
+     * @LegacyDBMirror
      * @return Markdown report as a string
      * @throws JsonProcessingException if there's an error processing JSON/YAML
      */
-    public String toReport(ConversionResult conversionResult, String database, ExecuteSessionService executeSessionService) throws JsonProcessingException {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+    public String toReport(LegacyDBMirror dbMirror) throws JsonProcessingException {
+//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
+//        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
+        // TODO: Should we build this from ConversionResult?
+        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+                new IllegalStateException("HmsMirrorConfig not set."));
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus not set."));
 
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        sb.append("# HMS-Mirror for: ").append(database).append("\n\n");
+        sb.append("# HMS-Mirror for: ").append(dbMirror.getName()).append("\n\n");
         sb.append(ReportingConf.substituteVariablesFromManifest("v.${HMS-Mirror-Version}")).append("\n");
         sb.append("---\n").append("## Run Log\n\n");
         sb.append("| Date | Elapsed Time | Status\n");
@@ -609,7 +615,7 @@ public class ConversionResultService {
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        String yamlStr = mapper.writeValueAsString(hmsMirrorConfig);
+        String yamlStr = mapper.writeValueAsString(config);
         // Mask User/Passwords in Control File
         yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
         yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");
@@ -639,7 +645,7 @@ public class ConversionResultService {
             sb.append("\n");
         }
 
-        DBMirror dbMirror = conversionResult.getDatabases().get(database);
+//        DBMirror dbMirror = conversionResult.getDatabases().get(database);
 
         sb.append("## Database SQL Statement(s)").append("\n\n");
 

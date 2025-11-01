@@ -167,7 +167,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(true, true, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal and TRANSACTIONAL step added
         assertThat(tableMirror.isRemove()).isFalse();
@@ -185,7 +185,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(true, true, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -203,7 +203,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(true, false, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -222,7 +222,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, true));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal
         assertThat(tableMirror.isRemove()).isFalse();
@@ -240,7 +240,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -259,7 +259,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, true));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -277,7 +277,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -301,7 +301,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(nonNativeDefinition);
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -325,7 +325,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(nonNativeDefinition);
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal
         assertThat(tableMirror.isRemove()).isFalse();
@@ -350,7 +350,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(definition);
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -371,7 +371,7 @@ public class TableServiceTest {
         environmentTable.getStatistics().put("data_size", 200L * 1024 * 1024);
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should be marked for removal
         assertThat(tableMirror.isRemove()).isTrue();
@@ -392,7 +392,7 @@ public class TableServiceTest {
         environmentTable.getStatistics().put("data_size", 50L * 1024 * 1024);
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal
         assertThat(tableMirror.isRemove()).isFalse();
@@ -408,7 +408,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(new ArrayList<>());
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal (nothing to validate)
         assertThat(tableMirror.isRemove()).isFalse();
@@ -425,7 +425,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, false));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: TRANSACTIONAL step should NOT be added
         assertThat(tableMirror.isRemove()).isFalse();
@@ -443,7 +443,7 @@ public class TableServiceTest {
         environmentTable.setDefinition(createTableDefinition(false, false, true));
 
         // When: checkTableFilter is called
-        tableService.checkTableFilter(dbMirror, tableMirror, Environment.LEFT);
+        tableService.checkTableFilter(dbMirror.getName(), tableMirror, Environment.LEFT);
 
         // Then: table should not be marked for removal (DUMP allows VIEWs)
         assertThat(tableMirror.isRemove()).isFalse();

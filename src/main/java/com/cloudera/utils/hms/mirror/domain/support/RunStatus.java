@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -45,21 +44,17 @@ import static java.util.Objects.nonNull;
 @Setter
 @Slf4j
 public class RunStatus implements Comparable<RunStatus>, Cloneable {
+    private String key;
+
     private Date start = null;
     private Date end = null;
 
-    @JsonIgnore
-    private String conversionResultKey;
-
     private String comment;
+
     @JsonIgnore
     private Messages errors = null;//new Messages(150);
     @JsonIgnore
     private Messages warnings = null;//new Messages(150);
-    //    @JsonIgnore
-    Integer concurrency;
-    @JsonIgnore
-    CompletableFuture<Boolean> runningTask = null;
 
     List<String> errorMessages = new ArrayList<>();
     List<String> warningMessages = new ArrayList<>();
@@ -70,6 +65,7 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
     */
     private Map<StageEnum, CollectionEnum> stages = new LinkedHashMap<>();
 
+    // TODO: Change to String?
     private List<TableMirror> inProgressTables = new ArrayList<>();
 
     /*
@@ -196,41 +192,26 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
      */
     public boolean reset() {
         boolean rtn = Boolean.TRUE;
-        if (cancel()) {
-            if (nonNull(errors)) {
-                errors.clear();
-            }
-            if (nonNull(warnings)) {
-                warnings.clear();
-            }
-            errorMessages.clear();
-            warningMessages.clear();
-            // Loop through the stages map and reset the values to WAITING.
-            stages.keySet().forEach(k -> stages.put(k, CollectionEnum.WAITING));
-            operationStatistics.reset();
-            reportName = null;
-            start = null;
-            end = null;
-            if (nonNull(inProgressTables))
-                inProgressTables.clear();
-        } else {
-            rtn = Boolean.FALSE;
-        }
-        return rtn;
-    }
-
-    public boolean cancel() {
-        boolean rtn = Boolean.TRUE;
-        if (nonNull(runningTask) && !runningTask.isDone()) {
-            if (runningTask.cancel(true)) {
-                log.info("Task cancelled.");
-//                this.progress = ProgressEnum.CANCELLED;
-            } else {
-                log.error("Task could not be cancelled.");
-//                this.progress = ProgressEnum.CANCEL_FAILED;
-                rtn = Boolean.FALSE;
-            }
-        }
+//        if (cancel()) {
+//            if (nonNull(errors)) {
+//                errors.clear();
+//            }
+//            if (nonNull(warnings)) {
+//                warnings.clear();
+//            }
+//            errorMessages.clear();
+//            warningMessages.clear();
+//            // Loop through the stages map and reset the values to WAITING.
+//            stages.keySet().forEach(k -> stages.put(k, CollectionEnum.WAITING));
+//            operationStatistics.reset();
+//            reportName = null;
+//            start = null;
+//            end = null;
+//            if (nonNull(inProgressTables))
+//                inProgressTables.clear();
+//        } else {
+//            rtn = Boolean.FALSE;
+//        }
         return rtn;
     }
 

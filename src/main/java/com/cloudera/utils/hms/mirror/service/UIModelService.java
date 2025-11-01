@@ -124,14 +124,14 @@ public class UIModelService implements ControllerReferences {
             // Set up RunStatus either for testing or use existing session run status
             if (lclTesting && isNull(session.getRunStatus())) {
                 RunStatus runStatus = new RunStatus();
-                runStatus.setConcurrency(concurrency);
+//                runStatus.setConcurrency(concurrency);
                 runStatus.addError(MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS);
                 runStatus.addWarning(MessageCode.RESET_TO_DEFAULT_LOCATION);
                 map.put(RUN_STATUS, runStatus);
             } else {
                 RunStatus runStatus = session.getRunStatus();
                 if (nonNull(runStatus)) {
-                    runStatus.setConcurrency(concurrency);
+//                    runStatus.setConcurrency(concurrency);
                     map.put(RUN_STATUS, runStatus);
                 }
             }

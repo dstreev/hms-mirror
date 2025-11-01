@@ -32,7 +32,6 @@ is run.
 @Getter
 public class Warehouse implements Cloneable {
 
-
     @Setter
     @Schema(description = "The source of the warehouse location.")
     private WarehouseSource source = WarehouseSource.GLOBAL;
@@ -81,8 +80,12 @@ public class Warehouse implements Cloneable {
     }
 
     @Override
-    public Warehouse clone() throws CloneNotSupportedException {
-        return (Warehouse)super.clone();
+    public Warehouse clone()  {
+        try {
+            return (Warehouse)super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

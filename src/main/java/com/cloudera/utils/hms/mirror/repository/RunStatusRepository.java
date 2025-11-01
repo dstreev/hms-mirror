@@ -42,7 +42,9 @@ public interface RunStatusRepository extends RocksDBRepository<RunStatus, String
      * @return The saved RunStatus
      * @throws RepositoryException if there's an error accessing the repository
      */
-    RunStatus saveByKey(String conversionResultKey, RunStatus runStatus) throws RepositoryException;
+    RunStatus save(String conversionResultKey, RunStatus runStatus) throws RepositoryException;
+
+    RunStatus save(RunStatus runStatus) throws RepositoryException;
 
     /**
      * Find a RunStatus by its associated ConversionResult key.

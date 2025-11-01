@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Implementation of DBMirrorRepository that persists DBMirror instances to RocksDB.
- *
+ * <p>
  * Keys are composite: "conversionResultKey/databaseName"
  * Values are DBMirror instances serialized as YAML.
  */
@@ -51,58 +51,31 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
         implements DBMirrorRepository {
 
     public DBMirrorRepositoryImpl(RocksDB rocksDB,
-                                   @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
-                                   @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<DBMirror>() {});
+                                  @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
+                                  @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<DBMirror>() {
+        });
     }
 
     @Override
-    public Map<String, DBMirror> findByKey(String conversionResultKey) throws RepositoryException {
-        Map<String, DBMirror> result = new HashMap<>();
-        String prefix = conversionResultKey + DATABASE_PREFIX;
-
-        try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seek(prefix.getBytes());
-
-            while (iterator.isValid()) {
-                String key = new String(iterator.key());
-
-                // Stop if we've moved past keys for this conversion result
-                if (!key.startsWith(prefix)) {
-                    break;
-                }
-
-                // Extract database name from composite key
-                String databaseName = key.substring(prefix.length());
-
-                try {
-                    DBMirror dbMirror = objectMapper.readValue(iterator.value(), typeReference);
-                    result.put(databaseName, dbMirror);
-                } catch (Exception e) {
-                    log.error("Failed to deserialize DBMirror for key: {}", key, e);
-                }
-
-                iterator.next();
-            }
-        }
-
-        return result;
+    public boolean delete(DBMirror dbMirror) throws RepositoryException {
+        // TODO: Need to cleanup the TableMirror References too.
+        return deleteById(dbMirror.getKey());
     }
 
     @Override
     public DBMirror save(String conversionResultKey, DBMirror dbMirror)
             throws RepositoryException {
         String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, dbMirror.getName());
-        // Don't reset it if it's already set.  Prevents from creating orphans.'
-        if (isBlank(dbMirror.getKey())) {
-            dbMirror.setKey(compositeKey);
-        }
+        dbMirror.setKey(compositeKey);
         return super.save(compositeKey, dbMirror);
     }
 
     @Override
-    public void deleteByKey(String conversionResultKey) throws RepositoryException {
+    public void deleteByConversionKey(String conversionResultKey) throws RepositoryException {
         String prefix = conversionResultKey + DATABASE_PREFIX;
+
+        Map<String, DBMirror> dbMirrors = findByConversionKey(conversionResultKey);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             iterator.seek(prefix.getBytes());
@@ -120,8 +93,34 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
             }
         } catch (RocksDBException e) {
             // todo: missing id.
-            throw new RepositoryException("Failed to delete entity: " , e);
+            throw new RepositoryException("Failed to delete entity: ", e);
         }
+    }
+
+    @Override
+    public Map<String, DBMirror> findByConversionKey(String conversionResultKey) throws RepositoryException {
+        Map<String, DBMirror> result = new HashMap<>();
+        // Using the RocksDB prefix iterator, we can find all entities for this conversion result
+        String prefix = conversionResultKey + DATABASE_PREFIX;
+        log.debug("Finding DBMirrors by conversion result key prefix: {}", prefix);
+        try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
+            iterator.seek(prefix.getBytes());
+            while (iterator.isValid()) {
+                String key = new String(iterator.key());
+                if (!key.startsWith(prefix)) {
+                    break;
+                }
+                String databaseName = key.substring(prefix.length());
+                try {
+                    DBMirror dbMirror = objectMapper.readValue(iterator.value(), typeReference);
+                    dbMirror.setKey(key);
+                    result.put(databaseName, dbMirror);
+                } catch (Exception e) {
+                    log.error("Failed to deserialize DBMirror for key: {}", key, e);
+                }
+            }
+        }
+        return result;
     }
 
     @Override
@@ -144,6 +143,6 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
             throws RepositoryException {
         String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
         log.debug("Finding DBMirror by composite key: {}", compositeKey);
-        return findById(compositeKey);
+        return this.findByKey(compositeKey);
     }
 }

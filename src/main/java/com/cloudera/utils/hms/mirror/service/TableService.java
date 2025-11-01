@@ -25,18 +25,23 @@ import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.core.api.TableOperations;
+import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.JobExecution;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.stage.ReturnStatus;
 import com.cloudera.utils.hms.util.TableUtils;
-import com.cloudera.utils.hms.mirror.core.api.TableOperations;
-import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +51,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.sql.*;
-import java.sql.Connection;
 import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
@@ -94,7 +98,7 @@ public class TableService {
      * Checks the table filter using the new core business logic.
      * This method now delegates to the pure business logic layer.
      */
-    public void checkTableFilter(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
+    public void checkTableFilter(String dbMirror, TableMirror tableMirror, Environment environment) {
         log.debug("Checking table filter for table: {} in environment: {}", tableMirror, environment);
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
@@ -126,7 +130,7 @@ public class TableService {
         log.trace("Table filter checked for table: {} - Valid: {}", tableMirror, result.isValid());
     }
 
-    private ValidationResult validateTableFilterImpl(ConversionResult conversionResult, DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
+    private ValidationResult validateTableFilterImpl(ConversionResult conversionResult, String databaseName, TableMirror tableMirror, Environment environment) {
         try {
             // Get configuration through the infrastructure abstraction
             ConfigLiteDto config = conversionResult.getConfig();
@@ -181,7 +185,7 @@ public class TableService {
             }
 
             // Check table size limit
-            DatasetDto.DatabaseSpec dbSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
+            DatasetDto.DatabaseSpec dbSpec = conversionResult.getDataset().getDatabase(databaseName);
             if (dbSpec.getFilter() != null && dbSpec.getFilter().getMaxSizeMb() > 0) {
                 Long dataSize = (Long) et.getStatistics().get(com.cloudera.utils.hms.mirror.MirrorConf.DATA_SIZE);
                 if (dataSize != null) {
@@ -246,9 +250,10 @@ public class TableService {
      * @param tableMirror The table mirror object.
      * @param environment The environment (LEFT or RIGHT).
      */
-    private void getTableDefinition(DBMirror dbMirror, TableMirror tableMirror, EnvironmentTable environmentTable, Environment environment) throws SQLException {
+    private void getTableDefinition(String databaseName, TableMirror tableMirror, EnvironmentTable environmentTable,
+                                    Environment environment) throws SQLException {
         final String tableId = String.format("%s:%s.%s",
-                environment, dbMirror.getName(), tableMirror.getName());
+                environment, databaseName, tableMirror.getName());
         log.info("Fetching table definition for table: {} in environment: {}", tableMirror.getName(), environment);
         log.info("Starting to get table definition for {}", tableId);
 
@@ -257,7 +262,7 @@ public class TableService {
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
-        DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(dbMirror.getName());
+        DatasetDto.DatabaseSpec databaseSpec = conversionResult.getDataset().getDatabase(databaseName);
 
         // Fetch Table Definition
         // TODO: Fix for Test Data
@@ -265,10 +270,10 @@ public class TableService {
             log.debug("Loading test data is enabled. Skipping schema load for {}", tableId);
         } else {
             log.debug("Loading schema from catalog for {}", tableId);
-            loadSchemaFromCatalog(dbMirror, tableMirror, environment);
+            loadSchemaFromCatalog(databaseName, tableMirror, environment);
         }
         log.debug("Checking table filter for {}", tableId);
-        checkTableFilter(dbMirror, tableMirror, environment);
+        checkTableFilter(databaseName, tableMirror, environment);
 
         if (!tableMirror.isRemove()
                 && !conversionResult.isMockTestDataset()
@@ -280,7 +285,7 @@ public class TableService {
                 log.debug("Table is partitioned. Checking metadata details for {}", tableId);
                 if (config.loadMetadataDetails()) {
                     log.debug("Loading partition metadata directly for {}", tableId);
-                    loadTablePartitionMetadataDirect(dbMirror, tableMirror, environment);
+                    loadTablePartitionMetadataDirect(databaseName, tableMirror, environment);
                 }
             }
 
@@ -337,99 +342,95 @@ public class TableService {
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTableMetadata(ConversionResult conversionResult, DBMirror dbMirror,
-                                                            TableMirror tableMirror) {
-        log.info("Fetching table metadata asynchronously for table: {}", tableMirror.getName());
+    public CompletableFuture<ReturnStatus> getTableMetadata(ConversionResult conversionResult, String databaseName,
+                                                            String tableName) {
+        log.info("Fetching table metadata asynchronously for table: {}.{}", databaseName, tableName);
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+
+        RunStatus runStatus = conversionResult.getRunStatus();
 
         ReturnStatus rtn = new ReturnStatus();
         // Preset and overwrite the status when an issue or anomoly occurs.
         rtn.setStatus(ReturnStatus.Status.SUCCESS);
 
-//        ConversionResult conversionResult = getExecutionContextService().getConversionResult();
-        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
-        RunStatus runStatus = conversionResult.getRunStatus();
 
         return CompletableFuture.supplyAsync(() -> {
+            // ...logic...
+            TableMirror tableMirror = null;
             try {
-                // ...logic...
-                rtn.setDbMirror(dbMirror);
-                rtn.setTableMirror(tableMirror);
-//                HmsMirrorConfig hmsMirrorConfig = session.getConfig();
-                EnvironmentTable leftEnvTable = tableMirror.getEnvironmentTable(Environment.LEFT);
-                try {
-                    getTableDefinition(dbMirror, tableMirror, leftEnvTable, Environment.LEFT);
-                    if (tableMirror.isRemove()) {
-                        rtn.setStatus(ReturnStatus.Status.SKIP);
-                        return rtn;
-                    } else {
-                        switch (job.getStrategy()) {
-                            case DUMP:
-                            case STORAGE_MIGRATION:
-                                // Make a clone of the left as a working copy.
-                                try {
-                                    tableMirror.getEnvironments().put(Environment.RIGHT,
-                                            tableMirror.getEnvironmentTable(Environment.LEFT).clone());
-                                } catch (CloneNotSupportedException e) {
-                                    log.error("Clone not supported for table: {}.{}", dbMirror.getName(), tableMirror.getName());
-                                }
-                                rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
-                                break;
-                            default:
-                                EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
-                                try {
-                                    getTableDefinition(dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
-                                    rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
-                                } catch (SQLException se) {
-                                    // Can't find the table on the RIGHT.  This is OK if the table doesn't exist.
-                                    log.debug("No table definition for {}:{}", dbMirror.getName(), tableMirror.getName(), se);
-                                }
-                        }
-                    }
-                } catch (SQLException throwables) {
-                    // Check to see if the RIGHT exists.  This is for `--sync` mode.
-                    // If it doesn't exist, then this is OK.
-                    if (job.isSync()) {
-                        EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
-                        try {
-                            getTableDefinition(dbMirror, tableMirror, rightEnvTable, Environment.RIGHT);
+                tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)
+                                .orElseThrow(() -> new IllegalStateException("Couldn't locate Table '" + databaseName + "." +
+                                        tableName + " for Conversion Key: " + conversionResult.getKey()));
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+            rtn.setDatabaseName(databaseName);
+            rtn.setTableName(tableName);
+            EnvironmentTable leftEnvTable = tableMirror.getEnvironmentTable(Environment.LEFT);
+            try {
+                getTableDefinition(databaseName, tableMirror, leftEnvTable, Environment.LEFT);
+                if (tableMirror.isRemove()) {
+                    rtn.setStatus(ReturnStatus.Status.SKIP);
+                    return rtn;
+                } else {
+                    switch (job.getStrategy()) {
+                        case DUMP:
+                        case STORAGE_MIGRATION:
+                            // Make a clone of the left as a working copy.
+                            try {
+                                tableMirror.getEnvironments().put(Environment.RIGHT,
+                                        tableMirror.getEnvironmentTable(Environment.LEFT).clone());
+                            } catch (CloneNotSupportedException e) {
+                                log.error("Clone not supported for table: {}.{}", databaseName, tableMirror.getName());
+                            }
                             rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
-                        } catch (SQLException se) {
-                            // OK, if the db doesn't exist yet.
-                            handleSqlException(throwables, tableMirror, rightEnvTable, Environment.RIGHT);
-                            rtn.setStatus(ReturnStatus.Status.ERROR);
-                            rtn.setException(throwables);
-                        }
-                    } else {
-                        handleSqlException(throwables, tableMirror, leftEnvTable, Environment.LEFT);
+                            break;
+                        default:
+                            EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
+                            try {
+                                getTableDefinition(databaseName, tableMirror, rightEnvTable, Environment.RIGHT);
+                                rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
+                            } catch (SQLException se) {
+                                // Can't find the table on the RIGHT.  This is OK if the table doesn't exist.
+                                log.debug("No table definition for {}:{}", databaseName, tableMirror.getName(), se);
+                            }
+                    }
+                }
+            } catch (SQLException throwables) {
+                // Check to see if the RIGHT exists.  This is for `--sync` mode.
+                // If it doesn't exist, then this is OK.
+                if (job.isSync()) {
+                    EnvironmentTable rightEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
+                    try {
+                        getTableDefinition(databaseName, tableMirror, rightEnvTable, Environment.RIGHT);
+                        rtn.setStatus(ReturnStatus.Status.SUCCESS);//successful = Boolean.TRUE;
+                    } catch (SQLException se) {
+                        // OK, if the db doesn't exist yet.
+                        handleSqlException(throwables, tableMirror, rightEnvTable, Environment.RIGHT);
                         rtn.setStatus(ReturnStatus.Status.ERROR);
                         rtn.setException(throwables);
                     }
+                } else {
+                    handleSqlException(throwables, tableMirror, leftEnvTable, Environment.LEFT);
+                    rtn.setStatus(ReturnStatus.Status.ERROR);
                 }
-                log.debug("Metadata fetch completed for table: {}", tableMirror);
-                return rtn;
-            } catch (Exception e) {
-                log.error("Error occurred while fetching metadata for table: {}", tableMirror, e);
-                rtn.setStatus(ReturnStatus.Status.ERROR);
-                rtn.setException(e);
-                return rtn;
             } finally {
                 // Save the latest copy of TableMirror
                 try {
-                    getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), tableMirror);
+                    getTableMirrorRepository().save(conversionResult.getKey(), databaseName, tableMirror);
                 } catch (RepositoryException e) {
                     throw new RuntimeException(e);
                 }
-                // Clear Threads hook to these objects.
-                getExecutionContextService().reset();
             }
+            log.debug("Metadata fetch completed for table: {}", tableMirror);
+            return rtn;
         });
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTables(ConversionResult conversionResult, DBMirror dbMirror) {
+    public CompletableFuture<ReturnStatus> getTablesForProcessing(ConversionResult conversionResult, DBMirror dbMirror) {
         log.info("Fetching tables asynchronously for DBMirror: {}", dbMirror.getName());
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
@@ -444,12 +445,12 @@ public class TableService {
                 RunStatus runStatus = conversionResult.getRunStatus();
                 log.debug("Getting tables for Database {}", dbMirror.getName());
                 try {
-                    getTablesInner(dbMirror, Environment.LEFT);
+                    getTablesFromMetastore(dbMirror, Environment.LEFT);
                     if (job.isSync()) {
                         // Get the tables on the RIGHT side.  Used to determine if a table has been dropped on the LEFT
                         // and later needs to be removed on the RIGHT.
                         try {
-                            getTablesInner(dbMirror, Environment.RIGHT);
+                            getTablesFromMetastore(dbMirror, Environment.RIGHT);
                         } catch (SQLException se) {
                             // OK, if the db doesn't exist yet.
                         }
@@ -476,7 +477,7 @@ public class TableService {
         });
     }
 
-    private void getTablesInner(DBMirror dbMirror, Environment environment) throws SQLException {
+    private void getTablesFromMetastore(DBMirror dbMirror, Environment environment) throws SQLException {
         log.info("Fetching tables for DBMirror: {} in environment: {}", dbMirror.getName(), environment);
         Connection conn = null;
         String database = null;
@@ -509,7 +510,7 @@ public class TableService {
                     try (ResultSet rs = stmt.executeQuery(show)) { // try-with-resources for ResultSet
                         while (rs.next()) {
                             String tableName = rs.getString(1);
-                            handleTableName(dbMirror, tableName);
+                            addTableForProcessing(dbMirror, tableName);
                         }
                     }
                 }
@@ -556,7 +557,7 @@ public class TableService {
         log.debug("Set Hive DB Session Context to {}", database);
     }
 
-    private void handleTableName(DBMirror dbMirror, String tableName) {
+    private void addTableForProcessing(DBMirror dbMirror, String tableName) {
         if (tableName == null) return;
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
@@ -568,13 +569,17 @@ public class TableService {
 
         if (startsWithAny(tableName, config.getTransfer().getTransferPrefix(), config.getTransfer().getShadowPrefix())
                 || endsWith(tableName, config.getTransfer().getStorageMigrationPostfix())) {
-            markTableForRemoval(dbMirror, tableName, getRemovalReason(tableName));
+            // TODO: Evaluate Removal process.  At this point, we're building the list from the list
+            //       of tables in the metastore.  We haven't created them yet, unless this is TestData.
+            //       so do we need this? Just don't add them.
+//            markTableForRemoval(dbMirror.getName(), tableMirror, getRemovalReason(tableMirror.getName()));
             return;
         }
 
         DatasetDto.TableFilter filter = databaseSpec.getFilter();
 //        Filter filter = config.getFilter();
 
+        // Now check if table should be filtered out.
         boolean addTable = false;
         if (filter == null || (isBlank(filter.getIncludeRegEx()) && isBlank(filter.getExcludeRegEx()))) {
             addTable = true;
@@ -594,14 +599,10 @@ public class TableService {
             tableMirror.setName(tableName);
             try {
                 getTableMirrorRepository().save(conversionResult.getKey(), dbMirror.getName(), tableMirror);
+                log.info("{}.{} added to processing list.", dbMirror.getName(), tableName);
             } catch (RepositoryException e) {
                 throw new RuntimeException(e);
             }
-//            TableMirror tableMirror = dbMirror.addTable(tableName);
-//            String uniqueStr = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
-//            tableMirror.setUnique(uniqueStr);
-//            tableMirror.setMigrationStageMessage("Added to evaluation inventory");
-//            log.info("{}.{} added to processing list.", database, tableName);
         } else {
             log.info("{}.{} did not match filter and will NOT be added.", dbMirror.getName(), tableName);
         }
@@ -618,12 +619,17 @@ public class TableService {
         return !isBlank(postfix) && value.endsWith(postfix);
     }
 
-    private void markTableForRemoval(DBMirror dbMirror, String tableName, String reason) {
+    @Deprecated
+    /*
+    TODO: Not sure this is needed.  Maybe just for mock data of other filters like partition or table
+            type filtering. TBD
+     */
+    private void markTableForRemoval(String databaseName, TableMirror tableMirror, String reason) {
         // TODO: Fix
 //        TableMirror tableMirror = dbMirror.addTable(tableName);
-//        tableMirror.setRemove(true);
-//        tableMirror.setRemoveReason(reason);
-//        log.info("{}.{} was NOT added to list. Reason: {}", database, tableName, reason);
+        tableMirror.setRemove(true);
+        tableMirror.setRemoveReason(reason);
+        log.info("{}.{} was NOT added to list. Reason: {}", databaseName, tableMirror.getName(), reason);
     }
 
     private String getRemovalReason(String tableName) {
@@ -652,10 +658,11 @@ public class TableService {
     private static final String OWNER_PREFIX = "owner";
 
     public void
-    loadSchemaFromCatalog(DBMirror dbMirror, TableMirror tableMirror, Environment environment) throws SQLException {
+    loadSchemaFromCatalog(String databaseName, TableMirror tableMirror, Environment environment) throws SQLException {
         log.info("Loading schema from catalog for table: {} in environment: {}", tableMirror.getName(), environment);
         // ...logic...
-        String database = resolveDatabaseName(dbMirror, tableMirror, environment);
+//        String database = resolveDatabaseName(dbMirror, tableMirror, environment);
+        String database = getConversionResultService().getResolvedDB(databaseName);
         EnvironmentTable environmentTable = tableMirror.getEnvironmentTable(environment);
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
@@ -669,7 +676,7 @@ public class TableService {
 
             try (Statement statement = connection.createStatement()) {
                 useDatabase(statement, database);
-                List<String> tableDefinition = fetchTableDefinition(statement, tableMirror, database, environment);
+                List<String> tableDefinition = fetchTableDefinition(statement, tableMirror.getName(), database, environment);
                 environmentTable.setDefinition(tableDefinition);
                 environmentTable.setName(tableMirror.getName());
                 environmentTable.setExists(Boolean.TRUE);
@@ -703,10 +710,10 @@ public class TableService {
         statement.execute(useStatement);
     }
 
-    private List<String> fetchTableDefinition(Statement statement, TableMirror tableMirror, String database, Environment environment) throws SQLException {
-        log.debug("Fetching table definition for table: {} from database: {} in environment: {}", tableMirror.getName(), database, environment);
+    private List<String> fetchTableDefinition(Statement statement, String tableName, String database, Environment environment) throws SQLException {
+        log.debug("Fetching table definition for table: {} from database: {} in environment: {}", tableName, database, environment);
         // ...logic...
-        String showStatement = MessageFormat.format(MirrorConf.SHOW_CREATE_TABLE, tableMirror.getName());
+        String showStatement = MessageFormat.format(MirrorConf.SHOW_CREATE_TABLE, tableName);
         List<String> tableDefinition = new ArrayList<>();
         try (ResultSet resultSet = statement.executeQuery(showStatement)) {
             ResultSetMetaData metaData = resultSet.getMetaData();
@@ -717,12 +724,12 @@ public class TableService {
                     } catch (NullPointerException npe) {
                         log.error("Loading Table Definition. Issue with SHOW CREATE TABLE resultset. " +
                                         "ResultSet record(line) is null. Skipping. {}:{}.{}",
-                                environment, database, tableMirror.getName());
+                                environment, database, tableName);
                     }
                 }
             } else {
                 log.error("Loading Table Definition. Issue with SHOW CREATE TABLE resultset. No Metadata. {}:{}.{}",
-                        environment, database, tableMirror.getName());
+                        environment, database, tableName);
             }
         }
         return tableDefinition;
@@ -892,7 +899,7 @@ public class TableService {
         }
     }
 
-    protected void loadTablePartitionMetadataDirect(DBMirror dbMirror, TableMirror tableMirror, Environment environment) {
+    protected void loadTablePartitionMetadataDirect(String databaseName, TableMirror tableMirror, Environment environment) {
         /*
         1. Get Metastore Direct Connection
         2. Get Query Definitions
@@ -918,16 +925,16 @@ public class TableService {
             return;
         }
 
-        String database = dbMirror.getName();
+//        String database = dbMirror.getName();
         EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
         try {
             conn = getConnectionPoolService().getMetastoreDirectEnvironmentConnection(environment);
-            log.info("Loading Partitions from Metastore Direct Connection {}:{}.{}", environment, database, et.getName());
+            log.info("Loading Partitions from Metastore Direct Connection {}:{}.{}", environment, databaseName, et.getName());
             QueryDefinitions queryDefinitions = getQueryDefinitionsService().getQueryDefinitions(environment);
             if (queryDefinitions != null) {
                 String partLocationQuery = queryDefinitions.getQueryDefinition("part_locations").getStatement();
                 pstmt = conn.prepareStatement(partLocationQuery);
-                pstmt.setString(1, database);
+                pstmt.setString(1, databaseName);
                 pstmt.setString(2, et.getName());
                 resultSet = pstmt.executeQuery();
                 Map<String, String> partDef = new HashMap<String, String>();
@@ -936,10 +943,10 @@ public class TableService {
                 }
                 et.setPartitions(partDef);
             }
-            log.info("Loaded Partitions from Metastore Direct Connection {}:{}.{}", environment, database, et.getName());
+            log.info("Loaded Partitions from Metastore Direct Connection {}:{}.{}", environment, databaseName, et.getName());
         } catch (SQLException throwables) {
             et.addError(throwables.getMessage());
-            log.error("Issue loading Partitions from Metastore Direct Connection. {}:{}.{}", environment, database, et.getName());
+            log.error("Issue loading Partitions from Metastore Direct Connection. {}:{}.{}", environment, databaseName, et.getName());
             log.error(throwables.getMessage(), throwables);
         } finally {
             try {

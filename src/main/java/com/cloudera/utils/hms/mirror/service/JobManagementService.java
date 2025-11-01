@@ -123,7 +123,7 @@ public class JobManagementService {
     public Map<String, Object> load(String jobKey) {
         log.info("Loading job with key: {}", jobKey);
         try {
-            Optional<JobDto> jobOpt = jobRepository.findById(jobKey);
+            Optional<JobDto> jobOpt = jobRepository.findByKey(jobKey);
 
             Map<String, Object> result = new HashMap<>();
             if (jobOpt.isPresent()) {
@@ -195,7 +195,7 @@ public class JobManagementService {
     public Map<String, Object> update(JobDto jobDto) {
         log.debug("Updating job: {}", jobDto.getKey());
         try {
-            Optional<JobDto> existingJobOpt = jobRepository.findById(jobDto.getKey());
+            Optional<JobDto> existingJobOpt = jobRepository.findByKey(jobDto.getKey());
             Map<String, Object> result = new HashMap<>();
 
             if (existingJobOpt.isPresent()) {
@@ -454,7 +454,7 @@ public class JobManagementService {
 
         try {
             // First, look up the JobDto by ID
-            Optional<JobDto> jobOpt = jobRepository.findById(jobId);
+            Optional<JobDto> jobOpt = jobRepository.findByKey(jobId);
             if (!jobOpt.isPresent()) {
                 log.error("Job not found: {}", jobId);
                 return null;

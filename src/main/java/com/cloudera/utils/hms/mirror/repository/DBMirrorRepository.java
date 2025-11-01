@@ -22,6 +22,7 @@ import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Repository for managing DBMirror instances.
@@ -40,13 +41,12 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @return Map of database names to DBMirror instances
      * @throws RepositoryException if there's an error accessing the repository
      */
-    Map<String, DBMirror> findByKey(String conversionResultKey) throws RepositoryException;
+    Map<String, DBMirror> findByConversionKey(String conversionResultKey) throws RepositoryException;
 
     /**
      * Save a DBMirror instance for a specific ConversionResult.
      *
      * @param conversionResultKey The key of the ConversionResult
-     * @param databaseName The name of the database
      * @param dbMirror The DBMirror instance to save
      * @return The saved DBMirror instance
      * @throws RepositoryException if there's an error accessing the repository
@@ -59,7 +59,7 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @param conversionResultKey The key of the ConversionResult
      * @throws RepositoryException if there's an error accessing the repository
      */
-    void deleteByKey(String conversionResultKey) throws RepositoryException;
+    void deleteByConversionKey(String conversionResultKey) throws RepositoryException;
 
     /**
      * Delete a specific DBMirror instance by name.
@@ -90,7 +90,7 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @return Optional containing the DBMirror if found, empty otherwise
      * @throws RepositoryException if there's an error accessing the repository
      */
-    java.util.Optional<DBMirror> findByName(String conversionResultKey, String databaseName) throws RepositoryException;
+    Optional<DBMirror> findByName(String conversionResultKey, String databaseName) throws RepositoryException;
 
     /**
      * Build a composite key from ConversionResult key and database name.

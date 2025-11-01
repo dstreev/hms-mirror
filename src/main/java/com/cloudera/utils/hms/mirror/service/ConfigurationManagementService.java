@@ -95,7 +95,7 @@ public class ConfigurationManagementService {
     public Map<String, Object> load(String configName) {
         log.debug("Loading configuration: {}", configName);
         try {
-            Optional<ConfigLiteDto> configOpt = configurationRepository.findById(configName);
+            Optional<ConfigLiteDto> configOpt = configurationRepository.findByKey(configName);
 
             Map<String, Object> result = new HashMap<>();
             if (configOpt.isPresent()) {

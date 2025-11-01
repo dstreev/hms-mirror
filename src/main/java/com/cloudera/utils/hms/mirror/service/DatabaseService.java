@@ -955,7 +955,7 @@ public class DatabaseService {
 
 //        ConversionResult conversionResult = session.getConversionResult();
 //        RunStatus runStatus = session.getRunStatus();
-        OperationStatistics stats = runStatus.getOperationStatistics();
+//        OperationStatistics stats = runStatus.getOperationStatistics();
         for (DatasetDto.DatabaseSpec dbSpec : conversionResult.getDataset().getDatabases()) {
             String database = dbSpec.getDatabaseName();
             log.info("Building Database commands: {}", database);
@@ -970,6 +970,13 @@ public class DatabaseService {
             }
             try {
                 rtn = buildDBStatements(dbMirror);
+                // Save the DBMirror work.
+                try {
+                    getDbMirrorRepository().save(conversionResult.getKey(), dbMirror);
+                } catch (RepositoryException e) {
+                    throw new RuntimeException(e);
+                }
+
             } catch (RuntimeException rte) {
                 log.error("Issue building DB Statements for {}", database, rte);
                 runStatus.addError(MISC_ERROR, database + ":Issue building DB Statements");

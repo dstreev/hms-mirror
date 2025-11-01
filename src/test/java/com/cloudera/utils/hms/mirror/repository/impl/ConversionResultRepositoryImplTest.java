@@ -18,10 +18,6 @@
 package com.cloudera.utils.hms.mirror.repository.impl;
 
 import com.cloudera.utils.hms.mirror.domain.core.*;
-import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
-import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
-import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
@@ -110,7 +106,7 @@ class ConversionResultRepositoryImplTest {
         assertTrue(repository.existsById(originalConversionResult.getKey()));
 
         // When - Retrieve the conversion result
-        ConversionResult retrievedResult = repository.findById(originalConversionResult.getKey()).orElseThrow(() ->
+        ConversionResult retrievedResult = repository.findByKey(originalConversionResult.getKey()).orElseThrow(() ->
                 new AssertionFailedException("Failed to retrieve from Repository")); //rebuildConversionResult(sessionId, createTimestamp);
 
         // Then - Verify it was retrieved successfully
@@ -126,7 +122,7 @@ class ConversionResultRepositoryImplTest {
         repository.save(originalConversionResult);
 
         // Verify it exists
-        ConversionResult fetched = repository.findById(originalConversionResult.getKey()).orElseThrow(() ->
+        ConversionResult fetched = repository.findByKey(originalConversionResult.getKey()).orElseThrow(() ->
                 new AssertionFailedException("Could load from repo."));
 
         // When - Delete the conversion result

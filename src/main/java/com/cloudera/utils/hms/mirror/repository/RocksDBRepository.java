@@ -49,7 +49,7 @@ public interface RocksDBRepository<T, ID> {
      * @return Optional containing the entity if found, empty otherwise
      * @throws RepositoryException if there's an error accessing the repository
      */
-    Optional<T> findById(ID id) throws RepositoryException;
+    Optional<T> findByKey(ID id) throws RepositoryException;
 
     /**
      * Check if an entity exists by its identifier.
@@ -75,6 +75,8 @@ public interface RocksDBRepository<T, ID> {
      * @throws RepositoryException if there's an error accessing the repository
      */
     List<ID> findAllIds() throws RepositoryException;
+
+    boolean delete(T entity) throws RepositoryException;
 
     /**
      * Delete an entity by its identifier.

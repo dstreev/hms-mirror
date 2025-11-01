@@ -23,7 +23,6 @@ public class JobDto implements Cloneable {
     private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
     // This would be the top level Key for the RocksDB columnFamily.
-    @com.fasterxml.jackson.annotation.JsonAlias("id")  // Backward compatibility for old data stored with "id" field
     private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
 
     @Schema(description = "Name for the job", example = "job-12345")

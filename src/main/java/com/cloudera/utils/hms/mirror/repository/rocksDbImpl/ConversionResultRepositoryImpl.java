@@ -18,8 +18,8 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
-import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -42,10 +41,10 @@ import java.util.List;
 /**
  * RocksDB implementation of ConversionResultRepository.
  * Handles persistence of ConversionResult entities in RocksDB.
- *
+ * <p>
  * ConversionResult objects are stored in the conversionResult column family.
  * The key is ConversionResult.key which follows the format "yyyyMMdd_HHmmss".
- *
+ * <p>
  * This implementation provides efficient date-based querying by leveraging
  * the lexicographic ordering of the date-formatted keys.
  */
@@ -60,7 +59,14 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
     public ConversionResultRepositoryImpl(RocksDB rocksDB,
                                           @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
                                           @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConversionResult>() {});
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConversionResult>() {
+        });
+    }
+
+    @Override
+    public boolean delete(ConversionResult conversionResult) throws RepositoryException {
+        // TODO: Need to cleanup the DBMirror and TableMirror References too.
+        return deleteById(conversionResult.getKey());
     }
 
     @Override

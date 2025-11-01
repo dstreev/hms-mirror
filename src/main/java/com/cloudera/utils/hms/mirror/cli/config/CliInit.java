@@ -21,6 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
 import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
@@ -30,10 +31,8 @@ import com.cloudera.utils.hms.mirror.util.HmsMirrorConfigConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -59,7 +58,7 @@ import static java.util.Objects.isNull;
 @Component
 @Slf4j
 @Getter
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class CliInit {
 
     @NonNull
@@ -69,15 +68,24 @@ public class CliInit {
     @NonNull
     private final ExecutionContextService executionContextService;
     @NonNull
-    @Qualifier("yamlMapper")
     private final ObjectMapper yamlMapper;
-    @NonNull
-    private final ConversionResultRepository conversionResultRepository;
-    @NonNull
-    private final RunStatusRepository runStatusRepository;
+//    @NonNull
+//    private final ConversionResultRepository conversionResultRepository;
+//    @NonNull
+//    private final RunStatusRepository runStatusRepository;
 
+    public CliInit(@NonNull DomainService domainService,
+                   @NonNull ConversionResultService conversionResultService,
+                   @NonNull ExecutionContextService executionContextService,
+                   @NonNull @Qualifier("yamlMapper") ObjectMapper yamlMapper
+    ) {
+        this.domainService = domainService;
+        this.conversionResultService = conversionResultService;
+        this.executionContextService = executionContextService;
+        this.yamlMapper = yamlMapper;
+    }
 
-//    /**
+    //    /**
 //     * Initializes the CliInit class with required services and utilities.
 //     *
 //     * @param domainService the service responsible for managing domain-specific logic.
@@ -290,11 +298,11 @@ public class CliInit {
         return dbMirror;
     }
 
-    @Bean
+    @Bean("cliConversionResult")
     // Needs to happen after all the configs have been set.
     @Order(15)
-    public CommandLineRunner conversionPostProcessing() {
-        return args -> {
+    public ConversionResult conversionPostProcessing() {
+//        return args -> {
             // Create a session for the CLI.  It will be the 'current' session. prefix 'cli-' with timestamp.
             log.info("Creating Session for CLI");
             DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
@@ -315,15 +323,25 @@ public class CliInit {
                 getConversionResultService().loadLegacyConversionWrapperForTestData(dbMirrorTest);
             }
 
-            getConversionResultRepository().save(conversionResult);
-            getRunStatusRepository().saveByKey(conversionResult.getKey(), runStatus);
+//        try {
+//            getConversionResultRepository().save(conversionResult);
+//        } catch (RepositoryException e) {
+//            throw new RuntimeException(e);
+//        }
+//        try {
+//            getRunStatusRepository().save(conversionResult.getKey(), runStatus);
+//        } catch (RepositoryException e) {
+//            throw new RuntimeException(e);
+//        }
 
-            // Remove Tables from Map.
+        // Remove Tables from Map.
             // TODO: Account for this eventually. I think this is already done in the 'theWork' process.
 //            for (DBMirror dbMirror : conversionResult.getDatabases().values()) {
 //                dbMirror.getTableMirrors().entrySet().removeIf(entry -> entry.getValue().isRemove());
 //            }
-        };
+//        };
+
+        return conversionResult;
     }
 
     @Bean

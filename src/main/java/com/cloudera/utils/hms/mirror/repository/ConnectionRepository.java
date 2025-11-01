@@ -34,8 +34,8 @@ public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, S
      *
      * @return Optional containing the default connection if found
      * @throws RepositoryException if there's an error accessing the repository
-     */
     Optional<ConnectionDto> findDefaultConnection() throws RepositoryException;
+     */
 
     ConnectionDto save(ConnectionDto connectionDto) throws RepositoryException;
 
@@ -45,15 +45,7 @@ public interface ConnectionRepository extends RocksDBRepository<ConnectionDto, S
      * @param environment The environment to filter by
      * @return List of connections for the specified environment
      * @throws RepositoryException if there's an error accessing the repository
-     */
     List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RepositoryException;
-
-    /**
-     * Test a connection.
-     *
-     * @param connectionId The ID of the connection to test
-     * @return true if the connection is successful, false otherwise
-     * @throws RepositoryException if there's an error accessing the repository
      */
-    boolean testConnection(String connectionId) throws RepositoryException;
+
 }

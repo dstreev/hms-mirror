@@ -199,7 +199,7 @@ public class ConversionResult {
         if (runStatus == null) {
             this.runStatus = new RunStatus();
             try {
-                this.runStatus.setConversionResultKey(this.getKey());
+                this.runStatus.setKey(this.getKey());
                 this.runStatus.setAppVersion(com.jcabi.manifests.Manifests.read("HMS-Mirror-Version"));
             } catch (IllegalArgumentException iae) {
                 this.runStatus.setAppVersion("Unknown");

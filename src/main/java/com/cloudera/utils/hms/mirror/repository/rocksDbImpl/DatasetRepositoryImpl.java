@@ -18,14 +18,13 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
-import com.cloudera.utils.hms.mirror.repository.DatasetRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.DatasetRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -50,9 +49,15 @@ public class DatasetRepositoryImpl extends AbstractRocksDBRepository<DatasetDto,
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public DatasetRepositoryImpl(RocksDB rocksDB,
-                                @Qualifier("datasetsColumnFamily") ColumnFamilyHandle columnFamily,
-                                @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<DatasetDto>() {});
+                                 @Qualifier("datasetsColumnFamily") ColumnFamilyHandle columnFamily,
+                                 @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<DatasetDto>() {
+        });
+    }
+
+    @Override
+    public boolean delete(DatasetDto datasetDto) throws RepositoryException {
+        return deleteById(datasetDto.getKey());
     }
 
     @Override
@@ -65,32 +70,6 @@ public class DatasetRepositoryImpl extends AbstractRocksDBRepository<DatasetDto,
         datasetDto.setModified(currentTime);
 
         return super.save(datasetDto.getKey(), datasetDto);
-    }
-
-    @Override
-    public Optional<DatasetDto> findById(String key) throws RepositoryException {
-        // Call parent implementation to get the entity
-        Optional<DatasetDto> result = super.findById(key);
-
-        // If entity exists, ensure the key is set (it's not stored in the JSON value)
-        if (result.isPresent()) {
-            DatasetDto dataset = result.get();
-            dataset.setKey(key);
-            return Optional.of(dataset);
-        }
-
-        return result;
-    }
-
-    @Override
-    public Map<String, DatasetDto> findAll() throws RepositoryException {
-        // Call parent implementation
-        Map<String, DatasetDto> allDatasets = super.findAll();
-
-        // Set the key on each dataset (keys are not stored in the JSON value)
-        allDatasets.forEach((key, dataset) -> dataset.setKey(key));
-
-        return allDatasets;
     }
 
     @Override

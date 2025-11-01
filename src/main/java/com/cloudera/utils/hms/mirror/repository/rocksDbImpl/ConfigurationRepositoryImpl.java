@@ -18,14 +18,13 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.repository.ConfigurationRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.ConfigurationRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -52,9 +51,15 @@ public class ConfigurationRepositoryImpl extends AbstractRocksDBRepository<Confi
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public ConfigurationRepositoryImpl(RocksDB rocksDB,
-                                      @Qualifier("configurationsColumnFamily") ColumnFamilyHandle columnFamily,
-                                      @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConfigLiteDto>() {});
+                                       @Qualifier("configurationsColumnFamily") ColumnFamilyHandle columnFamily,
+                                       @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConfigLiteDto>() {
+        });
+    }
+
+    @Override
+    public boolean delete(ConfigLiteDto configLiteDto) throws RepositoryException {
+        return deleteById(configLiteDto.getKey());
     }
 
     @Override
@@ -76,9 +81,9 @@ public class ConfigurationRepositoryImpl extends AbstractRocksDBRepository<Confi
     }
 
     @Override
-    public Optional<ConfigLiteDto> findById(String key) throws RepositoryException {
+    public Optional<ConfigLiteDto> findByKey(String key) throws RepositoryException {
         // Call parent implementation to get the entity
-        Optional<ConfigLiteDto> result = super.findById(key);
+        Optional<ConfigLiteDto> result = super.findByKey(key);
 
         // If entity exists, ensure the key is set (it's not stored in the JSON value)
         if (result.isPresent()) {

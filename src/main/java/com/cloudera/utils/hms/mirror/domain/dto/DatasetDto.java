@@ -48,6 +48,7 @@ public class DatasetDto implements Cloneable {
 
     // This would be the top level Key for the RocksDB columnFamily.
     private String key = null;
+
     //    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
     public String getKey() {
         if (key == null) {
@@ -262,14 +263,10 @@ public class DatasetDto implements Cloneable {
             }
 
             // Deep clone warehouse
-            try {
-                if (this.warehouse != null) {
-                    clone.warehouse = this.warehouse.clone();
-                } else {
-                    clone.warehouse = new Warehouse(WarehouseSource.PLAN, null, null);
-                }
-            } catch (CloneNotSupportedException e) {
-                throw new RuntimeException("Failed to clone Warehouse", e);
+            if (this.warehouse != null) {
+                clone.warehouse = this.warehouse.clone();
+            } else {
+                clone.warehouse = new Warehouse(WarehouseSource.PLAN, null, null);
             }
 
             return clone;

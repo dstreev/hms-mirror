@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror.domain.testdata;
 
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.NamespaceUtils;
@@ -73,6 +74,170 @@ public class LegacyDBMirror {
         return filteredOut;
     }
 
+    @JsonIgnore
+    public boolean isThereAnIssue() {
+        return !issues.isEmpty() ? Boolean.TRUE : Boolean.FALSE;
+    }
 
+    public List<String> getIssuesList(Environment environment) {
+        return issues.get(environment);
+    }
+
+    public boolean hasAddedProperties() {
+        boolean rtn = Boolean.FALSE;
+        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
+            if (entry.getValue().hasAddedProperties())
+                rtn = Boolean.TRUE;
+        }
+        return rtn;
+    }
+
+    public boolean hasStatistics() {
+        boolean rtn = Boolean.FALSE;
+        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
+            if (entry.getValue().hasStatistics())
+                rtn = Boolean.TRUE;
+        }
+        return rtn;
+    }
+
+    public boolean hasIssues() {
+        boolean rtn = Boolean.FALSE;
+        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
+            if (entry.getValue().hasIssues())
+                rtn = Boolean.TRUE;
+        }
+        return rtn;
+    }
+
+    public boolean hasErrors() {
+        boolean rtn = Boolean.FALSE;
+        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
+            if (entry.getValue().hasErrors())
+                rtn = Boolean.TRUE;
+        }
+        return rtn;
+    }
+
+    public Map<PhaseState, Integer> getPhaseSummary() {
+        Map<PhaseState, Integer> rtn = new HashMap<>();
+        for (String tableName : getTableMirrors().keySet()) {
+            TableMirror tableMirror = getTableMirrors().get(tableName);
+            Integer count = rtn.get(tableMirror.getPhaseState());
+            if (nonNull(count))
+                rtn.put(tableMirror.getPhaseState(), count + 1);
+            else
+                rtn.put(tableMirror.getPhaseState(), 1);
+        }
+        return rtn;
+    }
+
+    @JsonIgnore
+    public String getPhaseSummaryString() {
+        StringBuilder sb = new StringBuilder();
+        Map<PhaseState, Integer> psMap = getPhaseSummary();
+        for (PhaseState ps : psMap.keySet()) {
+            sb.append(ps).append("(").append(psMap.get(ps)).append(") ");
+        }
+        return sb.toString();
+    }
+
+    public List<Pair> getSql(Environment environment) {
+        List<Pair> sqlList = null;
+        if (isNull(sql.get(environment))) {
+            sqlList = new ArrayList<>();
+            sql.put(environment, sqlList);
+        } else {
+            sqlList = sql.get(environment);
+        }
+        return sqlList;
+    }
+    public static LegacyDBMirror fromDBMirror(DBMirror dbMirror) {
+        if (dbMirror == null) {
+            return null;
+        }
+
+        LegacyDBMirror legacy = new LegacyDBMirror();
+
+        // Copy simple fields
+        legacy.setKey(dbMirror.getKey());
+        legacy.setName(dbMirror.getName());
+        legacy.setResolvedName(dbMirror.getResolvedName());
+
+        // Deep copy issues map (final field)
+        legacy.issues.clear();
+        for (Map.Entry<Environment, List<String>> entry : dbMirror.getIssues().entrySet()) {
+            if (entry.getValue() != null) {
+                legacy.issues.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            } else {
+                legacy.issues.put(entry.getKey(), null);
+            }
+        }
+
+        // Deep copy filteredOut map (final field)
+        legacy.filteredOut.clear();
+        legacy.filteredOut.putAll(dbMirror.getFilteredOut());
+
+        // Deep copy sql map (final field)
+        legacy.sql.clear();
+        for (Map.Entry<Environment, List<Pair>> entry : dbMirror.getSql().entrySet()) {
+            if (entry.getValue() != null) {
+                // Pair is immutable, so we can use ArrayList copy constructor
+                legacy.sql.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            } else {
+                legacy.sql.put(entry.getKey(), null);
+            }
+        }
+
+        // Deep copy problemSQL map (final field)
+        legacy.problemSQL.clear();
+        for (Map.Entry<Environment, Map<String, String>> entry : dbMirror.getProblemSQL().entrySet()) {
+            if (entry.getValue() != null) {
+                legacy.problemSQL.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+            } else {
+                legacy.problemSQL.put(entry.getKey(), null);
+            }
+        }
+
+        // Deep copy properties map
+        if (dbMirror.getProperties() != null) {
+            legacy.properties = new TreeMap<>();
+            for (Map.Entry<Environment, Map<String, String>> entry : dbMirror.getProperties().entrySet()) {
+                if (entry.getValue() != null) {
+                    legacy.properties.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+                } else {
+                    legacy.properties.put(entry.getKey(), null);
+                }
+            }
+        }
+
+        // Deep copy tableMirrors map
+        if (dbMirror.getTableMirrors() != null) {
+            legacy.tableMirrors = new TreeMap<>();
+            for (Map.Entry<String, TableMirror> entry : dbMirror.getTableMirrors().entrySet()) {
+                if (entry.getValue() != null) {
+                    // Deep clone TableMirror objects
+                    TableMirror clonedTableMirror = entry.getValue().clone();
+                    legacy.tableMirrors.put(entry.getKey(), clonedTableMirror);
+                } else {
+                    legacy.tableMirrors.put(entry.getKey(), null);
+                }
+            }
+        }
+
+        // Deep copy environmentStatistics map
+        if (dbMirror.getEnvironmentStatistics() != null) {
+            legacy.environmentStatistics = new TreeMap<>();
+            for (Map.Entry<Environment, Map<String, Number>> entry : dbMirror.getEnvironmentStatistics().entrySet()) {
+                if (entry.getValue() != null) {
+                    legacy.environmentStatistics.put(entry.getKey(), new TreeMap<>(entry.getValue()));
+                } else {
+                    legacy.environmentStatistics.put(entry.getKey(), null);
+                }
+            }
+        }
+
+        return legacy;
+    }
 
 }

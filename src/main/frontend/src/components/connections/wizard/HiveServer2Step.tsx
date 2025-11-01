@@ -57,13 +57,6 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* DEBUG: Version indicator */}
-      <div className="bg-purple-100 border-2 border-purple-500 rounded p-2 text-center">
-        <p className="text-sm font-bold text-purple-900">
-          🔧 UPDATED COMPONENT LOADED - Kerberos Detection Active
-        </p>
-      </div>
-
       {/* HDFS Namespace */}
       <div>
         <label htmlFor="hcfsNamespace" className="block text-sm font-medium text-gray-700 mb-2">

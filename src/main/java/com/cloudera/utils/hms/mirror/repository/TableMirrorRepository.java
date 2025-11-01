@@ -20,7 +20,9 @@ package com.cloudera.utils.hms.mirror.repository;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Repository for managing TableMirror instances.
@@ -42,7 +44,7 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
      * @return The TableMirror instance, or null if not found
      * @throws RepositoryException if there's an error accessing the repository
      */
-    java.util.Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException;
+    Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException;
 
     /**
      * Find all TableMirror instances for a specific database within a ConversionResult.
@@ -65,6 +67,8 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
      */
     TableMirror save(String conversionResultKey, String databaseName, TableMirror tableMirror)
             throws RepositoryException;
+
+    TableMirror save(TableMirror tableMirror) throws RepositoryException;
 
     /**
      * Delete a specific TableMirror instance by name.
@@ -98,6 +102,17 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
     static String buildKey(String conversionResultKey, String databaseName, String tableName) {
         return conversionResultKey + DATABASE_PREFIX + databaseName + TABLE_PREFIX + tableName;
     }
+
+    /**
+     * Find all database names for a specific ConversionResult.
+     * Returns a list of database names (extracted from DBMirror.getName()).
+     *
+     * @param conversionResultKey The key of the ConversionResult
+     * @param databaseName The name of the database
+     * @return List of database names
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    List<String> listNamesByKey(String conversionResultKey, String databaseName) throws RepositoryException;
 
     /**
      * Build a database prefix for iteration.

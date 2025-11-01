@@ -18,14 +18,13 @@
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
-import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -45,9 +44,15 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public ConnectionRepositoryImpl(RocksDB rocksDB,
-                                   @Qualifier("connectionsColumnFamily") ColumnFamilyHandle columnFamily,
-                                   @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
-        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConnectionDto>() {});
+                                    @Qualifier("connectionsColumnFamily") ColumnFamilyHandle columnFamily,
+                                    @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
+        super(rocksDB, columnFamily, objectMapper, new TypeReference<ConnectionDto>() {
+        });
+    }
+
+    @Override
+    public boolean delete(ConnectionDto connectionDto) throws RepositoryException {
+        return deleteById(connectionDto.getKey());
     }
 
     @Override
@@ -60,76 +65,5 @@ public class ConnectionRepositoryImpl extends AbstractRocksDBRepository<Connecti
         connectionDto.setModified(currentTime);
 
         return super.save(connectionDto.getKey(), connectionDto);
-    }
-
-    @Override
-    public Optional<ConnectionDto> findById(String key) throws RepositoryException {
-        // Call parent implementation to get the entity
-        Optional<ConnectionDto> result = super.findById(key);
-
-        // If entity exists, ensure the key is set (it's not stored in the JSON value)
-        if (result.isPresent()) {
-            ConnectionDto connection = result.get();
-            connection.setKey(key);
-            return Optional.of(connection);
-        }
-
-        return result;
-    }
-
-    @Override
-    public Map<String, ConnectionDto> findAll() throws RepositoryException {
-        // Call parent implementation
-        Map<String, ConnectionDto> allConnections = super.findAll();
-
-        // Set the key on each connection (keys are not stored in the JSON value)
-        allConnections.forEach((key, connection) -> connection.setKey(key));
-
-        return allConnections;
-    }
-
-    @Override
-    public Optional<ConnectionDto> findDefaultConnection() throws RepositoryException {
-        Map<String, ConnectionDto> all = findAll();
-        return all.values().stream()
-                .filter(ConnectionDto::isDefault)
-                .findFirst();
-    }
-
-    @Override
-    public List<ConnectionDto> findByEnvironment(ConnectionDto.Environment environment) throws RepositoryException {
-        Map<String, ConnectionDto> all = findAll();
-        return all.values().stream()
-                .filter(conn -> environment.equals(conn.getEnvironment()))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean testConnection(String connectionId) throws RepositoryException {
-        Optional<ConnectionDto> connectionOpt = findById(connectionId);
-        if (connectionOpt.isEmpty()) {
-            throw new RepositoryException("Connection not found: " + connectionId);
-        }
-        
-        ConnectionDto connectionDto = connectionOpt.get();
-        
-        // TODO: Implement actual connection testing logic
-        // For now, return a basic validation
-        boolean isValid = connectionDto.getHs2Uri() != null
-                && !connectionDto.getHs2Uri().trim().isEmpty();
-        
-        // Update test results
-        ConnectionDto.ConnectionTestResults testResults = ConnectionDto.ConnectionTestResults.builder()
-                .status(isValid ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS : ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
-                .lastTested(LocalDateTime.now())
-                .duration(isValid ? 1.5 : 0.0)
-                .errorMessage(isValid ? null : "Invalid configuration")
-                .build();
-        
-        connectionDto.setTestResults(testResults);
-        save(connectionId, connectionDto);
-        
-        log.info("Connection test completed for {}: {}", connectionId, testResults.getStatus());
-        return isValid;
     }
 }

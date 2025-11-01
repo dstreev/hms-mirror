@@ -17,9 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -37,16 +40,20 @@ public class CliReporterConfig {
         this.cliReporter = cliReporter;
     }
 
-    @Bean
-    @Order(21) // Needs to run before the main application logic in "ApplicationConfig".
-    // Don't run when encrypting/decrypting passwords.
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.password",
-            matchIfMissing = true)
-    public CommandLineRunner launchCliReporting() {
-        return args -> {
-            log.info("Launching CLI Reporting");
-            cliReporter.run();
-        };
-    }
+//    @Bean
+//    @Order(21) // Needs to run before the main application logic in "ApplicationConfig".
+//    // Don't run when encrypting/decrypting passwords.
+//    @ConditionalOnProperty(
+//            name = "hms-mirror.config.password",
+//            matchIfMissing = true)
+//    /**
+//     * Pick up the converted ConversionResult to use for Reporting.
+//     */
+//    public CommandLineRunner launchCliReporting(@Qualifier("cliConversionResult") ConversionResult conversionResult,
+//                                                HmsMirrorConfig hmsMirrorConfig) {
+//        return args -> {
+//            log.info("Launching CLI Reporting");
+//            cliReporter.run(conversionResult, hmsMirrorConfig);
+//        };
+//    }
 }

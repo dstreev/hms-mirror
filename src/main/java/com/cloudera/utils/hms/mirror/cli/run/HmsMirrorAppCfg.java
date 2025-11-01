@@ -18,6 +18,7 @@ package com.cloudera.utils.hms.mirror.cli.run;
 
 import com.cloudera.utils.hms.mirror.cli.CliReporter;
 import com.cloudera.utils.hms.mirror.cli.HmsMirrorCommandLineOptions;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
@@ -79,14 +80,21 @@ public class HmsMirrorAppCfg {
             log.debug("Starting the HMS Mirror Application");
             ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                     new IllegalStateException("Conversion result is not set."));
+            HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+                    new IllegalStateException("HmsMirrorConfig is not set."));
             CompletableFuture<Boolean> result = hmsMirrorAppService.cliRun(conversionResult);
-            while (!result.isDone()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            CompletableFuture<Void> runFuture = cliReporter.run(conversionResult, config);
+
+            // Wait for this to finish. It contains the logic to watch the RunStatus for a complete signal.
+            runFuture.join();
+
+//            while (!result.isDone()) {
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
             cliReporter.refresh(Boolean.TRUE);
         };
     }

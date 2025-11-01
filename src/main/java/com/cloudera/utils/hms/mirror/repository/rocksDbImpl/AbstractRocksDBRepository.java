@@ -36,7 +36,7 @@ import java.util.*;
  * Provides common functionality for JSON serialization/deserialization and basic CRUD operations.
  * Wraps RocksDB-specific exceptions in generic RepositoryException.
  *
- * @param <T> The entity type
+ * @param <T>  The entity type
  * @param <ID> The identifier type (typically String)
  */
 @Slf4j
@@ -47,17 +47,17 @@ public abstract class AbstractRocksDBRepository<T, ID> implements RocksDBReposit
     protected final ObjectMapper objectMapper;
     protected final TypeReference<T> typeReference;
 
-    public AbstractRocksDBRepository(RocksDB rocksDB, 
-                                   ColumnFamilyHandle columnFamily,
-                                   ObjectMapper objectMapper,
-                                   TypeReference<T> typeReference) {
+    public AbstractRocksDBRepository(RocksDB rocksDB,
+                                     ColumnFamilyHandle columnFamily,
+                                     ObjectMapper objectMapper,
+                                     TypeReference<T> typeReference) {
         this.rocksDB = rocksDB;
         this.columnFamily = columnFamily;
         this.objectMapper = objectMapper;
         this.typeReference = typeReference;
     }
 
-//    @Override
+    //    @Override
     protected T save(ID id, T entity) throws RepositoryException {
         try {
             byte[] key = serializeKey(id);
@@ -73,8 +73,8 @@ public abstract class AbstractRocksDBRepository<T, ID> implements RocksDBReposit
         }
     }
 
-    @Override
-    public Optional<T> findById(ID id) throws RepositoryException {
+    //    @Override
+    public Optional<T> findByKey(ID id) throws RepositoryException {
         try {
             byte[] key = serializeKey(id);
             byte[] value = rocksDB.get(columnFamily, key);

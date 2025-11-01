@@ -22,14 +22,16 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
-import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.domain.support.JobExecution;
-import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
 import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -43,12 +45,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Component
 @Getter
 @Setter
 @Slf4j
+@RequiredArgsConstructor
 public class CliReporter {
     private final Date start = new Date();
     private final int sleepInterval = 1000;
@@ -57,10 +64,16 @@ public class CliReporter {
     private final List<String> reportTemplateFooter = new ArrayList<>();
     private final List<String> reportTemplateOutput = new ArrayList<>();
     private final Map<String, String> varMap = new TreeMap<>();
-    private final List<TableMirror> startedTables = new ArrayList<>();
+//    private final List<TableMirror> startedTables = new ArrayList<>();
 
+    @NonNull
     private final ExecutionContextService executionContextService;
+    @NonNull
     private final ConversionResultService conversionResultService;
+    @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
 
     // TODO: Need to populate this.
     private DBMirror dbMirror;
@@ -70,13 +83,6 @@ public class CliReporter {
     private Boolean quiet = Boolean.FALSE;
     private boolean tiktok = false;
 
-
-    // Constructor injection for dependencies
-    public CliReporter(ExecutionContextService executionContextService, ConversionResultService conversionResultService) {
-        this.executionContextService = executionContextService;
-        this.conversionResultService = conversionResultService;
-    }
-
     @Bean
     @Order(20)
     CommandLineRunner configQuiet(HmsMirrorConfig hmsMirrorConfig) {
@@ -84,12 +90,8 @@ public class CliReporter {
     }
 
     protected void displayReport(Boolean showAll) {
-//        ExecuteSession session = sessionManager.getCurrentSession();
-//        HmsMirrorConfig config = session.getConfig();
-//        ConversionResult conversionResult = session.getConversionResult();
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-        ConfigLiteDto config = conversionResult.getConfig();
 
         System.out.print(ReportingConf.CLEAR_CONSOLE);
         StringBuilder report = new StringBuilder();
@@ -98,6 +100,7 @@ public class CliReporter {
             report.append(ReportingConf.substituteAllVariables(reportTemplateHeader, varMap));
 
             // Table Processing
+            /* TODO: Need to get a list of 'in-progress' tables.
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
                 String dbName = findDatabaseForTable(conversionResult, tblMirror);
@@ -108,15 +111,22 @@ public class CliReporter {
                 tblVars.put("tbl.strategy", tblMirror.getStrategy().toString());
                 report.append(ReportingConf.substituteAllVariables(reportTemplateTableDetail, tblVars));
             }
+
+             */
         }
 
         // Footer
         report.append(ReportingConf.substituteAllVariables(reportTemplateFooter, varMap));
-
+        List<String> databases;
+        try {
+            databases = getDbMirrorRepository().listNamesByKey(conversionResult.getKey());
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
         // Output
         if (showAll) {
             report.append("\nDatabases(<db>):\n");
-            report.append(String.join(",", conversionResult.getDatabases().keySet()));
+            report.append(String.join(",", databases));
             report.append("\n");
             report.append(ReportingConf.substituteAllVariables(reportTemplateOutput, varMap));
             log.info(report.toString());
@@ -188,16 +198,15 @@ public class CliReporter {
     private void populateVarMap() {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-        ConfigLiteDto config = conversionResult.getConfig();
+        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+                new IllegalStateException("HmsMirrorConfig not set"));
+
+//        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
         JobExecution jobExecution = conversionResult.getJobExecution();
 
-//        ExecuteSession session = sessionManager.getCurrentSession();
-//        ConversionResult conversionResult = session.getConversionResult();
-//        HmsMirrorConfig config = session.getConfig();
-
         tiktok = !tiktok;
-        startedTables.clear();
+//        startedTables.clear();
         if (!retry)
             varMap.put("retry", "       ");
         else
@@ -205,7 +214,7 @@ public class CliReporter {
         varMap.put("run.mode", jobExecution.isExecute() ? "EXECUTE" : "DRYRUN");
         varMap.put("HMS-Mirror-Version", ReportingConf.substituteVariablesFromManifest("${HMS-Mirror-Version}"));
         // TODO: Fix
-//        varMap.put("config.file", config.getConfigFilename());
+        varMap.put("config.file", config.getConfigFilename());
         varMap.put("config.strategy", job.getStrategy().toString());
         varMap.put("tik.tok", tiktok ? "*" : "");
         varMap.put("java.version", System.getProperty("java.version"));
@@ -215,10 +224,10 @@ public class CliReporter {
         varMap.put("memory", Runtime.getRuntime().totalMemory() / 1024 / 1024 + "MB");
 
         // TODO: Fix
-        /*
-        String outputDir = session.getConfig().getOutputDirectory();
-        if (!isBlank(session.getConfig().getFinalOutputDirectory())) {
-            outputDir = session.getConfig().getFinalOutputDirectory();
+
+        String outputDir = config.getOutputDirectory();
+        if (!isBlank(config.getFinalOutputDirectory())) {
+            outputDir = config.getFinalOutputDirectory();
         }
 
         varMap.put("report.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_hms-mirror.md|html|yaml");
@@ -227,7 +236,7 @@ public class CliReporter {
         varMap.put("left.cleanup.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_LEFT_CleanUp_execute.sql");
         varMap.put("right.execute.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_execute.sql");
         varMap.put("right.cleanup.file", outputDir + FileSystems.getDefault().getSeparator() + "<db>_RIGHT_CleanUp_execute.sql");
-         */
+
         varMap.put("total.dbs", Integer.toString(conversionResult.getDatabases().size()));
         // Count
         int tblCount = 0;
@@ -300,35 +309,44 @@ public class CliReporter {
     }
 
     @Async("reportingThreadPool")
-    public void run() {
-        // TODO: Fix
-        /*
-        ExecuteSession session = sessionManager.getCurrentSession();
-        try {
-            fetchReportTemplates();
-            log.info("Starting Reporting Thread");
-            // Wait for the main thread to start.
-            while (!session.isRunning() && session.getRunStatus().getStages().isEmpty()) {
-                try {
-                    Thread.sleep(sleepInterval);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            while (session.isRunning()) {
-                refresh(Boolean.FALSE);
-                try {
-                    Thread.sleep(sleepInterval);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            log.info("Completed Reporting Thread");
-        } catch (IOException ioe) {
-            System.out.println("Missing Reporting Template");
-        }
+    public CompletableFuture<Void> run(ConversionResult conversionResult, HmsMirrorConfig config) {
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+        getExecutionContextService().setHmsMirrorConfig(config);
 
-         */
+        RunStatus runStatus = conversionResult.getRunStatus();
+        CompletableFuture<Void> future;
+
+        future = CompletableFuture.runAsync(() -> {
+            getExecutionContextService().setConversionResult(conversionResult);
+            getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+            getExecutionContextService().setHmsMirrorConfig(config);
+            try {
+                fetchReportTemplates();
+                log.info("Starting Reporting Thread");
+                // Wait for the main thread to start.
+                while (runStatus.getProgress().equals(ProgressEnum.INITIALIZED)) {
+                    try {
+                        Thread.sleep(sleepInterval);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                // If the Job hasn't completed, keep cycling.
+                while (EnumSet.of(ProgressEnum.STARTED, ProgressEnum.IN_PROGRESS).contains(runStatus.getProgress())) {
+                    refresh(Boolean.FALSE);
+                    try {
+                        Thread.sleep(sleepInterval);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                log.info("Completed Reporting Thread");
+            } catch (IOException ioe) {
+                System.out.println("Missing Reporting Template");
+            }
+        });
+        return future;
     }
 
     @PreDestroy

@@ -28,8 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public class ReturnStatus {
     private Status status = null;
-    private DBMirror dbMirror = null;
-    private TableMirror tableMirror = null;
+    private String databaseName = null;
+    private String tableName = null;
     private Throwable exception = null;
 
     public enum Status {
