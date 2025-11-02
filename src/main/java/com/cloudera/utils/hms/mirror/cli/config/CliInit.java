@@ -40,6 +40,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -56,30 +57,29 @@ import java.util.Date;
 import static java.util.Objects.isNull;
 
 @Component
+@DependsOn("hmsMirrorCommandLineOptions")
 @Slf4j
 @Getter
 //@RequiredArgsConstructor
 public class CliInit {
 
     @NonNull
-    private final DomainService domainService;
-    @NonNull
     private final ConversionResultService conversionResultService;
     @NonNull
     private final ExecutionContextService executionContextService;
     @NonNull
     private final ObjectMapper yamlMapper;
+    @NonNull
+
 //    @NonNull
 //    private final ConversionResultRepository conversionResultRepository;
 //    @NonNull
 //    private final RunStatusRepository runStatusRepository;
 
-    public CliInit(@NonNull DomainService domainService,
-                   @NonNull ConversionResultService conversionResultService,
+    public CliInit(@NonNull ConversionResultService conversionResultService,
                    @NonNull ExecutionContextService executionContextService,
                    @NonNull @Qualifier("yamlMapper") ObjectMapper yamlMapper
     ) {
-        this.domainService = domainService;
         this.conversionResultService = conversionResultService;
         this.executionContextService = executionContextService;
         this.yamlMapper = yamlMapper;
@@ -151,56 +151,6 @@ public class CliInit {
         }
         log.info("Config loaded.");
         return config;
-    }
-
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.setup",
-            havingValue = "false")
-    public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config.path}") String configPath,
-                                               @Value("${hms-mirror.config.filename}") String configFile) {
-        String fullConfigPath;
-        // If file is absolute, use it.  Otherwise, use the path.
-        // Strip the quotes from the string.
-        configFile = configFile.replaceAll("^\"|\"$", "");
-        if (configFile.startsWith(File.separator)) {
-            fullConfigPath = configFile;
-        } else {
-            fullConfigPath = configPath + File.separator + configFile;
-        }
-        HmsMirrorConfig config = domainService.deserializeConfig(fullConfigPath);
-        if (config == null) {
-            log.error("Couldn't locate configuration file: {}", fullConfigPath);
-            throw new RuntimeException("Couldn't locate configuration file: " + fullConfigPath);
-        }
-        getExecutionContextService().setHmsMirrorConfig(config);
-
-        return config;
-    }
-
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.setup",
-            havingValue = "true")
-    /*
-    Init empty for framework to fill in.
-     */
-    public HmsMirrorConfig loadHmsMirrorConfigWithSetup() {
-        return new HmsMirrorConfig();
-    }
-
-    @Bean
-    @Order(5)
-    @ConditionalOnProperty(
-            name = "hms-mirror.conversion.test-filename")
-    public CommandLineRunner setTestDataFile(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
-        return args -> {
-            // String quotes from the filename.
-            String adjustedFilename = filename.replaceAll("^\"|\"$", "");
-            hmsMirrorConfig.setLoadTestDataFile(adjustedFilename);
-        };
     }
 
 //    private void loadTestData() {
@@ -300,18 +250,19 @@ public class CliInit {
 
     @Bean("cliConversionResult")
     // Needs to happen after all the configs have been set.
-    @Order(15)
-    public ConversionResult conversionPostProcessing() {
+//    @Order(15)
+    public ConversionResult conversionPostProcessing(HmsMirrorConfig config) {
 //        return args -> {
             // Create a session for the CLI.  It will be the 'current' session. prefix 'cli-' with timestamp.
             log.info("Creating Session for CLI");
             DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
             String cliSessionId = "cli-" + dtf.format(new Date());
 
-            HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-                    new IllegalStateException("HmsMirrorConfig not set"));
+//            HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+//                    new IllegalStateException("HmsMirrorConfig not set"));
             ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, "cliSessionId");
             getExecutionContextService().setConversionResult(conversionResult);
+            getExecutionContextService().setHmsMirrorConfig(config);
             RunStatus runStatus = conversionResult.getRunStatus();
             getExecutionContextService().setRunStatus(runStatus);
 
@@ -344,50 +295,5 @@ public class CliInit {
         return conversionResult;
     }
 
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.output-dir")
-        // Will set this when the value is set externally.
-    CommandLineRunner configOutputDir(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.output-dir}") String value) {
-        return configOutputDirInternal(hmsMirrorConfig, Boolean.TRUE, value);
-    }
 
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.output-dir",
-            havingValue = "false")
-        // Will set this when the value is NOT set and picks up the default application.yaml (false) setting.
-    CommandLineRunner configOutputDirNotSet(HmsMirrorConfig hmsMirrorConfig) {
-        String value = System.getenv("APP_OUTPUT_PATH");
-        if (value != null) {
-            return configOutputDirInternal(hmsMirrorConfig, Boolean.FALSE, value);
-        } else {
-            String reportDir = System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror/reports/not-set";
-            return configOutputDirInternal(hmsMirrorConfig, Boolean.FALSE,
-                    reportDir);
-        }
-    }
-
-    CommandLineRunner configOutputDirInternal(HmsMirrorConfig hmsMirrorConfig, boolean userSetOutputDir, String value) {
-        return args -> {
-            log.info("output-dir: {}", value);
-            hmsMirrorConfig.setOutputDirectory(value);
-            // Identify it as being set by the user.
-            hmsMirrorConfig.setUserSetOutputDirectory(userSetOutputDir);
-            // TODO: Fix
-//            executeSessionService.setReportOutputDirectory(value, false);
-
-            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
-
-            // Ensure the Retry Path is created.
-            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
-                    FileSystems.getDefault().getSeparator() + "retry");
-            if (!retryPath.exists()) {
-                retryPath.mkdirs();
-            }
-
-        };
-    }
 }

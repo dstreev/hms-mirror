@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -32,12 +33,21 @@ import java.util.List;
 public class JacksonConfig implements WebMvcConfigurer {
 
     @Autowired
+    @Qualifier("jsonMapper")
     private ObjectMapper objectMapper;
+
+    @Autowired
+    @Qualifier("yamlMapper")
+    private ObjectMapper yamlMapper;
+
 
     @PostConstruct
     public void configureJackson() {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        yamlMapper.registerModule(new JavaTimeModule());
+        yamlMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
     }
 
     @Override

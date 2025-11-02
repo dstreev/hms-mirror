@@ -23,7 +23,9 @@ import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
 import com.cloudera.utils.hms.mirror.service.ConfigService;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
+import com.cloudera.utils.hms.mirror.service.DomainService;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
@@ -36,13 +38,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.util.*;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
-@Configuration
+@Configuration("hmsMirrorCommandLineOptions")
 @Order(5)
 @Slf4j
 @Getter
@@ -50,21 +54,116 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class HmsMirrorCommandLineOptions {
     public static String SPRING_CONFIG_PREFIX = "hms-mirror.config";
 
+    @NonNull
     private final ConfigService configService;
 
-    /**
-     * Constructor injection for HmsMirrorCommandLineOptions.
-     *
-     * @param configService the injected config service
-     * @param log injected logger
-     */
-    public HmsMirrorCommandLineOptions(ConfigService configService) {
-        this.configService = configService;
-    }
+    @NonNull
+    private final DomainService domainService;
 
+    public HmsMirrorCommandLineOptions(@NonNull ConfigService configService, @NonNull DomainService domainService) {
+        this.configService = configService;
+        this.domainService = domainService;
+    }
 
     @Bean
     @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.setup",
+            havingValue = "false")
+    public HmsMirrorConfig loadHmsMirrorConfig(@Value("${hms-mirror.config.path}") String configPath,
+                                               @Value("${hms-mirror.config.filename}") String configFile) {
+        String fullConfigPath;
+        // If file is absolute, use it.  Otherwise, use the path.
+        // Strip the quotes from the string.
+        configFile = configFile.replaceAll("^\"|\"$", "");
+        if (configFile.startsWith(File.separator)) {
+            fullConfigPath = configFile;
+        } else {
+            fullConfigPath = configPath + File.separator + configFile;
+        }
+        HmsMirrorConfig config = domainService.deserializeConfig(fullConfigPath);
+        if (config == null) {
+            log.error("Couldn't locate configuration file: {}", fullConfigPath);
+            throw new RuntimeException("Couldn't locate configuration file: " + fullConfigPath);
+        }
+//        getExecutionContextService().setHmsMirrorConfig(config);
+
+        return config;
+    }
+
+    @Bean
+    @Order(1)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.setup",
+            havingValue = "true")
+    /*
+    Init empty for framework to fill in.
+     */
+    public HmsMirrorConfig loadHmsMirrorConfigWithSetup() {
+        return new HmsMirrorConfig();
+    }
+
+    @Bean
+    @Order(2)
+    @ConditionalOnProperty(
+            name = "hms-mirror.conversion.test-filename")
+    public CommandLineRunner setTestDataFile(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String filename) throws IOException {
+        return args -> {
+            // String quotes from the filename.
+            String adjustedFilename = filename.replaceAll("^\"|\"$", "");
+            hmsMirrorConfig.setLoadTestDataFile(adjustedFilename);
+        };
+    }
+
+    @Bean
+    @Order(2)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.output-dir")
+        // Will set this when the value is set externally.
+    CommandLineRunner configOutputDir(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.output-dir}") String value) {
+        return configOutputDirInternal(hmsMirrorConfig, Boolean.TRUE, value);
+    }
+
+    @Bean
+    @Order(2)
+    @ConditionalOnProperty(
+            name = "hms-mirror.config.output-dir",
+            havingValue = "false")
+        // Will set this when the value is NOT set and picks up the default application.yaml (false) setting.
+    CommandLineRunner configOutputDirNotSet(HmsMirrorConfig hmsMirrorConfig) {
+        String value = System.getenv("APP_OUTPUT_PATH");
+        if (value != null) {
+            return configOutputDirInternal(hmsMirrorConfig, Boolean.FALSE, value);
+        } else {
+            String reportDir = System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror/reports/not-set";
+            return configOutputDirInternal(hmsMirrorConfig, Boolean.FALSE,
+                    reportDir);
+        }
+    }
+
+    CommandLineRunner configOutputDirInternal(HmsMirrorConfig hmsMirrorConfig, boolean userSetOutputDir, String value) {
+        return args -> {
+            log.info("output-dir: {}", value);
+            hmsMirrorConfig.setOutputDirectory(value);
+            // Identify it as being set by the user.
+            hmsMirrorConfig.setUserSetOutputDirectory(userSetOutputDir);
+            // TODO: Fix
+//            executeSessionService.setReportOutputDirectory(value, false);
+
+            File testFile = new File(value + FileSystems.getDefault().getSeparator() + ".dir-check");
+
+            // Ensure the Retry Path is created.
+            File retryPath = new File(System.getProperty("user.home") + FileSystems.getDefault().getSeparator() + ".hms-mirror" +
+                    FileSystems.getDefault().getSeparator() + "retry");
+            if (!retryPath.exists()) {
+                retryPath.mkdirs();
+            }
+
+        };
+    }
+
+    @Bean
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.debug-dir")
     CommandLineRunner runDebugSession(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.acid-partition-count}") String value) {
@@ -76,7 +175,7 @@ public class HmsMirrorCommandLineOptions {
 
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.acid-partition-count")
     CommandLineRunner configAcidPartitionCount(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.acid-partition-count}") String value) {
@@ -87,7 +186,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.auto-tune",
             havingValue = "true")
@@ -99,7 +198,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.auto-tune",
             havingValue = "false")
@@ -112,7 +211,7 @@ public class HmsMirrorCommandLineOptions {
 
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.avro-schema-migration",
             havingValue = "true")
@@ -124,7 +223,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.avro-schema-migration",
             havingValue = "false")
@@ -136,7 +235,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.beta",
             havingValue = "true")
@@ -148,7 +247,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.beta",
             havingValue = "false")
@@ -161,7 +260,7 @@ public class HmsMirrorCommandLineOptions {
 
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.create-if-not-exist",
             havingValue = "true")
@@ -178,7 +277,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.create-if-not-exist",
             havingValue = "false")
@@ -195,7 +294,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.legacy-command-line-options")
     CommandLineRunner configCommandLineOptions(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.legacy-command-line-options}") String value) {
@@ -206,7 +305,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.target-namespace")
     CommandLineRunner configTargetNamespace(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.target-namespace}") String value) {
@@ -219,7 +318,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.compress-text-output",
             havingValue = "true")
@@ -231,7 +330,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.compress-text-output",
             havingValue = "false")
@@ -243,7 +342,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.comment"
     )
@@ -254,8 +353,8 @@ public class HmsMirrorCommandLineOptions {
         };
     }
 
-    @Bean
-    @Order(1)
+    @Bean("configDataStrategy")
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.data-strategy")
     CommandLineRunner configDataStrategy(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.data-strategy}") String value) {
@@ -266,7 +365,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.database")
     CommandLineRunner configDatabase(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.database}") String dbs) {
@@ -280,7 +379,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.database-only",
             havingValue = "true")
@@ -292,7 +391,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.database-only",
             havingValue = "false")
@@ -304,7 +403,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.consolidate-tables-for-distcp",
             havingValue = "true")
@@ -316,7 +415,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.consolidate-tables-for-distcp",
             havingValue = "false")
@@ -328,7 +427,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.db-prefix")
     CommandLineRunner configDatabasePrefix(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.db-prefix}") String value) {
@@ -339,7 +438,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.database-skip-properties")
     CommandLineRunner configDatabasePropertySkip(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.database-skip-properties}") String values) {
@@ -353,7 +452,7 @@ public class HmsMirrorCommandLineOptions {
 
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.database-regex")
     CommandLineRunner configDatabaseRegEx(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.database-regex}") String value) {
@@ -364,7 +463,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.db-rename")
     CommandLineRunner configDatabaseRename(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.db-rename}") String value) {
@@ -375,7 +474,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.distcp")
     CommandLineRunner configDistcp(HmsMirrorConfig hmsMirrorConfig,
@@ -421,7 +520,7 @@ public class HmsMirrorCommandLineOptions {
 
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.downgrade-acid",
             havingValue = "true")
@@ -433,7 +532,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.downgrade-acid",
             havingValue = "false")
@@ -445,7 +544,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.dump-source")
     CommandLineRunner configDumpSource(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.dump-source}") String value) {
@@ -468,7 +567,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.dump-test-data")
     CommandLineRunner configDumpTestData(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.dump-test-data}") String value) {
@@ -479,7 +578,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
         @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.align-locations")
     CommandLineRunner configAlignLocations(HmsMirrorConfig hmsMirrorConfig,
@@ -491,7 +590,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.execute",
             havingValue = "true")
@@ -503,7 +602,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.execute",
             havingValue = "false")
@@ -515,7 +614,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.export-partition-count")
     CommandLineRunner configExportPartitionCount(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.export-partition-count}") String value) {
@@ -526,7 +625,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.external-warehouse-directory")
     CommandLineRunner configExternalWarehouseDirectory(HmsMirrorConfig config, @Value("${hms-mirror.config.external-warehouse-directory}") String value) {
@@ -565,7 +664,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.flip",
             havingValue = "false")
@@ -577,7 +676,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.force-external-location",
             havingValue = "true")
@@ -589,7 +688,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.force-external-location",
             havingValue = "false")
@@ -601,7 +700,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.global-location-map")
     CommandLineRunner configGlobalLocationMap(HmsMirrorConfig config, @Value("${hms-mirror.config.global-location-map}") String value) {
@@ -615,7 +714,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.help")
     CommandLineRunner configHelp(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.help}") String value) {
@@ -626,7 +725,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.iceberg-table-property-overrides")
     CommandLineRunner configIcebergTablePropertyOverrides(HmsMirrorConfig config, @Value("${hms-mirror.config.iceberg-table-property-overrides}") String value) {
@@ -639,7 +738,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.iceberg-version")
     CommandLineRunner configIcebergVersion(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.iceberg-version}") String value) {
@@ -651,7 +750,7 @@ public class HmsMirrorCommandLineOptions {
 
     @Bean
     // So this happens AFTER migrate acid and migrate acid only are checked.
-    @Order(5)
+    @Order(4)
     @ConditionalOnProperty(
             name = "hms-mirror.config.in-place",
             havingValue = "true")
@@ -667,7 +766,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.intermediate-storage")
     CommandLineRunner configIntermediateStorage(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.intermediate-storage}") String value) {
@@ -691,7 +790,7 @@ public class HmsMirrorCommandLineOptions {
     in ConversionInitialization.
      */
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.conversion.test-filename")
     CommandLineRunner configLoadTestData(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.conversion.test-filename}") String value) {
@@ -702,7 +801,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-acid")
     CommandLineRunner configMigrateAcid(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.migrate-acid}") String value) {
@@ -723,7 +822,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-acid-only")
     CommandLineRunner configMigrateAcidOnly(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.migrate-acid-only}") String value) {
@@ -744,7 +843,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-non-native",
             havingValue = "true")
@@ -756,7 +855,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-non-native",
             havingValue = "false")
@@ -768,7 +867,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-non-native-only",
             havingValue = "true")
@@ -780,7 +879,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.migrate-non-native-only",
             havingValue = "false")
@@ -792,7 +891,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.no-purge",
             havingValue = "true")
@@ -804,7 +903,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.no-purge",
             havingValue = "false")
@@ -816,7 +915,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.password-key")
     CommandLineRunner configPasswordKey(HmsMirrorConfig config, @Value("${hms-mirror.config.password-key}") String value) {
@@ -827,7 +926,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.property-overrides")
     CommandLineRunner configPropertyOverrides(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.property-overrides}") String value) {
@@ -840,7 +939,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.property-overrides-left")
     CommandLineRunner configPropertyOverridesLeft(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.property-overrides-left}") String value) {
@@ -853,7 +952,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.property-overrides-right")
     CommandLineRunner configPropertyOverridesRight(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.property-overrides-right}") String value) {
@@ -866,7 +965,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.quiet",
             havingValue = "true")
@@ -878,7 +977,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.quiet",
             havingValue = "false")
@@ -890,7 +989,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.read-only",
             havingValue = "true")
@@ -902,7 +1001,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.read-only",
             havingValue = "false")
@@ -914,7 +1013,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.replay-directory")
     CommandLineRunner configReplayDirectory(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.replay-directory}") String value) {
@@ -925,7 +1024,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.reset-right",
             havingValue = "true")
@@ -938,7 +1037,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.reset-right",
             havingValue = "false")
@@ -951,7 +1050,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.right-is-disconnected",
             havingValue = "true")
@@ -964,7 +1063,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.right-is-disconnected",
             havingValue = "false")
@@ -977,7 +1076,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.save-working-tables")
     CommandLineRunner configSaveWorkingTables(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.save-working-tables}") boolean value) {
@@ -1017,7 +1116,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-features",
             havingValue = "true")
@@ -1029,7 +1128,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-features",
             havingValue = "false")
@@ -1041,7 +1140,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-legacy-translation",
             havingValue = "true")
@@ -1053,7 +1152,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-legacy-translation",
             havingValue = "false")
@@ -1065,7 +1164,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-link-check",
             havingValue = "true")
@@ -1077,7 +1176,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-link-check",
             havingValue = "false")
@@ -1089,7 +1188,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-optimizations",
             havingValue = "true")
@@ -1101,7 +1200,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-optimizations",
             havingValue = "false")
@@ -1113,7 +1212,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-stats-collection",
             havingValue = "true")
@@ -1125,7 +1224,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.skip-stats-collection",
             havingValue = "false")
@@ -1137,7 +1236,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.sort-dynamic-partition-inserts",
             havingValue = "true")
@@ -1149,7 +1248,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.sort-dynamic-partition-inserts",
             havingValue = "false")
@@ -1161,7 +1260,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.sql-partition-count")
     CommandLineRunner configSqlPartitionCount(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.sql-partition-count}") String value) {
@@ -1172,7 +1271,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.storage-migration-namespace")
     CommandLineRunner configStorageMigrationNamespace(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.storage-migration-namespace}") String value) {
@@ -1183,7 +1282,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.storage-migration-strict")
     CommandLineRunner configStorageMigrationStrictTrue(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.storage-migration-strict}") boolean value) {
@@ -1194,7 +1293,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.suppress-cli-warnings")
     CommandLineRunner configSuppressCliWarnings(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.suppress-cli-warnings}") boolean value) {
@@ -1205,7 +1304,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.sync",
             havingValue = "true")
@@ -1219,7 +1318,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.sync",
             havingValue = "false")
@@ -1231,7 +1330,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.table-exclude-filter")
     CommandLineRunner configTableExcludeFilter(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.table-exclude-filter}") String value) {
@@ -1242,7 +1341,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.table-filter")
     CommandLineRunner configTableFilter(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.table-filter}") String value) {
@@ -1253,7 +1352,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.table-filter-partition-count-limit")
     CommandLineRunner configTableFilterPartitionCountLimit(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.table-filter-partition-count-limit}") String value) {
@@ -1264,7 +1363,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.table-filter-size-limit")
     CommandLineRunner configTableFilterSizeLimit(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.table-filter-size-limit}") String value) {
@@ -1299,7 +1398,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.transfer-ownership",
             havingValue = "true")
@@ -1312,7 +1411,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.translation-type")
     CommandLineRunner configTranslationType(HmsMirrorConfig hmsMirrorConfig, @Value("${hms-mirror.config.translation-type}") String value) {
@@ -1327,7 +1426,7 @@ public class HmsMirrorCommandLineOptions {
     Set this first (false or not set).  Individual settings will override.
      */
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.transfer-ownership",
             havingValue = "false")
@@ -1340,7 +1439,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.views-only",
             havingValue = "true")
@@ -1352,7 +1451,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.views-only",
             havingValue = "false")
@@ -1364,7 +1463,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.warehouse-directory")
     CommandLineRunner configWarehouseDirectory(HmsMirrorConfig config, @Value("${hms-mirror.config.warehouse-directory}") String value) {
@@ -1388,7 +1487,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     @ConditionalOnProperty(
             name = "hms-mirror.config.warehouse-plans")
     CommandLineRunner configWarehousePlans(HmsMirrorConfig config, @Value("${hms-mirror.config.warehouse-plans}") String value) {
