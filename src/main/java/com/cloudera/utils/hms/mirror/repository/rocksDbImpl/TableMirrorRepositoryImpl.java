@@ -56,13 +56,14 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
 
     @Override
     public boolean delete(TableMirror tableMirror) throws RepositoryException {
-        return deleteById(tableMirror.getKey());
+        String compositeKey = TableMirrorRepository.buildPrefixedKey(tableMirror);
+        return deleteById(compositeKey);
     }
 
     @Override
     public java.util.Optional<TableMirror> findByName(String conversionResultKey, String databaseName, String tableName)
             throws RepositoryException {
-        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
+        String compositeKey = TableMirrorRepository.buildPrefixedKey(conversionResultKey, databaseName, tableName);
         return super.findByKey(compositeKey);
     }
 
@@ -70,7 +71,7 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
     public Map<String, TableMirror> findByDatabase(String conversionResultKey, String databaseName)
             throws RepositoryException {
         Map<String, TableMirror> result = new HashMap<>();
-        String prefix = TableMirrorRepository.buildPrefixKey(conversionResultKey, databaseName);
+        String prefix = TableMirrorRepository.buildSearchPrefix(conversionResultKey, databaseName);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             iterator.seek(prefix.getBytes());
@@ -83,12 +84,9 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
                     break;
                 }
 
-                // Extract table name from composite key
-                String tableName = key.substring(prefix.length());
-
                 try {
                     TableMirror tableMirror = objectMapper.readValue(iterator.value(), typeReference);
-                    result.put(tableName, tableMirror);
+                    result.put(tableMirror.getName(), tableMirror);
                 } catch (Exception e) {
                     log.error("Failed to deserialize TableMirror for key: {}", key, e);
                 }
@@ -102,14 +100,15 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
 
     @Override
     public TableMirror save(String conversionResultKey, String databaseName, TableMirror tableMirror) throws RepositoryException {
-        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableMirror.getName());
-        tableMirror.setKey(compositeKey);
+        String compositeKey = TableMirrorRepository.buildPrefixedKey(conversionResultKey, databaseName, tableMirror.getName());
+        String key = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableMirror.getName());
+        tableMirror.setKey(key);
         return save(compositeKey, tableMirror);
     }
 
     @Override
     public TableMirror save(TableMirror tableMirror) throws RepositoryException {
-        String compositeKey = tableMirror.getKey();
+        String compositeKey = TableMirrorRepository.buildPrefixedKey(tableMirror);
         if (compositeKey == null) {
             throw new RepositoryException("TableMirror does not have a key for table: " + tableMirror.getName());
         }
@@ -118,13 +117,13 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
 
     @Override
     public boolean deleteByName(String conversionResultKey, String databaseName, String tableName) throws RepositoryException {
-        String compositeKey = TableMirrorRepository.buildKey(conversionResultKey, databaseName, tableName);
+        String compositeKey = TableMirrorRepository.buildPrefixedKey(conversionResultKey, databaseName, tableName);
         return deleteById(compositeKey);
     }
 
     @Override
     public void deleteByDatabase(String conversionResultKey, String databaseName) throws RepositoryException {
-        String prefix = TableMirrorRepository.buildPrefixKey(conversionResultKey, databaseName);
+        String prefix = TableMirrorRepository.buildSearchPrefix(conversionResultKey, databaseName);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             iterator.seek(prefix.getBytes());
@@ -148,12 +147,11 @@ public class TableMirrorRepositoryImpl extends AbstractRocksDBRepository<TableMi
 
     @Override
     public List<String> listNamesByKey(String conversionResultKey, String databaseName) throws RepositoryException {
-        String prefix = conversionResultKey + DATABASE_PREFIX + databaseName;
+        String prefix = TableMirrorRepository.buildSearchPrefix(conversionResultKey, databaseName);
         List<String> tableNames = findKeySuffixesByPrefix(prefix);
         log.debug("Found {} tableNames names for ConversionResult key: {} in Database: {}", tableNames.size()
                 , conversionResultKey, databaseName);
         return tableNames;
     }
-
 
 }

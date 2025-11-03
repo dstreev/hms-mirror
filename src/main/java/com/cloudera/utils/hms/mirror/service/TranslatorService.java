@@ -315,12 +315,15 @@ public class TranslatorService {
             throws MissingDataPointException {
 
         String origNamespace = NamespaceUtils.getNamespace(originalLocation);
+        // TODO: Fix
+        /*
         if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION
                 && origNamespace.equals(config.getTransfer().getTargetNamespace())) {
             tableMirror.setPhaseState(PhaseState.ERROR);
             throw new MissingDataPointException("Location Mapping can't be determined.  No matching `glm` entry to make translation." +
                     "Original Location: " + originalLocation);
         }
+        */
     }
 
     /**

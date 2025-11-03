@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
+import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
@@ -127,8 +128,27 @@ public class ConversionResult {
         }
     }
 
+    /**
+     * The Target Namespace should be the hcfsNamespace on the Target Cluster.  When the Data Strategy is STORAGE_MIGRATION
+     * then pull it from the JobDto.
+     * @return
+     * @throws RequiredConfigurationException
+     */
     public String getTargetNamespace() throws RequiredConfigurationException {
         String rtn = null;
+        if (job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
+            return job.getTargetNamespace();
+        } else {
+            ConnectionDto right = getConnection(Environment.RIGHT);
+            if (right != null) {
+                rtn = right.getHcfsNamespace();
+                if (isBlank(rtn)) {
+                    // TODO: Try to pull from the Environment Values of the Right Cluster.
+//                    right.getHs2EnvSets()
+                }
+            }
+        }
+        /*
         if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
             rtn = config.getTransfer().getTargetNamespace();
         } else if (nonNull(getConnection(Environment.RIGHT))
@@ -136,6 +156,7 @@ public class ConversionResult {
             log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
             rtn = getConnection(Environment.RIGHT).getHcfsNamespace();
         }
+        */
         if (isBlank(rtn)) {
             throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
         }

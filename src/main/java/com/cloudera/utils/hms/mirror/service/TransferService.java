@@ -167,9 +167,9 @@ public class TransferService {
                     warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
                     // Build distcp reports.
                     // Build when intermediate and NOT ACID with isInPlace.
-                    if (!isBlank(config.getTransfer().getIntermediateStorage())) {
+                    if (!isBlank(job.getIntermediateStorage())) {
                         // The Transfer Table should be available.
-                        String isLoc = config.getTransfer().getIntermediateStorage();
+                        String isLoc = job.getIntermediateStorage();
                         // Deal with extra '/'
                         isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                         isLoc = isLoc + "/" +
@@ -202,7 +202,7 @@ public class TransferService {
                         conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
                                 isLoc,
                                 fnlLoc, 1, consolidateSourceTables);
-                    } else if (!isBlank(config.getTransfer().getTargetNamespace())
+                    } else if (!isBlank(conversionResult.getTargetNamespace())
                             && job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         // LEFT PUSH COMMON
                         String origLoc = TableUtils.isACID(let) ?
@@ -219,7 +219,7 @@ public class TransferService {
                             newLoc = TableUtils.getLocation(ret.getName(), ret.getDefinition());
                         }
                         if (isBlank(newLoc) && config.loadMetadataDetails()) {
-                            String sbDir = config.getTransfer().getTargetNamespace() +
+                            String sbDir = conversionResult.getTargetNamespace() +
                                     warehouse.getExternalDirectory() + "/" +
                                     getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
                             newLoc = sbDir;

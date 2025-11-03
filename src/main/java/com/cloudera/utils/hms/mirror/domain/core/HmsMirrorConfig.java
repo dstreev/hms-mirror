@@ -246,10 +246,9 @@ public class HmsMirrorConfig implements Cloneable {
         }
     }
 
-    @JsonIgnore
     /*
+    @JsonIgnore
     Target Namespace is a hierarchy check of the 'common' storage location, the RIGHT cluster's namespace.
-     */
     public String getTargetNamespace() throws RequiredConfigurationException {
         String rtn = null;
         if (nonNull(getTransfer()) && !isBlank(getTransfer().getTargetNamespace())) {
@@ -264,6 +263,7 @@ public class HmsMirrorConfig implements Cloneable {
         }
         return rtn;
     }
+     */
 
     // Handle null databases from config load.
     public Set<String> getDatabases() {

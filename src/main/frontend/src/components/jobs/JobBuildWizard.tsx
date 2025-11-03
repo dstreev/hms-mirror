@@ -24,6 +24,8 @@ interface JobFormData {
   strategy: string;
   disasterRecovery: boolean;
   sync: boolean;
+  intermediateStorage?: string;
+  targetNamespace?: string;
   hybrid: {
     exportImportPartitionLimit: number;
     sqlPartitionLimit: number;
@@ -91,6 +93,8 @@ const JobBuildWizard: React.FC = () => {
     strategy: existingJob?.strategy || '',
     disasterRecovery: existingJob?.disasterRecovery || false,
     sync: existingJob?.sync || false,
+    intermediateStorage: existingJob?.intermediateStorage || '',
+    targetNamespace: existingJob?.targetNamespace || '',
     hybrid: {
       exportImportPartitionLimit: existingJob?.hybrid?.exportImportPartitionLimit || 100,
       sqlPartitionLimit: existingJob?.hybrid?.sqlPartitionLimit || 500,
@@ -357,6 +361,8 @@ const JobBuildWizard: React.FC = () => {
         strategy: jobData.strategy,
         disasterRecovery: jobData.disasterRecovery,
         sync: jobData.sync,
+        intermediateStorage: jobData.intermediateStorage,
+        targetNamespace: jobData.targetNamespace,
         hybrid: {
           exportImportPartitionLimit: jobData.hybrid.exportImportPartitionLimit,
           sqlPartitionLimit: jobData.hybrid.sqlPartitionLimit,
@@ -622,9 +628,52 @@ const JobBuildWizard: React.FC = () => {
       case 5: // Options
         return (
           <div className="space-y-6">
+            {/* Target Namespace and Intermediate Storage Settings */}
             <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Storage and Namespace Configuration</h3>
+              <div className="space-y-4">
+                {/* Target Namespace - Only show for STORAGE_MIGRATION strategy */}
+                {jobData.strategy === 'STORAGE_MIGRATION' && (
+                  <div>
+                    <label htmlFor="targetNamespace" className="block text-sm font-medium text-gray-700 mb-2">
+                      Target Namespace
+                    </label>
+                    <input
+                      type="text"
+                      id="targetNamespace"
+                      value={jobData.targetNamespace}
+                      onChange={(e) => handleInputChange('targetNamespace', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter target namespace (required for STORAGE_MIGRATION)"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Target namespace for the storage migration
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="intermediateStorage" className="block text-sm font-medium text-gray-700 mb-2">
+                    Intermediate Storage
+                  </label>
+                  <input
+                    type="text"
+                    id="intermediateStorage"
+                    value={jobData.intermediateStorage}
+                    onChange={(e) => handleInputChange('intermediateStorage', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter intermediate storage location (optional)"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Optional intermediate storage location for data transfer operations
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Options</h3>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start">
                   <input
@@ -822,6 +871,16 @@ const JobBuildWizard: React.FC = () => {
                 {jobData.disasterRecovery && (
                   <p className="text-sm text-gray-600">
                     Sync Enabled: {jobData.sync ? 'Yes' : 'No'}
+                  </p>
+                )}
+                {jobData.intermediateStorage && (
+                  <p className="text-sm text-gray-600">
+                    Intermediate Storage: {jobData.intermediateStorage}
+                  </p>
+                )}
+                {jobData.targetNamespace && (
+                  <p className="text-sm text-gray-600">
+                    Target Namespace: {jobData.targetNamespace}
                   </p>
                 )}
               </div>

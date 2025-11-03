@@ -61,14 +61,24 @@ export interface FilterConfig {
 }
 
 export interface TransferConfig {
-  targetNamespace?: string;
-  warehouse: {
+  transferPrefix?: string;
+  shadowPrefix?: string;
+  storageMigrationPostfix?: string;
+  exportBaseDirPrefix?: string;
+  remoteWorkingDirectory?: string;
+  warehouse?: {
+    source?: 'GLOBAL' | 'RELATIVE';
     managedDirectory?: string;
     externalDirectory?: string;
   };
-  storageMigration: {
-    dataMovementStrategy: 'SQL' | 'EXPORT_IMPORT' | 'DISTCP';
-    translationType: 'NAMESPACE' | 'RELATIVE';
+  storageMigration?: {
+    translationType?: 'ALIGNED' | 'RELATIVE' | 'NAMESPACE';
+    dataMovementStrategy?: 'SQL' | 'EXPORT_IMPORT' | 'DISTCP';
+    dataFlow?: 'PULL' | 'PUSH';
+    skipDatabaseLocationAdjustments?: boolean;
+    createArchive?: boolean;
+    consolidateTablesForDistcp?: boolean;
+    strict?: boolean;
   };
 }
 

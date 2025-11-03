@@ -51,6 +51,8 @@ import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -302,13 +304,8 @@ public class ConversionResultService {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
         ConfigLiteDto config = conversionResult.getConfig();
-        if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
-            rtn = config.getTransfer().getTargetNamespace();
-        } else if (nonNull(conversionResult.getConnection(Environment.RIGHT))
-                && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace())) {
-            log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
-            rtn = conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace();
-        }
+        rtn = conversionResult.getTargetNamespace();
+
         if (isBlank(rtn)) {
             throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
         }
@@ -498,24 +495,34 @@ public class ConversionResultService {
      */
     public String executeCleanUpSql(ConversionResult conversionResult, Environment environment, String database) {
         StringBuilder sb = new StringBuilder();
-        boolean found = Boolean.FALSE;
+        AtomicBoolean found = new AtomicBoolean(Boolean.FALSE);
         sb.append("-- EXECUTION CLEANUP script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
         sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())).append("\n\n");
 
-        DBMirror dbMirror = conversionResult.getDatabases().get(database);
+        try {
+            DBMirror dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                    new IllegalStateException("Couldn't locate database: " + database + " for conversion " + conversionResult.getKey()));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
 
-        Set<String> tables = dbMirror.getTableMirrors().keySet();
-        for (String table : tables) {
-            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-            if (tblMirror.isThereCleanupSql(environment)) {
-                sb.append("\n--    Cleanup script: ").append(table).append("\n");
-                for (Pair pair : tblMirror.getCleanUpSql(environment)) {
+        Map<String, TableMirror> tableMirrors = null;
+        try {
+            tableMirrors = getTableMirrorRepository().findByDatabase(conversionResult.getKey(), database);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        tableMirrors.forEach((tableName, tableMirror) -> {
+            if (tableMirror.isThereCleanupSql(environment)) {
+                sb.append("\n--    Cleanup script: ").append(tableName).append("\n");
+                for (Pair pair : tableMirror.getCleanUpSql(environment)) {
                     sb.append(pair.getAction());
                     // Skip ';' when it's a comment
                     // https://github.com/cloudera-labs/hms-mirror/issues/33
                     if (!pair.getAction().trim().startsWith("--")) {
                         sb.append(";\n");
-                        found = Boolean.TRUE;
+                        found.set(Boolean.TRUE);
                     } else {
                         sb.append("\n");
                     }
@@ -523,8 +530,9 @@ public class ConversionResultService {
             } else {
                 sb.append("\n");
             }
-        }
-        if (found)
+        });
+
+        if (found.get())
             return sb.toString();
         else
             return null;
@@ -540,35 +548,48 @@ public class ConversionResultService {
      */
     public String executeSql(ConversionResult conversionResult, Environment environment, String database) {
         StringBuilder sb = new StringBuilder();
-        Boolean found = Boolean.FALSE;
+        AtomicBoolean found = new AtomicBoolean(false);
         sb.append("-- EXECUTION script for ").append(database).append(" on ").append(environment).append(" cluster\n\n");
         sb.append("-- ").append(new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date()));
         sb.append("-- These are the command run on the ").append(environment).append(" cluster when `-e` is used.\n");
-        DBMirror dbMirror = conversionResult.getDatabases().get(database);
+
+        DBMirror dbMirror = null;
+        try {
+            dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                    new IllegalStateException("Couldn't locate DBMirror for " + database + " in " + conversionResult.getKey() + " conversion result."));
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
 
         List<Pair> dbSql = dbMirror.getSql(environment);
         if (dbSql != null && !dbSql.isEmpty()) {
             for (Pair sqlPair : dbSql) {
                 sb.append("-- ").append(sqlPair.getDescription()).append("\n");
                 sb.append(sqlPair.getAction()).append(";\n");
-                found = Boolean.TRUE;
+                found.set(Boolean.TRUE);
             }
         }
 
-        Set<String> tables = dbMirror.getTableMirrors().keySet();
-        for (String table : tables) {
-            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-            sb.append("\n--    Table: ").append(table).append("\n");
-            if (tblMirror.isThereSql(environment)) {
-                for (Pair pair : tblMirror.getSql(environment)) {
+        Map<String, TableMirror> tableMirrors = null;
+        try {
+            tableMirrors = getTableMirrorRepository().findByDatabase(conversionResult.getKey(), dbMirror.getName());
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        tableMirrors.forEach((tableName, tableMirror) -> {
+            sb.append("\n--    Table: ").append(tableName).append("\n");
+            if (tableMirror.isThereSql(environment)) {
+                for (Pair pair : tableMirror.getSql(environment)) {
                     sb.append(pair.getAction()).append(";\n");
-                    found = Boolean.TRUE;
+                    found.set(Boolean.TRUE);
                 }
             } else {
                 sb.append("\n");
             }
-        }
-        if (found)
+
+        });
+        if (found.get())
             return sb.toString();
         else
             return null;

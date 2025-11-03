@@ -26,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -447,10 +448,11 @@ public class ConfigService {
             if (nonNull(conversionResult.getConnection(Environment.RIGHT)) && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace())) {
                 namespaces.add(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace());
             }
-            if (!isBlank(config.getTransfer().getTargetNamespace())) {
-                namespaces.add(config.getTransfer().getTargetNamespace());
-            }
+            try {
+                namespaces.add(conversionResult.getTargetNamespace());
+            } catch (RequiredConfigurationException rce) {
 
+            }
             for (String namespace : namespaces) {
                 try {
                     if (NamespaceUtils.isNamespaceAvailable(cliEnvironment, namespace)) {
@@ -597,7 +599,7 @@ public class ConfigService {
                 rtn.getClusters().put(Environment.LEFT, leftSM);
                 leftSM.setMetastoreDirect(new DBStore());
                 leftSM.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
-                rtn.getTransfer().setTargetNamespace("ofs://NEED_TO_SET_THIS");
+//                rtn.getTransfer().setTargetNamespace("ofs://NEED_TO_SET_THIS");
                 leftSM.setHiveServer2(new HiveServer2Config());
                 break;
             case SCHEMA_ONLY:
@@ -625,7 +627,7 @@ public class ConfigService {
                 rtn.getClusters().put(Environment.LEFT, leftC);
                 leftC.setMetastoreDirect(new DBStore());
                 leftC.getMetastoreDirect().setType(DBStore.DB_TYPE.MYSQL);
-                rtn.getTransfer().setTargetNamespace("hdfs|s3a|ofs://NEED_TO_SET_THIS");
+//                rtn.getTransfer().setTargetNamespace("hdfs|s3a|ofs://NEED_TO_SET_THIS");
                 leftC.setHiveServer2(new HiveServer2Config());
                 Cluster rightC = new Cluster();
                 rightC.setEnvironment(Environment.RIGHT);
@@ -1015,24 +1017,24 @@ public class ConfigService {
         // Ozone Volume Name Check.
         // If the target namespace is set to ofs:// and we have warehouse plans defined for movement, ensure the
         //   volume name is at least 3 characters long.
-        if (!isBlank(config.getTransfer().getTargetNamespace()) &&
-                config.getTransfer().getTargetNamespace().startsWith("ofs://")) {
-            //
-            for (DatasetDto.DatabaseSpec dbs: conversionResult.getDataset().getDatabases()) {
-                Warehouse wp = dbs.getWarehouse();
-                String externalDirectory = wp.getExternalDirectory();
-                String managedDirectory = wp.getManagedDirectory();
-                if (nonNull(externalDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(externalDirectory)).length() < 3) {
-                    // TODO: FIX
+        try {
+            if (conversionResult.getTargetNamespace().startsWith("ofs://")) {
+                //
+                for (DatasetDto.DatabaseSpec dbs : conversionResult.getDataset().getDatabases()) {
+                    Warehouse wp = dbs.getWarehouse();
+                    String externalDirectory = wp.getExternalDirectory();
+                    String managedDirectory = wp.getManagedDirectory();
+                    if (nonNull(externalDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(externalDirectory)).length() < 3) {
+                        // TODO: FIX
 //                    finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
-                    rtn.set(Boolean.FALSE);
-                }
-                if (nonNull(managedDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(managedDirectory)).length() < 3) {
-                    // TODO: FIX
+                        rtn.set(Boolean.FALSE);
+                    }
+                    if (nonNull(managedDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(managedDirectory)).length() < 3) {
+                        // TODO: FIX
 //                    finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
-                    rtn.set(Boolean.FALSE);
+                        rtn.set(Boolean.FALSE);
+                    }
                 }
-            }
 //            if (!config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
 //                RunStatus finalRunStatus = runStatus;
 //                config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().forEach((k, v) -> {
@@ -1048,6 +1050,9 @@ public class ConfigService {
 //                    }
 //                });
 //            }
+            }
+        } catch (RequiredConfigurationException rce) {
+
         }
 
         // TODO: Need validation of Metastore Direct.
@@ -1190,11 +1195,13 @@ public class ConfigService {
                 runStatus.addError(VALID_ACID_DA_IP_STRATEGIES);
                 rtn.set(Boolean.FALSE);
             }
-            if (!isBlank(config.getTransfer().getTargetNamespace())) {
+            try {
+              conversionResult.getTargetNamespace();
+            } catch (RequiredConfigurationException rce) {
                 runStatus.addError(COMMON_STORAGE_WITH_DA_IP);
                 rtn.set(Boolean.FALSE);
             }
-            if (!isBlank(config.getTransfer().getIntermediateStorage())) {
+            if (!isBlank(job.getIntermediateStorage())) {
                 runStatus.addError(INTERMEDIATE_STORAGE_WITH_DA_IP);
                 rtn.set(Boolean.FALSE);
             }
@@ -1261,11 +1268,15 @@ public class ConfigService {
         // Test to ensure the clusters are LINKED to support underlying functions.
         switch (job.getStrategy()) {
             case LINKED:
-                if (config.getTransfer().getTargetNamespace() != null) {
-                    runStatus.addError(COMMON_STORAGE_WITH_LINKED);
-                    rtn.set(Boolean.FALSE);
+                try {
+                    if (conversionResult.getTargetNamespace() != null) {
+                        runStatus.addError(COMMON_STORAGE_WITH_LINKED);
+                        rtn.set(Boolean.FALSE);
+                    }
+                } catch (RequiredConfigurationException rce) {
+
                 }
-                if (!isBlank(config.getTransfer().getIntermediateStorage())) {
+                if (!isBlank(job.getIntermediateStorage())) {
                     runStatus.addError(INTERMEDIATE_STORAGE_WITH_LINKED);
                     rtn.set(Boolean.FALSE);
                 }

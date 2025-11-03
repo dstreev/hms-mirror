@@ -88,8 +88,8 @@ public class SQLDataStrategy extends DataStrategyBase {
         ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
 
         // Different transfer technique.  Staging location.
-        if (!isBlank(config.getTransfer().getIntermediateStorage()) ||
-                !isBlank(config.getTransfer().getTargetNamespace()) ||
+        if (!isBlank(job.getIntermediateStorage()) ||
+                !isBlank(conversionResult.getTargetNamespace()) ||
                 TableUtils.isACID(let)) {
             return getIntermediateDataStrategy().buildOutDefinition(dbMirror, tableMirror);
         }
@@ -184,9 +184,14 @@ public class SQLDataStrategy extends DataStrategyBase {
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
-        if (config.getTransfer().getIntermediateStorage() != null ||
-                config.getTransfer().getTargetNamespace() != null) {
-            return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
+        // Build intermediate sql if the storage elements are defined.
+        try {
+            if (job.getIntermediateStorage() != null ||
+                    conversionResult.getTargetNamespace() != null) {
+                return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
+            }
+        } catch (RequiredConfigurationException e) {
+            // Nothing to do here.
         }
 
         String useDb = null;
@@ -276,10 +281,18 @@ public class SQLDataStrategy extends DataStrategyBase {
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
+        String targetNamespace = null;
+        try {
+            targetNamespace = conversionResult.getTargetNamespace();
+        } catch (RequiredConfigurationException e) {
+            // nothing.
+        }
+
+        // Select which Strategy Implementation: Acid Inplace, Intermediate, just this one (SQL).
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
             rtn = getSqlAcidInPlaceDataStrategy().build(dbMirror, tableMirror);
-        } else if (!isBlank(config.getTransfer().getIntermediateStorage())
-                || !isBlank(config.getTransfer().getTargetNamespace())
+        } else if (!isBlank(job.getIntermediateStorage())
+                || !isBlank(targetNamespace)
                 || (TableUtils.isACID(let)
                 && config.getMigrateACID().isOn())) {
             if (TableUtils.isACID(let)) {

@@ -39,8 +39,11 @@ public class TransferConfig implements Cloneable {
     private String storageMigrationPostfix = "_storage_migration";
     private String exportBaseDirPrefix = "/apps/hive/warehouse/export_";
     private String remoteWorkingDirectory = "hms_mirror_working";
-    private String intermediateStorage = null;
+    @Deprecated // Moved to Job.
     private String targetNamespace = null;
+    @Deprecated
+    private String intermediateStorage = null;
+
     private StorageMigration storageMigration = null;
     private Warehouse warehouse = null;
 
@@ -74,17 +77,17 @@ public class TransferConfig implements Cloneable {
 //        return warehouse;
 //    }
 
-    public void setTargetNamespace(String targetNamespace) {
-        if (!isBlank(targetNamespace)) {
-            this.targetNamespace = targetNamespace.trim();
-            if (this.targetNamespace.endsWith("/")) {
-                // Remove trailing slash.
-                this.targetNamespace = this.targetNamespace.substring(0, this.targetNamespace.length() - 1);
-            }
-        } else {
-            this.targetNamespace = null;
-        }
-    }
+//    public void setTargetNamespace(String targetNamespace) {
+//        if (!isBlank(targetNamespace)) {
+//            this.targetNamespace = targetNamespace.trim();
+//            if (this.targetNamespace.endsWith("/")) {
+//                // Remove trailing slash.
+//                this.targetNamespace = this.targetNamespace.substring(0, this.targetNamespace.length() - 1);
+//            }
+//        } else {
+//            this.targetNamespace = null;
+//        }
+//    }
 
 //    @JsonIgnore
 //    public int getConcurrency() {

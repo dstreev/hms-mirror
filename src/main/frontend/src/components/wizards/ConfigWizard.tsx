@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import WizardProgress from '../connections/wizard/WizardProgress';
 
 interface HmsMirrorConfig {
@@ -35,12 +35,25 @@ interface HmsMirrorConfig {
 
   // Transfer and Warehouse Settings
   transfer: {
+    transferPrefix: string;
+    shadowPrefix: string;
+    storageMigrationPostfix: string;
+    exportBaseDirPrefix: string;
+    remoteWorkingDirectory: string;
     warehouse: {
+      source: 'GLOBAL' | 'RELATIVE';
       externalDirectory: string;
       managedDirectory: string;
     };
-    transferPrefix: string;
-    shadowPrefix: string;
+    storageMigration?: {
+      translationType: 'ALIGNED' | 'RELATIVE' | 'NAMESPACE';
+      dataMovementStrategy: 'SQL' | 'EXPORT_IMPORT' | 'DISTCP';
+      dataFlow: 'PULL' | 'PUSH';
+      skipDatabaseLocationAdjustments: boolean;
+      createArchive: boolean;
+      consolidateTablesForDistcp: boolean;
+      strict: boolean;
+    };
   };
 
   // Force external location in table DDLs
@@ -98,12 +111,25 @@ const ConfigWizard: React.FC = () => {
       inplace: false,
     },
     transfer: {
+      transferPrefix: "hms_mirror_transfer_",
+      shadowPrefix: "hms_mirror_shadow_",
+      storageMigrationPostfix: "_storage_migration",
+      exportBaseDirPrefix: "/apps/hive/warehouse/export_",
+      remoteWorkingDirectory: "hms_mirror_working",
       warehouse: {
+        source: "GLOBAL",
         externalDirectory: "/user/hive/external",
         managedDirectory: "/user/hive/warehouse",
       },
-      transferPrefix: "mig_",
-      shadowPrefix: "_shadow",
+      storageMigration: {
+        translationType: "RELATIVE",
+        dataMovementStrategy: "SQL",
+        dataFlow: "PULL",
+        skipDatabaseLocationAdjustments: false,
+        createArchive: false,
+        consolidateTablesForDistcp: false,
+        strict: false,
+      },
     },
     forceExternalLocation: false,
     icebergConversion: {
@@ -120,6 +146,7 @@ const ConfigWizard: React.FC = () => {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdvancedTransferCollapsed, setIsAdvancedTransferCollapsed] = useState(true);
 
   // Load existing configuration if passed via navigation state
   useEffect(() => {
@@ -171,12 +198,25 @@ const ConfigWizard: React.FC = () => {
 
             // Transfer settings
             transfer: {
+              transferPrefix: existingConfig.transfer?.transferPrefix || "hms_mirror_transfer_",
+              shadowPrefix: existingConfig.transfer?.shadowPrefix || "hms_mirror_shadow_",
+              storageMigrationPostfix: existingConfig.transfer?.storageMigrationPostfix || "_storage_migration",
+              exportBaseDirPrefix: existingConfig.transfer?.exportBaseDirPrefix || "/apps/hive/warehouse/export_",
+              remoteWorkingDirectory: existingConfig.transfer?.remoteWorkingDirectory || "hms_mirror_working",
               warehouse: {
+                source: existingConfig.transfer?.warehouse?.source || "GLOBAL",
                 externalDirectory: existingConfig.transfer?.warehouse?.externalDirectory || "/user/hive/external",
                 managedDirectory: existingConfig.transfer?.warehouse?.managedDirectory || "/user/hive/warehouse",
               },
-              transferPrefix: existingConfig.transfer?.transferPrefix || "mig_",
-              shadowPrefix: existingConfig.transfer?.shadowPrefix || "_shadow",
+              storageMigration: {
+                translationType: existingConfig.transfer?.storageMigration?.translationType || "RELATIVE",
+                dataMovementStrategy: existingConfig.transfer?.storageMigration?.dataMovementStrategy || "SQL",
+                dataFlow: existingConfig.transfer?.storageMigration?.dataFlow || "PULL",
+                skipDatabaseLocationAdjustments: existingConfig.transfer?.storageMigration?.skipDatabaseLocationAdjustments || false,
+                createArchive: existingConfig.transfer?.storageMigration?.createArchive || false,
+                consolidateTablesForDistcp: existingConfig.transfer?.storageMigration?.consolidateTablesForDistcp || false,
+                strict: existingConfig.transfer?.storageMigration?.strict || false,
+              },
             },
 
             // Force external location setting
@@ -369,12 +409,25 @@ const ConfigWizard: React.FC = () => {
 
         // Map transfer settings
         transfer: {
+          transferPrefix: config.transfer?.transferPrefix || 'hms_mirror_transfer_',
+          shadowPrefix: config.transfer?.shadowPrefix || 'hms_mirror_shadow_',
+          storageMigrationPostfix: config.transfer?.storageMigrationPostfix || '_storage_migration',
+          exportBaseDirPrefix: config.transfer?.exportBaseDirPrefix || '/apps/hive/warehouse/export_',
+          remoteWorkingDirectory: config.transfer?.remoteWorkingDirectory || 'hms_mirror_working',
           warehouse: {
+            source: config.transfer?.warehouse?.source || 'GLOBAL',
             externalDirectory: config.transfer?.warehouse?.externalDirectory || '',
             managedDirectory: config.transfer?.warehouse?.managedDirectory || '',
           },
-          transferPrefix: config.transfer?.transferPrefix || '',
-          shadowPrefix: config.transfer?.shadowPrefix || '',
+          storageMigration: {
+            translationType: config.transfer?.storageMigration?.translationType || 'RELATIVE',
+            dataMovementStrategy: config.transfer?.storageMigration?.dataMovementStrategy || 'SQL',
+            dataFlow: config.transfer?.storageMigration?.dataFlow || 'PULL',
+            skipDatabaseLocationAdjustments: config.transfer?.storageMigration?.skipDatabaseLocationAdjustments || false,
+            createArchive: config.transfer?.storageMigration?.createArchive || false,
+            consolidateTablesForDistcp: config.transfer?.storageMigration?.consolidateTablesForDistcp || false,
+            strict: config.transfer?.storageMigration?.strict || false,
+          },
         },
 
         // Force external location setting
@@ -768,8 +821,149 @@ const ConfigWizard: React.FC = () => {
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Transfer and Warehouse Settings</h3>
         <p className="text-sm text-gray-600 mb-6">Core settings for data transfer paths and warehouses.</p>
-        
+      </div>
+
+      {/* Storage Migration Settings - 2 Column Layout */}
+      <div>
+        <h4 className="text-md font-medium text-gray-900 mb-4">Storage Migration Settings</h4>
+        <p className="text-sm text-gray-600 mb-4">Configure how data is moved during storage migration.</p>
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label htmlFor="translationType" className="block text-sm font-medium text-gray-700">
+              Translation Type
+            </label>
+            <select
+              id="translationType"
+              value={config.transfer.storageMigration?.translationType}
+              onChange={(e) => updateConfig('transfer.storageMigration.translationType', e.target.value)}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="ALIGNED">ALIGNED</option>
+              <option value="RELATIVE">RELATIVE</option>
+              <option value="NAMESPACE">NAMESPACE</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Type of translation to use for location migration</p>
+          </div>
+
+          <div>
+            <label htmlFor="dataMovementStrategy" className="block text-sm font-medium text-gray-700">
+              Data Movement Strategy
+            </label>
+            <select
+              id="dataMovementStrategy"
+              value={config.transfer.storageMigration?.dataMovementStrategy}
+              onChange={(e) => updateConfig('transfer.storageMigration.dataMovementStrategy', e.target.value)}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="SQL">SQL</option>
+              <option value="EXPORT_IMPORT">EXPORT_IMPORT</option>
+              <option value="DISTCP">DISTCP</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Strategy for moving data (SQL, EXPORT_IMPORT, or DISTCP)</p>
+          </div>
+
+          <div>
+            <label htmlFor="dataFlow" className="block text-sm font-medium text-gray-700">
+              Data Flow Direction
+            </label>
+            <select
+              id="dataFlow"
+              value={config.transfer.storageMigration?.dataFlow}
+              onChange={(e) => updateConfig('transfer.storageMigration.dataFlow', e.target.value)}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="PULL">PULL</option>
+              <option value="PUSH">PUSH</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Direction for distcp jobs (where they should run from)</p>
+          </div>
+
+          <div className="flex items-start pt-6">
+            <input
+              type="checkbox"
+              id="skipDatabaseLocationAdjustments"
+              checked={config.transfer.storageMigration?.skipDatabaseLocationAdjustments || false}
+              onChange={(e) => updateConfig('transfer.storageMigration.skipDatabaseLocationAdjustments', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+            />
+            <div className="ml-2">
+              <label htmlFor="skipDatabaseLocationAdjustments" className="block text-sm text-gray-900">
+                Skip Database Location Adjustments
+              </label>
+              <p className="text-xs text-gray-500">Don't adjust database location to match table locations</p>
+            </div>
+          </div>
+
+          <div className="flex items-start pt-6">
+            <input
+              type="checkbox"
+              id="createArchive"
+              checked={config.transfer.storageMigration?.createArchive || false}
+              onChange={(e) => updateConfig('transfer.storageMigration.createArchive', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+            />
+            <div className="ml-2">
+              <label htmlFor="createArchive" className="block text-sm text-gray-900">
+                Create Archive
+              </label>
+              <p className="text-xs text-gray-500">Archive tables instead of changing metadata</p>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              id="consolidateTablesForDistcp"
+              checked={config.transfer.storageMigration?.consolidateTablesForDistcp || false}
+              onChange={(e) => updateConfig('transfer.storageMigration.consolidateTablesForDistcp', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+            />
+            <div className="ml-2">
+              <label htmlFor="consolidateTablesForDistcp" className="block text-sm text-gray-900">
+                Consolidate Tables for DistCp
+              </label>
+              <p className="text-xs text-gray-500">Consolidate tables into single directory for distcp</p>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              id="strict"
+              checked={config.transfer.storageMigration?.strict || false}
+              onChange={(e) => updateConfig('transfer.storageMigration.strict', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+            />
+            <div className="ml-2">
+              <label htmlFor="strict" className="block text-sm text-gray-900">
+                Strict Mode
+              </label>
+              <p className="text-xs text-gray-500">Fail migration if any issues occur during evaluation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Warehouse Settings */}
+      <div>
+        <h4 className="text-md font-medium text-gray-900 mb-4">Warehouse Configuration</h4>
+
         <div className="space-y-4">
+          <div>
+            <label htmlFor="warehouseSource" className="block text-sm font-medium text-gray-700">
+              Warehouse Source
+            </label>
+            <input
+              type="text"
+              id="warehouseSource"
+              value={config.transfer.warehouse.source}
+              readOnly
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+            />
+            <p className="mt-1 text-xs text-gray-500">Source of the warehouse location (read-only)</p>
+          </div>
+
           <div>
             <label htmlFor="externalDirectory" className="block text-sm font-medium text-gray-700">
               External Directory
@@ -787,7 +981,7 @@ const ConfigWizard: React.FC = () => {
             )}
             <p className="mt-1 text-xs text-gray-500">External table base path</p>
           </div>
-          
+
           <div>
             <label htmlFor="managedDirectory" className="block text-sm font-medium text-gray-700">
               Managed Directory
@@ -827,44 +1021,102 @@ const ConfigWizard: React.FC = () => {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
+      {/* Advanced Transfer Settings - Collapsible */}
       <div>
-        <h4 className="text-md font-medium text-gray-900 mb-4">Advanced Transfer Settings (Optional)</h4>
-        
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="transferPrefix" className="block text-sm font-medium text-gray-700">
-              Transfer Prefix
-            </label>
-            <input
-              type="text"
-              id="transferPrefix"
-              value={config.transfer.transferPrefix}
-              onChange={(e) => updateConfig('transfer.transferPrefix', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="mig_"
-            />
-            <p className="mt-1 text-xs text-gray-500">Prefix for migrated objects</p>
+        <button
+          type="button"
+          onClick={() => setIsAdvancedTransferCollapsed(!isAdvancedTransferCollapsed)}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h4 className="text-md font-medium text-gray-900">Advanced Transfer Settings</h4>
+          {isAdvancedTransferCollapsed ? (
+            <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+          ) : (
+            <ChevronUpIcon className="w-5 h-5 text-gray-500" />
+          )}
+        </button>
+
+        {!isAdvancedTransferCollapsed && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="transferPrefix" className="block text-sm font-medium text-gray-700">
+                Transfer Prefix
+              </label>
+              <input
+                type="text"
+                id="transferPrefix"
+                value={config.transfer.transferPrefix}
+                onChange={(e) => updateConfig('transfer.transferPrefix', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="hms_mirror_transfer_"
+              />
+              <p className="mt-1 text-xs text-gray-500">Prefix for transfer tables (default: hms_mirror_transfer_)</p>
+            </div>
+
+            <div>
+              <label htmlFor="shadowPrefix" className="block text-sm font-medium text-gray-700">
+                Shadow Prefix
+              </label>
+              <input
+                type="text"
+                id="shadowPrefix"
+                value={config.transfer.shadowPrefix}
+                onChange={(e) => updateConfig('transfer.shadowPrefix', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="hms_mirror_shadow_"
+              />
+              <p className="mt-1 text-xs text-gray-500">Prefix for shadow tables (default: hms_mirror_shadow_)</p>
+            </div>
+
+            <div>
+              <label htmlFor="storageMigrationPostfix" className="block text-sm font-medium text-gray-700">
+                Storage Migration Postfix
+              </label>
+              <input
+                type="text"
+                id="storageMigrationPostfix"
+                value={config.transfer.storageMigrationPostfix}
+                onChange={(e) => updateConfig('transfer.storageMigrationPostfix', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="_storage_migration"
+              />
+              <p className="mt-1 text-xs text-gray-500">Postfix for storage migration tables (default: _storage_migration)</p>
+            </div>
+
+            <div>
+              <label htmlFor="exportBaseDirPrefix" className="block text-sm font-medium text-gray-700">
+                Export Base Directory Prefix
+              </label>
+              <input
+                type="text"
+                id="exportBaseDirPrefix"
+                value={config.transfer.exportBaseDirPrefix}
+                onChange={(e) => updateConfig('transfer.exportBaseDirPrefix', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="/apps/hive/warehouse/export_"
+              />
+              <p className="mt-1 text-xs text-gray-500">Base directory for export operations (default: /apps/hive/warehouse/export_)</p>
+            </div>
+
+            <div>
+              <label htmlFor="remoteWorkingDirectory" className="block text-sm font-medium text-gray-700">
+                Remote Working Directory
+              </label>
+              <input
+                type="text"
+                id="remoteWorkingDirectory"
+                value={config.transfer.remoteWorkingDirectory}
+                onChange={(e) => updateConfig('transfer.remoteWorkingDirectory', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="hms_mirror_working"
+              />
+              <p className="mt-1 text-xs text-gray-500">Remote working directory (default: hms_mirror_working)</p>
+            </div>
           </div>
-          
-          <div>
-            <label htmlFor="shadowPrefix" className="block text-sm font-medium text-gray-700">
-              Shadow Prefix
-            </label>
-            <input
-              type="text"
-              id="shadowPrefix"
-              value={config.transfer.shadowPrefix}
-              onChange={(e) => updateConfig('transfer.shadowPrefix', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="_shadow"
-            />
-            <p className="mt-1 text-xs text-gray-500">Prefix for shadow objects</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

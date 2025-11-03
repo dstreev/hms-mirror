@@ -68,23 +68,30 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
             throws RepositoryException {
         String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, dbMirror.getName());
         dbMirror.setKey(compositeKey);
-        return super.save(compositeKey, dbMirror);
+        String storagePrefix = DBMirrorRepository.buildPrefixedKey(conversionResultKey, dbMirror.getName());
+        // The object key and the storage key are different because the storage key contains the KEY_PREFIX
+        //   in order to identify the object type. Since we are storing multiple object types in this column Family.
+        //  EG: conv: for ConversionResult db: for DBMirror and tbl: for TableMirror.
+        return super.save(storagePrefix, dbMirror);
     }
 
     @Override
     public void deleteByConversionKey(String conversionResultKey) throws RepositoryException {
-        String prefix = conversionResultKey + DATABASE_PREFIX;
+        // Use full prefix including KEY_PREFIX to avoid picking up non-DBMirror records
+//        String prefix = KEY_PREFIX + conversionResultKey + DATABASE_PREFIX;
 
-        Map<String, DBMirror> dbMirrors = findByConversionKey(conversionResultKey);
+//        Map<String, DBMirror> dbMirrors = findByConversionKey(conversionResultKey);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seek(prefix.getBytes());
+            // Seek directly to the full prefix for efficiency
+            String searchPrefix = DBMirrorRepository.buildSearchPrefix(conversionResultKey);
+            iterator.seek(searchPrefix.getBytes());
 
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
 
-                // Stop if we've moved past keys for this conversion result
-                if (!key.startsWith(prefix)) {
+                // Verify the key starts with our full prefix - stop if we've moved past our prefix range
+                if (!key.startsWith(searchPrefix)) {
                     break;
                 }
 
@@ -100,23 +107,27 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
     @Override
     public Map<String, DBMirror> findByConversionKey(String conversionResultKey) throws RepositoryException {
         Map<String, DBMirror> result = new HashMap<>();
-        // Using the RocksDB prefix iterator, we can find all entities for this conversion result
-        String prefix = conversionResultKey + DATABASE_PREFIX;
-        log.debug("Finding DBMirrors by conversion result key prefix: {}", prefix);
+        // Use full prefix including KEY_PREFIX to avoid picking up non-DBMirror records
+        String searchPrefix = DBMirrorRepository.buildSearchPrefix(conversionResultKey);
+
+        log.debug("Finding DBMirrors by conversion result key prefix: {}", searchPrefix);
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seek(prefix.getBytes());
+            // Seek directly to the full prefix for efficiency
+            iterator.seek(searchPrefix.getBytes());
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
-                if (!key.startsWith(prefix)) {
+                // Verify the key starts with our full prefix - stop if we've moved past our prefix range
+                if (!key.startsWith(searchPrefix)) {
                     break;
                 }
-                String databaseName = key.substring(prefix.length());
+                String databaseName = key.substring(searchPrefix.length());
                 try {
                     DBMirror dbMirror = objectMapper.readValue(iterator.value(), typeReference);
-                    dbMirror.setKey(key);
                     result.put(databaseName, dbMirror);
                 } catch (Exception e) {
                     log.error("Failed to deserialize DBMirror for key: {}", key, e);
+                } finally {
+                    iterator.next();
                 }
             }
         }
@@ -125,15 +136,16 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
 
     @Override
     public boolean deleteByName(String conversionResultKey, String databaseName) throws RepositoryException {
-        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
+        String compositeKey = DBMirrorRepository.buildPrefixedKey(conversionResultKey, databaseName);;
         log.debug("Deleting DBMirror by composite key: {}", compositeKey);
         return deleteById(compositeKey);
     }
 
     @Override
     public List<String> listNamesByKey(String conversionResultKey) throws RepositoryException {
-        String prefix = conversionResultKey + DATABASE_PREFIX;
-        List<String> databaseNames = findKeySuffixesByPrefix(prefix);
+        // Use full prefix including KEY_PREFIX to avoid picking up non-DBMirror records
+        String searchPrefix = DBMirrorRepository.buildSearchPrefix(conversionResultKey);
+        List<String> databaseNames = findKeySuffixesByPrefix(searchPrefix);
         log.debug("Found {} database names for ConversionResult key: {}", databaseNames.size(), conversionResultKey);
         return databaseNames;
     }
@@ -141,7 +153,7 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
     @Override
     public Optional<DBMirror> findByName(String conversionResultKey, String databaseName)
             throws RepositoryException {
-        String compositeKey = DBMirrorRepository.buildKey(conversionResultKey, databaseName);
+        String compositeKey = DBMirrorRepository.buildPrefixedKey(conversionResultKey, databaseName);
         log.debug("Finding DBMirror by composite key: {}", compositeKey);
         return this.findByKey(compositeKey);
     }

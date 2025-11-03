@@ -119,7 +119,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
             } else if (TableUtils.isACID(let)) {
                 // ACID
                 if (configLite.getMigrateACID().isDowngrade()) {
-                    if (isBlank(configLite.getTransfer().getTargetNamespace())) {
+                    if (isBlank(conversionResult.getTargetNamespace())) {
                         if (configLite.getTransfer().getStorageMigration().isDistcp()) {
                             rightSpec.setReplaceLocation(Boolean.TRUE);
                         } else {
@@ -169,7 +169,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
         if (buildWhat.isShadowTable()) {
             CopySpec shadowSpec = null;
             // If we built a transfer table, use it as the source for the shadow table.
-            if (TableUtils.isACID(let) || !isBlank(configLite.getTransfer().getIntermediateStorage())) {
+            if (TableUtils.isACID(let) || !isBlank(job.getIntermediateStorage())) {
                 shadowSpec = new CopySpec(tableMirror, Environment.TRANSFER, Environment.SHADOW);
             } else {
                 shadowSpec = new CopySpec(tableMirror, Environment.LEFT, Environment.SHADOW);
@@ -303,6 +303,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto configLite = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         // Build the RIGHT table definition.
@@ -329,7 +330,7 @@ public class IntermediateDataStrategy extends DataStrategyBase {
             buildWhat.shadowTable = true;
             buildWhat.shadowSql = true;
         } else {
-            if (!isBlank(configLite.getTransfer().getIntermediateStorage())) {
+            if (!isBlank(job.getIntermediateStorage())) {
                 buildWhat.transferTable = true;
                 buildWhat.transferSql = true;
                 buildWhat.shadowTable = true;

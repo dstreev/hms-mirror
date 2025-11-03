@@ -31,6 +31,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.*;
 import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.util.DatabaseUtils;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import lombok.Getter;
@@ -79,6 +80,8 @@ public class DatabaseService {
     private final CliEnvironment cliEnvironment;
     @NonNull
     private final DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
 
 
     public static final Set<String> skipList = new HashSet<String>(Arrays.asList(DB_LOCATION, DB_MANAGED_LOCATION, COMMENT, DB_NAME, OWNER_NAME, OWNER_TYPE));
@@ -536,7 +539,7 @@ public class DatabaseService {
 
             String targetNamespace = null;
             try {
-                targetNamespace = getConversionResultService().getTargetNamespace();
+                targetNamespace = conversionResult.getTargetNamespace();
             } catch (RequiredConfigurationException rte) {
                 // TODO: We need to rework this to handle multiple namespaces.
                 if (job.getStrategy() == DataStrategyEnum.DUMP) {
@@ -1385,12 +1388,20 @@ public class DatabaseService {
         return rtn;
     }
 
-    // TODO: Need to fix this to pull tables from the appropriate service as they are no longer a collection in dbmirror.
     public Map<String, Number> getEnvironmentSummaryStatistics(DBMirror dbMirror, Environment environment) {
         Map<String, Number> stats = new TreeMap<>();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is not set."));
 
-        for (TableMirror tableMirror : dbMirror.getTableMirrors().values()) {
-            EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
+        Map<String, TableMirror> tableMirrors = null;
+        try {
+            tableMirrors = getTableMirrorRepository().findByDatabase(conversionResult.getKey(), dbMirror.getName());
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+
+        tableMirrors.forEach((tblName, tblMirror) -> {
+            EnvironmentTable et = tblMirror.getEnvironmentTable(environment);
 
             if (nonNull(et)) {
                 Map<String, Number> tableStats = new TreeMap<>();
@@ -1400,7 +1411,7 @@ public class DatabaseService {
                         try {
                             tableStats.put(k, Double.parseDouble((String) v));
                         } catch (NumberFormatException nfe) {
-                            log.error("Issue parsing Table Statistics for {}.{}", dbMirror.getName(), tableMirror.getName());
+                            log.error("Issue parsing Table Statistics for {}.{}", dbMirror.getName(), tblMirror.getName());
                             log.error(nfe.getMessage(), nfe);
                         }
                     } else if (v instanceof Number) {
@@ -1442,11 +1453,12 @@ public class DatabaseService {
                         }
                     });
                 } catch (RuntimeException e) {
-                    log.error("Issue aggregating Table Statistics for {}.{}", dbMirror.getName(), tableMirror.getName());
+                    log.error("Issue aggregating Table Statistics for {}.{}", dbMirror.getName(), tblMirror.getName());
                     log.error(e.getMessage(), e);
                 }
             }
-        }
+        });
+
         Long totalDataSize = stats.get(DATA_SIZE) == null ? 0L : stats.get(DATA_SIZE).longValue();
         Integer totalFileCount = stats.get(FILE_COUNT) == null ? 0 : stats.get(FILE_COUNT).intValue();
         try {

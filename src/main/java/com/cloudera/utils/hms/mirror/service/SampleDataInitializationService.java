@@ -357,10 +357,6 @@ public class SampleDataInitializationService {
         config.setEnableAutoTableStats(false);
         config.setEnableAutoColumnStats(false);
 
-        // Set intermediate storage for data transfer
-        config.getTransfer().setIntermediateStorage("s3a://migration-bucket/intermediate");
-        config.getTransfer().setTargetNamespace("hdfs://new-cluster:8020");
-
         return config;
     }
 

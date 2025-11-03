@@ -56,8 +56,6 @@ public class HmsMirrorAppCfg {
     @NonNull
     private final ExecutionContextService executionContextService;
     @NonNull
-    private final HmsMirrorCommandLineOptions hmsMirrorCommandLineOptions;
-    @NonNull
     private final ConnectionPoolService connectionPoolService;
     @NonNull
     private final DatabaseService databaseService;
@@ -96,6 +94,7 @@ public class HmsMirrorAppCfg {
 //                }
 //            }
             cliReporter.refresh(Boolean.TRUE);
+            getReportWriterService().writeReport();
         };
     }
 }

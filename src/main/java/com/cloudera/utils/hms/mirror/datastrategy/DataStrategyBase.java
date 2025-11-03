@@ -437,8 +437,8 @@ public abstract class DataStrategyBase implements DataStrategy {
                                     rtn = Boolean.FALSE;
                                 }
                             } else if (copySpec.isReplaceLocation()) {
-                                if (!isBlank(config.getTransfer().getIntermediateStorage())) {
-                                    String isLoc = config.getTransfer().getIntermediateStorage();
+                                if (!isBlank(job.getIntermediateStorage())) {
+                                    String isLoc = job.getIntermediateStorage();
                                     // Deal with extra '/'
                                     isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                                     isLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +

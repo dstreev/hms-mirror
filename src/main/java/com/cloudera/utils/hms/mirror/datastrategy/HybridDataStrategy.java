@@ -104,8 +104,8 @@ public class HybridDataStrategy extends DataStrategyBase {
                             ".  Hence, the SQL method has been selected for the migration.");
 
                     tableMirror.setStrategy(DataStrategyEnum.SQL);
-                    if (!isBlank(config.getTransfer().getIntermediateStorage())
-                            || !isBlank(config.getTransfer().getTargetNamespace())) {
+                    if (!isBlank(job.getIntermediateStorage())
+                            || !isBlank(job.getTargetNamespace())) {
                         rtn = intermediateDataStrategy.build(dbMirror, tableMirror);
                     } else {
                         rtn = sqlDataStrategy.build(dbMirror, tableMirror);
@@ -148,8 +148,8 @@ public class HybridDataStrategy extends DataStrategyBase {
             if (let.getPartitioned()) {
                 if (let.getPartitions().size() > job.getHybrid().getExportImportPartitionLimit() &&
                         job.getHybrid().getExportImportPartitionLimit() > 0) {
-                    if (!isBlank(config.getTransfer().getIntermediateStorage())
-                            || !isBlank(config.getTransfer().getTargetNamespace())) {
+                    if (!isBlank(job.getIntermediateStorage())
+                            || !isBlank(job.getTargetNamespace())) {
                         rtn = intermediateDataStrategy.execute(dbMirror, tableMirror);
                     } else {
                         rtn = sqlDataStrategy.execute(dbMirror, tableMirror);

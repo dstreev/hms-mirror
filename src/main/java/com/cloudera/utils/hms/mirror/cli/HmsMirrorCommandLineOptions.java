@@ -46,7 +46,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
-@Configuration("hmsMirrorCommandLineOptions")
+//@Configuration("hmsMirrorCommandLineOptions")
 @Order(5)
 @Slf4j
 @Getter

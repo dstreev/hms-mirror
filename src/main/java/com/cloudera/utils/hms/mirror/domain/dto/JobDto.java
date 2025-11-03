@@ -51,6 +51,12 @@ public class JobDto implements Cloneable {
     @Schema(description = "The data strategy for this job")
     private DataStrategyEnum strategy;
 
+    @Schema(description = "Optional intermediate storage location for data transfer operations")
+    private String intermediateStorage;
+
+    @Schema(description = "Optional target namespace for the migration")
+    private String targetNamespace;
+
     private HybridConfig hybrid = new HybridConfig();
 
     @Schema(description = "Flag to indicate if this job is for a database only migration")

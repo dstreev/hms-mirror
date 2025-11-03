@@ -85,6 +85,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
 
         // Different transfer technique.  Staging location.
         EnvironmentTable let = null;
@@ -96,7 +97,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
         // Check that the table isn't already in the target location.
         StringBuilder sb = new StringBuilder();
-        sb.append(config.getTransfer().getTargetNamespace());
+        sb.append(conversionResult.getTargetNamespace());
         String warehouseDir = null;
         // Get the Warehouse for the database
         Warehouse dbWarehouse = null;
@@ -117,7 +118,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
             warehouseDir = dbWarehouse.getManagedDirectory();
         }
 
-        if (!config.getTransfer().getTargetNamespace().endsWith("/") && !warehouseDir.startsWith("/")) {
+        if (!conversionResult.getTargetNamespace().endsWith("/") && !warehouseDir.startsWith("/")) {
             sb.append("/");
         }
         sb.append(warehouseDir);

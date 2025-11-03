@@ -33,6 +33,7 @@ import java.util.Optional;
  */
 public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> {
     String DATABASE_PREFIX = "/database/";
+    String KEY_PREFIX = "db:";
 
     /**
      * Find all DBMirror instances for a specific ConversionResult.
@@ -100,12 +101,25 @@ public interface DBMirrorRepository extends RocksDBRepository<DBMirror, String> 
      * @return The composite key in format "conversionResultKey/databaseName"
      */
     static String buildKey(String conversionResultKey, String databaseName) {
-        String prefix = buildKeyPrefix(conversionResultKey);
-        return prefix + databaseName;
+        String key = conversionResultKey + DATABASE_PREFIX + databaseName;
+        return key;
     }
 
-    static String buildKeyPrefix(String conversionResultKey) {
-        return conversionResultKey + DATABASE_PREFIX;
+    /**
+     * Build a prefixed key from ConversionResult key and database name.
+     * Used for storing and searching with the prefix.
+     *
+     * @param conversionResultKey
+     * @param databaseName
+     * @return
+     */
+    static String buildPrefixedKey(String conversionResultKey, String databaseName) {
+        return KEY_PREFIX + buildKey(conversionResultKey, databaseName);
+    }
+
+
+    static String buildSearchPrefix(String conversionResultKey) {
+        return KEY_PREFIX + conversionResultKey + DATABASE_PREFIX;
     }
 
 }

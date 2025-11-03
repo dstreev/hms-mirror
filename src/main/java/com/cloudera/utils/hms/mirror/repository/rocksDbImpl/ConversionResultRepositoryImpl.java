@@ -54,6 +54,7 @@ import java.util.List;
 public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<ConversionResult, String>
         implements ConversionResultRepository {
 
+    private static final String KEY_PREFIX = "conv:";
     private static final DateFormat KEY_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
 
     public ConversionResultRepositoryImpl(RocksDB rocksDB,
@@ -61,6 +62,10 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
                                           @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
         super(rocksDB, columnFamily, objectMapper, new TypeReference<ConversionResult>() {
         });
+    }
+
+    protected String buildKey(String key) {
+        return KEY_PREFIX + key;
     }
 
     @Override
@@ -71,10 +76,7 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
     @Override
     public ConversionResult save(ConversionResult conversionResult) throws RepositoryException {
-        if (conversionResult.getKey() == null || conversionResult.getKey().isEmpty()) {
-            // Generate a new key if not present
-            conversionResult.setKey(KEY_DATE_FORMAT.format(new Date()));
-        }
+
         log.debug("Saving ConversionResult with key: {}", conversionResult.getKey());
 
         LocalDateTime currentTime = LocalDateTime.now();
@@ -83,13 +85,16 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
         }
         conversionResult.setModified(currentTime);
 
-        return super.save(conversionResult.getKey(), conversionResult);
+        // Save it with the prefix for the object (conv:)
+        // The key does NOT contain this prefix because we'll use that key to build other object keys
+        //    which will have a different key.
+        return super.save(buildKey(conversionResult.getKey()), conversionResult);
     }
 
     @Override
     public List<ConversionResult> findByDateRange(Date startDate, Date endDate) throws RepositoryException {
-        String startKey = KEY_DATE_FORMAT.format(startDate);
-        String endKey = KEY_DATE_FORMAT.format(endDate);
+        String startKey = buildKey(KEY_DATE_FORMAT.format(startDate));
+        String endKey = buildKey(KEY_DATE_FORMAT.format(endDate));
 
         log.debug("Finding ConversionResults between {} and {}", startKey, endKey);
 
@@ -124,7 +129,7 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
     @Override
     public List<ConversionResult> findByDateAfter(Date startDate) throws RepositoryException {
-        String startKey = KEY_DATE_FORMAT.format(startDate);
+        String startKey = buildKey(KEY_DATE_FORMAT.format(startDate));
 
         log.debug("Finding ConversionResults after {}", startKey);
 
@@ -136,6 +141,11 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
+                // Verify the key starts with our prefix - stop if we've moved past our prefix range
+
+                if (!key.startsWith(KEY_PREFIX)) {
+                    break;
+                }
 
                 try {
                     ConversionResult result = objectMapper.readValue(iterator.value(), typeReference);
@@ -154,17 +164,23 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
     @Override
     public List<ConversionResult> findByDateBefore(Date endDate) throws RepositoryException {
-        String endKey = KEY_DATE_FORMAT.format(endDate);
+        String endKey = buildKey(KEY_DATE_FORMAT.format(endDate));
 
         log.debug("Finding ConversionResults before {}", endKey);
 
         List<ConversionResult> results = new ArrayList<>();
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seekToFirst();
+            // Seek directly to the prefix instead of seekToFirst() for efficiency
+            iterator.seek(KEY_PREFIX.getBytes());
 
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
+
+                // Verify the key starts with our prefix - stop if we've moved past our prefix range
+                if (!key.startsWith(KEY_PREFIX)) {
+                    break;
+                }
 
                 // Stop if we've moved past the end date
                 if (key.compareTo(endKey) > 0) {
@@ -191,10 +207,16 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
         List<ConversionResult> results = new ArrayList<>();
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seekToFirst();
+            // Seek directly to the prefix instead of seekToFirst() for efficiency
+            iterator.seek(KEY_PREFIX.getBytes());
 
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
+
+                // Verify the key starts with our prefix - stop if we've moved past our prefix range
+                if (!key.startsWith(KEY_PREFIX)) {
+                    break;
+                }
 
                 try {
                     ConversionResult result = objectMapper.readValue(iterator.value(), typeReference);
@@ -213,7 +235,7 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
     @Override
     public int deleteByDateBefore(Date beforeDate) throws RepositoryException {
-        String cutoffKey = KEY_DATE_FORMAT.format(beforeDate);
+        String cutoffKey = buildKey(KEY_DATE_FORMAT.format(beforeDate));
 
         log.debug("Deleting ConversionResults before {}", cutoffKey);
 
@@ -222,10 +244,16 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
 
         // First pass: collect keys to delete
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
-            iterator.seekToFirst();
+            // Seek directly to the prefix instead of seekToFirst() for efficiency
+            iterator.seek(KEY_PREFIX.getBytes());
 
             while (iterator.isValid()) {
                 String key = new String(iterator.key());
+
+                // Verify the key starts with our prefix - stop if we've moved past our prefix range
+                if (!key.startsWith(KEY_PREFIX)) {
+                    break;
+                }
 
                 // Stop if we've reached entries at or after the cutoff date
                 if (key.compareTo(cutoffKey) >= 0) {

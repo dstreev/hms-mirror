@@ -21,11 +21,7 @@ import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
-import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
-import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
-import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.service.ConversionResultService;
-import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import com.cloudera.utils.hms.mirror.util.HmsMirrorConfigConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,12 +32,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -49,7 +40,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -57,7 +47,6 @@ import java.util.Date;
 import static java.util.Objects.isNull;
 
 @Component
-@DependsOn("hmsMirrorCommandLineOptions")
 @Slf4j
 @Getter
 //@RequiredArgsConstructor

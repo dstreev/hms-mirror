@@ -34,6 +34,7 @@ import java.util.Optional;
 public interface TableMirrorRepository extends RocksDBRepository<TableMirror, String> {
     String DATABASE_PREFIX = "/database/";
     String TABLE_PREFIX = "/table/";
+    String KEY_PREFIX = "tbl:";
 
     /**
      * Find a specific TableMirror by name within a database.
@@ -92,6 +93,18 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
     void deleteByDatabase(String conversionResultKey, String databaseName) throws RepositoryException;
 
     /**
+     * Find all database names for a specific ConversionResult.
+     * Returns a list of database names (extracted from DBMirror.getName()).
+     *
+     * @param conversionResultKey The key of the ConversionResult
+     * @param databaseName The name of the database
+     * @return List of database names
+     * @throws RepositoryException if there's an error accessing the repository
+     */
+    List<String> listNamesByKey(String conversionResultKey, String databaseName) throws RepositoryException;
+
+
+    /**
      * Build a composite key from ConversionResult key, database name, and table name.
      *
      * @param conversionResultKey The key of the ConversionResult
@@ -103,25 +116,33 @@ public interface TableMirrorRepository extends RocksDBRepository<TableMirror, St
         return conversionResultKey + DATABASE_PREFIX + databaseName + TABLE_PREFIX + tableName;
     }
 
-    /**
-     * Find all database names for a specific ConversionResult.
-     * Returns a list of database names (extracted from DBMirror.getName()).
-     *
-     * @param conversionResultKey The key of the ConversionResult
-     * @param databaseName The name of the database
-     * @return List of database names
-     * @throws RepositoryException if there's an error accessing the repository
-     */
-    List<String> listNamesByKey(String conversionResultKey, String databaseName) throws RepositoryException;
 
     /**
-     * Build a database prefix for iteration.
+     * Build a prefixed key from ConversionResult key and database name.
+     * Used for storing and searching with the prefix.
      *
-     * @param conversionResultKey The key of the ConversionResult
-     * @param databaseName The name of the database
-     * @return The database prefix in format "conversionResultKey/database/databaseName/table/"
+     * @param conversionResultKey
+     * @param databaseName
+     * @return
      */
-    static String buildPrefixKey(String conversionResultKey, String databaseName) {
-        return conversionResultKey + DATABASE_PREFIX + databaseName + TABLE_PREFIX;
+    static String buildPrefixedKey(String conversionResultKey, String databaseName, String tableName) {
+        return KEY_PREFIX + buildKey(conversionResultKey, databaseName, tableName);
     }
+
+    /**
+     * Build a prefixed key from ConversionResult key and database name.
+     * Used for storing and searching with the prefix.
+     *
+     * @param tableMirror
+     * @return
+     */
+    static String buildPrefixedKey(TableMirror tableMirror) {
+        return KEY_PREFIX + tableMirror.getKey();
+    }
+
+
+    static String buildSearchPrefix(String conversionResultKey, String databaseName) {
+        return KEY_PREFIX + conversionResultKey + DATABASE_PREFIX + databaseName + TABLE_PREFIX;
+    }
+
 }

@@ -116,8 +116,8 @@ public class ExportCircularResolveService extends DataStrategyBase {
             let.addSql(TableUtils.USE_DESC, useLeftDb);
             String exportLoc = null;
 
-            if (!isBlank(config.getTransfer().getIntermediateStorage())) {
-                String isLoc = config.getTransfer().getIntermediateStorage();
+            if (!isBlank(job.getIntermediateStorage())) {
+                String isLoc = job.getIntermediateStorage();
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" +
@@ -125,8 +125,8 @@ public class ExportCircularResolveService extends DataStrategyBase {
                         conversionResult.getKey() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
-            } else if (!isBlank(config.getTransfer().getTargetNamespace())) {
-                String isLoc = config.getTransfer().getTargetNamespace();
+            } else if (!isBlank(job.getTargetNamespace())) {
+                String isLoc = job.getTargetNamespace();
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
@@ -161,8 +161,8 @@ public class ExportCircularResolveService extends DataStrategyBase {
             }
 
             String importLoc = null;
-            if (!isBlank(config.getTransfer().getIntermediateStorage())
-                    || !isBlank(config.getTransfer().getTargetNamespace())) {
+            if (!isBlank(job.getIntermediateStorage())
+                    || !isBlank(job.getTargetNamespace())) {
                 importLoc = exportLoc;
             } else {
                 // We'll use the LEFT Namespace for the EXPORT location to ensure consistency with the EXPORT's
