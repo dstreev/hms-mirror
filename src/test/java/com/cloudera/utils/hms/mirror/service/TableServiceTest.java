@@ -18,8 +18,6 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.Marker;
-import com.cloudera.utils.hms.mirror.core.api.TableOperations;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
@@ -72,9 +70,6 @@ public class TableServiceTest {
 
     @Mock
     private StatsCalculatorService statsCalculatorService;
-
-    @Mock
-    private TableOperations tableOperations;
 
     @Mock
     private CliEnvironment cliEnvironment;

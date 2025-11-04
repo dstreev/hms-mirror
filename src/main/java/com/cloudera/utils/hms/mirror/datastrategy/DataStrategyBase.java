@@ -89,108 +89,11 @@ public abstract class DataStrategyBase implements DataStrategy {
         this.featureService = featureService;
     }
 
-    //    protected Boolean AVROCheck(ConversionResult conversionResult, TableMirror tableMirror) {
-//        Boolean rtn = Boolean.TRUE;
-//        Boolean relative = Boolean.FALSE;
-//
-//        ConfigLiteDto config = conversionResult.getConfigLite();
-//        JobDto job = conversionResult.getJob();
-//
-//        // Check for AVRO
-//        EnvironmentTable let = getEnvironmentTable(Environment.LEFT, tableMirror);
-//        EnvironmentTable ret = getEnvironmentTable(Environment.RIGHT, tableMirror);
-//        if (TableUtils.isAVROSchemaBased(let)) {
-//            log.info("{}: is an AVRO table.", let.getName());
-//            String leftPath = TableUtils.getAVROSchemaPath(let);
-//            String rightPath = null;
-//            log.debug("{}: Original AVRO Schema path: {}", let.getName(), leftPath);
-//                /* Checks:
-//                - Is Path prefixed with a protocol?
-//                    - (Y) Does it match the LEFT's hcfsNamespace.
-//                        - (Y) Replace prefix with RIGHT 'hcfsNamespace' prefix.
-//                        - (N) Throw WARNING and set return to FALSE.  We don't recognize the prefix and
-//                                 can't guarantee that we can retrieve the file.
-//                    - (N) Leave it and copy the file to the same relative path on the RIGHT
-//                 */
-//            String leftNamespace = NamespaceUtils.getNamespace(leftPath);
-//            try {
-//                if (nonNull(leftNamespace)) {
-//                    log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
-//                    rightPath = NamespaceUtils.replaceNamespace(leftPath, conversionResult.getTargetNamespace());
-//                } else {
-//                    // No Protocol defined.  So we're assuming that its a relative path to the
-//                    // defaultFS
-//                    String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
-//                    log.info("{}: {}", let.getName(), rpath);
-//                    ret.addIssue(rpath);
-//                    rightPath = leftPath;
-//                    relative = Boolean.TRUE;
-//                }
-//
-//                // TODO: Fix
-//                /*
-//                if (nonNull(leftPath) && nonNull(rightPath) && config.isCopyAvroSchemaUrls() && job.isExecute()) {
-//                    // Copy over.
-//                    log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
-//                    try {
-//                        CommandReturn cr = null;
-//                        if (relative) {
-//                            // checked..
-//                            rightPath = conversionResult.getTargetNamespace() + rightPath;
-//                        }
-//                        log.info("AVRO Schema COPY from: {} to {}", leftPath, rightPath);
-//                        // Ensure the path for the right exists.
-//                        String parentDirectory = NamespaceUtils.getParentDirectory(rightPath);
-//                        if (nonNull(parentDirectory)) {
-//                            cr = cliEnvironment.processInput("mkdir -p " + parentDirectory);
-//                            if (cr.isError()) {
-//                                ret.addError("Problem creating directory " + parentDirectory + ". " + cr.getError());
-//                                rtn = Boolean.FALSE;
-//                            } else {
-//                                cr = cliEnvironment.processInput("cp -f " + leftPath + " " + rightPath);
-//                                if (cr.isError()) {
-//                                    ret.addError("Problem copying AVRO schema file from " + leftPath + " to " + parentDirectory + ".\n```" + cr.getError() + "```");
-//                                    rtn = Boolean.FALSE;
-//                                }
-//                            }
-//                        }
-//                    } catch (Throwable t) {
-//                        log.error("{}: AVRO file copy issue", ret.getName(), t);
-//                        ret.addError(t.getMessage());
-//                        rtn = Boolean.FALSE;
-//                    }
-//                } else {
-//                    log.info("{}: did NOT attempt to copy AVRO schema file to target cluster.", let.getName());
-//                }
-//                tableMirror.addStep("AVRO", "Checked");
-//
-//                 */
-//            } catch (RequiredConfigurationException e) {
-//                log.error("Required Configuration Exception", e);
-//                ret.addError(e.getMessage());
-//                rtn = Boolean.FALSE;
-//            }
-//        } else {
-//            // Not AVRO, so no action (passthrough)
-//            rtn = Boolean.TRUE;
-//        }
-//        return rtn;
-//    }
-
     @Override
     public BuildWhat whatToBuild(DBMirror dbMirror, TableMirror tableMirror) {
         return null;
     }
 
-//    public EnvironmentTable getEnvironmentTable(Environment environment, TableMirror tableMirror) {
-//        EnvironmentTable et = tableMirror.getEnvironments().get(environment);
-//        if (isNull(et)) {
-//            et = new EnvironmentTable(tableMirror);
-//            tableMirror.getEnvironments().put(environment, et);
-//        }
-//        return et;
-//    }
-//
     public Boolean buildTableSchema(CopySpec copySpec, DBMirror dbMirror) throws RequiredConfigurationException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->

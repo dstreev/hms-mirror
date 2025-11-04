@@ -151,12 +151,6 @@ public class HmsMirrorConfig implements Cloneable {
      */
     private boolean noPurge = Boolean.FALSE;
     /*
-    TODO: Not implemented.
-    When Common Storage is used with the SQL Data Strategy, this will 'replace' the original table
-    with a table by the same name but who's data lives in the common storage location.
-     */
-    private boolean replace = Boolean.FALSE;
-    /*
     When set, the RIGHT database will be DROPPED before being recreated.
      */
     private boolean resetRight = Boolean.FALSE;
@@ -359,7 +353,6 @@ public class HmsMirrorConfig implements Cloneable {
 
     /*
         Use this to initialize a default config.
-        TODO: Need to add back.
          */
     public static void setup(String configFile) throws IOException {
         HmsMirrorConfig hmsMirrorConfig = new HmsMirrorConfig();
@@ -673,16 +666,9 @@ public class HmsMirrorConfig implements Cloneable {
         return Boolean.FALSE;
     }
 
-
-    // Entry Format source_dir=ext_dir[:mngd_dir]
-    // Entry Format source_dir=ext_dir
-    // Entry Format source_dir=:mngd_dir
     public void addGlobalLocationMap(String glmEntry) {
         boolean set = Boolean.TRUE;
-        // Determine if the migrations between the clusters might have conversions (managed to external).
-        // TODO: Fix
         boolean conversionsPossible = false;
-//                ConversionResultUtil.possibleConversions(this);
         if (glmEntry != null) {
             String[] glmParts = glmEntry.split("=");
             String source_dir = glmParts[0];

@@ -21,14 +21,16 @@ import lombok.Getter;
 
 @Getter
 public enum HiveVersion {
-    HIVE_1(true),
-    HIVE_2(true),
-    HIVE_3(false),
-    HIVE_4(false);
+    HIVE_1(true, 1),
+    HIVE_2(true, 2 ),
+    HIVE_3(false, 3),
+    HIVE_4(false, 4);
 
     private final boolean legacy;
+    private final int version;
 
-    HiveVersion(boolean legacy) {
+    HiveVersion(boolean legacy, int version) {
         this.legacy = legacy;
+        this.version = version;
     }
 }

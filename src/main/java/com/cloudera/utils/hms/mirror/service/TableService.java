@@ -25,7 +25,6 @@ import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.core.api.TableOperations;
 import com.cloudera.utils.hms.mirror.core.model.ValidationResult;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
@@ -87,8 +86,6 @@ public class TableService {
     private final TranslatorService translatorService;
     @NonNull
     private final StatsCalculatorService statsCalculatorService;
-    @NonNull
-    private final TableOperations tableOperations;  // NEW: Core business logic injection
     @NonNull
     private final CliEnvironment cliEnvironment;
     @NonNull

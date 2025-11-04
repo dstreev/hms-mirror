@@ -114,6 +114,7 @@ public enum MessageCode {
             "specified, will be created in the `hive.metastore.warehouse.external.dir`.  This value is global in HDP Hive3 and " +
             "can NOT be set for individual databases.  Post upgrade to CDP, you should add a specific directory value at the " +
             "database level for better control."),
+    HIVE_DOWNGRADE_REQUESTED("We do NOT support Hive downgrades."),
     HIVE3_ON_HDP_ACID_TRANSFERS("Hive3 on HDP does NOT honor the 'database' LOCATION element for newly created MANAGED tables. " +
             "For STORAGE_MIGRATION in the same metastore/namespace, move the data with `distcp` and ALTER the table locations by adding " +
             "`-dc` option to the commandline."),
@@ -147,6 +148,7 @@ public enum MessageCode {
     METASTORE_DIRECT_NOT_DEFINED_OR_CONFIGURED("The {0} metastore_direct is NOT defined or configured in the runtime configuration.  " +
             "Please check the configuration and try again."),
     MISC_ERROR("Check log for details. Miscellaneous Error: {0}"),
+    MISSING_CONFIGURATION("Missing a require part of the configuration: {}"),
     MISSING_PROPERTY("The property ''{0}'' is missing from the configuration {1} {2}.  Please add it and try again."),
     NON_LEGACY_TO_LEGACY("`hms-mirror` does NOT support migrations from Hive 3 to Hive 1/2."),
     OPTIONAL_ARG_ISSUE("Bad optional argument"),
@@ -250,6 +252,7 @@ public enum MessageCode {
     WAREHOUSE_DIRECTORIES_RETRIEVED_FROM_HIVE_ENV("The warehouse directories were retrieved from the Hive environment.  If these are not the intended " +
             "directories, add the warehouse directories to the configuration and try again."),
     WAREHOUSE_DIRS_SAME_DIR("You can't use the same location for EXTERNAL {0} and MANAGED {1} warehouse locations."),
+    WAREHOUSE_DETAILS_MISSING("The Warehouse details for database {} are missing.  Add them and try again."),
     WAREHOUSE_PLANS_REQUIRED_FOR_STORAGE_MIGRATION("You must specify a warehouse plan when using STORAGE_MIGRATION to ensure the locations are correctly aligned.");
 
     //    private int code = 0;

@@ -40,7 +40,7 @@ public enum HmsMirrorCommandLineOptionsEnum {
     DATABASE_SKIP_PROPERTIES("dbsp", "database-skip-properties", "key(s)", ""),
     DATABASE_RENAME("dbr", "db-rename", "rename", ""),
     DATABASE_REGEX("dbRegEx", "database-regex", "regex", ""),
-    //TODO: Double check conversion from legacy.
+    // TODO: Double check conversion from legacy.
     DISTCP("dc", "distcp", "flow-direction default:PULL", ""),
     DATA_MOVEMENT_STRATEGY("dms", "data-movement-strategy", "strategy", ""),
     DECRYPT_PASSWORD("dp", "decrypt-password", "encrypted-password", ""),

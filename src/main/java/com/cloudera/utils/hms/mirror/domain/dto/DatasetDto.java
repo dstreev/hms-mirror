@@ -32,6 +32,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 /**
  * Dataset DTO for HMS Mirror Dataset management.
  * A dataset defines a collection of databases and their associated tables
@@ -310,6 +312,28 @@ public class DatasetDto implements Cloneable {
         private Pattern includeRegExPattern = null;
         @JsonIgnore
         private Pattern excludeRegExPattern = null;
+
+        public boolean isFilterEnabled() {
+            boolean rtn = Boolean.FALSE;
+            // If the includeRegEx is defined, then only '.*' is allowed
+            if (!isBlank(this.includeRegEx) && !this.includeRegEx.equals(".*")) {
+                rtn = Boolean.TRUE;
+            }
+            // If the excludeRegEx is defined then its filtering.
+            if (!isBlank(this.excludeRegEx)) {
+                rtn = Boolean.TRUE;
+            }
+            // If minPartitions, maxPartitions, minSizeMb, maxSizeMb are defined then its filtering.
+            if (this.minPartitions > 0 || this.maxPartitions > 0 || this.minSizeMb > 0 || this.maxSizeMb > 0) {
+                rtn = Boolean.TRUE;
+            }
+            // If tableTypes are defined then its filtering.
+            if (this.tableTypes != null && !this.tableTypes.isEmpty()) {
+                rtn = Boolean.TRUE;
+            }
+            return rtn;
+
+        }
 
         public Pattern getIncludeRegExPattern() {
             // If null, create Pattern object

@@ -164,8 +164,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" +
                         config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        // TODO: Fix
-//                        config.getRunMarker() + "/" +
+                        conversionResult.getKey() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else if (!isBlank(job.getTargetNamespace())) {
@@ -173,8 +172,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 // Deal with extra '/'
                 isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
                 exportLoc = isLoc + "/" + config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                        // TODO: Fix
-//                        config.getRunMarker() + "/" +
+                        conversionResult.getKey() + "/" +
                         dbMirror.getName() + "/" +
                         tableMirror.getName();
             } else {

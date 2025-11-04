@@ -17,16 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.connections;
 
-import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
-import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
+import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
@@ -98,26 +94,24 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
         if (metastoreDirectDataSources.get(Environment.LEFT) != null)
             if (metastoreDirectDataSources.get(Environment.LEFT) instanceof PoolingDataSource) {
                 try {
-                    ((PoolingDataSource<?>)metastoreDirectDataSources.get(Environment.LEFT)).close();
+                    ((PoolingDataSource<?>) metastoreDirectDataSources.get(Environment.LEFT)).close();
                 } catch (SQLException e) {
                     log.error("Issue closing connection for: {}", "LEFT Metastore", e);
                     throw new RuntimeException(e);
                 }
-            }
-            else if (metastoreDirectDataSources.get(Environment.LEFT) instanceof HikariDataSource)
-                ((HikariDataSource)metastoreDirectDataSources.get(Environment.LEFT)).close();
+            } else if (metastoreDirectDataSources.get(Environment.LEFT) instanceof HikariDataSource)
+                ((HikariDataSource) metastoreDirectDataSources.get(Environment.LEFT)).close();
 
         if (metastoreDirectDataSources.get(Environment.RIGHT) != null)
             if (metastoreDirectDataSources.get(Environment.RIGHT) instanceof PoolingDataSource) {
                 try {
-                    ((PoolingDataSource<?>)metastoreDirectDataSources.get(Environment.RIGHT)).close();
+                    ((PoolingDataSource<?>) metastoreDirectDataSources.get(Environment.RIGHT)).close();
                 } catch (SQLException e) {
                     log.error("Issue closing connection for: {}", "RIGHT Metastore Direct", e);
                     throw new RuntimeException(e);
                 }
-            }
-            else if (metastoreDirectDataSources.get(Environment.RIGHT) instanceof HikariDataSource)
-                ((HikariDataSource)metastoreDirectDataSources.get(Environment.RIGHT)).close();
+            } else if (metastoreDirectDataSources.get(Environment.RIGHT) instanceof HikariDataSource)
+                ((HikariDataSource) metastoreDirectDataSources.get(Environment.RIGHT)).close();
         // Clear the DataSources.
         metastoreDirectDataSources.clear();
     }
@@ -261,32 +255,24 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
     }
 
     public synchronized void init() {
-        // TODO: Fix to handle test data load. (Don't init connections).
-        //       I Think we should handle this outside of the ConnectionPoolsBase by ensuring we don't
-        //       call these methods during test data load.
-//        if (!executeSession.getConfig().isLoadingTestData()) {
-//            try {
-                switch (connectionState) {
-                    case DISCONNECTED:
-                    case ERROR:
-                        connectionState = ConnectionState.INITIALIZING;
-                        // Attempt to re-init.
-                        initHS2Drivers();
-                        initHS2PooledDataSources();
-                        initMetastoreDataSources();
-                        break;
-                    case INITIALIZING:
-                    case INITIALIZED:
-                    case CONNECTED:
-                        // Do Nothing
-                        break;
-                }
-                connectionState = ConnectionState.CONNECTED;
-//            } catch (SessionException | EncryptionException e) {
-//                connectionState = ConnectionState.ERROR;
-//                throw e;
-//            }
+        if (!conversionResult.isMockTestDataset()) {
+            switch (connectionState) {
+                case DISCONNECTED:
+                case ERROR:
+                    connectionState = ConnectionState.INITIALIZING;
+                    // Attempt to re-init.
+                    initHS2Drivers();
+                    initHS2PooledDataSources();
+                    initMetastoreDataSources();
+                    break;
+                case INITIALIZING:
+                case INITIALIZED:
+                case CONNECTED:
+                    // Do Nothing
+                    break;
+            }
+            connectionState = ConnectionState.CONNECTED;
         }
-//    }
+    }
 
 }

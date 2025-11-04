@@ -48,6 +48,7 @@ import java.io.InputStreamReader;
 import java.nio.file.FileSystems;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -64,7 +65,7 @@ public class CliReporter {
     private final List<String> reportTemplateFooter = new ArrayList<>();
     private final List<String> reportTemplateOutput = new ArrayList<>();
     private final Map<String, String> varMap = new TreeMap<>();
-//    private final List<TableMirror> startedTables = new ArrayList<>();
+    private final List<TableMirror> startedTables = new ArrayList<>();
 
     @NonNull
     private final ExecutionContextService executionContextService;
@@ -74,9 +75,6 @@ public class CliReporter {
     private final DBMirrorRepository dbMirrorRepository;
     @NonNull
     private final TableMirrorRepository tableMirrorRepository;
-
-    // TODO: Need to populate this.
-//    private DBMirror dbMirror;
 
     private Thread worker;
     private Boolean retry = Boolean.FALSE;
@@ -100,7 +98,6 @@ public class CliReporter {
             report.append(ReportingConf.substituteAllVariables(reportTemplateHeader, varMap));
 
             // Table Processing
-            /* TODO: Need to get a list of 'in-progress' tables.
             for (TableMirror tblMirror : startedTables) {
                 Map<String, String> tblVars = new TreeMap<>();
                 String dbName = findDatabaseForTable(conversionResult, tblMirror);
@@ -111,8 +108,6 @@ public class CliReporter {
                 tblVars.put("tbl.strategy", tblMirror.getStrategy().toString());
                 report.append(ReportingConf.substituteAllVariables(reportTemplateTableDetail, tblVars));
             }
-
-             */
         }
 
         // Footer
@@ -206,14 +201,14 @@ public class CliReporter {
         JobExecution jobExecution = conversionResult.getJobExecution();
 
         tiktok = !tiktok;
-//        startedTables.clear();
+        startedTables.clear();
         if (!retry)
             varMap.put("retry", "       ");
         else
             varMap.put("retry", "(RETRY)");
         varMap.put("run.mode", jobExecution.isExecute() ? "EXECUTE" : "DRYRUN");
         varMap.put("HMS-Mirror-Version", ReportingConf.substituteVariablesFromManifest("${HMS-Mirror-Version}"));
-        // TODO: Fix
+        // TODO: Fix.  We may need to rearrange this to work for the Web UI too.
         varMap.put("config.file", config.getConfigFilename());
         varMap.put("config.strategy", job.getStrategy().toString());
         varMap.put("tik.tok", tiktok ? "*" : "");
@@ -222,8 +217,6 @@ public class CliReporter {
         varMap.put("cores", Integer.toString(Runtime.getRuntime().availableProcessors()));
         varMap.put("os.arch", System.getProperty("os.arch"));
         varMap.put("memory", Runtime.getRuntime().totalMemory() / 1024 / 1024 + "MB");
-
-        // TODO: Fix
 
         String outputDir = config.getOutputDirectory();
         if (!isBlank(config.getFinalOutputDirectory())) {
@@ -239,58 +232,70 @@ public class CliReporter {
 
         varMap.put("total.dbs", Integer.toString(conversionResult.getDatabases().size()));
         // Count
-        int tblCount = 0;
-        // TODO: FIX
-        /*
-        for (String database : conversionResult.getDatabases().keySet()) {
-            tblCount += conversionResult.getDatabase(database).getTableMirrors().size();
-        }
-         */
-        varMap.put("total.tbls", Integer.toString(tblCount));
+        final AtomicInteger tblCount = new AtomicInteger(0);
+
+//        List<String> dbNames = getDbMirrorRepository().listNamesByKey(conversionResult.getKey());
+//        dbNames.forEach(dbName -> {
+//            List<String> tableNames = getTableMirrorRepository().listNamesByKey(conversionResult.getKey(), dbName);
+//            tblCount += tableNames.size();
+//        });
+//
 
         // Table Counters
-        int started = 0;
-        int completed = 0;
-        int errors = 0;
-        int skipped = 0;
-        /*
-        TODO: Fix.
+        final AtomicInteger started = new AtomicInteger(0);
+        final AtomicInteger completed = new AtomicInteger(0);
+        final AtomicInteger errors = new AtomicInteger(0);
+        final AtomicInteger skipped = new AtomicInteger(0);
 
-        for (String database : conversionResult.getDatabases().keySet()) {
-            DBMirror dbMirror = conversionResult.getDatabase(database);
-            for (String tbl : dbMirror.getTableMirrors().keySet()) {
-                switch (dbMirror.getTable(tbl).getPhaseState()) {
+        List<String> dbNames = null;
+        try {
+            dbNames = getDbMirrorRepository().listNamesByKey(conversionResult.getKey());
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+        dbNames.forEach(dbName -> {
+            Map<String, TableMirror> tables = null;
+            try {
+                tables = getTableMirrorRepository().findByDatabase(conversionResult.getKey(), dbName);
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+            tblCount.addAndGet(tables.size());
+            tables.forEach((tblName, tableMirror) -> {
+                switch (tableMirror.getPhaseState()) {
                     case INIT:
                         break;
                     case APPLYING_SQL:
                     case CALCULATING_SQL:
-                        started++;
-                        startedTables.add(dbMirror.getTable(tbl));
+                        started.incrementAndGet();
+                        startedTables.add(tableMirror);
                         break;
                     case CALCULATED_SQL:
                         if (config.isExecute())
-                            started++;
+                            started.incrementAndGet();
                         else
-                            completed++;
+                            completed.incrementAndGet();
                         break;
                     case PROCESSED:
-                        completed++;
+                        completed.incrementAndGet();
                         break;
                     case ERROR:
                     case CALCULATED_SQL_WARNING:
-                        errors++;
+                        errors.incrementAndGet();
                         break;
                     case RETRY_SKIPPED_PAST_SUCCESS:
-                        skipped++;
+                        skipped.incrementAndGet();
                 }
-            }
-        }
+            });
 
-         */
-        varMap.put("started.tbls", Integer.toString(started));
-        varMap.put("completed.tbls", Integer.toString(completed));
-        varMap.put("error.tbls", Integer.toString(errors));
-        varMap.put("skipped.tbls", Integer.toString(skipped));
+        });
+
+        varMap.put("total.tbls", Integer.toString(tblCount.get()));
+
+        varMap.put("started.tbls", Integer.toString(started.get()));
+        varMap.put("completed.tbls", Integer.toString(completed.get()));
+        varMap.put("error.tbls", Integer.toString(errors.get()));
+        varMap.put("skipped.tbls", Integer.toString(skipped.get()));
         Date current = new Date();
         long elapsedMS = current.getTime() - start.getTime();
         if (tiktok)

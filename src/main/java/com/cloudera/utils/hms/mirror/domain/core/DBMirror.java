@@ -73,34 +73,6 @@ public class DBMirror implements Cloneable {
 
     private Map<Environment, Map<String, Number>> environmentStatistics = new TreeMap<>();
 
-    /*
-    TODO: Should this be externalized?
-     */
-    @JsonIgnore
-    public List<PhaseState> getPhasesFromAvailableTables() {
-        List<PhaseState> rtn = new ArrayList<>();
-//        for (TableMirror tableMirror : getTableMirrors().values()) {
-//            if (!rtn.contains(tableMirror.getPhaseState())) {
-//                rtn.add(tableMirror.getPhaseState());
-//            }
-//        }
-        return rtn;
-    }
-
-    /*
-    TOOD: Should this be externalized?
-     */
-    @JsonIgnore
-    public Map<String, TableMirror> getTablesByPhase(PhaseState phaseState) {
-        Map<String, TableMirror> rtn = new TreeMap<>();
-//        for (TableMirror tableMirror : getTableMirrors().values()) {
-//            if (tableMirror.getPhaseState().equals(phaseState)) {
-//                rtn.put(tableMirror.getName(), tableMirror);
-//            }
-//        }
-        return rtn;
-    }
-
     public void addIssue(Environment environment, String issue) {
         String scrubbedIssue = issue.replace("\n", "<br/>");
         List<String> issuesList = issues.get(environment);
@@ -119,20 +91,6 @@ public class DBMirror implements Cloneable {
         }
         sqlList.put(sql, reason);
     }
-
-//    public TableMirror addTable(String table) {
-//        if (getTableMirrors().containsKey(table)) {
-//            log.debug("Table object found in map {}.{}", this.getName(), table);
-//            return getTableMirrors().get(table);
-//        } else {
-//            log.info("Adding table object to map {}.{}", this.getName(), table);
-//            TableMirror tableMirror = new TableMirror();
-//            tableMirror.setName(table);
-//            tableMirror.setParent(this);
-//            getTableMirrors().put(table, tableMirror);
-//            return tableMirror;
-//        }
-//    }
 
     public void setProperty(Environment environment, String dbProperty, String value) {
         Map<String, String> dbDefinition = getProperty(environment);
@@ -193,32 +151,6 @@ public class DBMirror implements Cloneable {
         return issues.get(environment);
     }
 
-    /*
-    TODO: This should be externalized
-     */
-    public Map<PhaseState, Integer> getPhaseSummary() {
-        Map<PhaseState, Integer> rtn = new HashMap<>();
-//        for (String tableName : getTableMirrors().keySet()) {
-//            TableMirror tableMirror = getTableMirrors().get(tableName);
-//            Integer count = rtn.get(tableMirror.getPhaseState());
-//            if (nonNull(count))
-//                rtn.put(tableMirror.getPhaseState(), count + 1);
-//            else
-//                rtn.put(tableMirror.getPhaseState(), 1);
-//        }
-        return rtn;
-    }
-
-    @JsonIgnore
-    public String getPhaseSummaryString() {
-        StringBuilder sb = new StringBuilder();
-        Map<PhaseState, Integer> psMap = getPhaseSummary();
-        for (PhaseState ps : psMap.keySet()) {
-            sb.append(ps).append("(").append(psMap.get(ps)).append(") ");
-        }
-        return sb.toString();
-    }
-
     public List<Pair> getSql(Environment environment) {
         List<Pair> sqlList = null;
         if (isNull(sql.get(environment))) {
@@ -230,85 +162,6 @@ public class DBMirror implements Cloneable {
         return sqlList;
     }
 
-//    public TableMirror getTable(String table) {
-//        return getTableMirrors().get(table);
-//    }
-//
-//    public Map<String, TableMirror> getTableMirrors() {
-//        if (isNull(tableMirrors)) {
-//            tableMirrors = new TreeMap<>();
-//        }
-//        return tableMirrors;
-//    }
-//
-//    public void setTableMirrors(Map<String, TableMirror> tableMirrors) {
-//        this.tableMirrors = tableMirrors;
-//        for (TableMirror tableMirror : tableMirrors.values()) {
-//            tableMirror.setParent(this);
-//        }
-//    }
-
-//    public boolean hasActions() {
-//        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-//            if (entry.getValue().hasActions())
-//                rtn = Boolean.TRUE;
-//        }
-//        return rtn;
-//    }
-
-    /*
-    TODO: This should be externalized.
-     */
-    public boolean hasAddedProperties() {
-        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-//            if (entry.getValue().hasAddedProperties())
-//                rtn = Boolean.TRUE;
-//        }
-        return rtn;
-    }
-
-    /*
-    TODO: This should be externalized.
-     */
-    public boolean hasIssues() {
-        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-//            if (entry.getValue().hasIssues())
-//                rtn = Boolean.TRUE;
-//        }
-        return rtn;
-    }
-
-    /*
-    TODO: This should be externalized.
-     */
-    public boolean hasErrors() {
-        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-//            if (entry.getValue().hasErrors())
-//                rtn = Boolean.TRUE;
-//        }
-        return rtn;
-    }
-
-    /*
-    TODO: This should be externalized.
-     */
-    public boolean hasStatistics() {
-        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<String, TableMirror> entry : getTableMirrors().entrySet()) {
-//            if (entry.getValue().hasStatistics())
-//                rtn = Boolean.TRUE;
-//        }
-        return rtn;
-    }
-
-    @JsonIgnore
-    public boolean isThereAnIssue() {
-        return !issues.isEmpty() ? Boolean.TRUE : Boolean.FALSE;
-    }
 
     public void setProperty(Environment enviroment, Map<String, String> dbProperties) {
         properties.put(enviroment, dbProperties);

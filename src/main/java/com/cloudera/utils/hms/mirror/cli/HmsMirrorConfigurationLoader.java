@@ -406,16 +406,16 @@ public class HmsMirrorConfigurationLoader {
         });
 
 //        // Global location map
-//        applyIfPresent(CONFIG_PREFIX + ".global-location-map", value -> {
-//            String[] maps = value.split(",");
-//            for (String map : maps) {
-//                String[] parts = map.split("=");
-//                if (parts.length == 2) {
-//                    config.getTranslator().addGlobalLocationMap(parts[0], parts[1]);
-//                }
-//            }
-//            log.info("global-location-map: {}", value);
-//        });
+        applyIfPresent(CONFIG_PREFIX + ".global-location-map", value -> {
+            String[] maps = value.split(",");
+            for (String map : maps) {
+                String[] parts = map.split("=");
+                if (parts.length == 2) {
+                    config.addGlobalLocationMap(parts[0], parts[1]);
+                }
+            }
+            log.info("global-location-map: {}", value);
+        });
 
         // Iceberg table property overrides
         applyIfPresent(CONFIG_PREFIX + ".iceberg-table-property-overrides", value -> {

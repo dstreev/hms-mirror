@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.config;
 
-import com.cloudera.utils.hms.mirror.core.api.TableOperations;
-import com.cloudera.utils.hms.mirror.core.impl.TableOperationsImpl;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.ConfigurationProvider;
 import com.cloudera.utils.hms.mirror.infrastructure.configuration.SpringConfigurationProviderAdapter;
 import com.cloudera.utils.hms.mirror.infrastructure.connection.ConnectionProvider;
@@ -51,16 +49,6 @@ public class CoreBusinessConfig {
     @Bean
     public ConfigurationProvider configurationProvider(ExecuteSessionService executeSessionService) {
         return new SpringConfigurationProviderAdapter(executeSessionService);
-    }
-
-    /**
-     * Creates the core table operations implementation with pure business logic.
-     * This is dependency-injected with infrastructure abstractions.
-     */
-    @Bean
-    public TableOperations tableOperations(ConnectionProvider connectionProvider,
-                                         ConfigurationProvider configurationProvider) {
-        return new TableOperationsImpl(connectionProvider, configurationProvider);
     }
 
 
