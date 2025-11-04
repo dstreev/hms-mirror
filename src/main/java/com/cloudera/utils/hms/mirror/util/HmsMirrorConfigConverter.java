@@ -54,6 +54,10 @@ public class HmsMirrorConfigConverter {
      */
     public static ConversionResult convert(HmsMirrorConfig config, String jobName) {
         ConversionResult result = new ConversionResult();
+        // Setup Output directories for Report Writing
+        result.setUserSetOutputDirectory(config.isUserSetOutputDirectory());
+        result.setOutputDirectory(config.getOutputDirectory());
+        result.setFinalOutputDirectory(config.getFinalOutputDirectory());
 
         result.setConfig(toConfigLiteDto(config, result.getKey()));
         result.setDataset(toDatasetDto(config, result.getKey()));
@@ -328,6 +332,11 @@ public class HmsMirrorConfigConverter {
 
         dto.setName(jobName);
         dto.setDescription("Job converted from HmsMirrorConfig");
+
+        if (config.getTransfer() != null) {
+            dto.setTargetNamespace(config.getTransfer().getTargetNamespace());
+        }
+
 //        dto.setDatasetReference(datasetReference);
 //        dto.setConfigReference(configReference);
 

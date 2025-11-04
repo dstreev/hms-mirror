@@ -5,6 +5,7 @@ hybrid:
   sqlSizeLimit: 1073741824
 transfer:
   concurrency: 2
+  targetNamespace: "ofs://HOME90"
 clusters:
   LEFT:
     legacyHive: "false"

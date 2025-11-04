@@ -134,8 +134,8 @@ public class ReportWriterService {
 
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-        HmsMirrorConfig hmsMirrorConfig = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-                new IllegalStateException("HmsMirrorConfig not set."));
+//        HmsMirrorConfig hmsMirrorConfig = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+//                new IllegalStateException("HmsMirrorConfig not set."));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
                 new IllegalStateException("RunStatus not set."));
 
@@ -148,10 +148,10 @@ public class ReportWriterService {
 //        config.getClusters().remove(Environment.TRANSFER);
 //        config.getClusters().remove(Environment.SHADOW);
 
-        String reportOutputDir = hmsMirrorConfig.getOutputDirectory();
+        String reportOutputDir = conversionResult.getOutputDirectory();
         String ds = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(new Date());
 
-        if (!hmsMirrorConfig.isUserSetOutputDirectory()) {
+        if (!conversionResult.isUserSetOutputDirectory()) {
             // Create a String Date Stamp to the hundredths of a second.
             reportOutputDir = reportOutputDir + File.separator + ds;
         }
@@ -184,18 +184,18 @@ public class ReportWriterService {
         log.info("Writing CLI report and artifacts to directory: {}", reportOutputDir);
         // Used by display and report writer to convey the actual output directory.  We don't modify the config object
         //    because that is a 'base' directory and we want to keep it that way.
-        hmsMirrorConfig.setFinalOutputDirectory(reportOutputDir);
+        conversionResult.setFinalOutputDirectory(reportOutputDir);
 
         // Write out the config used to run this session.
 
         // TODO: We need to build this back from the ConversionResult to get the accurate changes made to through the
         //       process.
-        HmsMirrorConfig resolvedConfig = hmsMirrorConfig;
+//        HmsMirrorConfig resolvedConfig = hmsMirrorConfig;
 
         String configOutputFile = reportOutputDir + File.separator + "session-config.yaml";
         try {
             // We need to mask usernames and passwords.
-            String yamlStr = yamlMapper.writeValueAsString(resolvedConfig);
+            String yamlStr = yamlMapper.writeValueAsString(conversionResult);
             // Mask User/Passwords in Control File
             yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
             yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");

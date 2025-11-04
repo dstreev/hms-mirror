@@ -26,12 +26,15 @@ import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
-import com.cloudera.utils.hms.mirror.domain.support.*;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyDBMirror;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.reporting.ReportingConf;
+import com.cloudera.utils.hms.mirror.repository.*;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -43,6 +46,8 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Conversion;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,7 +57,6 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -64,7 +68,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  */
 @Service
 @Getter
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 @Slf4j
 public class ConversionResultService {
 
@@ -82,6 +86,26 @@ public class ConversionResultService {
     private final com.cloudera.utils.hms.mirror.repository.TableMirrorRepository tableMirrorRepository;
     @NonNull
     private final com.cloudera.utils.hms.mirror.repository.DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final ObjectMapper yamlMapper;
+
+    public ConversionResultService(@NonNull ExecutionContextService executionContextService,
+                                   @NonNull ConfigurationRepository configurationRepository,
+                                   @NonNull DatasetRepository datasetRepository,
+                                   @NonNull ConnectionRepository connectionRepository,
+                                   @NonNull JobRepository jobRepository,
+                                   @NonNull TableMirrorRepository tableMirrorRepository,
+                                   @NonNull DBMirrorRepository dbMirrorRepository,
+                                   @NonNull @Qualifier("yamlMapper") ObjectMapper yamlMapper) {
+        this.executionContextService = executionContextService;
+        this.configurationRepository = configurationRepository;
+        this.datasetRepository = datasetRepository;
+        this.connectionRepository = connectionRepository;
+        this.jobRepository = jobRepository;
+        this.tableMirrorRepository = tableMirrorRepository;
+        this.dbMirrorRepository = dbMirrorRepository;
+        this.yamlMapper = yamlMapper;
+    }
 
     /**
      * This method uses a job ID to look up the JobDto from the repository and build out a fully resolved
@@ -420,21 +444,20 @@ public class ConversionResultService {
                     - (N) Leave it and copy the file to the same relative path on the RIGHT
                  */
             String leftNamespace = NamespaceUtils.getNamespace(leftPath);
-            try {
-                if (nonNull(leftNamespace)) {
-                    log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
-                    rightPath = NamespaceUtils.replaceNamespace(leftPath, conversionResult.getTargetNamespace());
-                } else {
-                    // No Protocol defined.  So we're assuming that its a relative path to the
-                    // defaultFS
-                    String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
-                    log.info("{}: {}", let.getName(), rpath);
-                    ret.addIssue(rpath);
-                    rightPath = leftPath;
-                    relative = Boolean.TRUE;
-                }
+            if (nonNull(leftNamespace)) {
+                log.info("{}: Namespace found: {}", let.getName(), leftNamespace);
+                rightPath = NamespaceUtils.replaceNamespace(leftPath, conversionResult.getTargetNamespace());
+            } else {
+                // No Protocol defined.  So we're assuming that its a relative path to the
+                // defaultFS
+                String rpath = "AVRO Schema URL appears to be relative: " + leftPath + ". No table definition adjustments.";
+                log.info("{}: {}", let.getName(), rpath);
+                ret.addIssue(rpath);
+                rightPath = leftPath;
+                relative = Boolean.TRUE;
+            }
 
-                // TODO: Fix
+            // TODO: Fix
                 /*
                 if (nonNull(leftPath) && nonNull(rightPath) && config.isCopyAvroSchemaUrls() && job.isExecute()) {
                     // Copy over.
@@ -472,11 +495,6 @@ public class ConversionResultService {
                 tableMirror.addStep("AVRO", "Checked");
 
                  */
-            } catch (RequiredConfigurationException e) {
-                log.error("Required Configuration Exception", e);
-                ret.addError(e.getMessage());
-                rtn = Boolean.FALSE;
-            }
         } else {
             // Not AVRO, so no action (passthrough)
             rtn = Boolean.TRUE;
@@ -598,16 +616,18 @@ public class ConversionResultService {
     /**
      * Generates a detailed report for a specific database.
      *
-     * @LegacyDBMirror
      * @return Markdown report as a string
      * @throws JsonProcessingException if there's an error processing JSON/YAML
+     * @LegacyDBMirror
      */
     public String toReport(LegacyDBMirror dbMirror) throws JsonProcessingException {
 //        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 //        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
         // TODO: Should we build this from ConversionResult?
-        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-                new IllegalStateException("HmsMirrorConfig not set."));
+        ConversionResult config = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
+//        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
+//                new IllegalStateException("HmsMirrorConfig not set."));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
                 new IllegalStateException("RunStatus not set."));
 
@@ -634,9 +654,9 @@ public class ConversionResultService {
 
         sb.append("## Config:\n");
 
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        String yamlStr = mapper.writeValueAsString(config);
+//        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+//        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        String yamlStr = yamlMapper.writeValueAsString(config);
         // Mask User/Passwords in Control File
         yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
         yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");

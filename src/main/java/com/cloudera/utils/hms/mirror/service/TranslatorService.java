@@ -675,12 +675,8 @@ public class TranslatorService {
         String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
         String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(), targetDatabase + ".db");
         String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
-        String targetNamespace;
-        try {
-            targetNamespace = conversionResult.getTargetNamespace();
-        } catch (RequiredConfigurationException e) {
-            return LocationTranslationResult.failure("Failed to get target namespace: " + e.getMessage());
-        }
+        String targetNamespace = conversionResult.getTargetNamespace();
+
         String relativeDir = NamespaceUtils.stripNamespace(originalLocation);
 
         // Process Global Location Map

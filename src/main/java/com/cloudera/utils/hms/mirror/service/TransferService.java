@@ -283,7 +283,7 @@ public class TransferService {
             Long diff = end.getTime() - start.getTime();
             tableMirror.setStageDuration(diff);
             log.info("Migration complete for {}.{} in {}ms", dbMirror.getName(), tableMirror.getName(), diff);
-        } catch (MissingDataPointException | RequiredConfigurationException mde) {
+        } catch (MissingDataPointException  mde) {
             rtn.setStatus(ReturnStatus.Status.FATAL);
             rtn.setException(mde);
         } finally {

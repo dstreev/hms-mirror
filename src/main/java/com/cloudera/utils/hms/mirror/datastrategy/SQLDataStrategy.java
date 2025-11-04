@@ -185,13 +185,11 @@ public class SQLDataStrategy extends DataStrategyBase {
         RunStatus runStatus = conversionResult.getRunStatus();
 
         // Build intermediate sql if the storage elements are defined.
-        try {
-            if (job.getIntermediateStorage() != null ||
-                    conversionResult.getTargetNamespace() != null) {
-                return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
-            }
-        } catch (RequiredConfigurationException e) {
-            // Nothing to do here.
+        // Actually the targetNamespace should never be null by the time we get here.
+        //    This will be checked through validation.
+        if (job.getIntermediateStorage() != null ||
+                conversionResult.getTargetNamespace() != null) {
+            return getIntermediateDataStrategy().buildOutSql(dbMirror, tableMirror);
         }
 
         String useDb = null;
@@ -281,12 +279,7 @@ public class SQLDataStrategy extends DataStrategyBase {
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
-        String targetNamespace = null;
-        try {
-            targetNamespace = conversionResult.getTargetNamespace();
-        } catch (RequiredConfigurationException e) {
-            // nothing.
-        }
+        String targetNamespace = conversionResult.getTargetNamespace();
 
         // Select which Strategy Implementation: Acid Inplace, Intermediate, just this one (SQL).
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {

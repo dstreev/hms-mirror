@@ -358,6 +358,9 @@ public class TableService {
 
         return CompletableFuture.supplyAsync(() -> {
             // ...logic...
+            getExecutionContextService().setConversionResult(conversionResult);
+            getExecutionContextService().setRunStatus(runStatus);
+
             TableMirror tableMirror = null;
             try {
                 tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)

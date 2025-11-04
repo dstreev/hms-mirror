@@ -21,6 +21,7 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
@@ -106,16 +107,15 @@ public class HMSMirrorAppService {
 
     public long getReturnCode() {
         long rtn = 0L;
-        // TODO: Fix
-        /*
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is not set in the current thread context."));
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is not set in the current thread context."));
         rtn = runStatus.getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
             rtn = conversionResultService.getUnsuccessfullTableCount(conversionResult);
         }
-        */
         return rtn;
     }
 
@@ -136,9 +136,10 @@ public class HMSMirrorAppService {
     the session from the calling thread.
      */
     @Async("cliExecutionThreadPool")
-    public CompletableFuture<Boolean> cliRun(ConversionResult conversionResult) {
+    public CompletableFuture<Boolean> cliRun(ConversionResult conversionResult, HmsMirrorConfig hmsMirrorConfig) {
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+        getExecutionContextService().setHmsMirrorConfig(hmsMirrorConfig);
 
         ConversionResult conversionResult1 = initializeExecutionContext();
 
@@ -237,7 +238,11 @@ public class HMSMirrorAppService {
             return Boolean.TRUE;
         } else {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
-            reportWriterService.wrapup();
+            try {
+                reportWriterService.wrapup();
+            } catch (IllegalStateException ise) {
+                log.error("IllegalStateException", ise);
+            }
             runStatus.setProgress(ProgressEnum.FAILED);
             try {
                 getConversionResultRepository().save(conversionResult);

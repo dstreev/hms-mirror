@@ -76,7 +76,7 @@ public class CliReporter {
     private final TableMirrorRepository tableMirrorRepository;
 
     // TODO: Need to populate this.
-    private DBMirror dbMirror;
+//    private DBMirror dbMirror;
 
     private Thread worker;
     private Boolean retry = Boolean.FALSE;

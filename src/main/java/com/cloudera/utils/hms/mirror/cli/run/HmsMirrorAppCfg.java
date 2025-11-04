@@ -66,7 +66,6 @@ public class HmsMirrorAppCfg {
     @NonNull
     private final TransferService transferService;
 
-    // TODO: Need to address failures here...
     @Bean
     @Order(1000) // Needs to be the last thing to run.
     // Don't run when encrypting/decrypting passwords.
@@ -80,21 +79,14 @@ public class HmsMirrorAppCfg {
                     new IllegalStateException("Conversion result is not set."));
             HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
                     new IllegalStateException("HmsMirrorConfig is not set."));
-            CompletableFuture<Boolean> result = hmsMirrorAppService.cliRun(conversionResult);
+            CompletableFuture<Boolean> result = hmsMirrorAppService.cliRun(conversionResult, config);
             CompletableFuture<Void> runFuture = cliReporter.run(conversionResult, config);
 
             // Wait for this to finish. It contains the logic to watch the RunStatus for a complete signal.
             runFuture.join();
 
-//            while (!result.isDone()) {
-//                try {
-//                    Thread.sleep(1000);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
             cliReporter.refresh(Boolean.TRUE);
-            getReportWriterService().writeReport();
+
         };
     }
 }

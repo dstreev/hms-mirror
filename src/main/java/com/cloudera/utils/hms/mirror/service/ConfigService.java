@@ -20,7 +20,10 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.core.Cluster;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
@@ -52,7 +55,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  * This class handles configuration validation, loading, saving, and various configuration-related
  * operations for the HMS Mirror tool. It ensures that configurations are valid for different
  * data strategies and cluster setups.
- *
+ * <p>
  * Key responsibilities include:
  * - Configuration validation for different data strategies
  * - Cluster connection validation
@@ -91,14 +94,14 @@ public class ConfigService {
      * @param domainService Service for domain operations
      * @param executeSessionService Service for execute session management
     public ConfigService(@Qualifier("yamlMapper") ObjectMapper yamlMapper,
-                        org.springframework.core.env.Environment springEnv,
-                        DomainService domainService,
-                        ExecuteSessionService executeSessionService) {
-        this.yamlMapper = yamlMapper;
-        this.springEnv = springEnv;
-        this.domainService = domainService;
-        this.executeSessionService = executeSessionService;
-        log.debug("ConfigService initialized");
+    org.springframework.core.env.Environment springEnv,
+    DomainService domainService,
+    ExecuteSessionService executeSessionService) {
+    this.yamlMapper = yamlMapper;
+    this.springEnv = springEnv;
+    this.domainService = domainService;
+    this.executeSessionService = executeSessionService;
+    log.debug("ConfigService initialized");
     }
      */
 
@@ -111,23 +114,23 @@ public class ConfigService {
      * @param session The execute session containing the configuration
      * @return true if warehouse plans exist, false otherwise
     public boolean doWareHousePlansExist(ExecuteSession session) {
-        HmsMirrorConfig config = session.getConfig();
-        
-        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
-        if (!warehouseMapBuilder.getWarehousePlans().isEmpty()) {
-            return true;
-        }
-        
-        Warehouse warehouse = config.getTransfer().getWarehouse();
-        return nonNull(warehouse) && !(isBlank(warehouse.getExternalDirectory())
-                || isBlank(warehouse.getManagedDirectory()));
+    HmsMirrorConfig config = session.getConfig();
+
+    WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
+    if (!warehouseMapBuilder.getWarehousePlans().isEmpty()) {
+    return true;
+    }
+
+    Warehouse warehouse = config.getTransfer().getWarehouse();
+    return nonNull(warehouse) && !(isBlank(warehouse.getExternalDirectory())
+    || isBlank(warehouse.getManagedDirectory()));
     }
      */
 
     /**
      * Checks if metastore direct configuration is available for a specific environment.
      *
-     * @param session The execute session containing the configuration
+     * @param session     The execute session containing the configuration
      * @param environment The environment (LEFT/RIGHT) to check
      * @return true if metastore direct is configured, false otherwise
      */
@@ -318,7 +321,7 @@ public class ConfigService {
         //  change to data strategy to SCHEMA_ONLY.
         if (config.getMigrateVIEW().isOn() &&
                 !(job.getStrategy() == DataStrategyEnum.DUMP ||
-                job.getStrategy() == DataStrategyEnum.SCHEMA_ONLY)) {
+                        job.getStrategy() == DataStrategyEnum.SCHEMA_ONLY)) {
             // TODO: FIX
 //            session.addConfigAdjustmentMessage(config.getDataStrategy(),
 //                    "DataStrategy",
@@ -448,11 +451,7 @@ public class ConfigService {
             if (nonNull(conversionResult.getConnection(Environment.RIGHT)) && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace())) {
                 namespaces.add(conversionResult.getConnection(Environment.RIGHT).getHcfsNamespace());
             }
-            try {
-                namespaces.add(conversionResult.getTargetNamespace());
-            } catch (RequiredConfigurationException rce) {
-
-            }
+            namespaces.add(conversionResult.getTargetNamespace());
             for (String namespace : namespaces) {
                 try {
                     if (NamespaceUtils.isNamespaceAvailable(cliEnvironment, namespace)) {
@@ -484,9 +483,9 @@ public class ConfigService {
     /**
      * Saves the configuration to a file.
      *
-     * @param config The configuration to save
+     * @param config         The configuration to save
      * @param configFileName The name of the file to save to
-     * @param overwrite Whether to overwrite an existing file
+     * @param overwrite      Whether to overwrite an existing file
      * @return true if save was successful, false otherwise
      * @throws IOException if there is an error writing the file
      */
@@ -497,7 +496,7 @@ public class ConfigService {
     /**
      * Overlays one configuration onto another, merging their settings.
      *
-     * @param config The base configuration
+     * @param config  The base configuration
      * @param overlay The configuration to overlay on top
      */
     public void overlayConfig(HmsMirrorConfig config, HmsMirrorConfig overlay) {
@@ -667,7 +666,7 @@ public class ConfigService {
      * - Kerberos configuration validation across versions
      *
      * @return Boolean TRUE if all connection configurations are valid, FALSE otherwise.
-     *         The method will add appropriate error messages to the conversionResult's RunStatus for any validation failures.
+     * The method will add appropriate error messages to the conversionResult's RunStatus for any validation failures.
      */
     public Boolean validateForConnections() {
         Boolean rtn = Boolean.TRUE;
@@ -794,23 +793,23 @@ public class ConfigService {
                     }
                      */
 
-                    if (job.getStrategy() != STORAGE_MIGRATION
-                            && !rightConnection.isValidHs2Uri()) {
-                        if (!job.getStrategy().equals(DataStrategyEnum.DUMP)) {
-                            rtn = Boolean.FALSE;
-                            runStatus.addError(RIGHT_HS2_URI_INVALID);
-                        }
-                    } else {
-
-
-                        if (leftConnection.isHs2KerberosConnection()
-                                && rightConnection.isHs2KerberosConnection()
-                                && (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
-                                != conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive())) {
-                            rtn = Boolean.FALSE;
-                            runStatus.addError(KERB_ACROSS_VERSIONS);
-                        }
+                if (job.getStrategy() != STORAGE_MIGRATION
+                        && !rightConnection.isValidHs2Uri()) {
+                    if (!job.getStrategy().equals(DataStrategyEnum.DUMP)) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(RIGHT_HS2_URI_INVALID);
                     }
+                } else {
+
+
+                    if (leftConnection.isHs2KerberosConnection()
+                            && rightConnection.isHs2KerberosConnection()
+                            && (conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
+                            != conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive())) {
+                        rtn = Boolean.FALSE;
+                        runStatus.addError(KERB_ACROSS_VERSIONS);
+                    }
+                }
 //                }
             } else {
                 if (!(job.getStrategy() == STORAGE_MIGRATION
@@ -832,17 +831,17 @@ public class ConfigService {
      * @return Boolean TRUE if all connection configurations are valid, FALSE otherwise
      * @deprecated Use {@link #validateForConnections(ConversionResult)} instead.
      *             This method will be removed in a future release.
-    @Deprecated(since = "4.0", forRemoval = true)
-    public Boolean validateForConnections(ExecuteSession session) {
-        // Delegate to ConversionResult-based method
-        if (session.getConversionResult() == null) {
-            // Create a temporary ConversionResult with the session's RunStatus
-            ConversionResult conversionResult = new ConversionResult();
-            conversionResult.setRunStatus(session.getRunStatus());
-            return validateForConnections(conversionResult);
-        }
-        return validateForConnections(session.getConversionResult());
-    }
+     @Deprecated(since = "4.0", forRemoval = true)
+     public Boolean validateForConnections(ExecuteSession session) {
+     // Delegate to ConversionResult-based method
+     if (session.getConversionResult() == null) {
+     // Create a temporary ConversionResult with the session's RunStatus
+     ConversionResult conversionResult = new ConversionResult();
+     conversionResult.setRunStatus(session.getRunStatus());
+     return validateForConnections(conversionResult);
+     }
+     return validateForConnections(session.getConversionResult());
+     }
      */
 
     /**
@@ -1002,7 +1001,7 @@ public class ConfigService {
                 if (!config.getMigrateACID().isInplace()) {
                     if (conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive() &&
                             !conversionResult.getConnection(Environment.LEFT).getPlatformType().isLegacyHive()
-                            // TODO: Review
+                        // TODO: Review
 //                            && !config.isDumpTestData()
                     ) {
                         runStatus.addError(NON_LEGACY_TO_LEGACY);
@@ -1017,7 +1016,12 @@ public class ConfigService {
         // Ozone Volume Name Check.
         // If the target namespace is set to ofs:// and we have warehouse plans defined for movement, ensure the
         //   volume name is at least 3 characters long.
-        try {
+        // Validate that the targetNamespace isn't null
+        if (isNull(conversionResult.getTargetNamespace()) && job.getStrategy() != DataStrategyEnum.DUMP) {
+            log.error("Unable to validate Target Namespace.");
+            rtn.set(Boolean.FALSE);
+            runStatus.addError(TARGET_NAMESPACE_NOT_DEFINED);
+        } else {
             if (conversionResult.getTargetNamespace().startsWith("ofs://")) {
                 //
                 for (DatasetDto.DatabaseSpec dbs : conversionResult.getDataset().getDatabases()) {
@@ -1025,13 +1029,12 @@ public class ConfigService {
                     String externalDirectory = wp.getExternalDirectory();
                     String managedDirectory = wp.getManagedDirectory();
                     if (nonNull(externalDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(externalDirectory)).length() < 3) {
-                        // TODO: FIX
-//                    finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
+                        runStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
                         rtn.set(Boolean.FALSE);
                     }
                     if (nonNull(managedDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(managedDirectory)).length() < 3) {
                         // TODO: FIX
-//                    finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
+                        runStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
                         rtn.set(Boolean.FALSE);
                     }
                 }
@@ -1051,8 +1054,6 @@ public class ConfigService {
 //                });
 //            }
             }
-        } catch (RequiredConfigurationException rce) {
-
         }
 
         // TODO: Need validation of Metastore Direct.
@@ -1195,12 +1196,10 @@ public class ConfigService {
                 runStatus.addError(VALID_ACID_DA_IP_STRATEGIES);
                 rtn.set(Boolean.FALSE);
             }
-            try {
-              conversionResult.getTargetNamespace();
-            } catch (RequiredConfigurationException rce) {
-                runStatus.addError(COMMON_STORAGE_WITH_DA_IP);
+            if (isNull(conversionResult.getTargetNamespace())) {
+                runStatus.addError(TARGET_NAMESPACE_NOT_DEFINED);
                 rtn.set(Boolean.FALSE);
-            }
+            };
             if (!isBlank(job.getIntermediateStorage())) {
                 runStatus.addError(INTERMEDIATE_STORAGE_WITH_DA_IP);
                 rtn.set(Boolean.FALSE);
@@ -1268,13 +1267,9 @@ public class ConfigService {
         // Test to ensure the clusters are LINKED to support underlying functions.
         switch (job.getStrategy()) {
             case LINKED:
-                try {
-                    if (conversionResult.getTargetNamespace() != null) {
-                        runStatus.addError(COMMON_STORAGE_WITH_LINKED);
-                        rtn.set(Boolean.FALSE);
-                    }
-                } catch (RequiredConfigurationException rce) {
-
+                if (nonNull(conversionResult.getTargetNamespace())) {
+                    runStatus.addError(COMMON_STORAGE_WITH_LINKED);
+                    rtn.set(Boolean.FALSE);
                 }
                 if (!isBlank(job.getIntermediateStorage())) {
                     runStatus.addError(INTERMEDIATE_STORAGE_WITH_LINKED);
@@ -1415,17 +1410,17 @@ public class ConfigService {
      * @return Boolean TRUE if configuration is valid, FALSE otherwise
      * @deprecated Use {@link #validate(ConversionResult, CliEnvironment)} instead.
      *             This method will be removed in a future release.
-    @Deprecated(since = "4.0", forRemoval = true)
-    public Boolean validate(ExecuteSession session, CliEnvironment cli) {
-        // Delegate to ConversionResult-based method
-        if (session.getConversionResult() == null) {
-            // Create a temporary ConversionResult with the session's RunStatus
-            ConversionResult conversionResult = new ConversionResult();
-            conversionResult.setRunStatus(session.getRunStatus());
-            return validate(conversionResult, cli);
-        }
-        return validate(session.getConversionResult(), cli);
-    }
+     @Deprecated(since = "4.0", forRemoval = true)
+     public Boolean validate(ExecuteSession session, CliEnvironment cli) {
+     // Delegate to ConversionResult-based method
+     if (session.getConversionResult() == null) {
+     // Create a temporary ConversionResult with the session's RunStatus
+     ConversionResult conversionResult = new ConversionResult();
+     conversionResult.setRunStatus(session.getRunStatus());
+     return validate(conversionResult, cli);
+     }
+     return validate(session.getConversionResult(), cli);
+     }
      */
 
     /**

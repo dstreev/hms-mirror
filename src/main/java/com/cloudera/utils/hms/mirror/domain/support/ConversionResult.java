@@ -32,6 +32,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.file.FileSystems;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -65,6 +66,14 @@ public class ConversionResult {
 
     @Schema(description = "Flag used to identify that this process was seeded via a Test Dataset")
     private boolean mockTestDataset = Boolean.FALSE;
+
+//    @JsonIgnore
+    private String outputDirectory = System.getProperty("user.home") + FileSystems.getDefault().getSeparator()
+            + ".hms-mirror/reports/";
+//    @JsonIgnore
+    private boolean userSetOutputDirectory = Boolean.FALSE;
+//    @JsonIgnore
+    private String finalOutputDirectory = null;
 
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
@@ -134,10 +143,10 @@ public class ConversionResult {
      * @return
      * @throws RequiredConfigurationException
      */
-    public String getTargetNamespace() throws RequiredConfigurationException {
+    public String getTargetNamespace() {
         String rtn = null;
         if (job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
-            return job.getTargetNamespace();
+            rtn = job.getTargetNamespace();
         } else {
             ConnectionDto right = getConnection(Environment.RIGHT);
             if (right != null) {
@@ -157,9 +166,9 @@ public class ConversionResult {
             rtn = getConnection(Environment.RIGHT).getHcfsNamespace();
         }
         */
-        if (isBlank(rtn)) {
-            throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
-        }
+//        if (isBlank(rtn)) {
+//            throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
+//        }
         return rtn;
     }
 

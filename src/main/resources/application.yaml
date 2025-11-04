@@ -30,6 +30,9 @@ spring:
 #      connectionTimeout: 60000
 #      validationTimeout: 30000
 #      minimumIdle: 2
+#  jackson:
+#    serialization:
+#      write-dates-as-timestamps: false
   lifecycle:
     timeout-per-shutdown-phase: 1s
   main:

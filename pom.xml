@@ -138,6 +138,11 @@
             <version>${jaxb-api.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version> <!-- Use your Jackson version -->
+        </dependency>
+        <dependency>
             <groupId>com.cloudera.utils.hadoop</groupId>
             <artifactId>hadoop-cli</artifactId>
             <version>${hadoop-cli.version}</version>

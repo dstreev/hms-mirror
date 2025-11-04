@@ -538,16 +538,7 @@ public class DatabaseService {
             }
 
             String targetNamespace = null;
-            try {
                 targetNamespace = conversionResult.getTargetNamespace();
-            } catch (RequiredConfigurationException rte) {
-                // TODO: We need to rework this to handle multiple namespaces.
-                if (job.getStrategy() == DataStrategyEnum.DUMP) {
-                    targetNamespace = conversionResult.getConnection(Environment.LEFT).getHcfsNamespace();
-                } else {
-                    throw rte;
-                }
-            }
             // One of three type of warehouses: Plan, Global, or Environment.
             Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
             log.debug("Warehouse Plan for {}: {}", dbMirror.getName(), warehouse);
@@ -932,11 +923,6 @@ public class DatabaseService {
             log.error(MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getDesc(), e);
             // TODO: Do we need to use the LEFT here when it's STORAGE_MIGRATION?
             dbMirror.addIssue(Environment.RIGHT, MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getDesc());
-        } catch (RequiredConfigurationException e) {
-            rtn = Boolean.FALSE;
-            log.error("Required Configuration", e);
-            // TODO: Do we need to use the LEFT here when it's STORAGE_MIGRATION?
-            dbMirror.addIssue(Environment.RIGHT, "Required Configuration: " + e.getMessage());
         }
 
         return rtn;
