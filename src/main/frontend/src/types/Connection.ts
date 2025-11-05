@@ -44,10 +44,7 @@ export interface ConnectionConfig {
   
   // Optional metastore direct configuration (for optimization)
   metastoreDirect?: MetastoreDirectConfig;
-  
-  // Connection pool library preference
-  connectionPoolLib: 'DBCP2' | 'HIKARI' | 'HYBRID';
-  
+
   // Partition discovery settings
   partitionDiscovery?: PartitionDiscoveryConfig;
   
@@ -111,10 +108,7 @@ export interface ConnectionFormData {
   metastoreDirectPassword: string;
   metastoreDirectMinConnections: number;
   metastoreDirectMaxConnections: number;
-  
-  // Connection Pool Configuration
-  connectionPoolLib: 'DBCP2' | 'HIKARI' | 'HYBRID';
-  
+
   // Partition Discovery Configuration
   partitionDiscoveryAuto: boolean;
   partitionDiscoveryInitMSCK: boolean;
@@ -174,12 +168,6 @@ export const ENVIRONMENT_OPTIONS = [
 // Platform types are now fetched dynamically from the API endpoint:
 // /hms-mirror/api/v1/app/platform-types
 // This ensures they match the PlatformType enum in the backend
-
-export const POOL_TYPE_OPTIONS = [
-  { value: 'DBCP2', label: 'DBCP2 (Default)' },
-  { value: 'HIKARI', label: 'HikariCP' },
-  { value: 'HYBRID', label: 'Hybrid' }
-];
 
 export const METASTORE_DB_TYPE_OPTIONS = [
   { value: 'MYSQL', label: 'MySQL / MariaDB' },
@@ -246,10 +234,7 @@ export const DEFAULT_CONNECTION_FORM: ConnectionFormData = {
   metastoreDirectPassword: '',
   metastoreDirectMinConnections: 3,
   metastoreDirectMaxConnections: 5,
-  
-  // Connection Pool Configuration
-  connectionPoolLib: 'DBCP2',
-  
+
   // Partition Discovery Configuration
   partitionDiscoveryAuto: true,
   partitionDiscoveryInitMSCK: true,

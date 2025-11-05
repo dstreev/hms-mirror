@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { JobDto } from '../../services/api/jobApi';
-import { 
-  ChevronLeftIcon, 
-  ChevronRightIcon, 
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
   CheckIcon,
   ExclamationTriangleIcon,
-  MagnifyingGlassIcon 
+  MagnifyingGlassIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import WizardProgress from '../connections/wizard/WizardProgress';
 import SearchableInput from '../common/SearchableInput';
+import StrategySelectionWizard from './StrategySelectionWizard';
 
 interface JobFormData {
   // Hidden field for updates
@@ -22,6 +24,8 @@ interface JobFormData {
   leftConnectionReference: string;
   rightConnectionReference: string;
   strategy: string;
+  databaseOnly: boolean;
+  consolidateDBCreateStatements: boolean;
   disasterRecovery: boolean;
   sync: boolean;
   intermediateStorage?: string;
@@ -81,6 +85,9 @@ const JobBuildWizard: React.FC = () => {
   const [leftConnectionSearchQuery, setLeftConnectionSearchQuery] = useState('');
   const [rightConnectionSearchQuery, setRightConnectionSearchQuery] = useState('');
 
+  // Strategy selection mode
+  const [useStrategyWizard, setUseStrategyWizard] = useState(!editMode && !copyMode);
+
   const [jobData, setJobData] = useState<JobFormData>({
     // Preserve key in edit mode, but not in copy mode
     key: (editMode && !copyMode) ? existingJobKey : undefined,
@@ -91,6 +98,8 @@ const JobBuildWizard: React.FC = () => {
     leftConnectionReference: existingJob?.leftConnectionReference || '',
     rightConnectionReference: existingJob?.rightConnectionReference || '',
     strategy: existingJob?.strategy || '',
+    databaseOnly: existingJob?.databaseOnly || false,
+    consolidateDBCreateStatements: existingJob?.consolidateDBCreateStatements || false,
     disasterRecovery: existingJob?.disasterRecovery || false,
     sync: existingJob?.sync || false,
     intermediateStorage: existingJob?.intermediateStorage || '',
@@ -110,6 +119,7 @@ const JobBuildWizard: React.FC = () => {
     { value: 'HYBRID', label: 'Hybrid', description: 'Choose SQL or EXPORT_IMPORT based on table criteria' },
     { value: 'COMMON', label: 'Common', description: 'Shared storage between clusters, no data migration' },
     { value: 'STORAGE_MIGRATION', label: 'Storage Migration', description: 'Migrate tables to new storage location' },
+    { value: 'DUMP', label: 'Dump', description: 'Extract schemas only without target cluster' },
     { value: 'CONVERT_LINKED', label: 'Convert Linked', description: 'Convert existing LINKED schemas to SCHEMA_ONLY' }
   ];
 
@@ -117,8 +127,8 @@ const JobBuildWizard: React.FC = () => {
     { id: 'basic', title: 'Job Details', description: 'Basic information' },
     { id: 'dataset', title: 'Dataset', description: 'Select dataset' },
     { id: 'config', title: 'Configuration', description: 'Select configuration' },
-    { id: 'connectionDtos', title: 'Connections', description: 'Select connectionDtos' },
     { id: 'strategy', title: 'Data Strategy', description: 'Choose strategy' },
+    { id: 'connectionDtos', title: 'Connections', description: 'Select connectionDtos' },
     { id: 'options', title: 'Options', description: 'Additional settings' },
     { id: 'summary', title: 'Summary', description: 'Review and create' }
   ];
@@ -271,6 +281,13 @@ const JobBuildWizard: React.FC = () => {
 
 
 
+  // Helper to check if RIGHT connection is required based on strategy
+  const isRightConnectionRequired = (): boolean => {
+    // RIGHT connection is NOT required for STORAGE_MIGRATION and DUMP strategies
+    const strategiesWithoutRightConnection = ['STORAGE_MIGRATION', 'DUMP'];
+    return !strategiesWithoutRightConnection.includes(jobData.strategy);
+  };
+
   const validateStep = (stepIndex: number): boolean => {
     const newErrors: { [key: string]: string } = {};
 
@@ -292,20 +309,23 @@ const JobBuildWizard: React.FC = () => {
           newErrors.configReference = 'Configuration selection is required';
         }
         break;
-      case 3: // Connections selection
+      case 3: // Data strategy
+        if (!jobData.strategy) {
+          newErrors.strategy = 'Data strategy selection is required';
+        }
+        break;
+      case 4: // Connections selection
         if (!jobData.leftConnectionReference) {
           newErrors.leftConnectionReference = 'Left connectionDto is required';
         }
-        if (!jobData.rightConnectionReference) {
+        // RIGHT connection is only required for certain strategies
+        if (isRightConnectionRequired() && !jobData.rightConnectionReference) {
           newErrors.rightConnectionReference = 'Right connectionDto is required';
         }
-        if (jobData.leftConnectionReference === jobData.rightConnectionReference) {
+        // Only validate different connections if both are provided and both are required
+        if (jobData.leftConnectionReference && jobData.rightConnectionReference &&
+            jobData.leftConnectionReference === jobData.rightConnectionReference) {
           newErrors.rightConnectionReference = 'Left and right connectionDtos must be different';
-        }
-        break;
-      case 4: // Data strategy
-        if (!jobData.strategy) {
-          newErrors.strategy = 'Data strategy selection is required';
         }
         break;
     }
@@ -359,6 +379,8 @@ const JobBuildWizard: React.FC = () => {
         leftConnectionReference: jobData.leftConnectionReference,
         rightConnectionReference: jobData.rightConnectionReference,
         strategy: jobData.strategy,
+        databaseOnly: jobData.databaseOnly,
+        consolidateDBCreateStatements: jobData.consolidateDBCreateStatements,
         disasterRecovery: jobData.disasterRecovery,
         sync: jobData.sync,
         intermediateStorage: jobData.intermediateStorage,
@@ -541,55 +563,40 @@ const JobBuildWizard: React.FC = () => {
           </div>
         );
 
-      case 3: // Connections Selection
+      case 3: // Data Strategy Selection
+        // Show wizard for new jobs, list for edit/copy mode
+        if (useStrategyWizard) {
+          return (
+            <StrategySelectionWizard
+              initialStrategy={jobData.strategy}
+              onStrategySelected={(strategy, reasoning) => {
+                handleInputChange('strategy', strategy);
+                setUseStrategyWizard(false);
+              }}
+              onCancel={() => {
+                if (editMode || copyMode) {
+                  setUseStrategyWizard(false);
+                }
+              }}
+            />
+          );
+        }
+
         return (
           <div className="space-y-6">
             <div>
-              <SearchableInput
-                value={jobData.leftConnectionReference}
-                onSearch={setLeftConnectionSearchQuery}
-                onSelect={(connectionDto: any) => handleInputChange('leftConnectionReference', connectionDto.name)}
-                onClear={() => handleInputChange('leftConnectionReference', '')}
-                options={filteredLeftConnections}
-                getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
-                getOptionKey={(conn: any) => conn.name}
-                placeholder="Type to search connectionDtos..."
-                label="Left Connection *"
-                error={errors.leftConnectionReference}
-              />
-            </div>
-
-            <div>
-              <SearchableInput
-                value={jobData.rightConnectionReference}
-                onSearch={setRightConnectionSearchQuery}
-                onSelect={(connectionDto: any) => handleInputChange('rightConnectionReference', connectionDto.name)}
-                onClear={() => handleInputChange('rightConnectionReference', '')}
-                options={filteredRightConnections}
-                getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
-                getOptionKey={(conn: any) => conn.name}
-                placeholder="Type to search connectionDtos..."
-                label="Right Connection *"
-                error={errors.rightConnectionReference}
-              />
-            </div>
-
-            {connectionDtos.length === 0 && (
-              <p className="mt-1 text-sm text-amber-600">
-                <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
-                No connectionDtos found. Please create connectionDtos first.
-              </p>
-            )}
-          </div>
-        );
-
-      case 4: // Data Strategy Selection
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                Select Data Strategy *
-              </label>
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Select Data Strategy *
+                </label>
+                <button
+                  onClick={() => setUseStrategyWizard(true)}
+                  className="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100 transition-colors"
+                >
+                  <SparklesIcon className="h-4 w-4 mr-1" />
+                  Use Selection Wizard
+                </button>
+              </div>
               <div className="space-y-3">
                 {dataStrategies.map((strategy) => (
                   <div
@@ -622,6 +629,61 @@ const JobBuildWizard: React.FC = () => {
                 <p className="mt-2 text-sm text-red-600">{errors.strategy}</p>
               )}
             </div>
+          </div>
+        );
+
+      case 4: // Connections Selection
+        const rightConnRequired = isRightConnectionRequired();
+        return (
+          <div className="space-y-6">
+            <div>
+              <SearchableInput
+                value={jobData.leftConnectionReference}
+                onSearch={setLeftConnectionSearchQuery}
+                onSelect={(connectionDto: any) => handleInputChange('leftConnectionReference', connectionDto.name)}
+                onClear={() => handleInputChange('leftConnectionReference', '')}
+                options={filteredLeftConnections}
+                getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
+                getOptionKey={(conn: any) => conn.name}
+                placeholder="Type to search connectionDtos..."
+                label="Left Connection *"
+                error={errors.leftConnectionReference}
+              />
+            </div>
+
+            {rightConnRequired && (
+              <div>
+                <SearchableInput
+                  value={jobData.rightConnectionReference}
+                  onSearch={setRightConnectionSearchQuery}
+                  onSelect={(connectionDto: any) => handleInputChange('rightConnectionReference', connectionDto.name)}
+                  onClear={() => handleInputChange('rightConnectionReference', '')}
+                  options={filteredRightConnections}
+                  getOptionLabel={(conn: any) => `${conn.name}${conn.uri ? ` (${conn.uri})` : ''}`}
+                  getOptionKey={(conn: any) => conn.name}
+                  placeholder="Type to search connectionDtos..."
+                  label="Right Connection *"
+                  error={errors.rightConnectionReference}
+                />
+              </div>
+            )}
+
+            {!rightConnRequired && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <p className="text-sm text-blue-800">
+                  ℹ️ The <strong>{jobData.strategy}</strong> strategy does not require a RIGHT (target) connection.
+                  {jobData.strategy === 'STORAGE_MIGRATION' && ' This strategy moves data within the same cluster.'}
+                  {jobData.strategy === 'DUMP' && ' This strategy only extracts schema SQL scripts.'}
+                </p>
+              </div>
+            )}
+
+            {connectionDtos.length === 0 && (
+              <p className="mt-1 text-sm text-amber-600">
+                <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
+                No connectionDtos found. Please create connectionDtos first.
+              </p>
+            )}
           </div>
         );
 
@@ -675,6 +737,42 @@ const JobBuildWizard: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Options</h3>
 
               <div className="space-y-4">
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id="databaseOnly"
+                    checked={jobData.databaseOnly}
+                    onChange={(e) => handleInputChange('databaseOnly', e.target.checked)}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <label htmlFor="databaseOnly" className="font-medium text-gray-900 cursor-pointer">
+                      Database Only
+                    </label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Only migrate database metadata, skip table migrations
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id="consolidateDBCreateStatements"
+                    checked={jobData.consolidateDBCreateStatements}
+                    onChange={(e) => handleInputChange('consolidateDBCreateStatements', e.target.checked)}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <label htmlFor="consolidateDBCreateStatements" className="font-medium text-gray-900 cursor-pointer">
+                      Consolidate DB Create Statements
+                    </label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Consolidate database creation statements into a single script
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex items-start">
                   <input
                     type="checkbox"
@@ -853,8 +951,13 @@ const JobBuildWizard: React.FC = () => {
               
               <div>
                 <h4 className="font-medium text-gray-900">Connections</h4>
-                <p className="text-sm text-gray-600">Left: {selectedLeftConn?.name}</p>
-                <p className="text-sm text-gray-600">Right: {selectedRightConn?.name}</p>
+                <p className="text-sm text-gray-600">Left: {selectedLeftConn?.name || 'Not selected'}</p>
+                {selectedRightConn?.name && (
+                  <p className="text-sm text-gray-600">Right: {selectedRightConn.name}</p>
+                )}
+                {!selectedRightConn?.name && (jobData.strategy === 'STORAGE_MIGRATION' || jobData.strategy === 'DUMP') && (
+                  <p className="text-sm text-gray-500 italic">Right connection not required for {jobData.strategy} strategy</p>
+                )}
               </div>
               
               <div>
@@ -865,6 +968,12 @@ const JobBuildWizard: React.FC = () => {
               
               <div>
                 <h4 className="font-medium text-gray-900">Options</h4>
+                <p className="text-sm text-gray-600">
+                  Database Only: {jobData.databaseOnly ? 'Yes' : 'No'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Consolidate DB Create Statements: {jobData.consolidateDBCreateStatements ? 'Yes' : 'No'}
+                </p>
                 <p className="text-sm text-gray-600">
                   Disaster Recovery: {jobData.disasterRecovery ? 'Yes' : 'No'}
                 </p>

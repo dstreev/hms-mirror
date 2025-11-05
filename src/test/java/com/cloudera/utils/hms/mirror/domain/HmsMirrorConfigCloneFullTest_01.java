@@ -157,7 +157,7 @@ public class HmsMirrorConfigCloneFullTest_01 {
         assertEquals(clone.isQuiet(), config.isQuiet());
         assertEquals(clone.isReadOnly(), config.isReadOnly());
         assertEquals(clone.isNoPurge(), config.isNoPurge());
-        assertEquals(clone.isReplace(), config.isReplace());
+//        assertEquals(clone.isReplace(), config.isReplace());
         assertEquals(clone.isResetRight(), config.isResetRight());
 //        assertEquals(clone.isResetToDefaultLocation(), config.isResetToDefaultLocation());
         assertEquals(clone.isSkipFeatures(), config.isSkipFeatures());

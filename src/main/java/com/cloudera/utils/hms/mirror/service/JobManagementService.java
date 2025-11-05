@@ -483,7 +483,7 @@ public class JobManagementService {
                 log.error("Dataset not found: {}", jobDto.getDatasetReference());
                 return null;
             }
-            DatasetDto datasetDto = (DatasetDto) datasetResult.get("dataset");
+            DatasetDto datasetDto = (DatasetDto) datasetResult.get("data");
 
             Map<String, Object> configResult = configurationManagementService.load(jobDto.getConfigReference());
             if (!"SUCCESS".equals(configResult.get("status"))) {

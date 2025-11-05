@@ -72,6 +72,7 @@ public class Messages implements Cloneable {
                 messageList.add(messageCode + "-->" + messageCode.getDesc());
             } else {
                 Object[] vMap = argMap.get(messageCode.ordinal());
+                // Convert vMap and its content to a String array
                 String m = MessageFormat.format(messageCode.getDesc(), vMap);
                 messageList.add(messageCode + "-->" + m);
             }

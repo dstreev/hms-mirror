@@ -17,6 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.service.ConfigService;
+import com.cloudera.utils.hms.mirror.service.ExecutionContextService;
 import com.cloudera.utils.hms.mirror.service.JobManagementService;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +37,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,10 +54,16 @@ import java.util.Map;
 public class JobsController {
 
     private final JobManagementService jobManagementService;
+    private final ExecutionContextService executionContextService;
+    private final ConfigService configService;
 
     @Autowired
-    public JobsController(JobManagementService jobManagementService) {
+    public JobsController(JobManagementService jobManagementService,
+                          ExecutionContextService executionContextService,
+                          ConfigService configService) {
         this.jobManagementService = jobManagementService;
+        this.executionContextService = executionContextService;
+        this.configService = configService;
     }
 
     @PostMapping(value = "/{jobKey}", consumes = "application/json", produces = "application/json")
@@ -196,6 +208,85 @@ public class JobsController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", "ERROR");
             errorResponse.put("message", "Failed to delete job: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @PostMapping(value = "/{jobKey}/validate", produces = "application/json")
+    @Operation(summary = "Validate job configuration",
+               description = "Validates an HMS Mirror job's configuration and dependencies")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Job validation completed"),
+        @ApiResponse(responseCode = "404", description = "Job not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to validate job")
+    })
+    public ResponseEntity<Map<String, Object>> validateJob(
+            @Parameter(description = "Job key", required = true)
+            @PathVariable String jobKey) {
+
+        log.info("JobsController.validateJob() called - key: {}", jobKey);
+
+        try {
+            // Build ConversionResult from job
+            ConversionResult conversionResult = jobManagementService.buildConversionResultFromJobId(jobKey);
+
+            if (conversionResult == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "NOT_FOUND");
+                errorResponse.put("message", "Job not found or failed to build conversion result");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+
+            // Get or initialize RunStatus
+            RunStatus runStatus = conversionResult.getRunStatus();
+
+            // Set the ConversionResult and RunStatus in the execution context
+            executionContextService.setConversionResult(conversionResult);
+            executionContextService.setRunStatus(runStatus);
+
+            try {
+                // Validate the configuration
+                Boolean isValid = configService.validate();
+
+                // Prepare the response
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "SUCCESS");
+                response.put("valid", isValid);
+                response.put("jobKey", jobKey);
+
+                // Collect errors and warnings from RunStatus
+                List<String> errors = new ArrayList<>();
+                List<String> warnings = new ArrayList<>();
+
+                if (runStatus.getErrors() != null) {
+                    errors.addAll(runStatus.getErrorMessages());
+                }
+                if (runStatus.getWarnings() != null) {
+                    warnings.addAll(runStatus.getWarningMessages());
+                }
+
+                response.put("errors", errors);
+                response.put("warnings", warnings);
+
+                if (isValid) {
+                    response.put("message", "Job configuration is valid");
+                } else {
+                    response.put("message", "Job configuration has validation errors");
+                }
+
+                return ResponseEntity.ok(response);
+
+            } finally {
+                // Clean up the execution context
+                executionContextService.reset();
+            }
+
+        } catch (Exception e) {
+            log.error("Error validating job {}", jobKey, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", "Failed to validate job: " + e.getMessage());
+            errorResponse.put("valid", false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }

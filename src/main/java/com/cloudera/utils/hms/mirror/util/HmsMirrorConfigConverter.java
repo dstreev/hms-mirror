@@ -337,8 +337,8 @@ public class HmsMirrorConfigConverter {
             dto.setTargetNamespace(config.getTransfer().getTargetNamespace());
         }
 
-//        dto.setDatasetReference(datasetReference);
-//        dto.setConfigReference(configReference);
+        // Consolidate DB Create Statements
+        dto.setConsolidateDBCreateStatements(config.isConsolidateDBCreateStatements());
 
         // Connection references
         dto.setLeftConnectionReference("LEFT");

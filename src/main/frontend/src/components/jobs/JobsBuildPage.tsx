@@ -9,13 +9,15 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   PlayIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { jobApi, JobListResponse } from '../../services/api/jobApi';
 import { Job } from '../../types/Job';
 import JobFilters, { JobListFilters } from './JobFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import JobSummaryDialog from './JobSummaryDialog';
+import JobValidationDialog from './JobValidationDialog';
 
 const JobsBuildPage: React.FC = () => {
   const navigate = useNavigate();
@@ -40,6 +42,22 @@ const JobsBuildPage: React.FC = () => {
     isOpen: boolean;
     job: Job | null;
   }>({ isOpen: false, job: null });
+  const [validationDialog, setValidationDialog] = useState<{
+    isOpen: boolean;
+    jobName: string;
+    isValid: boolean;
+    message: string;
+    errors: string[];
+    warnings: string[];
+  }>({
+    isOpen: false,
+    jobName: '',
+    isValid: false,
+    message: '',
+    errors: [],
+    warnings: []
+  });
+  const [validating, setValidating] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('JobsBuildPage: Loading jobs, location.key:', location.key);
@@ -196,6 +214,58 @@ const JobsBuildPage: React.FC = () => {
 
   const handleSummaryClose = () => {
     setSummaryDialog({ isOpen: false, job: null });
+  };
+
+  const handleValidateClick = async (job: Job, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!job.jobKey) {
+      setError('Cannot validate job: missing job key');
+      return;
+    }
+
+    try {
+      setValidating(job.jobKey);
+      setError(null);
+
+      const result = await jobApi.validateJob(job.jobKey);
+
+      if (result.success) {
+        setValidationDialog({
+          isOpen: true,
+          jobName: job.name,
+          isValid: result.valid || false,
+          message: result.message || '',
+          errors: result.errors || [],
+          warnings: result.warnings || []
+        });
+      } else {
+        setError(result.message || 'Failed to validate job');
+      }
+    } catch (error) {
+      console.error('Error validating job:', error);
+      setError('Failed to validate job');
+    } finally {
+      setValidating(null);
+    }
+  };
+
+  const handleValidationDialogClose = () => {
+    setValidationDialog({
+      isOpen: false,
+      jobName: '',
+      isValid: false,
+      message: '',
+      errors: [],
+      warnings: []
+    });
+  };
+
+  const handleRunClick = async (job: Job, event: React.MouseEvent) => {
+    event.stopPropagation();
+    // TODO: Implement run functionality
+    console.log('Run job:', job.name);
+    setError('Run functionality not yet implemented');
   };
 
   const formatDate = (dateString?: string) => {
@@ -432,6 +502,34 @@ const JobsBuildPage: React.FC = () => {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
+                      onClick={(e) => handleValidateClick(job, e)}
+                      disabled={validating === job.jobKey}
+                      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Validate job configuration"
+                    >
+                      {validating === job.jobKey ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 mr-1 animate-spin" />
+                          Validating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="h-4 w-4 mr-1" />
+                          Validate
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={(e) => handleRunClick(job, e)}
+                      className="inline-flex items-center px-3 py-2 border border-indigo-300 rounded-md text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50"
+                      title="Run job"
+                    >
+                      <PlayIcon className="h-4 w-4 mr-1" />
+                      Run
+                    </button>
+
+                    <button
                       onClick={(e) => handleSummaryClick(job, e)}
                       className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
                       title="View job summary"
@@ -492,8 +590,29 @@ const JobsBuildPage: React.FC = () => {
           isOpen={summaryDialog.isOpen}
           job={summaryDialog.job}
           onClose={handleSummaryClose}
+          onValidate={(jobName, isValid, message, errors, warnings) => {
+            setValidationDialog({
+              isOpen: true,
+              jobName,
+              isValid,
+              message,
+              errors,
+              warnings
+            });
+          }}
         />
       )}
+
+      {/* Job Validation Dialog */}
+      <JobValidationDialog
+        isOpen={validationDialog.isOpen}
+        jobName={validationDialog.jobName}
+        isValid={validationDialog.isValid}
+        message={validationDialog.message}
+        errors={validationDialog.errors}
+        warnings={validationDialog.warnings}
+        onClose={handleValidationDialogClose}
+      />
     </div>
   );
 };

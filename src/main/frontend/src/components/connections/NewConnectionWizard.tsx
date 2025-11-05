@@ -78,7 +78,6 @@ const NewConnectionWizard: React.FC = () => {
         metastoreDirectPassword: connectionData.config?.metastoreDirect?.connectionProperties?.password || '',
         metastoreDirectMinConnections: connectionData.config?.metastoreDirect?.connectionPool?.min || 2,
         metastoreDirectMaxConnections: connectionData.config?.metastoreDirect?.connectionPool?.max || 10,
-        connectionPoolLib: connectionData.config?.connectionPoolLib || 'HYBRID',
         partitionDiscoveryAuto: connectionData.config?.partitionDiscovery?.auto ?? true,
         partitionDiscoveryInitMSCK: connectionData.config?.partitionDiscovery?.initMSCK ?? true,
         partitionBucketLimit: connectionData.config?.partitionDiscovery?.partitionBucketLimit || 100,
@@ -123,7 +122,6 @@ const NewConnectionWizard: React.FC = () => {
             metastoreDirectPassword: connectionData.config?.metastoreDirect?.connectionProperties?.password || '',
             metastoreDirectMinConnections: connectionData.config?.metastoreDirect?.connectionPool?.min || 2,
             metastoreDirectMaxConnections: connectionData.config?.metastoreDirect?.connectionPool?.max || 10,
-            connectionPoolLib: connectionData.config?.connectionPoolLib || 'HYBRID',
             partitionDiscoveryAuto: connectionData.config?.partitionDiscovery?.auto ?? true,
             partitionDiscoveryInitMSCK: connectionData.config?.partitionDiscovery?.initMSCK ?? true,
             partitionBucketLimit: connectionData.config?.partitionDiscovery?.partitionBucketLimit || 100,
@@ -187,31 +185,7 @@ const NewConnectionWizard: React.FC = () => {
     }
   };
 
-  // Auto-determine connection pool type based on platform
-  const getConnectionPoolType = (platformType: string): 'DBCP2' | 'HIKARI' | 'HYBRID' => {
-    switch (platformType) {
-      case 'CDP7_1':
-      case 'CDP7_2':
-        return 'HIKARI'; // CDP prefers HikariCP
-      case 'HDP2':
-      case 'HDP3':
-      case 'CDH5':
-      case 'CDH6':
-        return 'DBCP2'; // Legacy platforms use DBCP2
-      case 'APACHE':
-      case 'EMR':
-      case 'GENERIC':
-      default:
-        return 'HYBRID'; // Generic/unknown platforms use hybrid
-    }
-  };
-
   const handleFormChange = (updates: Partial<ConnectionFormData>) => {
-    // Auto-update connection pool type when platform type changes
-    if (updates.platformType) {
-      updates.connectionPoolLib = getConnectionPoolType(updates.platformType);
-    }
-
     setFormData({ ...formData, ...updates });
     // Clear errors for fields that are being updated
     const newErrors = { ...errors };
@@ -265,7 +239,6 @@ const NewConnectionWizard: React.FC = () => {
             max: formData.metastoreDirectMaxConnections
           }
         } : undefined,
-        connectionPoolLib: formData.connectionPoolLib,
         partitionDiscovery: {
           auto: formData.partitionDiscoveryAuto,
           initMSCK: formData.partitionDiscoveryInitMSCK,

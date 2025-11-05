@@ -223,7 +223,7 @@ public class DatasetDto implements Cloneable {
         private List<String> tables = new ArrayList<>();
 
         @Schema(description = "Table filter configuration (if not specifying explicit table list)")
-        private TableFilter filter;
+        private TableFilter filter = new TableFilter();
 
         @Schema(description = "Warehouse configuration for the database with managed and external directories")
         private Warehouse warehouse = new Warehouse(WarehouseSource.PLAN, null, null);

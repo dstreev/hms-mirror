@@ -967,7 +967,8 @@ public class ConfigService {
         }
 
         // Check that we're not moving backwards with Hive Migrations.
-        if (conversionResult.getConnection(Environment.RIGHT).getPlatformType().getHiveVersion().getVersion() <
+        if (nonNull(conversionResult.getConnection(Environment.RIGHT))
+                && conversionResult.getConnection(Environment.RIGHT).getPlatformType().getHiveVersion().getVersion() <
                 conversionResult.getConnection(Environment.LEFT).getPlatformType().getHiveVersion().getVersion()) {
             runStatus.addError(HIVE_DOWNGRADE_REQUESTED);
             rtn.set(Boolean.FALSE);

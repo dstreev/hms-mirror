@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Job } from '../../types/Job';
 import { datasetApi, DatasetDto } from '../../services/api/datasetApi';
 import { configApi, ConfigurationResponse } from '../../services/api/configApi';
+import { jobApi } from '../../services/api/jobApi';
 import { HmsMirrorConfig } from '../../types/api';
 
 interface Connection {
@@ -21,9 +22,10 @@ interface JobSummaryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   job: Job;
+  onValidate?: (jobName: string, isValid: boolean, message: string, errors: string[], warnings: string[]) => void;
 }
 
-const JobSummaryDialog: React.FC<JobSummaryDialogProps> = ({ isOpen, onClose, job }) => {
+const JobSummaryDialog: React.FC<JobSummaryDialogProps> = ({ isOpen, onClose, job, onValidate }) => {
   const [leftConnection, setLeftConnection] = useState<Connection | null>(null);
   const [rightConnection, setRightConnection] = useState<Connection | null>(null);
   const [config, setConfig] = useState<HmsMirrorConfig | null>(null);
@@ -31,6 +33,7 @@ const JobSummaryDialog: React.FC<JobSummaryDialogProps> = ({ isOpen, onClose, jo
   const [dataset, setDataset] = useState<DatasetDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -74,6 +77,40 @@ const JobSummaryDialog: React.FC<JobSummaryDialogProps> = ({ isOpen, onClose, jo
       setError('Failed to load summary data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleValidate = async () => {
+    if (!job.jobKey) {
+      setError('Cannot validate job: missing job key');
+      return;
+    }
+
+    try {
+      setValidating(true);
+      setError(null);
+
+      const result = await jobApi.validateJob(job.jobKey);
+
+      if (result.success && onValidate) {
+        // Call parent's onValidate callback to show validation dialog
+        onValidate(
+          job.name,
+          result.valid || false,
+          result.message || '',
+          result.errors || [],
+          result.warnings || []
+        );
+        // Close the summary dialog
+        onClose();
+      } else {
+        setError(result.message || 'Failed to validate job');
+      }
+    } catch (err) {
+      console.error('Error validating job:', err);
+      setError('Failed to validate job');
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -352,7 +389,25 @@ const JobSummaryDialog: React.FC<JobSummaryDialogProps> = ({ isOpen, onClose, jo
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-100 px-6 py-4 flex justify-end">
+          <div className="bg-gray-100 px-6 py-4 flex justify-between items-center">
+            <button
+              onClick={handleValidate}
+              disabled={validating || loading}
+              className="inline-flex items-center px-4 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              {validating ? (
+                <>
+                  <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <CheckCircleIcon className="h-5 w-5 mr-2" />
+                  Validate
+                </>
+              )}
+            </button>
+
             <button
               onClick={onClose}
               className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"

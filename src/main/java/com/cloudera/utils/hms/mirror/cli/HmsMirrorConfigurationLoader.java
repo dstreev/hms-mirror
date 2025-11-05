@@ -187,25 +187,25 @@ public class HmsMirrorConfigurationLoader {
         });
 
         // Auto-tune
-        applyBooleanIfPresent(CONFIG_PREFIX + ".auto-tune", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".auto-tune", value -> {
             config.getOptimization().setAutoTune(value);
             log.info("auto-tune: {}", value);
         });
 
         // Avro schema migration
-        applyBooleanIfPresent(CONFIG_PREFIX + ".avro-schema-migration", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".avro-schema-migration", value -> {
             config.setCopyAvroSchemaUrls(value);
             log.info("avro-schema-migration: {}", value);
         });
 
         // Beta
-        applyBooleanIfPresent(CONFIG_PREFIX + ".beta", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".beta", value -> {
             config.setBeta(value);
             log.info("beta: {}", value);
         });
 
         // Create if not exist
-        applyBooleanIfPresent(CONFIG_PREFIX + ".create-if-not-exist", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".create-if-not-exist", value -> {
             if (nonNull(config.getCluster(com.cloudera.utils.hms.mirror.domain.support.Environment.LEFT))) {
                 config.getCluster(com.cloudera.utils.hms.mirror.domain.support.Environment.LEFT).setCreateIfNotExists(value);
             }
@@ -222,7 +222,7 @@ public class HmsMirrorConfigurationLoader {
         });
 
         // Compress text output
-        applyBooleanIfPresent(CONFIG_PREFIX + ".compress-text-output", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".compress-text-output", value -> {
             config.getOptimization().setCompressTextOutput(value);
             log.info("compress-text-output: {}", value);
         });
@@ -261,9 +261,15 @@ public class HmsMirrorConfigurationLoader {
         });
 
         // Consolidate tables for distcp
-        applyBooleanIfPresent(CONFIG_PREFIX + ".consolidate-tables-for-distcp", value -> {
+        applyFlagIfPresent(CONFIG_PREFIX + ".consolidate-tables-for-distcp", value -> {
             config.getTransfer().getStorageMigration().setConsolidateTablesForDistcp(value);
             log.info("consolidate-tables-for-distcp: {}", value);
+        });
+
+        // Consolidate DB create statements
+        applyFlagIfPresent(CONFIG_PREFIX + ".consolidate-db-create-statements", value -> {
+            config.setConsolidateDBCreateStatements(value);
+            log.info("consolidate-db-create-statements: {}", value);
         });
 
         // Database prefix
@@ -405,14 +411,11 @@ public class HmsMirrorConfigurationLoader {
             log.info("force-external-location: {}", value);
         });
 
-//        // Global location map
+        // Global location map
         applyIfPresent(CONFIG_PREFIX + ".global-location-map", value -> {
             String[] maps = value.split(",");
             for (String map : maps) {
-                String[] parts = map.split("=");
-                if (parts.length == 2) {
-                    config.addGlobalLocationMap(parts[0], parts[1]);
-                }
+                config.addGlobalLocationMap(map);
             }
             log.info("global-location-map: {}", value);
         });
@@ -737,6 +740,39 @@ public class HmsMirrorConfigurationLoader {
                 consumer.accept(Boolean.parseBoolean(value));
             } catch (Exception e) {
                 log.error("Error applying boolean property {}: {}", propertyName, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Applies a boolean flag property where presence means true.
+     * This is for command-line flags that don't require arguments.
+     *
+     * Behavior:
+     * - Property not set: don't apply
+     * - Property set to empty string: apply TRUE (flag is present)
+     * - Property set to "true": apply TRUE
+     * - Property set to "false": apply FALSE
+     * - Property set to any other value: apply TRUE (flag is present)
+     */
+    private void applyFlagIfPresent(String propertyName, BooleanPropertyConsumer consumer) {
+        if (environment.containsProperty(propertyName)) {
+            String value = environment.getProperty(propertyName);
+            try {
+                boolean flagValue;
+                if (value == null || value.isEmpty()) {
+                    // Flag is present without a value, treat as true
+                    flagValue = true;
+                } else if (value.equalsIgnoreCase("false")) {
+                    // Explicitly set to false
+                    flagValue = false;
+                } else {
+                    // Any other value (including "true"), treat as true
+                    flagValue = true;
+                }
+                consumer.accept(flagValue);
+            } catch (Exception e) {
+                log.error("Error applying flag property {}: {}", propertyName, e.getMessage());
             }
         }
     }

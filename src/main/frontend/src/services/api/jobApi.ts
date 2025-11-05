@@ -187,6 +187,53 @@ class JobApi extends BaseApi {
     }
   }
 
+  /**
+   * Validate a job's configuration
+   */
+  async validateJob(jobKey: string): Promise<{
+    success: boolean;
+    valid?: boolean;
+    message?: string;
+    errors?: string[];
+    warnings?: string[];
+  }> {
+    try {
+      const response = await this.post<{
+        status: string;
+        valid: boolean;
+        message?: string;
+        errors?: string[];
+        warnings?: string[];
+      }>(`/v1/jobs/${jobKey}/validate`, {});
+
+      if (response?.status === 'SUCCESS' || response?.status === 'success') {
+        return {
+          success: true,
+          valid: response.valid,
+          message: response.message,
+          errors: response.errors || [],
+          warnings: response.warnings || []
+        };
+      }
+
+      return {
+        success: false,
+        valid: false,
+        message: response?.message || 'Failed to validate job',
+        errors: response?.errors || [],
+        warnings: response?.warnings || []
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        valid: false,
+        message: error.message || 'Network error occurred',
+        errors: [],
+        warnings: []
+      };
+    }
+  }
+
 }
 
 export const jobApi = new JobApi();

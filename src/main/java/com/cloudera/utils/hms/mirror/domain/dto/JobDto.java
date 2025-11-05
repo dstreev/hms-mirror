@@ -37,7 +37,6 @@ public class JobDto implements Cloneable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 
-
     @Schema(description = "A reference to the dataset used for this job")
     private String datasetReference;
     @Schema(description = "A reference to the configuration used for this job")
@@ -61,6 +60,9 @@ public class JobDto implements Cloneable {
 
     @Schema(description = "Flag to indicate if this job is for a database only migration")
     private boolean databaseOnly = Boolean.FALSE;
+
+    @Schema(description = "Flag to indicate if this job should consolidate DB create statements")
+    private boolean consolidateDBCreateStatements = Boolean.FALSE;
 
     private String loadTestDataFile = null;
     private boolean skipLinkCheck = Boolean.FALSE;
