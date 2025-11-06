@@ -983,7 +983,7 @@ public class DatabaseService {
 //                    rtn = false;
 ////                    stats.getFailures().incrementDatabases();
 //                } else {
-//                    // TODO: Will this double up the mapped counts?  I think it will..  Will Observed..
+//                    // TODO: Will this double up the mapped counts?  I think it will..  Will Observe..
 ////                    stats.getSuccesses().incrementDatabases();
 //                }
 //            } else {

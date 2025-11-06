@@ -671,7 +671,7 @@ public class TranslatorService {
         String tableName = tableMirror.getName();
         EnvironmentTable targetEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
         String originalDatabase = dbMirror.getName();
-        String targetDatabase = dbMirror.getResolvedName(); // HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
+        String targetDatabase = getConversionResultService().getResolvedDB(originalDatabase); // HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
         String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
         String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(), targetDatabase + ".db");
         String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());

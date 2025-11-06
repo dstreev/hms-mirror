@@ -600,18 +600,14 @@ public class HMSMirrorAppService {
         runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.IN_PROGRESS);
 
         if (rtn) {
-            if (conversionResult.getJobExecution().isExecute()) {
-                if (getDatabaseService().execute()) {
-                    runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
-                    runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.COMPLETED);
-                } else {
-                    runStatus.addError(MessageCode.DATABASE_CREATION);
-                    runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.ERRORED);
-                    runStatus.getOperationStatistics().getFailures().incrementDatabases();
-                    rtn = Boolean.FALSE;
-                }
+            if (getDatabaseService().execute()) {
+                runStatus.getOperationStatistics().getSuccesses().incrementDatabases();
+                runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.COMPLETED);
             } else {
-                runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.SKIPPED);
+                runStatus.addError(MessageCode.DATABASE_CREATION);
+                runStatus.setStage(StageEnum.PROCESSING_DATABASES, CollectionEnum.ERRORED);
+                runStatus.getOperationStatistics().getFailures().incrementDatabases();
+                rtn = Boolean.FALSE;
             }
 
             // Set error if issue during processing.
@@ -692,7 +688,7 @@ public class HMSMirrorAppService {
                             TableMirror lclTableMirror = null;
                             try {
                                 lclTableMirror = getTableMirrorRepository().findByName(conversionResult.getKey()
-                                            , lclDatabaseName, lclTableName).orElseThrow(() ->
+                                        , lclDatabaseName, lclTableName).orElseThrow(() ->
                                         new IllegalStateException("Couldn't locate table " + lclDatabaseName + "." +
                                                 lclTableName + " for Conversion Key: " + conversionResult.getKey()));
                             } catch (RepositoryException e) {
@@ -906,57 +902,53 @@ public class HMSMirrorAppService {
         runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.IN_PROGRESS);
 
         if (rtn) {
-            if (conversionResult.getJobExecution().isExecute()) {
-                List<CompletableFuture<ReturnStatus>> migrationFuture = new ArrayList<>();
-                // Using the migrationExecute List, create futures for the table executions.
-                for (ReturnStatus returnStatus : migrationExecutions) {
-                    migrationFuture.add(getTransferService().execute(conversionResult, returnStatus.getDatabaseName(),
-                            returnStatus.getTableName()));
-                }
+            List<CompletableFuture<ReturnStatus>> migrationFuture = new ArrayList<>();
+            // Using the migrationExecute List, create futures for the table executions.
+            for (ReturnStatus returnStatus : migrationExecutions) {
+                migrationFuture.add(getTransferService().execute(conversionResult, returnStatus.getDatabaseName(),
+                        returnStatus.getTableName()));
+            }
 
-                // Wait for all the CompletableFutures to finish.
-                CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
-                // Check that all the CompletableFutures in 'migrationFuture' passed with ReturnStatus.Status.SUCCESS.
-                for (CompletableFuture<ReturnStatus> sf : migrationFuture) {
-                    try {
-                        ReturnStatus rs = sf.get();
-                        if (nonNull(rs)) {
-                            if (rs.getStatus() == ReturnStatus.Status.ERROR) {
-                                // Check if the table was removed, so that's not a processing error.
-                                TableMirror tableMirror = null;
-                                try {
-                                    tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey()
-                                    , rs.getDatabaseName(), rs.getTableName()).orElseThrow(() ->
-                                            new IllegalStateException("Couldn't locate table " + rs.getDatabaseName() + "." +
-                                                    rs.getTableName() + " for Conversion Key: "+ conversionResult.getKey()));
-                                } catch (RepositoryException e) {
-                                    throw new RuntimeException(e);
-                                }
+            // Wait for all the CompletableFutures to finish.
+            CompletableFuture.allOf(migrationFuture.toArray(new CompletableFuture[0])).join();
+            // Check that all the CompletableFutures in 'migrationFuture' passed with ReturnStatus.Status.SUCCESS.
+            for (CompletableFuture<ReturnStatus> sf : migrationFuture) {
+                try {
+                    ReturnStatus rs = sf.get();
+                    if (nonNull(rs)) {
+                        if (rs.getStatus() == ReturnStatus.Status.ERROR) {
+                            // Check if the table was removed, so that's not a processing error.
+                            TableMirror tableMirror = null;
+                            try {
+                                tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey()
+                                        , rs.getDatabaseName(), rs.getTableName()).orElseThrow(() ->
+                                        new IllegalStateException("Couldn't locate table " + rs.getDatabaseName() + "." +
+                                                rs.getTableName() + " for Conversion Key: " + conversionResult.getKey()));
+                            } catch (RepositoryException e) {
+                                throw new RuntimeException(e);
+                            }
 
-                                if (tableMirror != null) {
-                                    if (!tableMirror.isRemove()) {
-                                        rtn = Boolean.FALSE;
-                                    }
+                            if (tableMirror != null) {
+                                if (!tableMirror.isRemove()) {
+                                    rtn = Boolean.FALSE;
                                 }
                             }
-                        } else {
-                            log.error("ReturnStatus is NULL in migrationFuture");
                         }
-                    } catch (InterruptedException | ExecutionException | RuntimeException e) {
-                        log.error("Interrupted Migration Executions", e);
-                        rtn = Boolean.FALSE;
+                    } else {
+                        log.error("ReturnStatus is NULL in migrationFuture");
                     }
+                } catch (InterruptedException | ExecutionException | RuntimeException e) {
+                    log.error("Interrupted Migration Executions", e);
+                    rtn = Boolean.FALSE;
                 }
+            }
 
-                // If still TRUE, then we're good.
-                if (rtn) {
-                    runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.COMPLETED);
-                } else {
-                    runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.ERRORED);
-                    runStatus.addError(MessageCode.PROCESSING_TABLES_ISSUE);
-                }
+            // If still TRUE, then we're good.
+            if (rtn) {
+                runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.COMPLETED);
             } else {
-                runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.SKIPPED);
+                runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.ERRORED);
+                runStatus.addError(MessageCode.PROCESSING_TABLES_ISSUE);
             }
         } else {
             runStatus.setStage(StageEnum.PROCESSING_TABLES, CollectionEnum.SKIPPED);

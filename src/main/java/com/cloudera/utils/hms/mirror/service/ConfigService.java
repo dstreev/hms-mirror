@@ -1165,7 +1165,6 @@ public class ConfigService {
             conversionResult.getDataset().getDatabases().forEach(db -> {
                 if (db.getFilter().isFilterEnabled() || !db.getTables().isEmpty()) {
                     runStatus.addWarning(DISTCP_W_TABLE_FILTERS);
-                    rtn.set(Boolean.FALSE);
                     tableFilterWarning.set(true);
                 }
             });

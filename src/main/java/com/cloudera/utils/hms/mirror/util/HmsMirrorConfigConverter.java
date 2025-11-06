@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -95,19 +96,19 @@ public class HmsMirrorConfigConverter {
 
         // Sub-configuration objects
         if (nonNull(config.getIcebergConversion())) {
-            dto.setIcebergConversion(config.getIcebergConversion());
+            dto.setIcebergConversion(config.getIcebergConversion().clone());
         }
 
         if (nonNull(config.getMigrateACID())) {
-            dto.setMigrateACID(config.getMigrateACID());
+            dto.setMigrateACID(config.getMigrateACID().clone());
         }
 
         if (nonNull(config.getMigrateVIEW())) {
-            dto.setMigrateVIEW(config.getMigrateVIEW());
+            dto.setMigrateVIEW(config.getMigrateVIEW().clone());
         }
 
         if (nonNull(config.getOptimization())) {
-            dto.setOptimization(config.getOptimization());
+            dto.setOptimization(config.getOptimization().clone());
         }
 
         // Transfer configuration - includes all TransferConfig fields:
@@ -116,17 +117,12 @@ public class HmsMirrorConfigConverter {
         // - intermediateStorage, targetNamespace
         // - storageMigration, warehouse
         if (nonNull(config.getTransfer())) {
-            try {
-                // Clone to avoid sharing the same object reference
-                dto.setTransfer(config.getTransfer().clone());
-            } catch (Exception e) {
-                log.warn("Failed to clone TransferConfig, using direct assignment", e);
-                dto.setTransfer(config.getTransfer());
-            }
+            // Clone to avoid sharing the same object reference
+            dto.setTransfer(config.getTransfer().clone());
         }
 
         if (nonNull(config.getOwnershipTransfer())) {
-            dto.setOwnershipTransfer(config.getOwnershipTransfer());
+            dto.setOwnershipTransfer(config.getOwnershipTransfer().clone());
         }
 
         return dto;
@@ -173,6 +169,18 @@ public class HmsMirrorConfigConverter {
                 dto.getDatabases().add(dbSpec);
             }
         }
+
+        // Check the Translator Warehouse Plans.
+        config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().forEach((dbName, warehousePlan) -> {
+            DatasetDto.DatabaseSpec dbSpec = dto.getDatabase(dbName);
+            if (isNull(dbSpec)) {
+                dbSpec = new DatasetDto.DatabaseSpec();
+                dbSpec.setDatabaseName(dbName);
+                dto.getDatabases().add(dbSpec);
+            }
+            dbSpec.getWarehouse().setExternalDirectory(warehousePlan.getExternalDirectory());
+            dbSpec.getWarehouse().setManagedDirectory(warehousePlan.getManagedDirectory());
+        });
 
         return dto;
     }

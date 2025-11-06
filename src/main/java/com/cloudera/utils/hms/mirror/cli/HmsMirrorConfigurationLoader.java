@@ -453,16 +453,47 @@ public class HmsMirrorConfigurationLoader {
         });
 
         // Migrate ACID
-        applyIntIfPresent(CONFIG_PREFIX + ".migrate-acid", value -> {
-            config.getMigrateACID().setPartitionLimit(value);
-            log.info("migrate-acid: {}", value);
-        });
+        String migrateAcidValue = environment.getProperty(CONFIG_PREFIX + ".migrate-acid");
+        if (migrateAcidValue != null) {
+            if (Boolean.parseBoolean(migrateAcidValue)) {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.FALSE);
+            } else {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.FALSE);
+                String bucketLimit = migrateAcidValue;
+                if (!isBlank(bucketLimit)) {
+                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit));
+                }
+            }
+        }
 
-        // Migrate ACID only
-        applyBooleanIfPresent(CONFIG_PREFIX + ".migrate-acid-only", value -> {
-            config.getMigrateACID().setOnly(value);
-            log.info("migrate-acid-only: {}", value);
-        });
+        // Migrate ACID-Only
+        String migrateAcidValue1 = environment.getProperty(CONFIG_PREFIX + ".migrate-acid-only");
+        if (migrateAcidValue1 != null) {
+            if (Boolean.parseBoolean(migrateAcidValue1)) {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.TRUE);
+            } else {
+                config.getMigrateACID().setOn(Boolean.TRUE);
+                config.getMigrateACID().setOnly(Boolean.TRUE);
+                String bucketLimit1 = migrateAcidValue1;
+                if (!isBlank(bucketLimit1)) {
+                    config.getMigrateACID().setArtificialBucketThreshold(Integer.valueOf(bucketLimit1));
+                }
+            }
+        }
+
+//        applyIntIfPresent(CONFIG_PREFIX + ".migrate-acid", value -> {
+//            config.getMigrateACID().setPartitionLimit(value);
+//            log.info("migrate-acid: {}", value);
+//        });
+//
+//        // Migrate ACID only
+//        applyBooleanIfPresent(CONFIG_PREFIX + ".migrate-acid-only", value -> {
+//            config.getMigrateACID().setOnly(value);
+//            log.info("migrate-acid-only: {}", value);
+//        });
 
         // Views only
         applyBooleanIfPresent(CONFIG_PREFIX + ".views-only", value -> {

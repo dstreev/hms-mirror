@@ -59,11 +59,6 @@ public class LegacyDBMirror {
 //    @JsonIgnore
     private final Map<Environment, Map<String, String>> problemSQL = new TreeMap<>();
 
-    @Schema(description = "The name of the database that will be created during migration. If no prefix or rename was specified" +
-            "in the Dataset.DatabasesSpec, this will be the original name of the database.  If either of these are set on the input " +
-            "this name represents those adjustements.")
-    private String resolvedName;
-
     private Map<Environment, Map<String, String>> properties = new TreeMap<>();
 
     private Map<String, TableMirror> tableMirrors = null;
@@ -162,7 +157,7 @@ public class LegacyDBMirror {
         // Copy simple fields
         legacy.setKey(dbMirror.getKey());
         legacy.setName(dbMirror.getName());
-        legacy.setResolvedName(dbMirror.getResolvedName());
+//        legacy.setResolvedName(dbMirror.getResolvedName());
 
         // Deep copy issues map (final field)
         legacy.issues.clear();

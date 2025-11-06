@@ -98,6 +98,7 @@ public class TransferService {
         ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 
+        rtn.setDatabaseName(databaseName);
         rtn.setTableName(tableName);
         RunStatus runStatus = conversionResult.getRunStatus();
         Warehouse warehouse = null;

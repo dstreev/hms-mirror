@@ -396,10 +396,14 @@ public class ConversionResultService {
                 throw new RuntimeException("Failed to load references from repository", e);
             }
 
-            DatasetDto.DatabaseSpec dbSpec = new DatasetDto.DatabaseSpec();
-            finalDataset.getDatabases().add(dbSpec);
-            dbSpec.setDatabaseName(dbName);
+            DatasetDto.DatabaseSpec dbSpec = finalDataset.getDatabase(dbName);
+            if (isNull(dbSpec)) {
+                dbSpec = new DatasetDto.DatabaseSpec();
+                finalDataset.getDatabases().add(dbSpec);
+                dbSpec.setDatabaseName(dbName);
+            }
             DBMirror finalDbMirror = dbMirror;
+            DatasetDto.DatabaseSpec finalDbSpec = dbSpec;
             tableMirrorHolder.forEach((tableName, tableMirror) -> {
                 // Persist each table.
                 tableMirror.getEnvironments().forEach((env, et) -> {
@@ -414,7 +418,7 @@ public class ConversionResultService {
                 } catch (RepositoryException e) {
                     throw new RuntimeException("Failed to load references from repository", e);
                 }
-                dbSpec.getTables().add(tableName);
+                finalDbSpec.getTables().add(tableName);
             });
         });
     }
