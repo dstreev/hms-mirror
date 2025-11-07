@@ -234,8 +234,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                                 target.addIssue("Location Stripped from 'Downgraded' ACID definition.  Location will be the default " +
                                         "external location as configured by the database/environment.");
                             } else {
-                                target.addIssue("Location Stripped from ACID definition.  Location element in 'CREATE' " +
-                                        "not allowed in Hive3+");
+                                target.addIssue(MessageCode.ACID_LOCATION_STRIPPED.getDesc());
                             }
                             TableUtils.stripLocation(target);
                         }

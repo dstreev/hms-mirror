@@ -24,6 +24,9 @@ import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +70,10 @@ public class DistCpService {
     private final ExecutionContextService executionContextService;
     @NonNull
     private final ObjectMapper yamlMapper;
+    @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
 
     /**
      * Builds DistCp reports and scripts for all databases in the conversion.
@@ -89,9 +96,15 @@ public class DistCpService {
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
-        for (Map.Entry<String, DBMirror> dbEntry : conversionResult.getDatabases().entrySet()) {
-            String database = getConversionResultService().getResolvedDB(dbEntry.getKey());
-            String originalDatabase = dbEntry.getKey();
+        List<String> databases = null;
+        try {
+            databases = getDbMirrorRepository().listNamesByKey(conversionResult.getKey());
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+        for (String originalDatabase : databases) {
+//            String database = getConversionResultService().getResolvedDB(dbEntry.getKey());
+//            String originalDatabase = dbEntry.getKey();
 
             try {
                 Environment[] environments = null;

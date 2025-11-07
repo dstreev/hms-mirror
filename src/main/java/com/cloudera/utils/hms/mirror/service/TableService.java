@@ -430,7 +430,7 @@ public class TableService {
     }
 
     @Async("metadataThreadPool")
-    public CompletableFuture<ReturnStatus> getTablesForProcessing(ConversionResult conversionResult, DBMirror dbMirror) {
+    public CompletableFuture<ReturnStatus> getTableListForProcessing(ConversionResult conversionResult, DBMirror dbMirror) {
         log.info("Fetching tables asynchronously for DBMirror: {}", dbMirror.getName());
         getExecutionContextService().setConversionResult(conversionResult);
         getExecutionContextService().setRunStatus(conversionResult.getRunStatus());

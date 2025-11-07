@@ -61,13 +61,13 @@ public class Test_sm_smn_wd_epl_dc extends E2EBaseTest {
         // Verify the return code.
 
         // A few partitions have non-standard locations and can't be migrated without addition GLM entries.
-        long check = 0L;
+        long check = 1L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.ERROR);
     }
 
     @Test

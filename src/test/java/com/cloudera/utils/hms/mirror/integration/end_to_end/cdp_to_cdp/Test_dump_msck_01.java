@@ -17,9 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -27,22 +29,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import com.cloudera.utils.hms.mirror.PhaseState;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.data-strategy=DUMP",
                 "--hms-mirror.conversion.test-filename=/test_data/assorted_tbls_01.yaml",
-                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/dump_01"
+                "--hms-mirror.config.filename=/config/default.yaml.cdp-cdp.msck",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp_cdp/dump_01_msck"
         })
 @Slf4j
-public class Test_dump_01 extends E2EBaseTest {
-
+public class Test_dump_msck_01 extends E2EBaseTest {
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -115,9 +114,7 @@ public class Test_dump_01 extends E2EBaseTest {
     public void checkPartitionAddStatements() {
         // ext_part_01 is partitioned - should have ALTER TABLE ADD PARTITION statements
         validateTableSqlAction("assorted_test_db","ext_part_01", Environment.LEFT,
-                "ALTER TABLE ext_part_01 ADD IF NOT EXISTS");
-        validateTableSqlAction("assorted_test_db","ext_part_01", Environment.LEFT,
-                "PARTITION");
+                "MSCK REPAIR TABLE ext_part_01");
     }
 
     @Test
@@ -182,7 +179,7 @@ public class Test_dump_01 extends E2EBaseTest {
     public void checkPartitionedTable() {
         // ext_part_02 is non-partitioned - should NOT have partition statements
         validateTableSqlDescription("assorted_test_db", "ext_part_01", Environment.LEFT,
-                "Partition");
+                "Repairing");
     }
 
     @Test

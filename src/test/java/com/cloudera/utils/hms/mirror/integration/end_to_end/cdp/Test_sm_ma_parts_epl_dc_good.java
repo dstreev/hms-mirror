@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -33,14 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_epl",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_epl_dc_good",
                 "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.align-locations=true",
                 "--hms-mirror.config.target-namespace=ofs://OHOME90",
                 "--hms-mirror.config.migrate-acid=true",
-                "--hms-mirror.config.warehouse-directory=/new/warehouse/managed",
-                "--hms-mirror.config.external-warehouse-directory=/new/warehouse/external"
+                "--hms-mirror.config.distcp=true",
+                "--hms-mirror.config.warehouse-plans=assort_test_db=/new/warehouse/external:/new/warehouse/managed"
         })
 @Slf4j
 /*
@@ -54,12 +54,12 @@ not using -rdl (reset default location), we issue warnings about the partitions 
 This storage migration doesn't require the creation of any new tables.  We will simply ALTER the table and partition
 locations.
  */
-public class Test_sm_ma_parts_epl extends E2EBaseTest {
+public class Test_sm_ma_parts_epl_dc_good extends E2EBaseTest {
 
     @Test
     public void issueTest() {
         validateTableIssueCount("assort_test_db", "acid_03",
-                Environment.RIGHT, 1);
+                Environment.RIGHT, 202);
     }
 
     @Test
@@ -76,22 +76,27 @@ public class Test_sm_ma_parts_epl extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void sqlTest() {
-//        Boolean foundAT = Boolean.FALSE;
-//        Boolean foundOddPart = Boolean.FALSE;
+    @Test
+    public void sqlTest() {
+        Boolean foundAT = Boolean.FALSE;
+        Boolean foundOddPart = Boolean.FALSE;
 //        Boolean foundOddPart2 = Boolean.FALSE;
-//
+
+        validateTableSqlPair("assort_test_db", Environment.LEFT, "acid_03", "Alter Table Location",
+                "ALTER TABLE acid_03 SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03\"");
+        validateTableSqlPair("assort_test_db", Environment.LEFT, "acid_03", "Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location",
+                "ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"");
+
 //        for (Pair pair : getConversion().getDatabase("assort_test_db")
 //                .getTableMirrors().get("acid_03")
 //                .getEnvironmentTable(Environment.LEFT).getSql()) {
 //            if (pair.getDescription().trim().equals("Alter Table Location")) {
-//                assertEquals("Location doesn't match", "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales\"", pair.getAction());
+//                assertEquals("ALTER TABLE acid_03 SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03\"", pair.getAction(), "Location doesn't match");
 //                foundAT = Boolean.TRUE;
 //            }
-//            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location")) {
-//                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
-//                        "(`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"", pair.getAction());
+//            if (pair.getDescription().trim().equals("Alter Table Partition Spec `num`='R0L8KsIYFnLbrye' Location")) {
+//                assertEquals("ALTER TABLE acid_03 PARTITION (`num`='R0L8KsIYFnLbrye') SET LOCATION \"ofs://OHOME90/new/warehouse/managed/assort_test_db.db/acid_03/num=R0L8KsIYFnLbrye\"",
+//                        pair.getAction(), "Location doesn't match");
 //                foundOddPart = Boolean.TRUE;
 //            }
 //            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location")) {
@@ -100,9 +105,9 @@ public class Test_sm_ma_parts_epl extends E2EBaseTest {
 //                foundOddPart2 = Boolean.TRUE;
 //            }
 //        }
-//        assertEquals("Alter Table Location not found", Boolean.TRUE, foundAT);
-//        assertEquals("Alter Odd Part Location not found", Boolean.TRUE, foundOddPart);
+//        assertEquals(Boolean.TRUE, foundAT, "Alter Table Location not found");
+//        assertEquals(Boolean.TRUE, foundOddPart, "Alter Odd Part Location not found");
 //        assertEquals("Alter Odd Part 2 Location not found", Boolean.TRUE, foundOddPart2);
-//    }
+    }
 
 }

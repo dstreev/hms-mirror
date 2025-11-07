@@ -59,14 +59,14 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @RequiredArgsConstructor
 public class ConnectionPoolService {
 
-    private boolean connected = false;
+//    private boolean connected = false;
 
     // Replace with ExecutionContext and ConversionResult.
 //    private ExecuteSession executeSession;
     // This will be in the ConversionResult now.
 //    private ConnectionPools connectionPools = null;
     @NonNull
-    private final ExecutionContextService context;
+    private final ExecutionContextService executionContextService;
     @NonNull
     private final EnvironmentService environmentService;
     @NonNull
@@ -84,7 +84,7 @@ public class ConnectionPoolService {
 
 
     public ConversionResult getConversionResult() {
-        return context.getConversionResult().orElseThrow(() ->
+        return executionContextService.getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
     }
 
@@ -179,15 +179,13 @@ public class ConnectionPoolService {
     public boolean init() {
         // Set Session Connections.
         boolean rtn = Boolean.TRUE;
-        ConversionResult conversionResult = getConversionResult();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set"));
 
-        // TODO: Fix.
-        /*
         if (conversionResult.isConnected()) {
             log.info("Connections already established.  Skipping Connection Setup/Validation.");
             return Boolean.TRUE;
         }
-         */
 
         RunStatus runStatus = conversionResult.getRunStatus();
         runStatus.setProgress(ProgressEnum.STARTED);
@@ -196,15 +194,14 @@ public class ConnectionPoolService {
         initConnectionsSetup();
 
         // Initialize the drivers
-//        getConnectionPools().init();
+        getConnectionPools().init();
 
         rtn = initHS2();
         boolean msRtn = initMetastoreDirect();
         boolean nsRtn = initHcfsNamespaces();
 
         if (rtn && msRtn && nsRtn) {
-//             TODO: Fix
-//            conversionResult.setConnected(Boolean.TRUE);
+            conversionResult.setConnected(Boolean.TRUE);
         } else {
             runStatus.setProgress(ProgressEnum.FAILED);
         }
@@ -444,7 +441,7 @@ public class ConnectionPoolService {
             });
 
         // Set state of connections.
-        connected = rtn.get();
+//        connected = rtn.get();
         return rtn.get();
     }
 

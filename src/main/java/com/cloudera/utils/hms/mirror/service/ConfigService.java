@@ -20,10 +20,7 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.Cluster;
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
+import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
@@ -119,14 +116,24 @@ public class ConfigService {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
         final RunStatus runStatus = conversionResult.getRunStatus();
+        final TransferConfig transferConfig = conversionResult.getConfig().getTransfer();
 
         AtomicBoolean rtn = new AtomicBoolean(true);
         // Loop through the DatabaseSpecs and ensure the warehouse directories at set.
         conversionResult.getDataset().getDatabases().forEach(db -> {
             if (db.getWarehouse().getExternalDirectory() == null ||
                     db.getWarehouse().getManagedDirectory() == null) {
-                runStatus.addError(WAREHOUSE_DETAILS_MISSING, db.getDatabaseName());
-                rtn.set(false);
+                // If these are null, then lets check to see if a GLOBAL Plans is available.
+                if (nonNull(transferConfig.getWarehouse())) {
+                    if (isBlank(transferConfig.getWarehouse().getExternalDirectory()) ||
+                            isBlank(transferConfig.getWarehouse().getManagedDirectory())) {
+                        runStatus.addError(WAREHOUSE_DETAILS_MISSING, db.getDatabaseName());
+                        rtn.set(false);
+                    }
+                } else {
+                    runStatus.addError(WAREHOUSE_DETAILS_MISSING, db.getDatabaseName());
+                    rtn.set(false);
+                }
             }
         });
 
@@ -137,8 +144,7 @@ public class ConfigService {
     /**
      * Checks if metastore direct configuration is available for a specific environment.
      *
-     * @param session     The execute session containing the configuration
-     * @param environment The environment (LEFT/RIGHT) to check
+     * @param connect  The Connection Configuration
      * @return true if metastore direct is configured, false otherwise
      */
     public boolean isMetastoreDirectConfigured(ConnectionDto connect) {

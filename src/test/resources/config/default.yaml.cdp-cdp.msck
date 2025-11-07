@@ -14,7 +14,7 @@ clusters:
     hcfsNamespace: "hdfs://HDP50"
     partitionDiscovery:
       auto: true
-      initMSCK: false
+      initMSCK: true
   RIGHT:
     legacyHive: "false"
     hcfsNamespace: "hdfs://HOME90"

@@ -19,6 +19,7 @@ package com.cloudera.utils.hms.mirror;
 
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.UrlUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 
 import java.util.HashSet;
@@ -27,7 +28,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class EnvironmentMap {
-
+    @Getter
     private final Map<Environment, Set<TranslationLevel>> environmentMap = new TreeMap<>();
 
     public void addTranslationLocation(Environment environment, String original, String target, int level, boolean consolidateTablesForDistcp) {
@@ -35,16 +36,19 @@ public class EnvironmentMap {
         dbTranslationSet.add(new TranslationLevel(original, target, level, consolidateTablesForDistcp));
     }
 
+    @JsonIgnore
     public Set<TranslationLevel> getTranslationSet(Environment environment) {
         Set<TranslationLevel> dbTranslationSet = environmentMap.computeIfAbsent(environment, k -> new HashSet<>());
         return dbTranslationSet;
     }
 
 
-    @Getter
-    public static class TranslationLevel {
+    public class TranslationLevel {
+        @Getter
         final int level;
+        @Getter
         final boolean consolidateTablesForDistcp;
+        @Getter
         final String original, target;
 
         public TranslationLevel(String original, String target, int level, boolean consolidateTablesForDistcp) {
@@ -54,6 +58,7 @@ public class EnvironmentMap {
             this.consolidateTablesForDistcp = consolidateTablesForDistcp;
         }
 
+        @JsonIgnore
         public String getAdjustedOriginal() {
             String rtn;
             if (consolidateTablesForDistcp) {
@@ -65,6 +70,7 @@ public class EnvironmentMap {
             return rtn;
         }
 
+        @JsonIgnore
         public String getAdjustedTarget() {
             String rtn = UrlUtils.reduceUrlBy(target, level);
             return rtn;

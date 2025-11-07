@@ -198,7 +198,7 @@ public class DatasetController {
             }
 
             // Ensure the DTO has the correct key from the path
-            datasetDto.setKey(key);
+//            datasetDto.setKey(key);
 
             // Update the dataset
             Map<String, Object> result = datasetManagementService.update(datasetDto);

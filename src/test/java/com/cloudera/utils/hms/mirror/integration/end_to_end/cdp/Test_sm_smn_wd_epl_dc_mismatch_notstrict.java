@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.storage-migration-strict=false", // This would be 'false' by default.
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_notstrict",
         })
 @ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")
 @Slf4j
@@ -48,32 +48,8 @@ fail with warnings.
 FIXED:1. when namespace in table doesn't match the namespace specified in the hcfsNamespace, nothing is translated.
     - This should result in an error and warnings about why this didn't work.
 
-TODO: We need to fix the return code to be negative on Errors and Positive on 'table' conversion failures
-        but mapped app run.
  */
-public class Test_sm_smn_wd_epl_dc_mismatch extends E2EBaseTest {
-
-    /*
-            String[] args = new String[]{"-d", "STORAGE_MIGRATION",
-                "-wd", "/finance/managed-fso",
-                "-ewd", "/finance/external-fso",
-                "-smn", "ofs://OHOME90",
-                "-epl",
-                "-dc",
-                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP,
-                "-o", outputDir
-        };
-        long rtn = 0;
-        MirrorLegacy mirror = new MirrorLegacy();
-        rtn = mirror.go(args);
-        assertEquals("Return Code Failure: " + rtn, 1, rtn);
-
-        // Read the output and verify the results.
-        DBMirror[] resultsMirrors = getResults(outputDir, EXT_PURGE_ODD_PARTS_03);
-
-        validatePhase(resultsMirrors[0], "web_sales", PhaseState.ERROR);
-
-     */
+public class Test_sm_smn_wd_epl_dc_mismatch_notstrict extends E2EBaseTest {
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -85,7 +61,7 @@ public class Test_sm_smn_wd_epl_dc_mismatch extends E2EBaseTest {
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
 
     @Test
@@ -103,13 +79,13 @@ public class Test_sm_smn_wd_epl_dc_mismatch extends E2EBaseTest {
     @Test
     public void issueRightTest() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.RIGHT, 17);
+                Environment.RIGHT, 18);
     }
 
     @Test
     public void errorRightTest() {
         validateTableErrorCount("ext_purge_odd_parts", "web_sales",
-                Environment.RIGHT, 1);
+                Environment.RIGHT, 0);
     }
 
 

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         args = {
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_odd_parts_01.yaml",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",
-                "--hms-mirror.config.storage-migration-strict=true",
+//                "--hms-mirror.config.storage-migration-strict=true",
                 "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_dc_mismatch_strict",
         })
 @ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")

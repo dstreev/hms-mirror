@@ -50,7 +50,7 @@ public class Translator implements Cloneable {
      * Key: database name.
      * Value: EnvironmentMap of translation locations and metadata.
      */
-    @JsonIgnore
+//    @JsonIgnore
     private final Map<String, EnvironmentMap> translationMap = new TreeMap<>();
 
     /**

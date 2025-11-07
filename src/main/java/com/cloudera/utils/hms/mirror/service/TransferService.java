@@ -59,6 +59,10 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 @Setter
 @RequiredArgsConstructor
 public class TransferService {
+    // Constants
+    private static final String DB_SUFFIX = ".db";
+    private static final String PATH_SEPARATOR = "/";
+
     public static Pattern protocolNSPattern = Pattern.compile("(^.*://)([a-zA-Z0-9](?:(?:[a-zA-Z0-9-]*|(?<!-)\\.(?![-.]))*[a-zA-Z0-9]+)?)(:\\d{4})?");
     // Pattern to find the value of the last directory in a url.
     public static Pattern lastDirPattern = Pattern.compile(".*/([^/?]+).*");
@@ -116,6 +120,11 @@ public class TransferService {
             tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)
                     .orElseThrow(() -> new IllegalStateException("Couldn't locate table " + databaseName + "." + tableName +
                             " for Conversion Key: " + conversionResult.getKey()));
+            // Ensure the table isn't in an ERROR phase before continuing.
+            if (tableMirror.getPhaseState() == PhaseState.ERROR) {
+                rtn.setStatus(ReturnStatus.Status.INCOMPLETE);
+                return CompletableFuture.completedFuture(rtn);
+            }
         } catch (RepositoryException e) {
             throw new RuntimeException(e);
         }
@@ -166,98 +175,20 @@ public class TransferService {
 
                 if (rtn.getStatus() == ReturnStatus.Status.SUCCESS && config.getTransfer().getStorageMigration().isDistcp()) {
                     warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
-                    // Build distcp reports.
-                    // Build when intermediate and NOT ACID with isInPlace.
-                    if (!isBlank(job.getIntermediateStorage())) {
-                        // The Transfer Table should be available.
-                        String isLoc = job.getIntermediateStorage();
-                        // Deal with extra '/'
-                        isLoc = isLoc.endsWith("/") ? isLoc.substring(0, isLoc.length() - 1) : isLoc;
-                        isLoc = isLoc + "/" +
-                                config.getTransfer().getRemoteWorkingDirectory() + "/" +
-                                conversionResult.getKey() + "/" +
-                                dbMirror.getName() + ".db/" +
-                                tableMirror.getName();
-                        if (TableUtils.isACID(let) && config.getMigrateACID().isInplace()) {
-                            // skip the LEFT because the TRANSFER table used to downgrade was placed in the intermediate location.
-                        } else {
-                            // LEFT PUSH INTERMEDIATE
-                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
-                                    TableUtils.getLocation(tableMirror.getName(), let.getDefinition()),
-                                    isLoc, 1, consolidateSourceTables);
-                        }
 
-                        // RIGHT PULL from INTERMEDIATE
-                        String fnlLoc = null;
-                        if (!set.getDefinition().isEmpty()) {
-                            fnlLoc = TableUtils.getLocation(ret.getName(), set.getDefinition());
-                        } else {
-                            fnlLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (isBlank(fnlLoc) && config.loadMetadataDetails()) {
-                                String sbDir = conversionResult.getTargetNamespace() +
-                                        warehouse.getExternalDirectory() + "/" +
-                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
-                                fnlLoc = sbDir;
-                            }
-                        }
-                        conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
-                                isLoc,
-                                fnlLoc, 1, consolidateSourceTables);
-                    } else if (!isBlank(conversionResult.getTargetNamespace())
-                            && job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
-                        // LEFT PUSH COMMON
-                        String origLoc = TableUtils.isACID(let) ?
-                                TableUtils.getLocation(let.getName(), tet.getDefinition()) :
-                                TableUtils.getLocation(let.getName(), let.getDefinition());
-                        String newLoc = null;
-                        if (TableUtils.isACID(let)) {
-                            if (config.getMigrateACID().isDowngrade()) {
-                                newLoc = TableUtils.getLocation(ret.getName(), ret.getDefinition());
-                            } else {
-                                newLoc = TableUtils.getLocation(ret.getName(), set.getDefinition());
-                            }
-                        } else {
-                            newLoc = TableUtils.getLocation(ret.getName(), ret.getDefinition());
-                        }
-                        if (isBlank(newLoc) && config.loadMetadataDetails()) {
-                            String sbDir = conversionResult.getTargetNamespace() +
-                                    warehouse.getExternalDirectory() + "/" +
-                                    getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
-                            newLoc = sbDir;
-                        }
-                        conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.LEFT,
-                                origLoc, newLoc, 1, consolidateSourceTables);
+                    // Route to appropriate distcp handler based on configuration
+                    if (!isBlank(job.getIntermediateStorage())) {
+                        // Intermediate storage scenario: LEFT -> INTERMEDIATE -> RIGHT
+                        handleIntermediateStorageDistcp(conversionResult, config, job, dbMirror, tableMirror,
+                                let, set, ret, warehouse, consolidateSourceTables, rtn);
+                    } else if (job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
+                        // Common push scenario: LEFT -> RIGHT
+                        handleCommonPushDistcp(conversionResult, config, dbMirror, tableMirror,
+                                let, tet, set, ret, warehouse, consolidateSourceTables, rtn);
                     } else {
-                        // RIGHT PULL
-                        if (TableUtils.isACID(let)
-                                && !config.getMigrateACID().isDowngrade()
-                                && !(job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION)) {
-                            tableMirror.addError(Environment.RIGHT, DISTCP_FOR_SO_ACID.getDesc());
-                            rtn.setStatus(ReturnStatus.Status.INCOMPLETE);
-//                            successful = Boolean.FALSE;
-                        } else if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
-                            String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (isBlank(rLoc) && config.loadMetadataDetails()) {
-                                String sbDir = conversionResult.getTargetNamespace() +
-                                        warehouse.getExternalDirectory() + "/" +
-                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
-                                rLoc = sbDir;
-                            }
-                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
-                                    TableUtils.getLocation(tableMirror.getName(), tet.getDefinition()),
-                                    rLoc, 1, consolidateSourceTables);
-                        } else {
-                            String rLoc = TableUtils.getLocation(tableMirror.getName(), ret.getDefinition());
-                            if (isBlank(rLoc) && config.loadMetadataDetails()) {
-                                String sbDir = conversionResult.getTargetNamespace() +
-                                        warehouse.getExternalDirectory() + "/" +
-                                        getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db" + "/" + tableMirror.getName();
-                                rLoc = sbDir;
-                            }
-                            conversionResult.getTranslator().addTranslation(dbMirror.getName(), Environment.RIGHT,
-                                    TableUtils.getLocation(tableMirror.getName(), let.getDefinition())
-                                    , rLoc, 1, consolidateSourceTables);
-                        }
+                        // Right pull scenario: RIGHT pulls from LEFT
+                        handleRightPullDistcp(conversionResult, config, job, dbMirror, tableMirror,
+                                let, tet, ret, warehouse, consolidateSourceTables, rtn);
                     }
                 }
 
@@ -267,6 +198,8 @@ public class TransferService {
                     tableMirror.setPhaseState(PhaseState.CALCULATED_SQL_WARNING);
                 } else {
                     tableMirror.setPhaseState(PhaseState.ERROR);
+                    // Increase Unsuccessful Table Count.
+                    runStatus.getUnSuccessfulTableCount().incrementAndGet();
                 }
             } catch (ConnectionException ce) {
                 tableMirror.addIssue(Environment.LEFT, "FAILURE (check logs):" + ce.getMessage());
@@ -328,6 +261,10 @@ public class TransferService {
             tableMirror = getTableMirrorRepository().findByName(conversionResult.getKey(), databaseName, tableName)
                     .orElseThrow(() -> new IllegalStateException("Couldn't locate table: " + databaseName + "." +
                             tableName + " for Conversion Key: " + conversionResult.getKey()));
+            if (tableMirror.getPhaseState() == PhaseState.ERROR) {
+                rtn.setStatus(ReturnStatus.Status.INCOMPLETE);
+                return CompletableFuture.completedFuture(rtn);
+            }
         } catch (RepositoryException e) {
             throw new RuntimeException(e);
         }
@@ -369,10 +306,13 @@ public class TransferService {
                     }
                     break;
             }
-            if (rtn.getStatus() == ReturnStatus.Status.SUCCESS)
+            if (rtn.getStatus() == ReturnStatus.Status.SUCCESS) {
                 tableMirror.setPhaseState(PhaseState.PROCESSED);
-            else
+            } else {
                 tableMirror.setPhaseState(PhaseState.ERROR);
+                // Increment unsuccessful table count.
+                runStatus.getUnSuccessfulTableCount().incrementAndGet();
+            }
 
             try {
                 tableMirror = getTableMirrorRepository().save(tableMirror);
@@ -398,5 +338,221 @@ public class TransferService {
         log.info("Migration processing complete for {}.{} in {}ms", dbMirror.getName(), tableMirror.getName(), diff);
 
         return CompletableFuture.completedFuture(rtn);
+    }
+
+    /**
+     * Builds the default location path for a table when no explicit location is provided.
+     * Format: {targetNamespace}/{externalDirectory}/{resolvedDB}.db/{tableName}
+     *
+     * @param conversionResult The conversion result context
+     * @param warehouse The warehouse plan
+     * @param dbMirror The database mirror
+     * @param tableMirror The table mirror
+     * @return The constructed default location path
+     */
+    private String buildDefaultLocation(ConversionResult conversionResult, Warehouse warehouse,
+                                        DBMirror dbMirror, TableMirror tableMirror) {
+        return new StringBuilder()
+                .append(conversionResult.getTargetNamespace())
+                .append(warehouse.getExternalDirectory())
+                .append(PATH_SEPARATOR)
+                .append(getConversionResultService().getResolvedDB(dbMirror.getName()))
+                .append(DB_SUFFIX)
+                .append(PATH_SEPARATOR)
+                .append(tableMirror.getName())
+                .toString();
+    }
+
+    /**
+     * Builds the intermediate storage path for a table.
+     * Format: {intermediateStorage}/{remoteWorkingDir}/{conversionKey}/{dbName}.db/{tableName}
+     *
+     * @param intermediateStorage The base intermediate storage location
+     * @param config The configuration
+     * @param conversionResult The conversion result context
+     * @param dbMirror The database mirror
+     * @param tableMirror The table mirror
+     * @return The constructed intermediate storage path
+     */
+    private String buildIntermediateStoragePath(String intermediateStorage, ConfigLiteDto config,
+                                                ConversionResult conversionResult, DBMirror dbMirror,
+                                                TableMirror tableMirror) {
+        // Normalize intermediate storage path (remove trailing slash if present)
+        String normalizedIS = intermediateStorage.endsWith(PATH_SEPARATOR) ?
+                intermediateStorage.substring(0, intermediateStorage.length() - 1) :
+                intermediateStorage;
+
+        return new StringBuilder()
+                .append(normalizedIS)
+                .append(PATH_SEPARATOR)
+                .append(config.getTransfer().getRemoteWorkingDirectory())
+                .append(PATH_SEPARATOR)
+                .append(conversionResult.getKey())
+                .append(PATH_SEPARATOR)
+                .append(dbMirror.getName())
+                .append(DB_SUFFIX)
+                .append(PATH_SEPARATOR)
+                .append(tableMirror.getName())
+                .toString();
+    }
+
+    /**
+     * Gets the location for a table, providing a default if blank and metadata details are loaded.
+     *
+     * @param tableName The table name
+     * @param tableDefinition The table definition
+     * @param conversionResult The conversion result
+     * @param warehouse The warehouse plan
+     * @param dbMirror The database mirror
+     * @param tableMirror The table mirror
+     * @param config The configuration
+     * @return The table location (either from definition or default)
+     */
+    private String getLocationWithDefault(String tableName, java.util.List<String> tableDefinition,
+                                         ConversionResult conversionResult, Warehouse warehouse,
+                                         DBMirror dbMirror, TableMirror tableMirror,
+                                         ConfigLiteDto config) {
+        String location = TableUtils.getLocation(tableName, tableDefinition);
+        if (isBlank(location) && config.loadMetadataDetails()) {
+            location = buildDefaultLocation(conversionResult, warehouse, dbMirror, tableMirror);
+        }
+        return location;
+    }
+
+    /**
+     * Handles distcp translation setup when using intermediate storage.
+     * Creates translations for LEFT -> INTERMEDIATE and INTERMEDIATE -> RIGHT.
+     */
+    private void handleIntermediateStorageDistcp(ConversionResult conversionResult, ConfigLiteDto config,
+                                                 JobDto job, DBMirror dbMirror, TableMirror tableMirror,
+                                                 EnvironmentTable let, EnvironmentTable set, EnvironmentTable ret,
+                                                 Warehouse warehouse, boolean consolidateSourceTables,
+                                                    ReturnStatus rtn   ) {
+        String intermediatePath = buildIntermediateStoragePath(
+                job.getIntermediateStorage(), config, conversionResult, dbMirror, tableMirror);
+
+        // LEFT PUSH to INTERMEDIATE (skip for ACID in-place)
+        boolean isAcid = TableUtils.isACID(let);
+        if (!isAcid) {
+            conversionResult.getTranslator().addTranslation(
+                    dbMirror.getName(),
+                    Environment.LEFT,
+                    TableUtils.getLocation(tableMirror.getName(), let.getDefinition()),
+                    intermediatePath,
+                    1,
+                    consolidateSourceTables);
+        }
+        // This shouldn't happen now.  Tables are filtered out under this condition.
+//        else {
+//                tableMirror.addError(Environment.RIGHT, DISTCP_FOR_SO_ACID.getDesc());
+//                tableMirror.setPhaseState(PhaseState.ERROR);
+//                rtn.setStatus(ReturnStatus.Status.ERROR);
+//                return;
+//        }
+
+        // RIGHT PULL from INTERMEDIATE
+        String finalLocation;
+        if (!set.getDefinition().isEmpty()) {
+            finalLocation = TableUtils.getLocation(ret.getName(), set.getDefinition());
+        } else {
+            finalLocation = getLocationWithDefault(
+                    tableMirror.getName(), ret.getDefinition(),
+                    conversionResult, warehouse, dbMirror, tableMirror, config);
+        }
+
+        conversionResult.getTranslator().addTranslation(
+                dbMirror.getName(),
+                Environment.RIGHT,
+                intermediatePath,
+                finalLocation,
+                1,
+                consolidateSourceTables);
+    }
+
+    /**
+     * Handles distcp translation setup for common push scenario (LEFT -> RIGHT).
+     */
+    private void handleCommonPushDistcp(ConversionResult conversionResult, ConfigLiteDto config,
+                                       DBMirror dbMirror, TableMirror tableMirror,
+                                       EnvironmentTable let, EnvironmentTable tet,
+                                       EnvironmentTable set, EnvironmentTable ret,
+                                       Warehouse warehouse, boolean consolidateSourceTables,
+                                        ReturnStatus rtn) {
+        // Determine source location based on whether table is ACID
+        boolean isAcid = TableUtils.isACID(let);
+        String originalLocation = isAcid ?
+                TableUtils.getLocation(let.getName(), tet.getDefinition()) :
+                TableUtils.getLocation(let.getName(), let.getDefinition());
+
+        // Determine target location
+        String newLocation;
+        if (isAcid) {
+            if (config.getMigrateACID().isDowngrade()) {
+                newLocation = TableUtils.getLocation(ret.getName(), ret.getDefinition());
+            } else {
+                // ACID and DISTCP, no good.
+                rtn.setStatus(ReturnStatus.Status.ERROR);
+                tableMirror.addError(Environment.RIGHT, DISTCP_FOR_SO_ACID.getDesc());
+                tableMirror.setPhaseState(PhaseState.ERROR);
+                return;
+//                newLocation = TableUtils.getLocation(ret.getName(), set.getDefinition());
+            }
+        } else {
+            newLocation = TableUtils.getLocation(ret.getName(), ret.getDefinition());
+        }
+
+        // Apply default if location is blank
+        if (isBlank(newLocation) && config.loadMetadataDetails()) {
+            newLocation = buildDefaultLocation(conversionResult, warehouse, dbMirror, tableMirror);
+        }
+
+        conversionResult.getTranslator().addTranslation(
+                dbMirror.getName(),
+                Environment.LEFT,
+                originalLocation,
+                newLocation,
+                1,
+                consolidateSourceTables);
+    }
+
+    /**
+     * Handles distcp translation setup for right pull scenario (RIGHT pulls from LEFT).
+     */
+    private void handleRightPullDistcp(ConversionResult conversionResult, ConfigLiteDto config,
+                                      JobDto job, DBMirror dbMirror, TableMirror tableMirror,
+                                      EnvironmentTable let, EnvironmentTable tet, EnvironmentTable ret,
+                                      Warehouse warehouse, boolean consolidateSourceTables,
+                                      ReturnStatus rtn) {
+        boolean isAcid = TableUtils.isACID(let);
+        boolean isDowngrade = config.getMigrateACID().isDowngrade();
+        boolean isStorageMigration = job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION;
+
+        // Check if this is an unsupported scenario
+        if (isAcid && !isDowngrade && !isStorageMigration) {
+            tableMirror.addError(Environment.RIGHT, DISTCP_FOR_SO_ACID.getDesc());
+            tableMirror.setPhaseState(PhaseState.ERROR);
+            rtn.setStatus(ReturnStatus.Status.ERROR);
+            return;
+        }
+
+        // Determine source and target locations
+        String sourceLocation;
+        if (isAcid && isDowngrade) {
+            sourceLocation = TableUtils.getLocation(tableMirror.getName(), tet.getDefinition());
+        } else {
+            sourceLocation = TableUtils.getLocation(tableMirror.getName(), let.getDefinition());
+        }
+
+        String targetLocation = getLocationWithDefault(
+                tableMirror.getName(), ret.getDefinition(),
+                conversionResult, warehouse, dbMirror, tableMirror, config);
+
+        conversionResult.getTranslator().addTranslation(
+                dbMirror.getName(),
+                Environment.RIGHT,
+                sourceLocation,
+                targetLocation,
+                1,
+                consolidateSourceTables);
     }
 }

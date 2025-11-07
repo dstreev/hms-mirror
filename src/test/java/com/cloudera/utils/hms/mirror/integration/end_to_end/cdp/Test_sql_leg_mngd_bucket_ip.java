@@ -43,20 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles("e2e-cdp-sql-acid")
 @Slf4j
 public class Test_sql_leg_mngd_bucket_ip extends E2EBaseTest {
-//
-//        String[] args = new String[]{"-d", "SQL",
-//                "-da", "-ip", "-mao", "-rid",
-//                "-ltd", LEGACY_MNGD_NO_PARTS_02, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,LEGACY_MNGD_NO_PARTS_02);
-//
 
     @Test
     public void returnCodeTest() {
@@ -66,9 +52,4 @@ public class Test_sql_leg_mngd_bucket_ip extends E2EBaseTest {
         assertEquals(2L, rtn, "Return Code Failure: " + rtn);
     }
 
-    // Ensure the table is still an ACID table.
-//    @Test
-//    public void isStillAcidTest() {
-//        validateTableIsACID("tpcds_bin_partitioned_orc_10", "call_center_acid", Environment.RIGHT);
-//    }
 }

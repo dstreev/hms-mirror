@@ -188,10 +188,6 @@ public class ReportWriterService {
 
         // Write out the config used to run this session.
 
-        // TODO: We need to build this back from the ConversionResult to get the accurate changes made to through the
-        //       process.
-//        HmsMirrorConfig resolvedConfig = hmsMirrorConfig;
-
         String configOutputFile = reportOutputDir + File.separator + "session-config.yaml";
         try {
             // We need to mask usernames and passwords.
@@ -205,6 +201,21 @@ public class ReportWriterService {
             log.info("Resolved Config 'saved' to: {}", configOutputFile);
         } catch (IOException ioe) {
             log.error("Problem 'writing' resolved config", ioe);
+        }
+
+        String translatorOutputFile = reportOutputDir + File.separator + "session-translator.yaml";
+        try {
+            // We need to mask usernames and passwords.
+            String yamlStr = yamlMapper.writeValueAsString(conversionResult.getTranslator());
+            // Mask User/Passwords in Control File
+            yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
+            yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");
+            FileWriter configFW = new FileWriter(translatorOutputFile);
+            configFW.write(yamlStr);
+            configFW.close();
+            log.info("Resolved Translator 'saved' to: {}", translatorOutputFile);
+        } catch (IOException ioe) {
+            log.error("Problem 'writing' resolved translator", ioe);
         }
 
         String runStatusOutputFile = reportOutputDir + File.separator + "run-status.yaml";

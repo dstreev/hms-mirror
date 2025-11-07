@@ -48,7 +48,7 @@ Issues: Need to post warning when table/partition(s) new location isn't in the -
 public class Test_sm_smn_wd_epl_glm_dc extends E2EBaseTest {
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
 
     /*

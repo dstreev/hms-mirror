@@ -324,6 +324,10 @@ public class HmsMirrorConfigConverter {
         dto.setEnableAutoTableStats(cluster.isEnableAutoTableStats());
         dto.setEnableAutoColumnStats(cluster.isEnableAutoColumnStats());
 
+        // Partition Handling
+        dto.setPartitionDiscoveryAuto(cluster.getPartitionDiscovery().isAuto());
+        dto.setPartitionDiscoveryInitMSCK(cluster.getPartitionDiscovery().isInitMSCK());
+
         // System fields
         dto.setCreated(LocalDateTime.now());
         dto.setModified(LocalDateTime.now());

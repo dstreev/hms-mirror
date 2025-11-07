@@ -45,29 +45,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sm_ma_wd_dc_at_fel extends E2EBaseTest {
-    //        String[] args = new String[]{
-//                "-d", "STORAGE_MIGRATION",
-//                "-ma",
-//                "-dc",
-//                "-fel",
-//                "-wd", "/warehouseEC/managedDirectory/hive", "-ewd", "/warehouse/external",
-//                "-glm", "/warehouse/tablespace/managedDirectory=/warehouseEC/managed",
-//                "-ltd", ACID_W_PARTS_05,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = getCheckCode();
+        long check = 1L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 

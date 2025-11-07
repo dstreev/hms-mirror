@@ -111,19 +111,19 @@ public class DumpDataStrategy extends DataStrategyBase {
 
         // If partitioned, !ACID, repair
         if (let.getPartitioned() && !TableUtils.isACID(let)) {
-            if (config.loadMetadataDetails()) {
-                String tableParts = getTranslatorService().buildPartitionAddStatement(let);
-                // This will be empty when there's no data and we need to handle that.
-                if (!isBlank(tableParts)) {
-                    String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
-                    let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
-                }
-            } else if (conversionResult.getConnection(Environment.LEFT).isPartitionDiscoveryInitMSCK()) {
+            if (conversionResult.getConnection(Environment.LEFT).isPartitionDiscoveryInitMSCK()) {
                 String msckStmt = MessageFormat.format(MirrorConf.MSCK_REPAIR_TABLE, let.getName());
                 if (config.getTransfer().getStorageMigration().isDistcp()) {
                     let.addCleanUpSql(TableUtils.REPAIR_DESC, msckStmt);
                 } else {
                     let.addSql(TableUtils.REPAIR_DESC, msckStmt);
+                }
+            } else {
+                String tableParts = getTranslatorService().buildPartitionAddStatement(let);
+                // This will be empty when there's no data and we need to handle that.
+                if (!isBlank(tableParts)) {
+                    String addPartSql = MessageFormat.format(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION, let.getName(), tableParts);
+                    let.addSql(MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC, addPartSql);
                 }
             }
         }

@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest(classes = Mirror.class,
         args = {
                 "--hms-mirror.config.data-strategy=STORAGE_MIGRATION",
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_dc",
-                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_02.yaml",
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_ma_parts_dc_good",
+                "--hms-mirror.conversion.test-filename=/test_data/acid_w_parts_01.yaml",
                 "--hms-mirror.config.filename=/config/default.yaml.cdp",
                 "--hms-mirror.config.align-locations=true",
 //                "--hms-mirror.config.storage-migration-strict=false",
@@ -55,14 +54,14 @@ not using -rdl (reset default location), we issue warnings about the partitions 
 This storage migration doesn't require the creation of any new tables.  We will simply ALTER the table and partition
 locations.
  */
-public class Test_sm_ma_parts_dc extends E2EBaseTest {
+public class Test_sm_ma_parts_dc_good extends E2EBaseTest {
 
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 1L;
+        long check = 0L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 

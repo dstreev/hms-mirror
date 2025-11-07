@@ -53,7 +53,7 @@ public class StorageMigration implements Cloneable {
     private boolean consolidateTablesForDistcp = Boolean.FALSE;
     @Schema(description = "When strict is true, any issues during evaluation will cause the migration to fail. When false, " +
             "the migration will continue but the issues will be reported. This can lead to data movement issues.")
-    private boolean strict = Boolean.FALSE;
+    private boolean strict = Boolean.TRUE;
 
     @Override
     public StorageMigration clone() {

@@ -24,10 +24,8 @@ import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
-import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
-import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
+import com.cloudera.utils.hms.mirror.exceptions.*;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.cloudera.utils.hms.util.TableUtils;
 import com.cloudera.utils.hms.util.UrlUtils;
@@ -64,6 +62,8 @@ public class TranslatorService {
     private final ConversionResultService conversionResultService;
     @NonNull
     private final WarehouseService warehouseService;
+    @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
 
     /**
      * Builds a SQL statement for adding partitions to a table based on the given
@@ -599,8 +599,13 @@ public class TranslatorService {
             SourceLocationMap sourceLocationMap = sources.get(database);
             // TODO: Need to go to DBMirror service for retrieval.
             DBMirror dbMirror = null;
-//                    conversionResult.getDatabase(warehouseEntry.getKey());
-            if (sourceLocationMap != null && dbMirror != null) {
+            try {
+                dbMirror = getDbMirrorRepository().findByName(conversionResult.getKey(), database).orElseThrow(() ->
+                        new IllegalStateException("Couldn't load DBMirror: " + database));
+            } catch (RepositoryException e) {
+                throw new RuntimeException(e);
+            }
+            if (sourceLocationMap != null) {
                 for (Map.Entry<TableType, Map<String, Set<String>>> sourceLocationEntry : sourceLocationMap.getLocations().entrySet()) {
                     String typeTargetLocation = null;
                     String extTargetLocation = externalBaseLocation + "/" + dbMirror.getLocationDirectory();
@@ -957,6 +962,10 @@ public class TranslatorService {
                 // This is the critical validation - partition location doesn't align with table location
                 // and DistCP is enabled, which means we can't create a proper DistCP plan
                 tableMirror.setPhaseState(PhaseState.ERROR);
+                tableMirror.addError(Environment.LEFT, "Location Mapping can't be determined. No matching GLM entry to make translation. " +
+                        "Original Location: " + originalLocation + " which doesn't align with the original table location " +
+                        originalTableLocation + " and ALIGNED with DISTCP can't be determined.");
+                runStatus.getUnSuccessfulTableCount().incrementAndGet();
                 throw new RuntimeException("Location Mapping can't be determined. No matching GLM entry to make translation. " +
                         "Original Location: " + originalLocation + " which doesn't align with the original table location " +
                         originalTableLocation + " and ALIGNED with DISTCP can't be determined.");

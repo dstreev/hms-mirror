@@ -48,6 +48,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import static com.cloudera.utils.hms.mirror.MessageCode.ACID_LOCATION_STRIPPED;
 import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;

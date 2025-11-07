@@ -36,6 +36,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -59,6 +60,8 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
     List<String> errorMessages = new ArrayList<>();
     List<String> warningMessages = new ArrayList<>();
     Set<String> configMessages = new TreeSet<>();
+
+    AtomicInteger unSuccessfulTableCount = new AtomicInteger(0);
 
     /*
     Track the current progress across the various stages of the operation.

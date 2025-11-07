@@ -48,33 +48,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 Issues: Need to post warning when table/partition(s) new location isn't in the -[e]wd location.
 */
 public class Test_sm_wd_epl_glm_dc extends E2EBaseTest {
-    /*
-
-        String[] args = new String[]{"-d", "STORAGE_MIGRATION",
-                "-wd", "/finance/managed-fso",
-                "-ewd", "/finance/external-fso",
-                "-epl",
-                "-glm", "/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso",
-                "-dc",
-                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP_CDP,
-                "-o", outputDir
-        };
-        long rtn = 0;
-        MirrorLegacy mirror = new MirrorLegacy();
-        rtn = mirror.go(args);
-        assertEquals("Return Code Failure: " + rtn, 1, rtn);
-
-        // Read the output and verify the results.
-        DBMirror[] resultsMirrors = getResults(outputDir, EXT_PURGE_ODD_PARTS_03);
-
-        validatePhase(resultsMirrors[0], "web_sales", PhaseState.ERROR);
-        validateTableIssueCount(resultsMirrors[0], "web_sales", Environment.LEFT, 3);
-        // One of the locations is not accounted for in the glm and isn't standard.  So we can't translate it..
-     */
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
 
     @Test

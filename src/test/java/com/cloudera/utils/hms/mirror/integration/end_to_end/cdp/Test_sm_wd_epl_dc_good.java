@@ -17,9 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -33,20 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
         args = {
-                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_smn_wd_epl_glm_fel",
+                "--hms-mirror.config.target-namespace=ofs://OHOME90",
                 "--hms-mirror.conversion.test-filename=/test_data/ext_purge_parts_01.yaml",
-                "--hms-mirror.config.distcp=false",
-                "--hms-mirror.config.global-location-map=/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso"
-
-        })
-@ActiveProfiles("e2e-cdp-sm_smn_wd_epl_dc")
+                "--hms-mirror.config.output-dir=${user.home}/.hms-mirror/test-output/e2e/cdp/sm_wd_epl_dc_good"
+        }
+)
+@ActiveProfiles("e2e-cdp-sm_wd_epl_dc")
 @Slf4j
-public class Test_sm_smn_wd_epl_glm_fel extends E2EBaseTest {
-
-    @Test
-    public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
-    }
+public class Test_sm_wd_epl_dc_good extends E2EBaseTest {
 
     @Test
     public void returnCodeTest() {
@@ -58,8 +52,20 @@ public class Test_sm_smn_wd_epl_glm_fel extends E2EBaseTest {
     }
 
     @Test
-    public void tableIssueCountTest() {
-        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.RIGHT, 3);
+    public void phaseTest() {
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
+
+    @Test
+    public void issueTest() {
+        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
+                Environment.LEFT, 0);
+    }
+
+    @Test
+    public void errorTest() {
+        validateTableErrorCount("ext_purge_odd_parts", "web_sales",
+                Environment.LEFT, 0);
+    }
+
 }

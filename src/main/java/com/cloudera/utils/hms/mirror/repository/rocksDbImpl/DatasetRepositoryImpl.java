@@ -31,11 +31,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
 
 /**
  * RocksDB implementation of DatasetRepository.
@@ -64,6 +63,7 @@ public class DatasetRepositoryImpl extends AbstractRocksDBRepository<DatasetDto,
     public DatasetDto save(DatasetDto datasetDto) throws RepositoryException {
         // Set timestamps
         LocalDateTime currentTime = LocalDateTime.now();
+        // Save using repository (timestamps and name are handled by repository layer)
         if (datasetDto.getCreated() == null) {
             datasetDto.setCreated(currentTime);
         }

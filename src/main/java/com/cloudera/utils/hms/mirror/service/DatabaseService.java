@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.service;
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hadoop.cli.DisabledException;
 import com.cloudera.utils.hadoop.shell.command.CommandReturn;
+import com.cloudera.utils.hive.config.QueryDefinitions;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
@@ -34,6 +35,7 @@ import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.util.DatabaseUtils;
 import com.cloudera.utils.hms.util.NamespaceUtils;
+import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,7 @@ import java.sql.Connection;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
 import static com.cloudera.utils.hms.mirror.MirrorConf.*;
@@ -93,21 +96,19 @@ public class DatabaseService {
     public void buildDatabaseSources(int consolidationLevelBase, boolean partitionLevelMismatch)
             throws RequiredConfigurationException, EncryptionException, SessionException {
 //        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-        /*
-        WarehouseMapBuilder warehouseMapBuilder = config.getTranslator().getWarehouseMapBuilder();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is null"));
+        ConfigLiteDto config = conversionResult.getConfig();
+
+        WarehouseMapBuilder warehouseMapBuilder = conversionResult.getTranslator().getWarehouseMapBuilder();
 
         // Don't go through this process if you don't need to.
         if (!config.loadMetadataDetails())
             return;
 
         if (!warehouseMapBuilder.isInSync()) {
-            if (!connectionPoolService.isConnected() && !executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
-                try {
-                    connectionPoolService.init();
-                } catch (SQLException | URISyntaxException e) {
-                    log.error("SQL|URI Exception", e);
-                    throw new SessionException(e.getMessage());
-                }
+            if (!conversionResult.isMockTestDataset()) {
+                connectionPoolService.init();
             }
 
 
@@ -124,9 +125,9 @@ public class DatabaseService {
 
             for (String database : warehouseMapBuilder.getWarehousePlans().keySet()) {
                 // Reset the database in the translation map.
-                config.getTranslator().removeDatabaseFromTranslationMap(database);
+                conversionResult.getTranslator().removeDatabaseFromTranslationMap(database);
                 // Load the database locations.
-                if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
+                if (!conversionResult.isMockTestDataset()) {
                     loadDatabaseLocationMetadataDirect(database, Environment.LEFT, consolidationLevelBase, partitionLevelMismatch);
                 } else {
                     // Parse test data for sources.
@@ -135,7 +136,6 @@ public class DatabaseService {
             }
             warehouseMapBuilder.setInSync(Boolean.TRUE);
         }
-        */
     }
 
     // TODO: Fix
@@ -147,37 +147,37 @@ public class DatabaseService {
     }
     */
 
-    // TODO: Fix
     // Load sources from the test data set.
-    /*
     protected void loadDatabaseLocationMetadataFromTestData(String database, Environment environment,
                                                             int consolidationLevelBase,
                                                             boolean partitionLevelMismatch) {
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is null"));
 
-        ConversionResult conversionResult = session.getConversionResult();
+        Map<String, TableMirror> tableMirrors = null;
+        try {
+            tableMirrors = getTableMirrorRepository().findByDatabase(conversionResult.getKey(), database);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
 
-        conversionResult.getDatabases().forEach((dbName, dbMirror) -> {
-            dbMirror.getTableMirrors().forEach((tableName, tableMirror) -> {
-                EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
-                if (et != null) {
-                    String tableType = TableUtils.isExternal(et) ? TableType.EXTERNAL_TABLE.toString() : TableType.MANAGED_TABLE.toString();
-                    String tableLocation = TableUtils.getLocation(tableName, et.getDefinition());
+        tableMirrors.forEach((tableName, tableMirror) -> {
+            EnvironmentTable et = tableMirror.getEnvironmentTable(environment);
+            if (et != null) {
+                String tableType = TableUtils.isExternal(et) ? TableType.EXTERNAL_TABLE.toString() : TableType.MANAGED_TABLE.toString();
+                String tableLocation = TableUtils.getLocation(tableName, et.getDefinition());
 //                    String partitionSpec = et.getPartitionSpec();
 //                    String partitionLocation = et.getPartitionLocation(
-                    // config.getTranslator().addPartitionSource(database, table, tableType, partitionSpec, tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
-                    config.getTranslator().addPartitionSource(database, tableName, tableType, null,
-                            tableLocation, null, consolidationLevelBase, partitionLevelMismatch);
-                    tableMirror.getPartitionDefinition(environment).forEach((partSpec, partLoc) -> {
-                        config.getTranslator().addPartitionSource(database, tableName, tableType, partSpec,
-                                tableLocation, partLoc, consolidationLevelBase, partitionLevelMismatch);
-                    });
-                }
-            });
+                // config.getTranslator().addPartitionSource(database, table, tableType, partitionSpec, tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
+                conversionResult.getTranslator().addPartitionSource(database, tableName, tableType, null,
+                        tableLocation, null, consolidationLevelBase, partitionLevelMismatch);
+                tableMirror.getPartitionDefinition(environment).forEach((partSpec, partLoc) -> {
+                    conversionResult.getTranslator().addPartitionSource(database, tableName, tableType, partSpec,
+                            tableLocation, partLoc, consolidationLevelBase, partitionLevelMismatch);
+                });
+            }
         });
     }
-    */
 
     // TODO: Fix
     protected void loadDatabaseLocationMetadataDirect(String database, Environment environment,
@@ -190,20 +190,30 @@ public class DatabaseService {
         4. Execute Query
         5. Load Partition Data
          */
-        /*
+
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-        ExecuteSession session = executeSessionService.getSession();
-        HmsMirrorConfig config = session.getConfig();
-        RunStatus runStatus = session.getRunStatus();
+//        ExecuteSession session = executeSessionService.getSession();
+//        HmsMirrorConfig config = session.getConfig();
+//        RunStatus runStatus = session.getRunStatus();
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult is null"));
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is null"));
+        ConfigLiteDto config = conversionResult.getConfig();
+
 
         // TODO: Handle RIGHT Environment. At this point, we're only handling LEFT.
-        if (!configService.isMetastoreDirectConfigured(session, environment)) {
+        ConnectionDto leftConnection = conversionResult.getConnection(Environment.LEFT);
+        if (!getConfigService().isMetastoreDirectConfigured(leftConnection)) {
             log.info("Metastore Direct Connection is not configured for {}.  Skipping.", environment);
             runStatus.addWarning(METASTORE_TABLE_LOCATIONS_NOT_FETCHED);
             return;
         }
+
+        // Look up the DBSpec for the Database.
+        DatasetDto.DatabaseSpec dbSpec = conversionResult.getDataset().getDatabase(database);
 
         try {
             conn = getConnectionPoolService().getMetastoreDirectEnvironmentConnection(environment);
@@ -226,22 +236,23 @@ public class DatabaseService {
                                 "and is most likely a remnant of a previous event. If this is a mistake, change the " +
                                 "'transferPrefix' to something more unique.", database, tableName);
                     } else {
-                        if (isBlank(config.getFilter().getTblRegEx()) && isBlank(config.getFilter().getTblExcludeRegEx())) {
-                            config.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
+//                        dbSpec.getFilter().isFilterEnabled();
+                        if (isBlank(dbSpec.getFilter().getIncludeRegEx()) && isBlank(dbSpec.getFilter().getExcludeRegEx())) {
+                            conversionResult.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
                                     partitionLevelMismatch);
-                        } else if (!isBlank(config.getFilter().getTblRegEx())) {
+                        } else if (!isBlank(dbSpec.getFilter().getIncludeRegEx())) {
                             // Filter Tables
-                            assert (config.getFilter().getTblFilterPattern() != null);
-                            Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
+                            assert (dbSpec.getFilter().getIncludeRegExPattern() != null);
+                            Matcher matcher = dbSpec.getFilter().getIncludeRegExPattern().matcher(tableName);
                             if (matcher.matches()) {
-                                config.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
+                                conversionResult.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
                                         partitionLevelMismatch);
                             }
-                        } else if (config.getFilter().getTblExcludeRegEx() != null) {
-                            assert (config.getFilter().getTblExcludeFilterPattern() != null);
-                            Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
+                        } else if (dbSpec.getFilter().getExcludeRegExPattern() != null) {
+                            assert (dbSpec.getFilter().getExcludeRegExPattern() != null);
+                            Matcher matcher = dbSpec.getFilter().getExcludeRegExPattern().matcher(tableName);
                             if (!matcher.matches()) { // ANTI-MATCH
-                                config.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
+                                conversionResult.getTranslator().addTableSource(database, tableName, tableType, location, consolidationLevelBase,
                                         partitionLevelMismatch);
                             }
                         }
@@ -261,22 +272,22 @@ public class DatabaseService {
                     String tableLocation = resultSet.getString(4);
                     String partitionLocation = resultSet.getString(5);
 
-                    if (isBlank(config.getFilter().getTblRegEx()) && isBlank(config.getFilter().getTblExcludeRegEx())) {
-                        config.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
+                    if (isBlank(dbSpec.getFilter().getIncludeRegEx()) && isBlank(dbSpec.getFilter().getExcludeRegEx())) {
+                        conversionResult.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
                                 tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
-                    } else if (!isBlank(config.getFilter().getTblRegEx())) {
+                    } else if (!isBlank(dbSpec.getFilter().getExcludeRegEx())) {
                         // Filter Tables
-                        assert (config.getFilter().getTblFilterPattern() != null);
-                        Matcher matcher = config.getFilter().getTblFilterPattern().matcher(tableName);
+                        assert (dbSpec.getFilter().getIncludeRegExPattern() != null);
+                        Matcher matcher = dbSpec.getFilter().getIncludeRegExPattern().matcher(tableName);
                         if (matcher.matches()) {
-                            config.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
+                            conversionResult.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
                                     tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
                         }
-                    } else if (config.getFilter().getTblExcludeRegEx() != null) {
-                        assert (config.getFilter().getTblExcludeFilterPattern() != null);
-                        Matcher matcher = config.getFilter().getTblExcludeFilterPattern().matcher(tableName);
+                    } else if (dbSpec.getFilter().getExcludeRegEx() != null) {
+                        assert (dbSpec.getFilter().getExcludeRegExPattern() != null);
+                        Matcher matcher = dbSpec.getFilter().getExcludeRegExPattern().matcher(tableName);
                         if (!matcher.matches()) { // ANTI-MATCH
-                            config.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
+                            conversionResult.getTranslator().addPartitionSource(database, tableName, tableType, partitionSpec,
                                     tableLocation, partitionLocation, consolidationLevelBase, partitionLevelMismatch);
                         }
                     }
@@ -297,7 +308,6 @@ public class DatabaseService {
                 //
             }
         }
-        */
     }
 
     public boolean loadEnvironmentVars() {
@@ -538,7 +548,7 @@ public class DatabaseService {
             }
 
             String targetNamespace = null;
-                targetNamespace = conversionResult.getTargetNamespace();
+            targetNamespace = conversionResult.getTargetNamespace();
             // One of three type of warehouses: Plan, Global, or Environment.
             Warehouse warehouse = warehouseService.getWarehousePlan(dbMirror.getName());
             log.debug("Warehouse Plan for {}: {}", dbMirror.getName(), warehouse);
@@ -722,7 +732,7 @@ public class DatabaseService {
             }
 
 //            if (config.isResetRight() && buildRight) {
-                // TODO: Add DROP db to the RIGHT sql.
+            // TODO: Add DROP db to the RIGHT sql.
 //            }
 
             switch (job.getStrategy()) {
@@ -1297,74 +1307,74 @@ public class DatabaseService {
         // Skip when running test data.
         // TODO: Need to account for when we are running test data.
 //        if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
-            try {
-                conn = connectionPoolService.getHS2EnvironmentConnection(environment);
+        try {
+            conn = connectionPoolService.getHS2EnvironmentConnection(environment);
 
-                if (isNull(conn) && jobExecution.isExecute()
-                        && conversionResult.getConnection(environment).isHs2Connected()) {
-                    // this is a problem.
-                    rtn = Boolean.FALSE;
-                    dbMirror.addIssue(environment, "Connection missing. This is a bug.");
-                }
+            if (isNull(conn) && jobExecution.isExecute()
+                    && conversionResult.getConnection(environment).isHs2Connected()) {
+                // this is a problem.
+                rtn = Boolean.FALSE;
+                dbMirror.addIssue(environment, "Connection missing. This is a bug.");
+            }
 
-                if (isNull(conn) && !conversionResult.getConnection(environment).isHs2Connected()) {
-                    dbMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
-                            "The scripts will need to be run 'manually'.");
-                }
+            if (isNull(conn) && !conversionResult.getConnection(environment).isHs2Connected()) {
+                dbMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
+                        "The scripts will need to be run 'manually'.");
+            }
 
-                if (!isNull(conn) && jobExecution.isExecute()) {
-                    Statement stmt = null;
+            if (!isNull(conn) && jobExecution.isExecute()) {
+                Statement stmt = null;
+                try {
                     try {
+                        stmt = conn.createStatement();
+                    } catch (SQLException throwables) {
+                        log.error("Issue building statement", throwables);
+                        rtn = Boolean.FALSE;
+                    }
+
+                    for (Pair dbSqlPair : pairs) {
                         try {
-                            stmt = conn.createStatement();
+                            String action = dbSqlPair.getAction();
+                            if (action.trim().isEmpty() || action.trim().startsWith("--")) {
+                                continue;
+                            } else {
+                                log.info("{}:{}:{}", environment, dbSqlPair.getDescription(), dbSqlPair.getAction());
+                                stmt.execute(dbSqlPair.getAction());
+                            }
                         } catch (SQLException throwables) {
-                            log.error("Issue building statement", throwables);
+                            log.error("{}:{}:", environment, dbSqlPair.getDescription(), throwables);
+                            dbMirror.addIssue(environment, throwables.getMessage() + " " + dbSqlPair.getDescription() +
+                                    " " + dbSqlPair.getAction());
                             rtn = Boolean.FALSE;
                         }
-
-                        for (Pair dbSqlPair : pairs) {
-                            try {
-                                String action = dbSqlPair.getAction();
-                                if (action.trim().isEmpty() || action.trim().startsWith("--")) {
-                                    continue;
-                                } else {
-                                    log.info("{}:{}:{}", environment, dbSqlPair.getDescription(), dbSqlPair.getAction());
-                                    stmt.execute(dbSqlPair.getAction());
-                                }
-                            } catch (SQLException throwables) {
-                                log.error("{}:{}:", environment, dbSqlPair.getDescription(), throwables);
-                                dbMirror.addIssue(environment, throwables.getMessage() + " " + dbSqlPair.getDescription() +
-                                        " " + dbSqlPair.getAction());
-                                rtn = Boolean.FALSE;
-                            }
-                        }
-
-                    } finally {
-                        if (stmt != null) {
-                            try {
-                                stmt.close();
-                            } catch (SQLException sqlException) {
-                                // ignore
-                            }
-                        }
                     }
-                } else {
-                    log.info("DRY-RUN: {} - {}", environment, dbMirror.getName());
-                    for (Pair dbSqlPair : pairs) {
-                        log.info("{}:{}:{}", environment, dbSqlPair.getDescription(), dbSqlPair.getAction());
+
+                } finally {
+                    if (stmt != null) {
+                        try {
+                            stmt.close();
+                        } catch (SQLException sqlException) {
+                            // ignore
+                        }
                     }
                 }
-            } catch (SQLException throwables) {
-                log.error(environment.toString(), throwables);
-//                throw new RuntimeException(throwables);
-            } finally {
-                try {
-                    if (conn != null)
-                        conn.close();
-                } catch (SQLException throwables) {
-                    //
+            } else {
+                log.info("DRY-RUN: {} - {}", environment, dbMirror.getName());
+                for (Pair dbSqlPair : pairs) {
+                    log.info("{}:{}:{}", environment, dbSqlPair.getDescription(), dbSqlPair.getAction());
                 }
             }
+        } catch (SQLException throwables) {
+            log.error(environment.toString(), throwables);
+//                throw new RuntimeException(throwables);
+        } finally {
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException throwables) {
+                //
+            }
+        }
 //        } else {
 //            log.info("TEST DATA RUN: {} - {}", environment, dbMirror.getName());
 //            for (Pair dbSqlPair : pairs) {

@@ -75,6 +75,9 @@ public class ConversionResult {
 //    @JsonIgnore
     private String finalOutputDirectory = null;
 
+    @JsonIgnore
+    private boolean connected;
+
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/config', with the value being the yaml string.
@@ -145,9 +148,21 @@ public class ConversionResult {
      */
     public String getTargetNamespace() {
         String rtn = null;
+        // Pull from the Job.
         if (job.getStrategy() == DataStrategyEnum.STORAGE_MIGRATION) {
             rtn = job.getTargetNamespace();
+        } else if (config.getMigrateACID().isOnly() && config.getMigrateACID().isInplace()) {
+            // Downgrade Inplace only has LEFT connection
+            ConnectionDto left = getConnection(Environment.LEFT);
+            if (left != null) {
+                rtn = left.getHcfsNamespace();
+                if (isBlank(rtn)) {
+                    // TODO: Try to pull from the Environment Values of the Right Cluster.
+//                    right.getHs2EnvSets()
+                }
+            }
         } else {
+            // Get it from the Right.
             ConnectionDto right = getConnection(Environment.RIGHT);
             if (right != null) {
                 rtn = right.getHcfsNamespace();
@@ -157,18 +172,6 @@ public class ConversionResult {
                 }
             }
         }
-        /*
-        if (nonNull(config.getTransfer()) && !isBlank(config.getTransfer().getTargetNamespace())) {
-            rtn = config.getTransfer().getTargetNamespace();
-        } else if (nonNull(getConnection(Environment.RIGHT))
-                && !isBlank(getConnection(Environment.RIGHT).getHcfsNamespace())) {
-            log.warn("Using RIGHT 'hcfsNamespace' for 'targetNamespace'.");
-            rtn = getConnection(Environment.RIGHT).getHcfsNamespace();
-        }
-        */
-//        if (isBlank(rtn)) {
-//            throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");
-//        }
         return rtn;
     }
 

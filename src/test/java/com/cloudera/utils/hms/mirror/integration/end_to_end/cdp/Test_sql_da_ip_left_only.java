@@ -65,7 +65,7 @@ public class Test_sql_da_ip_left_only extends E2EBaseTest {
 
     @Test
     public void phaseTest() {
-        validatePhase("assort_test_db", "acid_03", PhaseState.CALCULATED_SQL);
+        validatePhase("assort_test_db", "acid_03", PhaseState.PROCESSED);
     }
 
     @Test

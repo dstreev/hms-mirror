@@ -440,12 +440,6 @@ public class HmsMirrorConfigurationLoader {
             log.info("iceberg-version: {}", value);
         });
 
-        // In-place
-        applyBooleanIfPresent(CONFIG_PREFIX + ".in-place", value -> {
-            config.getMigrateACID().setInplace(value);
-            log.info("in-place: {}", value);
-        });
-
         // Intermediate storage
         applyIfPresent(CONFIG_PREFIX + ".intermediate-storage", value -> {
             config.getTransfer().setIntermediateStorage(value);
@@ -484,16 +478,11 @@ public class HmsMirrorConfigurationLoader {
             }
         }
 
-//        applyIntIfPresent(CONFIG_PREFIX + ".migrate-acid", value -> {
-//            config.getMigrateACID().setPartitionLimit(value);
-//            log.info("migrate-acid: {}", value);
-//        });
-//
-//        // Migrate ACID only
-//        applyBooleanIfPresent(CONFIG_PREFIX + ".migrate-acid-only", value -> {
-//            config.getMigrateACID().setOnly(value);
-//            log.info("migrate-acid-only: {}", value);
-//        });
+        // In-place
+        applyBooleanIfPresent(CONFIG_PREFIX + ".in-place", value -> {
+            config.getMigrateACID().setInplace(value);
+            log.info("in-place: {}", value);
+        });
 
         // Views only
         applyBooleanIfPresent(CONFIG_PREFIX + ".views-only", value -> {
@@ -580,7 +569,7 @@ public class HmsMirrorConfigurationLoader {
 
         // Right is disconnected
         applyBooleanIfPresent(CONFIG_PREFIX + ".right-is-disconnected", value -> {
-            config.getCluster(com.cloudera.utils.hms.mirror.domain.support.Environment.RIGHT).setHcfsNamespace("DUMMY");
+//            config.getCluster(com.cloudera.utils.hms.mirror.domain.support.Environment.RIGHT).setHcfsNamespace("DUMMY");
             log.info("right-is-disconnected: {}", value);
         });
 

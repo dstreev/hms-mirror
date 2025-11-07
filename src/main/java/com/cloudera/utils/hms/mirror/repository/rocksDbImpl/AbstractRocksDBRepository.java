@@ -80,14 +80,28 @@ public abstract class AbstractRocksDBRepository<T, ID> implements RocksDBReposit
             byte[] value = rocksDB.get(columnFamily, key);
 
             if (value == null) {
+                log.debug("No value found for id: {}", id);
                 return Optional.empty();
             }
 
+            log.debug("Attempting to deserialize entity with id: {}", id);
+            log.debug("Value byte array length: {}", value.length);
+
+            if (log.isTraceEnabled()) {
+                String valueAsString = new String(value, StandardCharsets.UTF_8);
+                log.trace("Raw value for id {}: {}", id, valueAsString.substring(0, Math.min(500, valueAsString.length())));
+            }
+
             T entity = objectMapper.readValue(value, typeReference);
+            log.debug("Successfully deserialized entity with id: {}", id);
             return Optional.of(entity);
         } catch (java.io.IOException e) {
-            throw new RepositoryException("Failed to deserialize entity with id: " + id, e);
+            log.error("Failed to deserialize entity with id: {}. Error: {}", id, e.getMessage(), e);
+            log.error("Exception type: {}", e.getClass().getName());
+            throw new RepositoryException("Failed to deserialize entity with id: " + id +
+                ". Exception: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
         } catch (RocksDBException e) {
+            log.error("RocksDB error when finding entity with id: {}", id, e);
             throw new RepositoryException("Failed to find entity with id: " + id, e);
         }
     }
@@ -112,13 +126,40 @@ public abstract class AbstractRocksDBRepository<T, ID> implements RocksDBReposit
 
             while (iterator.isValid()) {
                 ID id = deserializeKey(iterator.key());
-                T entity = objectMapper.readValue(iterator.value(), typeReference);
-                results.put(id, entity);
+                byte[] valueBytes = iterator.value();
+
+                log.debug("Attempting to deserialize entity with id: {}", id);
+                log.debug("Value byte array length: {}", valueBytes != null ? valueBytes.length : 0);
+
+                if (valueBytes != null && log.isTraceEnabled()) {
+                    String valueAsString = new String(valueBytes, StandardCharsets.UTF_8);
+                    log.trace("Raw value for id {}: {}", id, valueAsString.substring(0, Math.min(500, valueAsString.length())));
+                }
+
+                try {
+                    T entity = objectMapper.readValue(valueBytes, typeReference);
+                    results.put(id, entity);
+                    log.debug("Successfully deserialized entity with id: {}", id);
+                } catch (java.io.IOException e) {
+                    log.error("Failed to deserialize entity with id: {}. Error: {}", id, e.getMessage(), e);
+                    log.error("Exception type: {}", e.getClass().getName());
+                    if (valueBytes != null) {
+                        String valuePreview = new String(valueBytes, StandardCharsets.UTF_8);
+                        log.error("Value preview (first 1000 chars): {}",
+                            valuePreview.substring(0, Math.min(1000, valuePreview.length())));
+                    }
+                    throw new RepositoryException("Failed to deserialize entity with id: " + id +
+                        ". Exception: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
+                }
+
                 iterator.next();
             }
             return results;
-        } catch (java.io.IOException e) {
-            throw new RepositoryException("Failed to deserialize entities", e);
+        } catch (RepositoryException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during findAll() iteration", e);
+            throw new RepositoryException("Unexpected error during findAll(): " + e.getMessage(), e);
         }
     }
 

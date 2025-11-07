@@ -41,38 +41,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles("e2e-cdp-sm_wd_epl_dc")
 @Slf4j
 public class Test_sm_wd_epl_dc extends E2EBaseTest {
-    /*
-            String[] args = new String[]{"-d", "STORAGE_MIGRATION",
-                "-wd", "/finance/managed-fso",
-                "-ewd", "/finance/external-fso",
-//                "-smn", "ofs://OHOME90",
-                "-epl",
-//                "-rdl",
-                "-dc",
-                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP_CDP,
-                "-o", outputDir
-        };
-        long rtn = 0;
-        MirrorLegacy mirror = new MirrorLegacy();
-        rtn = mirror.go(args);
-        long check = STORAGE_MIGRATION_NAMESPACE_LEFT_MISSING_RDL_GLM.getLong();
 
-        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
-
-
-     */
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 0L;
+        long check = 1L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.ERROR);
     }
 
     @Test

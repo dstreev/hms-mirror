@@ -19,11 +19,14 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
+import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.*;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
@@ -31,6 +34,7 @@ import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.cloudera.utils.hms.stage.ReturnStatus;
+import com.cloudera.utils.hms.util.TableUtils;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -114,19 +118,16 @@ public class HMSMirrorAppService {
         rtn = runStatus.getReturnCode();
         // If app ran, then check for unsuccessful table conversions.
         if (rtn == 0) {
-            rtn = conversionResultService.getUnsuccessfullTableCount(conversionResult);
+            rtn = runStatus.getUnSuccessfulTableCount().get();
         }
         return rtn;
     }
 
     public long getWarningCode() {
         long rtn = 0L;
-        // TODO: Fix;
-        /*
-        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is not set in the current thread context."));
         rtn = runStatus.getWarningCode();
-         */
         return rtn;
     }
 
@@ -428,7 +429,7 @@ public class HMSMirrorAppService {
                 // Build out the table list in a database (launches async table collection)
                 if (!conversionResult.getJob().isDatabaseOnly()) {
                     runStatus.setStage(StageEnum.TABLES, CollectionEnum.IN_PROGRESS);
-                    CompletableFuture<ReturnStatus> gt = getTableService().getTablesForProcessing(conversionResult, dbMirror);
+                    CompletableFuture<ReturnStatus> gt = getTableService().getTableListForProcessing(conversionResult, dbMirror);
                     gtf.add(gt);
                 }
             }
@@ -460,8 +461,8 @@ public class HMSMirrorAppService {
      * @param gtf              list of table collection futures
      * @return true if table collection succeeded, false otherwise
      */
-    private Boolean collectTables(ConversionResult conversionResult, RunStatus runStatus,
-                                  List<CompletableFuture<ReturnStatus>> gtf) {
+    private Boolean waitAndIncrementDBs(ConversionResult conversionResult, RunStatus runStatus,
+                                        List<CompletableFuture<ReturnStatus>> gtf) {
         Boolean rtn = Boolean.TRUE;
 
         if (!conversionResult.isMockTestDataset() && !conversionResult.getJob().isDatabaseOnly()) {
@@ -620,6 +621,47 @@ public class HMSMirrorAppService {
         return rtn;
     }
 
+    protected void filterTablesViaConfigSettings(ConversionResult conversionResult, TableMirror tableMirror) {
+        // Filter Tables by Metadata and flags.
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
+
+        if (TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+            if (!config.getMigrateACID().isOn()) {
+                tableMirror.setRemove(Boolean.TRUE);
+                tableMirror.setRemoveReason("Table is an ACID table and migrate ACID is turned OFF.");
+            }
+        } else {
+            if (config.getMigrateACID().isOnly()) {
+                tableMirror.setRemove(Boolean.TRUE);
+                tableMirror.setRemoveReason("Table is NOT ACID table and migrate ACID ONLY is turned ON.");
+            }
+        }
+
+        // If the table hasn't been removed yet and isAcid, when distcp requested.  Doesn't apply
+        // which storage migration.
+        if (!tableMirror.isRemove()) {
+            if (config.getTransfer().getStorageMigration().isDistcp()) {
+                if (TableUtils.isACID(tableMirror.getEnvironmentTable(Environment.LEFT))) {
+                    switch (job.getStrategy()) {
+                        case SCHEMA_ONLY:
+                            tableMirror.setPhaseState(PhaseState.ERROR);
+                            tableMirror.addError(Environment.LEFT, "ACID table and distcp requested.  You can't 'distcp' an ACID table.");
+//                            tableMirror.setRemoveReason("ACID table and distcp requested.  You can't 'distcp' an ACID table.");
+                        case SQL:
+                        case HYBRID:
+                        case EXPORT_IMPORT:
+                        case COMMON:
+                        case STORAGE_MIGRATION:
+                        case CONVERT_LINKED:
+                        case DUMP:
+                    }
+                }
+            }
+        }
+
+    }
+
     /**
      * Loads table metadata and builds migration plans.
      * This is the most complex stage that handles table metadata loading, migration building,
@@ -636,6 +678,9 @@ public class HMSMirrorAppService {
         if (conversionResult.getJob().isDatabaseOnly()) {
             return new HashSet<>();
         }
+
+        ConfigLiteDto config = conversionResult.getConfig();
+        JobDto job = conversionResult.getJob();
 
         log.warn("DEBUG: Processing tables: isDatabaseOnly={}, isLoadingTestData={}, collectedDbs={}",
                 conversionResult.getJob().isDatabaseOnly(), conversionResult.isMockTestDataset(),
@@ -695,6 +740,9 @@ public class HMSMirrorAppService {
                                 throw new RuntimeException(e);
                             }
 
+                            // Metadata Filter via Config Settings
+                            filterTablesViaConfigSettings(conversionResult, lclTableMirror);
+
                             // If the table has been marked for removal, add it to the filterout list in the dbMirror
                             //   and delete it from the processing list in the repo.
                             if (lclTableMirror.isRemove()) {
@@ -730,13 +778,22 @@ public class HMSMirrorAppService {
                                     throw new RuntimeException(re);
                                 }
 
+                                // Add to the Failed table count.
+                                if (lclTableMirror.getPhaseState() == PhaseState.ERROR) {
+                                    runStatus.getUnSuccessfulTableCount().incrementAndGet();
+                                }
+
                                 if (nonNull(returnStatus)) {
                                     switch (returnStatus.getStatus()) {
                                         case SUCCESS:
                                             runStatus.getOperationStatistics().getCounts().incrementTables();
-                                            future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
-                                            runStatus.getOperationStatistics().getSuccesses().incrementTables();
-                                            migrationFuture.add(getTransferService().build(conversionResult, lclDatabaseName, lclTableMirror.getName()));
+                                            if (lclTableMirror.getPhaseState() != PhaseState.ERROR) {
+                                                future.get().setStatus(ReturnStatus.Status.NEXTSTEP);
+                                                runStatus.getOperationStatistics().getSuccesses().incrementTables();
+                                                migrationFuture.add(getTransferService().build(conversionResult, lclDatabaseName, lclTableMirror.getName()));
+                                            } else {
+                                                future.get().setStatus(ReturnStatus.Status.ERROR);
+                                            }
                                             break;
                                         case ERROR:
                                             runStatus.getOperationStatistics().getCounts().incrementTables();
@@ -1135,7 +1192,8 @@ public class HMSMirrorAppService {
             saveRunStatus(conversionResult, runStatus);
         }
 
-        // Stage 7: Discover databases and collect tables
+        // Stage 7: Discover databases and collect tables into the tableMirror objects (no metadata yet).
+        //                          basic TableFiltering on tables added to list.
         List<CompletableFuture<ReturnStatus>> gtf = discoverDatabases(conversionResult, runStatus);
         if (gtf == null) {
             runStatus.setProgress(ProgressEnum.FAILED);
@@ -1149,8 +1207,8 @@ public class HMSMirrorAppService {
         saveConversionResult(conversionResult);
         saveRunStatus(conversionResult, runStatus);
 
-        // Stage 8: Collect tables
-        if (!collectTables(conversionResult, runStatus, gtf)) {
+        // Stage 8: Wait for Step 7 and increment DB counts.
+        if (!waitAndIncrementDBs(conversionResult, runStatus, gtf)) {
             runStatus.setProgress(ProgressEnum.FAILED);
             // Check point
             saveConversionResult(conversionResult);
@@ -1190,6 +1248,7 @@ public class HMSMirrorAppService {
         saveRunStatus(conversionResult, runStatus);
 
         // Stage 12: Load table metadata and build migrations
+        //           Logic to filter out more tables in scenario mismatches.
         Set<ReturnStatus> migrationExecutions = loadTableMetadataAndBuild(conversionResult, runStatus, gtf, rtn);
         if (migrationExecutions == null) {
             // Check point

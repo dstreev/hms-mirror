@@ -49,19 +49,9 @@ public class DatasetDto implements Cloneable {
     private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
     // This would be the top level Key for the RocksDB columnFamily.
-    private String key = null;
+//    private String key = null;
 
-    //    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
-    public String getKey() {
-        if (key == null) {
-            if (name == null) {
-                throw new IllegalStateException("name is required");
-            } else {
-                key = name;
-            }
-        }
-        return key;
-    }
+    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
 
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
     private String name;
@@ -88,88 +78,6 @@ public class DatasetDto implements Cloneable {
         }
         return null;
     }
-
-//    /**
-//     * Create a deep clone of this DatasetDto.
-//     * All nested objects and collections are cloned to avoid shared references.
-//     *
-//     * @return A deep clone of this DatasetDto
-//     */
-//    /**
-//     * Get database names as a Set for backward compatibility.
-//     *
-//     * @return Set of database names
-//     */
-//    public java.util.Set<String> getDatabases() {
-//        java.util.Set<String> dbNames = new java.util.TreeSet<>();
-//        if (databases != null) {
-//            for (DatabaseSpec dbSpec : databases) {
-//                if (dbSpec != null && dbSpec.getDatabaseName() != null) {
-//                    dbNames.add(dbSpec.getDatabaseName());
-//                }
-//            }
-//        }
-//        return dbNames;
-//    }
-//
-//    /**
-//     * Set databases from a collection of database names.
-//     * Creates DatabaseSpec entries for each name.
-//     *
-//     * @param databaseNames Collection of database names
-//     */
-//    public void setDatabases(java.util.Collection<String> databaseNames) {
-//        if (this.databases == null) {
-//            this.databases = new ArrayList<>();
-//        } else {
-//            this.databases.clear();
-//        }
-//
-//        if (databaseNames != null) {
-//            for (String dbName : databaseNames) {
-//                DatabaseSpec spec = new DatabaseSpec();
-//                spec.setDatabaseName(dbName);
-//                this.databases.add(spec);
-//            }
-//        }
-//    }
-//
-//    /**
-//     * Get the internal list of DatabaseSpec objects.
-//     * This method provides direct access to the DatabaseSpec list for code that needs
-//     * full database specifications rather than just database names.
-//     *
-//     * @return List of DatabaseSpec objects
-//     */
-//    public List<DatabaseSpec> getDatabaseSpecs() {
-//        return databases != null ? databases : new ArrayList<>();
-//    }
-//
-//    /**
-//     * Get the Filter from the dataset.
-//     * For backward compatibility, returns the filter from the first database spec if available.
-//     *
-//     * @return Filter object or null
-//     */
-//    public com.cloudera.utils.hms.mirror.domain.core.Filter getFilter() {
-//        if (databases != null && !databases.isEmpty() && databases.get(0) != null) {
-//            TableFilter tableFilter = databases.get(0).getFilter();
-//            if (tableFilter != null) {
-//                // Convert TableFilter to Filter
-//                com.cloudera.utils.hms.mirror.domain.core.Filter filter = new com.cloudera.utils.hms.mirror.domain.core.Filter();
-//                filter.setTblRegEx(tableFilter.getIncludePattern());
-//                filter.setTblExcludeRegEx(tableFilter.getExcludePattern());
-//                if (tableFilter.getMaxSizeBytes() > 0) {
-//                    filter.setTblSizeLimit(tableFilter.getMaxSizeBytes());
-//                }
-//                if (tableFilter.getMaxPartitions() > 0) {
-//                    filter.setTblPartitionLimit((int) tableFilter.getMaxPartitions());
-//                }
-//                return filter;
-//            }
-//        }
-//        return new com.cloudera.utils.hms.mirror.domain.core.Filter();
-//    }
 
     public DatasetDto clone() throws CloneNotSupportedException {
         DatasetDto clone = (DatasetDto) super.clone();
@@ -313,6 +221,7 @@ public class DatasetDto implements Cloneable {
         @JsonIgnore
         private Pattern excludeRegExPattern = null;
 
+        @JsonIgnore
         public boolean isFilterEnabled() {
             boolean rtn = Boolean.FALSE;
             // If the includeRegEx is defined, then only '.*' is allowed

@@ -42,20 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles({"e2e-cdp-sql-acid","no-cli","test"})
 @Slf4j
 public class Test_sql_da_ip extends E2EBaseTest {
-//
-//        String[] args = new String[]{"-d", "SQL",
-//                "-da", "-ip", "-mao", "-rid",
-//                "-ltd", ACID_W_PARTS_05, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,ACID_W_PARTS_05);
-//
 
     @Test
     public void issueCountTest() {
@@ -64,7 +50,7 @@ public class Test_sql_da_ip extends E2EBaseTest {
 
     @Test
     public void phaseTest() {
-        validatePhase("assort_test_db", "acid_03", PhaseState.CALCULATED_SQL);
+        validatePhase("assort_test_db", "acid_03", PhaseState.PROCESSED);
     }
 
     @Test

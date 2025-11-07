@@ -59,40 +59,6 @@ There should be no issue now that the default location is reset to the new wareh
  */
 public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
 
-    //        String[] args = new String[]{"-d", "STORAGE_MIGRATION",
-//                "-wd", "/finance/managed-fso",
-//                "-ewd", "/finance/external-fso",
-//                "-epl",
-//                "-rdl",
-//                "-dc",
-//                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir, EXT_PURGE_ODD_PARTS_03);
-//
-//        validatePhase(resultsMirrors[0], "web_sales", PhaseState.CALCULATED_SQL);
-//
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",  "Alter Table Location",
-//                "ALTER TABLE web_sales SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
-//            fail("Alter Table Location not found");
-//        }
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",
-//                "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",
-//                "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"hdfs://HDP50/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451188\"")) {
-//            fail("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location");
-//        }
-
     @Test
     public void issueCountTest() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales", Environment.LEFT, 0);
@@ -100,7 +66,7 @@ public class Test_sm_wd_epl_rdl_dc extends E2EBaseTest {
 
     @Test
     public void phaseTest() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
 
     @Test

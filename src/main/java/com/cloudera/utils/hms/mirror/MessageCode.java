@@ -24,6 +24,8 @@ import java.util.List;
 public enum MessageCode {
     AA_NON_ERROR("No Error"), // filler to ensure ordinal matches code.
     ACID_DOWNGRADE_SCHEMA_ONLY("Use the 'SQL' data-strategy to 'downgrade' an ACID table with 'distcp'"),
+    ACID_LOCATION_STRIPPED("ACID table are stripped of their location element for transfers. Location element in 'CREATE' " +
+            "not allowed in Hive3+"),
     ACID_NOT_TOP_LEVEL_STRATEGY("The `ACID` strategy is not a valid `hms-mirror` top level strategy.  Use 'HYBRID' or 'SQL' " +
             "along with the `-ma|-mao` option to address ACID tables."),
     ALIGNED_DISTCP_EXECUTE("Data migration with 'distcp' requires MANUAL intervention. " +
