@@ -125,7 +125,7 @@ public class Test_so_wd_epl_dc_ext_purge_w_odd_parts extends E2EBaseTest {
 
     @Test
     public void phaseTest_01() {
-        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);
     }
 
     @Test

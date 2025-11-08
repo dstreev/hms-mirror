@@ -343,7 +343,7 @@ public class E2EBaseTest {
 
         assertTrue(dbMirror.getProperties().containsKey(environment),
             String.format("Environment %s doesn't exist for database %s", environment, database));
-        assertEquals(expectedLocation, dbMirror.getProperties().get(environment).get(DB_LOCATION),
+        assertEquals(expectedLocation, dbMirror.getEnvironmentProperties(environment).get(DB_LOCATION),
             String.format("Location doesn't match for database %s in %s", database, environment));
     }
 
@@ -352,7 +352,7 @@ public class E2EBaseTest {
 
         assertTrue(dbMirror.getProperties().containsKey(environment),
             String.format("Environment %s doesn't exist for database %s", environment, database));
-        assertEquals(expectedLocation, dbMirror.getProperties().get(environment).get(DB_MANAGED_LOCATION),
+        assertEquals(expectedLocation, dbMirror.getEnvironmentProperty(environment, DB_MANAGED_LOCATION),
             String.format("Managed location doesn't match for database %s in %s", database, environment));
     }
 

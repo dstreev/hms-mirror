@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.domain.testdata.LegacyConversionWrapper;
@@ -328,7 +329,12 @@ public class ConversionResultService {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
         ConfigLiteDto config = conversionResult.getConfig();
-        rtn = conversionResult.getTargetNamespace();
+        JobDto job = conversionResult.getJob();
+        if (job.getStrategy() != DataStrategyEnum.LINKED) {
+            rtn = conversionResult.getConnection(Environment.LEFT).getHcfsNamespace();
+        } else {
+            rtn = conversionResult.getTargetNamespace();
+        }
 
         if (isBlank(rtn)) {
             throw new RequiredConfigurationException("Target Namespace is required.  Please set 'targetNamespace'.");

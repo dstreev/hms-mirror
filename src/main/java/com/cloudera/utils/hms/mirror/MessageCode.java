@@ -49,7 +49,7 @@ public enum MessageCode {
     COLLECTING_TABLES("There was an issue collecting tables.  Please check logs."),
     COLLECTING_TABLE_DEFINITIONS("There was an issue collecting table definitions.  Please check logs."),
     COMMON_STORAGE_WITH_DA_IP("Common Storage (-cs) is not a valid option for the ACID downgrades inplace."),
-    COMMON_STORAGE_WITH_LINKED("Common Storage (-cs) is not a valid option for the LINKED data strategy."),
+    TARGET_NAMESPACE_WITH_LINKED("Target Namespace (or Right hcfs Namespace) is not a valid option for the LINKED data strategy, removing."),
     CONFIGURATION_REMOVED_OR_INVALID("A configuration element is no longer valid, progress.  Please remove the element from the configuration yaml and try again. {0}"),
     CONNECTION_ISSUE("JDBC connections issue.  Check environment, jdbc urls, libraries, etc."),
     DATABASE_CREATION("There was an issue creating/modifying databases.  Ensure that the warehouse directories have been set.  Check logs."),
@@ -240,6 +240,8 @@ public enum MessageCode {
     SYNC_TBL_FILTER("'sync' with 'table filter' will be bi-directional ONLY for tables that meet the table filter '"
             + "' ON BOTH SIDES!!!"), // WARNINGS
     TABLE_ISSUE("Issue migrating: {0}.{1}. Reason: {2}"),
+    TABLE_LOCATION_NOT_ALIGNED_WITH_DB("The target location for the is not aligned with the DB source location {0}.  Alignment strategy is " +
+            "set to {1}"),
     TABLE_LOCATION_FORCED("You've request the table location be explicitly set."),
     TABLE_LOCATION_REMAPPED("The tables location matched one of the 'global location map' directories. " +
             "The LOCATION element was adjusted and will be explicitly set during table creation."),

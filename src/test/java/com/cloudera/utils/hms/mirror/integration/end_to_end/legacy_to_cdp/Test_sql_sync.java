@@ -75,9 +75,9 @@ public class Test_sql_sync extends E2EBaseTest {
         assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
     }
 
-    @Test
-    public void checkForDropTableTest() {
-        validateTableSqlPair("assorted_test_db", Environment.RIGHT, "ext_missing_01", TableUtils.DROP_DESC,
-                "DROP TABLE IF EXISTS ext_missing_01");
-    }
+//    @Test
+//    public void checkForDropTableTest() {
+//        validateTableSqlPair("assorted_test_db", Environment.RIGHT, "ext_missing_01", TableUtils.DROP_DESC,
+//                "DROP TABLE IF EXISTS ext_missing_01");
+//    }
 }

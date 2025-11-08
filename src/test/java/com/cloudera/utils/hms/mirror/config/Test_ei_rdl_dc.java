@@ -89,9 +89,9 @@ public class Test_ei_rdl_dc extends E2EBaseTest {
         long expected = getCheckCode(
 //                MessageCode.DISTCP_WO_TABLE_FILTERS,
 //                MessageCode.RDL_DC_WARNING_TABLE_ALIGNMENT,
-                MessageCode.LINK_TEST_SKIPPED_WITH_OPTIONS,
+                MessageCode.IGNORING_TBL_FILTERS_W_TEST_DATA,
 //                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED,
-                MessageCode.DATABASE_FILTER_CONTROLLED_BY,
+//                MessageCode.DATABASE_FILTER_CONTROLLED_BY,
                 MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED
         );
 

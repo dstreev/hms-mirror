@@ -28,6 +28,7 @@ import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
+import com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.service.*;
@@ -40,8 +41,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NOT_MATCH_DROP;
-import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
+import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -244,6 +245,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
             String sourceLocation = TableUtils.getLocation(let.getName(), let.getDefinition());
             String targetLocation = getTranslatorService().translateTableLocation(dbMirror, tableMirror, sourceLocation, 1, null);
             String importSql;
+            boolean withLocation = Boolean.FALSE;
             if (TableUtils.isACID(let)) {
                 if (!config.getMigrateACID().isDowngrade()) {
                     importSql = MessageFormat.format(MirrorConf.IMPORT_TABLE, let.getName(), importLoc);
@@ -260,10 +262,14 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                             + dbWarehouse.getExternalDirectory() +
                             "/" + getConversionResultService().getResolvedDB(dbMirror.getName()) + ".db/"
                             + tableMirror.getName();
-                    importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
-                } else {
-                    importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
                 }
+                if (config.isForceExternalLocation() || config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE) {
+                    importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE_LOCATION, let.getName(), importLoc, targetLocation);
+                    withLocation = Boolean.TRUE;
+                } else {
+                    importSql = MessageFormat.format(MirrorConf.IMPORT_EXTERNAL_TABLE, let.getName(), importLoc);
+                }
+
             }
 
             if (dropRight) {
@@ -274,6 +280,17 @@ public class ExportImportDataStrategy extends DataStrategyBase {
             if (isACIDInPlace(tableMirror, Environment.LEFT)) {
                 let.addSql(TableUtils.IMPORT_TABLE, importSql);
             } else {
+                if (withLocation && !targetLocation.startsWith(dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION))) {
+                    if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.ALIGNED) {
+                        String errMsg = MessageFormat.format(TABLE_LOCATION_NOT_ALIGNED_WITH_DB.getDesc(), sourceLocation, config.getTransfer().getStorageMigration().getTranslationType());
+                        tableMirror.addError(Environment.RIGHT, errMsg);
+                        tableMirror.setPhaseState(PhaseState.ERROR);
+                        return Boolean.FALSE;
+                    } else if (config.isForceExternalLocation() || config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.RELATIVE){
+                        String errMsg = MessageFormat.format(TABLE_LOCATION_NOT_ALIGNED_WITH_DB.getDesc(), sourceLocation, config.getTransfer().getStorageMigration().getTranslationType());
+                        tableMirror.addIssue(Environment.RIGHT, errMsg);
+                    }
+                }
                 ret.addSql(TableUtils.IMPORT_TABLE, importSql);
                 if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isLegacyHive()
                         && config.getOwnershipTransfer().isTable() && let.getOwner() != null) {

@@ -71,7 +71,8 @@ public class Test_so_rdl_dc extends E2EBaseTest {
         long actual = getReturnCode();
         // Verify the return code.
         long expected = getCheckCode(
-                MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS);
+                MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS,
+                MessageCode.WAREHOUSE_DETAILS_MISSING);
 
         assertEquals(expected, actual, "Return Code Failure: ");
 
@@ -86,8 +87,8 @@ public class Test_so_rdl_dc extends E2EBaseTest {
         // Verify the return code.
         long expected = getCheckCode(
                 MessageCode.ALIGNED_DISTCP_EXECUTE,
-                MessageCode.DATABASE_FILTER_CONTROLLED_BY,
-                MessageCode.DISTCP_WO_TABLE_FILTERS
+                MessageCode.IGNORING_TBL_FILTERS_W_TEST_DATA,
+                MessageCode.DISTCP_W_TABLE_FILTERS
                 );
 
         assertEquals(expected, actual, "Warning Code Failure: ");

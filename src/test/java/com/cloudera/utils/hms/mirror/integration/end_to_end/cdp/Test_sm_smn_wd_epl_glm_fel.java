@@ -60,6 +60,6 @@ public class Test_sm_smn_wd_epl_glm_fel extends E2EBaseTest {
     @Test
     public void tableIssueCountTest() {
         validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-                Environment.RIGHT, 3);
+                Environment.RIGHT, 2);
     }
 }

@@ -52,36 +52,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_wd_fel extends E2EBaseTest {
-    //        String[] args = new String[]{
-////                "-rdl",
-//                "-wd", "/wrehouse/tablespace/managed/hive", // should trigger warnings, but not affect location.
-//                "-ewd", "/wrehouse/tablespace/external/hive",
-////                "-glm", "/warehouse/external/hive=/chuck/me",
-//                "-fel",
-//                "-dc",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", HDP2_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,ASSORTED_TBLS_04);
-//
-//        validatePhase(resultsMirrors[0], "ext_part_01", PhaseState.CALCULATED_SQL);
-//
-//        validateTableIssueCount(resultsMirrors[0], "ext_part_01", Environment.RIGHT, 3);
-//        validateTableLocation(resultsMirrors[0], "ext_part_01", Environment.RIGHT, "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01");
+
 
     @Test
     public void issueTest_01() {
         validateTableIssueCount("assorted_test_db", "ext_part_01",
-                Environment.RIGHT, 2);
+                Environment.RIGHT, 1);
     }
 
     @Test
@@ -93,7 +69,7 @@ public class Test_so_wd_fel extends E2EBaseTest {
 
     @Test
     public void phaseTest_01() {
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
     }
 
     @Test

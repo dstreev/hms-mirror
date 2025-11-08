@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.domain.core;
 
 import com.cloudera.utils.hms.mirror.Pair;
-import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -88,7 +87,7 @@ public class DBMirror implements Cloneable {
     }
 
     public void setProperty(Environment environment, String dbProperty, String value) {
-        Map<String, String> dbDefinition = getProperty(environment);
+        Map<String, String> dbDefinition = getEnvironmentProperties(environment);
         if (isNull(dbDefinition)) {
             dbDefinition = new TreeMap<>();
             properties.put(environment, dbDefinition);
@@ -97,18 +96,18 @@ public class DBMirror implements Cloneable {
     }
 
     @JsonIgnore
-    public String getProperty(Environment environment, String dbProperty) {
+    public String getEnvironmentProperty(Environment environment, String dbProperty) {
         String rtn = null;
-        if (nonNull(getProperty(environment))) {
-            rtn = getProperty(environment).get(dbProperty);
+        if (nonNull(getEnvironmentProperties(environment))) {
+            rtn = getEnvironmentProperties(environment).get(dbProperty);
         }
         return rtn;
     }
 
     @JsonIgnore
-    public String getLocationDirectory() {
+    public String getLocationDirectory(Environment environment) {
         String location = null;
-        location = getProperty(Environment.LEFT, DB_LOCATION);
+        location = getEnvironmentProperty(environment, DB_LOCATION);
         if (nonNull(location)) {
             location = NamespaceUtils.getLastDirectory(location);
         } else {
@@ -118,9 +117,9 @@ public class DBMirror implements Cloneable {
     }
 
     @JsonIgnore
-    public String getManagedLocationDirectory() {
+    public String getManagedLocationDirectory(Environment environment) {
         String location = null;
-        location = getProperty(Environment.LEFT, DB_MANAGED_LOCATION);
+        location = getEnvironmentProperty(environment, DB_MANAGED_LOCATION);
         if (nonNull(location)) {
             location = NamespaceUtils.getLastDirectory(location);
         } else {
@@ -129,7 +128,7 @@ public class DBMirror implements Cloneable {
         return location;
     }
 
-    public Map<String, String> getProperty(Environment environment) {
+    public Map<String, String> getEnvironmentProperties(Environment environment) {
         Map<String, String> rtn = properties.get(environment);
 //        if (isNull(rtn)) {
 //            rtn = new TreeMap<>();

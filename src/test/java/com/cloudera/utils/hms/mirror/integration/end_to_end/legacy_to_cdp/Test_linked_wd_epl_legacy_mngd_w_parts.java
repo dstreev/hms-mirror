@@ -48,17 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_linked_wd_epl_legacy_mngd_w_parts extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "LINKED",
-//                "-wd", "/finance/managed-fso",
-//                "-ewd", "/finance/external-fso",
-//                "-epl",
-//                "-ltd", LEGACY_MNGD_PARTS_01, "-cfg", CDH_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -68,15 +58,5 @@ public class Test_linked_wd_epl_legacy_mngd_w_parts extends E2EBaseTest {
         assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

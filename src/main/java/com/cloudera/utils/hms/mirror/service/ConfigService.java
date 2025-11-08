@@ -42,8 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.cloudera.utils.hms.mirror.MessageCode.*;
-import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.SQL;
-import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.STORAGE_MIGRATION;
+import static com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum.*;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -330,6 +329,13 @@ public class ConfigService {
                 if (job.isSync()) {
                     job.setDisasterRecovery(Boolean.TRUE);
 //                    config.setNoPurge(Boolean.TRUE);
+                }
+                if (nonNull(conversionResult.getTargetNamespace())) {
+                    addConfigAdjustmentMessage(job.getStrategy(),
+                            "TargetNamespace",
+                            conversionResult.getTargetNamespace(),
+                            null, TARGET_NAMESPACE_WITH_LINKED.getDesc());
+                    conversionResult.getConnection(Environment.RIGHT).setHcfsNamespace(null);
                 }
                 break;
             default:
@@ -1068,12 +1074,14 @@ public class ConfigService {
         // If the target namespace is set to ofs:// and we have warehouse plans defined for movement, ensure the
         //   volume name is at least 3 characters long.
         // Validate that the targetNamespace isn't null
-        if (isNull(conversionResult.getTargetNamespace()) && job.getStrategy() != DataStrategyEnum.DUMP) {
+        if (isNull(conversionResult.getTargetNamespace())
+                && !(EnumSet.of(DUMP, LINKED).contains(job.getStrategy()))) {
             log.error("Unable to validate Target Namespace.");
             rtn.set(Boolean.FALSE);
             runStatus.addError(TARGET_NAMESPACE_NOT_DEFINED);
         } else {
-            if (conversionResult.getTargetNamespace().startsWith("ofs://")) {
+            // Prevent check when not defined.
+            if (!EnumSet.of(DUMP, LINKED).contains(job.getStrategy()) && conversionResult.getTargetNamespace().startsWith("ofs://")) {
                 //
                 for (DatasetDto.DatabaseSpec dbs : conversionResult.getDataset().getDatabases()) {
                     Warehouse wp = dbs.getWarehouse();
@@ -1201,7 +1209,7 @@ public class ConfigService {
         }
 
         // Can't LINK ACID tables. They'll need to turn ACID off.
-        if (job.getStrategy() == DataStrategyEnum.LINKED) {
+        if (job.getStrategy() == LINKED) {
             if (config.getMigrateACID().isOn()) {
                 runStatus.addError(LINKED_NO_ACID_SUPPORT);
                 rtn.set(Boolean.FALSE);
@@ -1219,7 +1227,7 @@ public class ConfigService {
 
         if (job.isSync()
                 && !(job.getStrategy() == DataStrategyEnum.SCHEMA_ONLY
-                || job.getStrategy() == DataStrategyEnum.LINKED ||
+                || job.getStrategy() == LINKED ||
                 job.getStrategy() == SQL ||
                 job.getStrategy() == DataStrategyEnum.EXPORT_IMPORT ||
                 job.getStrategy() == DataStrategyEnum.HYBRID)) {
@@ -1316,10 +1324,6 @@ public class ConfigService {
         // Test to ensure the clusters are LINKED to support underlying functions.
         switch (job.getStrategy()) {
             case LINKED:
-                if (nonNull(conversionResult.getTargetNamespace())) {
-                    runStatus.addError(COMMON_STORAGE_WITH_LINKED);
-                    rtn.set(Boolean.FALSE);
-                }
                 if (!isBlank(job.getIntermediateStorage())) {
                     runStatus.addError(INTERMEDIATE_STORAGE_WITH_LINKED);
                     rtn.set(Boolean.FALSE);

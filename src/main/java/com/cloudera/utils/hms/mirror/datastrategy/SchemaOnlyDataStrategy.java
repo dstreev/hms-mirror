@@ -132,7 +132,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                         String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                 SCHEMA_EXISTS_NO_ACTION.getDesc());
                         log.error(msg);
-                        return Boolean.FALSE;
+                        return Boolean.TRUE;
                     }
                 } else {
                     if (TableUtils.isExternalPurge(ret)) {
@@ -176,7 +176,7 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                             String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
                                     SCHEMA_EXISTS_NO_ACTION.getDesc());
                             log.error(msg);
-                            return Boolean.FALSE;
+                            return Boolean.TRUE;
                         }
                     }
                 }

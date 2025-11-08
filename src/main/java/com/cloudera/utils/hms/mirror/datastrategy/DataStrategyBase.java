@@ -323,7 +323,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                             }
 
 
-                            if (tableMirror.isReMapped()) {
+                            if (tableMirror.isReMapped() && config.getTransfer().getStorageMigration().isDistcp()) {
                                 target.addIssue(MessageCode.TABLE_LOCATION_REMAPPED.getDesc());
                             } else if (config.isForceExternalLocation()) {
                                 target.addIssue(MessageCode.TABLE_LOCATION_FORCED.getDesc());
@@ -335,6 +335,7 @@ public abstract class DataStrategyBase implements DataStrategy {
                         case SHADOW:
                         case TRANSFER:
                             if (nonNull(copySpec.getLocation())) {
+//                                if (copySpec.getLocation().startsWith(dbMirror.getLocationDirectory()))
                                 if (!TableUtils.updateTableLocation(target, copySpec.getLocation())) {
                                     rtn = Boolean.FALSE;
                                 }

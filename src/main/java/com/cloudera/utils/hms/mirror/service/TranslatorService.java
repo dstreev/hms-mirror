@@ -369,7 +369,7 @@ public class TranslatorService {
                 checkEnvTbl = tableMirror.getEnvironmentTable(Environment.LEFT);
             }
             if (TableUtils.isManaged(checkEnvTbl)) {
-                String managedLoc = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                String managedLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                 if (managedLoc != null) {
                     sbDir.append(managedLoc);
                 } else {
@@ -379,7 +379,7 @@ public class TranslatorService {
                             .append(targetDatabaseManagedDir);
                 }
             } else if (TableUtils.isExternal(checkEnvTbl)) {
-                String dbLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                String dbLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                 if (dbLoc != null) {
                     sbDir.append(dbLoc);
                 } else {
@@ -442,7 +442,7 @@ public class TranslatorService {
                                         String checkType, String newLocation, String partitionSpec, EnvironmentTable checkEnvTbl) {
 
         if (TableUtils.isExternal(checkEnvTbl)) {
-            String dbExtDir = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+            String dbExtDir = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
             if (!isBlank(dbExtDir)) {
                 dbExtDir = NamespaceUtils.stripNamespace(dbExtDir);
                 if (!testRelativeDir.startsWith(dbExtDir)) {
@@ -452,7 +452,7 @@ public class TranslatorService {
                 }
             }
         } else {
-            String managedLoc = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+            String managedLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
             if (!isBlank(managedLoc) && !newLocation.startsWith(managedLoc)) {
                 String msg = MessageFormat.format(LOCATION_NOT_MATCH_WAREHOUSE.getDesc(), checkType,
                         managedLoc, newLocation);
@@ -608,8 +608,8 @@ public class TranslatorService {
             if (sourceLocationMap != null) {
                 for (Map.Entry<TableType, Map<String, Set<String>>> sourceLocationEntry : sourceLocationMap.getLocations().entrySet()) {
                     String typeTargetLocation = null;
-                    String extTargetLocation = externalBaseLocation + "/" + dbMirror.getLocationDirectory();
-                    String mngdTargetLocation = managedBaseLocation + "/" + dbMirror.getManagedLocationDirectory();
+                    String extTargetLocation = externalBaseLocation + "/" + dbMirror.getLocationDirectory(Environment.LEFT);
+                    String mngdTargetLocation = managedBaseLocation + "/" + dbMirror.getManagedLocationDirectory(Environment.LEFT);
 
                     // Locations and the tables that are in that location.
                     for (Map.Entry<String, Set<String>> sourceLocationSet : sourceLocationEntry.getValue().entrySet()) {
@@ -677,9 +677,9 @@ public class TranslatorService {
         EnvironmentTable targetEnvTable = tableMirror.getEnvironmentTable(Environment.RIGHT);
         String originalDatabase = dbMirror.getName();
         String targetDatabase = getConversionResultService().getResolvedDB(originalDatabase); // HmsMirrorConfigUtil.getResolvedDB(originalDatabase, config);
-        String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
-        String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(), targetDatabase + ".db");
-        String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
+//        String targetDatabaseDir = getOrDefault(dbMirror.getLocationDirectory(), targetDatabase + ".db");
+        String targetDatabaseManagedDir = getOrDefault(dbMirror.getManagedLocationDirectory(Environment.RIGHT), targetDatabase + ".db");
+//        String originalTableLocation = TableUtils.getLocation(tableName, tableMirror.getEnvironmentTable(Environment.LEFT).getDefinition());
         String targetNamespace = conversionResult.getTargetNamespace();
 
         String relativeDir = NamespaceUtils.stripNamespace(originalLocation);
@@ -722,7 +722,7 @@ public class TranslatorService {
         }
 
         // Add GLM issue if mapped
-        if (glmMapping.isMapped()) {
+        if (glmMapping.isMapped() && config.getTransfer().getStorageMigration().isDistcp()) {
             issues.add("GLM applied. Original Location: " + glmMapping.getOriginalDir() +
                     " Mapped Location: " + glmMapping.getMappedDir());
         }

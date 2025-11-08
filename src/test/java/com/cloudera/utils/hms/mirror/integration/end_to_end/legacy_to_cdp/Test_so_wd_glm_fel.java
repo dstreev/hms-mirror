@@ -82,7 +82,7 @@ public class Test_so_wd_glm_fel extends E2EBaseTest {
     @Test
     public void issueTest_01() {
         validateTableIssueCount("assorted_test_db", "ext_part_01",
-                Environment.RIGHT, 4);
+                Environment.RIGHT, 444);
     }
 
     @Test
@@ -94,13 +94,10 @@ public class Test_so_wd_glm_fel extends E2EBaseTest {
 
     @Test
     public void phaseTest_01() {
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.PROCESSED);
     }
 
-    @Test
-    public void phaseTest_02() {
-        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
-    }
 
     @Test
     public void returnCodeTest() {

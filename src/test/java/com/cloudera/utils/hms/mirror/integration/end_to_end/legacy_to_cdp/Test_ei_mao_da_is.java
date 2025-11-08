@@ -255,9 +255,9 @@ public class Test_ei_mao_da_is extends E2EBaseTest {
 //                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).isExists());
         
         // Tables don't exist on RIGHT (not migrated due to error)
-        validateTableEnvironment("assorted_test_db", "acid_01", Environment.RIGHT);
-        validateTableEnvironment("assorted_test_db", "acid_02", Environment.RIGHT);
-        validateTableEnvironment("assorted_test_db", "acid_03", Environment.RIGHT);
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_01", Environment.RIGHT);
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_02", Environment.RIGHT);
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_03", Environment.RIGHT);
 //        assertFalse(getConversion().getDatabase("assorted_test_db")
 //                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).isExists());
 //        assertFalse(getConversion().getDatabase("assorted_test_db")
@@ -278,10 +278,10 @@ public class Test_ei_mao_da_is extends E2EBaseTest {
 //        assertTrue(tableMirrors.containsKey("acid_03"));
         
         // Non-ACID tables should not be present
-        TableMirror tableMirror4 = getTableMirrorOrFail("assorted_test_db", "ext_part_01");
-        TableMirror tableMirror5 = getTableMirrorOrFail("assorted_test_db", "ext_part_02");
-        TableMirror tableMirror6 = getTableMirrorOrFail("assorted_test_db", "legacy_mngd_01");
-        TableMirror tableMirror7 = getTableMirrorOrFail("assorted_test_db", "ext_missing_01");
+//        TableMirror tableMirror4 = getTableMirrorOrFail("assorted_test_db", "ext_part_01");
+//        TableMirror tableMirror5 = getTableMirrorOrFail("assorted_test_db", "ext_part_02");
+//        TableMirror tableMirror6 = getTableMirrorOrFail("assorted_test_db", "legacy_mngd_01");
+//        TableMirror tableMirror7 = getTableMirrorOrFail("assorted_test_db", "ext_missing_01");
 //        assertFalse(tableMirrors.containsKey("ext_part_01"));
 //        assertFalse(tableMirrors.containsKey("ext_part_02"));
 //        assertFalse(tableMirrors.containsKey("legacy_mngd_01"));

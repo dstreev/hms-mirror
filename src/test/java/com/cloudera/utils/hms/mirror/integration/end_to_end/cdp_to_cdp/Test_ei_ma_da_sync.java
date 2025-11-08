@@ -116,7 +116,7 @@ public class Test_ei_ma_da_sync extends E2EBaseTest {
         // LEFT side should not be modified (NOTHING)
         validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", Environment.LEFT, CreateStrategy.NOTHING);
         validateTableEnvironmentCreateStrategy("merge_files_migrate", "ext_01", Environment.LEFT, CreateStrategy.NOTHING);
-        validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", Environment.RIGHT, CreateStrategy.REPLACE);
+        validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", Environment.RIGHT, CreateStrategy.NOTHING);
         validateTableEnvironmentCreateStrategy("merge_files_migrate", "ext_01", Environment.RIGHT, CreateStrategy.NOTHING);
     }
 
@@ -127,7 +127,7 @@ public class Test_ei_ma_da_sync extends E2EBaseTest {
         validateTableIssueCount("merge_files_migrate", "ext_01", Environment.RIGHT, 1);
 
         validateSyncIssue("merge_files_migrate", "acid_01", Environment.RIGHT
-                , "Schema exists AND DOESN'T match.  Table will be dropped and re-created.");
+                , "Schema exists already and matches. No action necessary");
 
         validateSyncIssue("merge_files_migrate", "ext_01", Environment.RIGHT
                 , "Schema exists already and matches. No action necessary");
@@ -167,8 +167,8 @@ public class Test_ei_ma_da_sync extends E2EBaseTest {
 
     @Test
     public void checkNoSQLGenerated() {
-        validateTableSqlGenerated("merge_files_migrate", "acid_01", Environment.LEFT);
-        validateTableSqlGenerated("merge_files_migrate", "acid_01", Environment.RIGHT);
+        validateTableSqlNotGenerated("merge_files_migrate", "acid_01", Environment.LEFT);
+        validateTableSqlNotGenerated("merge_files_migrate", "acid_01", Environment.RIGHT);
         validateTableSqlNotGenerated("merge_files_migrate", "ext_01", Environment.LEFT);
         validateTableSqlNotGenerated("merge_files_migrate", "ext_01", Environment.RIGHT);
     }

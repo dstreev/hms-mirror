@@ -85,7 +85,7 @@ public class Test_sm extends E2EBaseTest {
         // Verify the return code.
         long expected = getCheckCode(
 //                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED,
-                MessageCode.DATASTRATEGY_FILTER_CONTROLLED_BY
+                MessageCode.IGNORING_TBL_FILTERS_W_TEST_DATA
         );
 
         assertEquals(expected, actual, "Warning Code Failure: ");

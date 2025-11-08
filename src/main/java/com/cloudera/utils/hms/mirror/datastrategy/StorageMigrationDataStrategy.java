@@ -48,7 +48,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.ACID_LOCATION_STRIPPED;
 import static com.cloudera.utils.hms.mirror.MessageCode.LOCATION_NOT_MATCH_WAREHOUSE;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
 import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
@@ -256,7 +255,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 //                    if (nonNull(warehouse)) {
                         if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                             // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                            String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                            String lclLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                             if (!isBlank(lclLoc) && !newLocation.startsWith(lclLoc)) {
                                 // Set warning that even though you've specified to warehouse directories, the current configuration
                                 // will NOT place it in that directory.
@@ -269,9 +268,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                             String location = null;
                             // Need to make adjustments for hdp3 hive 3.
                             if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
-                                location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                                location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                             } else {
-                                location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                             }
                             if (!isBlank(location) && !newLocation.startsWith(location)) {
                                 // Set warning that even though you've specified to warehouse directories, the current configuration
@@ -358,7 +357,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 //                                    hmsMirrorConfig.getTransfer().getWarehouse().getManagedDirectory() != null) {
                                 if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                                     // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                                    String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                                    String lclLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                                     if (!isBlank(lclLoc) && !newPartLocation.startsWith(lclLoc)) {
                                         // Set warning that even though you've specified to warehouse directories, the current configuration
                                         // will NOT place it in that directory.
@@ -371,9 +370,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                     String location = null;
                                     // Need to make adjustments for hdp3 hive 3.
                                     if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
-                                        location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                                        location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                                     } else {
-                                        location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                        location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                                     }
                                     if (nonNull(location) && !newPartLocation.startsWith(location)) {
                                         // Set warning that even though you've specified to warehouse directories, the current configuration
@@ -486,7 +485,7 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
 
                             if (TableUtils.isExternal(tableMirror.getEnvironmentTable(Environment.LEFT))) {
                                 // We store the DB LOCATION in the RIGHT dbDef so we can avoid changing the original LEFT
-                                String lclLoc = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                                String lclLoc = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                                 if (!isBlank(lclLoc) && !partLocation.startsWith(lclLoc)) {
                                     // Set warning that even though you've specified to warehouse directories, the current configuration
                                     // will NOT place it in that directory.
@@ -499,9 +498,9 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                                 String location = null;
                                 // Need to make adjustments for hdp3 hive 3.
                                 if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
-                                    location = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
+                                    location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
                                 } else {
-                                    location = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                                    location = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
                                 }
                                 if (nonNull(location) && !partLocation.startsWith(location)) {
                                     // Set warning that even though you've specified to warehouse directories, the current configuration

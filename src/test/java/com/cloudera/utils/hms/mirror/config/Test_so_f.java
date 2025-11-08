@@ -53,17 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 public class Test_so_f extends E2EBaseTest {
-    //        String[] args = new String[]{
-//                "-d", "SCHEMA_ONLY",
-//                "-f",
-//                "-ltd", ASSORTED_TBLS_06,
-//                "-cfg", HDP2_CDP,
-//                "-o", outputDir};
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        long check = MessageCode.NON_LEGACY_TO_LEGACY.getLong();
+
 
     @Test
     public void returnCodeTest() {
@@ -71,7 +61,9 @@ public class Test_so_f extends E2EBaseTest {
         long actual = getReturnCode();
         // Verify the return code.
         long expected = getCheckCode(
-                MessageCode.NON_LEGACY_TO_LEGACY);
+                MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS,
+                MessageCode.BUILDING_DATABASES_ISSUE,
+                MessageCode.DATABASE_CREATION);
 
         assertEquals(expected, actual, "Return Code Failure: ");
 
@@ -84,9 +76,9 @@ public class Test_so_f extends E2EBaseTest {
         long actual = getWarningCode();
         // Verify the return code.
         long expected = getCheckCode(
-//                MessageCode.DISTCP_OUTPUT_NOT_REQUESTED,
+                MessageCode.IGNORING_TBL_FILTERS_W_TEST_DATA,
                 MessageCode.RELATIVE_MANUAL,
-                MessageCode.DATABASE_FILTER_CONTROLLED_BY
+                MessageCode.WAREHOUSE_DIRECTORIES_NOT_DEFINED
         );
 
         assertEquals(expected, actual, "Warning Code Failure: ");

@@ -126,9 +126,9 @@ public class ConfigLiteDto implements Cloneable {
     public Boolean loadMetadataDetails() {
         // When we're ALIGNED and asking for DISTCP, we need to load the partition metadata.
         if (transfer != null && transfer.getStorageMigration() != null) {
-            if ((transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.ALIGNED
-                    || transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.RELATIVE)
-                    // && transfer.getStorageMigration().isDistcp()
+            if (transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.ALIGNED
+                    || (transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.RELATIVE
+                     && transfer.getStorageMigration().isDistcp())
              ) {
                 return Boolean.TRUE;
             }

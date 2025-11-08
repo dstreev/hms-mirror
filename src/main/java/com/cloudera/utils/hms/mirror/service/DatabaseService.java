@@ -444,8 +444,8 @@ public class DatabaseService {
         boolean skipManagedLocation = Boolean.FALSE;
         boolean forceLocations = Boolean.FALSE;
 
-        Map<String, String> dbPropsLeft = dbMirror.getProperty(Environment.LEFT);
-        Map<String, String> dbPropsRight = dbMirror.getProperty(Environment.RIGHT);
+        Map<String, String> dbPropsLeft = dbMirror.getEnvironmentProperties(Environment.LEFT);
+        Map<String, String> dbPropsRight = dbMirror.getEnvironmentProperties(Environment.RIGHT);
 
         switch (job.getStrategy()) {
             case DUMP:
@@ -506,11 +506,13 @@ public class DatabaseService {
                     createRight = Boolean.TRUE;
 //                    dbDefRight = new TreeMap<String, String>(dbDefLeft);
                     dbPropsRight = new TreeMap<String, String>();
+                    dbPropsRight.putAll(dbMirror.getEnvironmentProperties(Environment.LEFT));
                     dbPropsRight.put(DB_NAME, getConversionResultService().getResolvedDB(dbMirror.getName()));
                     dbMirror.setProperty(Environment.RIGHT, dbPropsRight);
                 }
                 // Force Locations to ensure DB and new tables are created in the right locations.
-                if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.ALIGNED) {
+                if (config.getTransfer().getStorageMigration().getTranslationType() == TranslationTypeEnum.ALIGNED &&
+                        job.getStrategy() != DataStrategyEnum.LINKED) {
                     forceLocations = Boolean.TRUE;
                 }
                 break;
@@ -541,10 +543,10 @@ public class DatabaseService {
             //   all other versions, LOCATION is for EXTERNAL tables and Legacy Managed Tables (Hive 1/2)
             if (conversionResult.getConnection(Environment.LEFT).getPlatformType().isHdpHive3()) {
                 log.info("HDP Hive 3 Detected.  Adjusting LOCATION to MANAGEDLOCATION.");
-                originalManagedLocation = dbMirror.getProperty(Environment.LEFT, DB_LOCATION);
+                originalManagedLocation = dbMirror.getEnvironmentProperty(Environment.LEFT, DB_LOCATION);
             } else {
-                originalLocation = dbMirror.getProperty(Environment.LEFT, DB_LOCATION);
-                originalManagedLocation = dbMirror.getProperty(Environment.LEFT, DB_MANAGED_LOCATION);
+                originalLocation = dbMirror.getEnvironmentProperty(Environment.LEFT, DB_LOCATION);
+                originalManagedLocation = dbMirror.getEnvironmentProperty(Environment.LEFT, DB_MANAGED_LOCATION);
             }
 
             String targetNamespace = null;
@@ -618,6 +620,11 @@ public class DatabaseService {
                                 targetLocation = null;
                             }
                         }
+                    } else {
+                        log.debug("Not Aligned Translation Type.  Keeping Original RELATIVE Location.");
+                        dbMirror.addIssue(Environment.RIGHT, "RELATIVE Data Movement Strategy was specified and " +
+                                "the database location MAY not aligned with the warehouse location.  " +
+                                "The database location will be set to the original RELATIVE location.");
                     }
                     if (nonNull(targetLocation)) {
                         // Add the Namespace.
@@ -643,7 +650,8 @@ public class DatabaseService {
                     targetManagedLocation = NamespaceUtils.stripNamespace(originalManagedLocation);
                     log.debug("Target Managed Location from Original Managed Location: {}", targetManagedLocation);
                     String dbDirectory = nonNull(targetManagedLocation) ? NamespaceUtils.getLastDirectory(targetManagedLocation) :
-                            nonNull(dbMirror.getLocationDirectory()) ? dbMirror.getLocationDirectory() : targetDatabase + ".db";
+                            nonNull(dbMirror.getLocationDirectory(Environment.LEFT)) ?
+                                    dbMirror.getLocationDirectory(Environment.LEFT) : targetDatabase + ".db";
 
                     // Only set to warehouse location if the translation type is 'ALIGNED',
                     //   otherwise we want to keep the same relative location.
@@ -829,6 +837,9 @@ public class DatabaseService {
                                 "removed when dropping these tables.  External non-purge table data will remain in storage.");
                     }
                     break;
+                case LINKED:
+                    // RESET TO Source
+                    targetLocation = originalLocation;
                 default:
                     /*
                     Check to see if the database already exists on the RIGHT.  If it does, we need to check the [MANAGED]LOCATION values
@@ -838,17 +849,18 @@ public class DatabaseService {
                     https://github.com/cloudera-labs/hms-mirror/issues/146
 
                      */
-                    if (dbMirror.getProperty(Environment.RIGHT) != null) {
-                        String rightLocation = dbMirror.getProperty(Environment.RIGHT, DB_LOCATION);
-                        String rightManagedLocation = dbMirror.getProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
-                        if (nonNull(rightLocation) && !rightLocation.equals(targetLocation)) {
+                    if (dbMirror.getEnvironmentProperties(Environment.RIGHT) != null) {
+                        String rightLocation = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_LOCATION);
+                        String rightManagedLocation = dbMirror.getEnvironmentProperty(Environment.RIGHT, DB_MANAGED_LOCATION);
+                        if (nonNull(rightLocation)
+                                && (!rightLocation.equals(targetLocation) || job.getStrategy() == DataStrategyEnum.LINKED)) {
                             altRightDB = Boolean.TRUE;
                         }
                         if (nonNull(rightManagedLocation) && !rightManagedLocation.equals(targetManagedLocation)) {
                             altRightDB = Boolean.TRUE;
                         }
                     }
-
+                    StringBuilder sbDef = new StringBuilder();
                     // Create the DB on the RIGHT is it doesn't exist.
                     if (createRight) {
                         log.debug("Building RIGHT DB SQL for {} -> CREATE", dbMirror.getName());
@@ -858,16 +870,24 @@ public class DatabaseService {
                         if (dbPropsLeft.get(COMMENT) != null && !dbPropsLeft.get(COMMENT).trim().isEmpty()) {
                             sbL.append(COMMENT).append(" \"").append(dbPropsLeft.get(COMMENT)).append("\"\n");
                         }
-                        dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
+                        if (!job.isConsolidateDBCreateStatements()) {
+                            dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbL.toString()));
+                        } else {
+                            sbDef.append(sbL.toString());
+                        }
                         log.trace("RIGHT DB Create SQL: {}", sbL);
                     }
 
                     if (nonNull(targetLocation) && !conversionResult.getConnection(Environment.RIGHT).getPlatformType().isHdpHive3()) {
                         String origRightLocation = dbPropsRight.get(DB_LOCATION);
                         // If the original location is null or doesn't equal the target location, set it.
-                        if (isNull(origRightLocation) || !origRightLocation.equals(targetLocation)) {
+                        if (isNull(origRightLocation) || !origRightLocation.equals(targetLocation) || job.getStrategy() == DataStrategyEnum.LINKED) {
                             String alterDbLoc = MessageFormat.format(ALTER_DB_LOCATION, targetDatabase, targetLocation);
-                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
+                            if (!job.isConsolidateDBCreateStatements()) {
+                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbLoc));
+                            } else {
+                                sbDef.append(DB_LOCATION).append(" \"").append(targetLocation).append("\"\n");
+                            }
                             dbPropsRight.put(DB_LOCATION, targetLocation);
                             log.trace("RIGHT DB Location SQL: {}", alterDbLoc);
                         }
@@ -877,19 +897,29 @@ public class DatabaseService {
                         if (isNull(origRightManagedLocation) || !origRightManagedLocation.equals(targetManagedLocation)) {
                             if (!conversionResult.getConnection(Environment.RIGHT).getPlatformType().isHdpHive3()) {
                                 String alterDbMngdLoc = MessageFormat.format(ALTER_DB_MNGD_LOCATION, targetDatabase, targetManagedLocation);
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
+                                if (!job.isConsolidateDBCreateStatements()) {
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDbMngdLoc));
+                                } else {
+                                    sbDef.append(DB_MANAGED_LOCATION).append(" \"").append(targetManagedLocation).append("\"\n");
+                                }
                                 dbPropsRight.put(DB_MANAGED_LOCATION, targetManagedLocation);
                                 log.trace("RIGHT DB Managed Location SQL: {}", alterDbMngdLoc);
                             } else {
                                 String alterDbMngdLoc = MessageFormat.format(ALTER_DB_LOCATION, targetDatabase, targetManagedLocation);
-                                dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
+                                if (!job.isConsolidateDBCreateStatements()) {
+                                    dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDbMngdLoc));
+                                } else {
+                                    sbDef.append(DB_LOCATION).append(" \"").append(targetManagedLocation).append("\"\n");
+                                }
                                 dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
                                 dbPropsRight.put(DB_LOCATION, targetManagedLocation);
                                 log.trace("RIGHT DB Managed Location SQL: {}", alterDbMngdLoc);
                             }
                         }
                     }
-
+                    if (job.isConsolidateDBCreateStatements()) {
+                        dbMirror.getSql(Environment.RIGHT).add(new Pair(CREATE_DB_DESC, sbDef.toString()));
+                    }
                     // Build the DBPROPERITES
                     // Check if the user has specified any DB Properties to skip.
                     // TODO: FIX

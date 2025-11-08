@@ -22,7 +22,6 @@ import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,8 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
-import static com.cloudera.utils.hms.mirror.MirrorConf.DB_LOCATION;
-import static com.cloudera.utils.hms.mirror.MirrorConf.DB_MANAGED_LOCATION;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 

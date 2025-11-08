@@ -79,7 +79,7 @@ public class Test_so_fel extends E2EBaseTest {
     @Test
     public void issueTest_01() {
         validateTableIssueCount("assorted_test_db", "ext_part_01",
-                Environment.RIGHT, 2);
+                Environment.RIGHT, 1);
     }
 
     @Test
@@ -91,12 +91,8 @@ public class Test_so_fel extends E2EBaseTest {
 
     @Test
     public void phaseTest_01() {
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
-    }
-
-    @Test
-    public void phaseTest_02() {
-        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.PROCESSED);
     }
 
     @Test

@@ -121,7 +121,7 @@ public class Test_so_wd_epl_dc_legacy_mngd_w_parts extends E2EBaseTest {
 
     @Test
     public void phaseTest_01() {
-        validatePhase("tpcds_bin_partitioned_orc_10", "web_sales", PhaseState.CALCULATED_SQL);
+        validatePhase("tpcds_bin_partitioned_orc_10", "web_sales", PhaseState.PROCESSED);
     }
 
     @Test
