@@ -47,13 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_dc_legacy_mngd_parts extends E2EBaseTest {
-    //        String[] args = new String[]{
-//                "--distcp",
-//                "-ltd", LEGACY_MNGD_PARTS_01,
-//                "-cfg", CDH_CDP,
-//                "-o", outputDir
-//        };
-////        args = toExecute(args, execArgs, Boolean.FALSE);
+    ////        args = toExecute(args, execArgs, Boolean.FALSE);
 //
 //        long rtn = 0;
 //        MirrorLegacy mirror = new MirrorLegacy();
@@ -68,16 +62,5 @@ public class Test_so_dc_legacy_mngd_parts extends E2EBaseTest {
         long check = 0L;
         assertEquals(check * -1, rtn, "Return Code Failure: " + rtn);
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

@@ -43,32 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_cs_rdl_dc_wd extends E2EBaseTest {
-    //    @Test
-//    public void so_cs_rdl_dc_wd() {
-//        String nameofCurrMethod = new Throwable()
-//                .getStackTrace()[0]
-//                .getMethodName();
-//
-//        String outputDir = getOutputDirBase() + nameofCurrMethod;
-//
-//        String[] args = new String[]{
-//                "-cs", "s3a://my_common_storage",
-//                "-rdl",
-//                "--distcp",
-//                "-wd", "/warehouse/managed",
-//                "-ewd", "/warehouse/external",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
-//
-//    }
 
     @Test
     public void returnCodeTest() {
@@ -78,16 +52,5 @@ public class Test_so_cs_rdl_dc_wd extends E2EBaseTest {
         long check = 0L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

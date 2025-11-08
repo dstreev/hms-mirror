@@ -28,7 +28,6 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import static com.cloudera.utils.hms.util.TableUtils.*;
-import static java.util.Objects.isNull;
 
 @Slf4j
 @Getter
@@ -40,8 +39,6 @@ public class LegacyTranslations extends BaseFeature implements Feature, Cloneabl
     private Map<String, String> rowSerde = null;
 
     // TODO: When needed... add translation for formats.
-    //    private Map<String, String> inputFormat = null;
-    //    private Map<String, String> outputFormat = null;
 
     public LegacyTranslations() {
         super();

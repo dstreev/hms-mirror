@@ -394,28 +394,6 @@ public abstract class DataStrategyBase implements DataStrategy {
                     // 6. Go through the features, if any.
                     getFeatureService().fixSchema(target);
 
-//                    if (!config.isSkipFeatures()) {
-//                        for (FeaturesEnum features : FeaturesEnum.values()) {
-//                            Feature feature = features.getFeature();
-//                            log.debug("Table: {} - Checking Feature: {}", tableMirror.getName(), features);
-//                            if (feature.fixSchema(target)) {
-//                                log.debug("Table: {} - Feature Applicable: {}", tableMirror.getName(), features);
-//                                target.addIssue("Feature (" + features + ") was found applicable and adjustments applied. " +
-//                                        feature.getDescription());
-//                            } else {
-//                                log.debug("Table: {} - Feature NOT Applicable: {}", tableMirror.getName(), features);
-//                            }
-//                        }
-//                    } else {
-//                        log.debug("Table: {} - Skipping Features Check...", tableMirror.getName());
-//                    }
-
-//                    if (config.isTranslateLegacy()) {
-//                        if (config.getLegacyTranslations().fixSchema(target)) {
-//                            log.info("Legacy Translation applied to: {}:{}", dbMirror.getName(), target.getName());
-//                        }
-//                    }
-
                     if (!copySpec.isTakeOwnership() && job.getStrategy() != DataStrategyEnum.STORAGE_MIGRATION) {
                         TableUtils.removeTblProperty(EXTERNAL_TABLE_PURGE, target);
                     }

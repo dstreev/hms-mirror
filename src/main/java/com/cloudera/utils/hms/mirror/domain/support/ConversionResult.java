@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.connections.ConnectionPools;
-import com.cloudera.utils.hms.mirror.datastrategy.DataStrategy;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
@@ -37,7 +36,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /*
@@ -197,10 +195,6 @@ public class ConversionResult {
      *
      * Moved to ConversionResultService.
      */
-//    @Deprecated(since = "4.0", forRemoval = true)
-//    public DBMirror getDatabase(String database) {
-//        return databases.get(database);
-//    }
 
     /**
      * Get ConnectionDto for a specific environment.

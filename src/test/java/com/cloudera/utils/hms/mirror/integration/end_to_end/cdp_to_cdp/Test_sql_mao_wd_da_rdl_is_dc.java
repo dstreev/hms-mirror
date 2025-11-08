@@ -33,8 +33,6 @@ import com.cloudera.utils.hms.mirror.PhaseState;
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_LOCATION_DESC;
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_MNGD_LOCATION_DESC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,

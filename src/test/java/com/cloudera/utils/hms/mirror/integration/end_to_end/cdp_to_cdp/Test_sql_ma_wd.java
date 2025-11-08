@@ -31,7 +31,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.util.TableUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 

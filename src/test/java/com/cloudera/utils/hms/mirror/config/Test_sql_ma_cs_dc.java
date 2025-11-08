@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.config;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import lombok.extern.slf4j.Slf4j;
@@ -74,8 +73,6 @@ public class Test_sql_ma_cs_dc extends E2EBaseTest {
         // Verify the return code.
         // distcp adjusted automatically.
         long expected = getCheckCode();
-//                getCheckCode(MessageCode.SQL_DISTCP_ONLY_W_DA_ACID,
-//                MessageCode.SQL_DISTCP_ACID_W_STORAGE_OPTS);
 
         assertEquals(expected, actual, "Return Code Failure: ");
 

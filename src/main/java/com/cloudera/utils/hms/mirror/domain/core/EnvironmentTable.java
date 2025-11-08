@@ -57,10 +57,6 @@ public class EnvironmentTable implements Cloneable {
         // Constructor kept for compatibility, but no longer stores parent reference
     }
 
-//    public void addAction(String action) {
-//        getActions().add(action);
-//    }
-
     public void addCleanUpSql(Pair sqlPair) {
         getCleanUpSql().add(sqlPair);
     }

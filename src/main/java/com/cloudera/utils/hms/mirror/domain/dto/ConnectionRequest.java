@@ -97,9 +97,6 @@ public class ConnectionRequest {
             if (this.config.hiveServer2 != null) {
                 HiveServer2Request hs2 = this.config.hiveServer2;
                 connectionDto.setHs2Uri(hs2.uri);
-//                connectionDto.setHs2DriverClassName(hs2.driverClassName);
-//                connectionDto.setHs2JarFile(hs2.jarFile);
-//                connectionDto.setHs2Disconnected(hs2.disconnected);
                 connectionDto.setHs2ConnectionProperties(hs2.connectionProperties);
                 
                 // Extract username and password from connection properties

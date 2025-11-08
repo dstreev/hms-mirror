@@ -104,11 +104,4 @@ public class WebConfigService {
         return configList;
     }
 
-    //    public HmsMirrorConfig getCurrentConfig() {
-    //        return executeSessionService.getHmsMirrorConfig();
-    //    }
-    //
-    //    public HmsMirrorConfig loadConfig(String configFileName) {
-    //        return executeSessionService.loadConfig(configFileName);
-    //    }
 }

@@ -17,11 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.encryption;
 
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.password.PasswordApp;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,11 +52,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_decrypt_cfg extends PasswordTestBase {
-
-//    @BeforeEach
-//    public void setup() {
-//        passwordService.decryptConfigPasswords(getExecuteSession().getConfig());
-//    }
 
 
     @Test

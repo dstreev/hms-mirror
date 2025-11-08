@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.core.api;
 
 import com.cloudera.utils.hms.mirror.core.model.*;
-import com.cloudera.utils.hms.mirror.domain.support.SerdeType;
 
 import java.util.Map;
 

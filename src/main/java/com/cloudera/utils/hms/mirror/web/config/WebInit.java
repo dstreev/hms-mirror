@@ -77,8 +77,6 @@ public class WebInit {
                 log.warn("Default config not found.");
                 // hmsMirrorConfig = new HmsMirrorConfig();
             }
-            // ExecuteSession createdSession = executeSessionService.createSession(null, hmsMirrorConfig);
-            // executeSessionService.setSession(createdSession);
         };
     }
 

@@ -17,14 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.cloudera.utils.hms.mirror.domain.support.HiveVersion.*;
 

@@ -35,7 +35,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
@@ -195,26 +194,6 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
      */
     public boolean reset() {
         boolean rtn = Boolean.TRUE;
-//        if (cancel()) {
-//            if (nonNull(errors)) {
-//                errors.clear();
-//            }
-//            if (nonNull(warnings)) {
-//                warnings.clear();
-//            }
-//            errorMessages.clear();
-//            warningMessages.clear();
-//            // Loop through the stages map and reset the values to WAITING.
-//            stages.keySet().forEach(k -> stages.put(k, CollectionEnum.WAITING));
-//            operationStatistics.reset();
-//            reportName = null;
-//            start = null;
-//            end = null;
-//            if (nonNull(inProgressTables))
-//                inProgressTables.clear();
-//        } else {
-//            rtn = Boolean.FALSE;
-//        }
         return rtn;
     }
 

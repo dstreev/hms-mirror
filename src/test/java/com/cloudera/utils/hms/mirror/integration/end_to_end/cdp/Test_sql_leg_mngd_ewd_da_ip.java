@@ -43,23 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles("e2e-cdp-sql-acid")
 @Slf4j
 public class Test_sql_leg_mngd_ewd_da_ip extends E2EBaseTest {
-    //    @Test
-//    public void sql_leg_mngd_ewd_da_ip() {
-//
-//        String[] args = new String[]{"-d", "SQL",
-//                "-da", "-ip", "-mao", "-ewd", "/my_base_loc/external",
-//                "-ltd", LEGACY_MNGD_NO_PARTS_02, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,LEGACY_MNGD_NO_PARTS_02);
-//
-//    }
 
     @Test
     public void returnCodeTest() {

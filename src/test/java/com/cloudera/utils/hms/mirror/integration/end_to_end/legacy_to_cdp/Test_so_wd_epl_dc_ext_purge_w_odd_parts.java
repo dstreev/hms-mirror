@@ -117,12 +117,6 @@ public class Test_so_wd_epl_dc_ext_purge_w_odd_parts extends E2EBaseTest {
 //        // ws_sold_date_sk=2451793: "hdfs://HOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451793"
 //        validatePartitionLocation(resultsMirrors[0], "web_sales", Environment.RIGHT, "ws_sold_date_sk=2451793", "hdfs://HOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451793");
 
-//    @Test
-//    public void partitionLocationTest_03() {
-//        validatePartitionLocation("ext_purge_odd_parts", "web_sales",
-//                Environment.RIGHT, "ws_sold_date_sk=2451793", "hdfs://HOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451793");
-//    }
-
     @Test
     public void phaseTest_01() {
         validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.PROCESSED);

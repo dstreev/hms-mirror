@@ -140,12 +140,6 @@ public class SessionManager {
         ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 
         // Not sure this is helpful.  It's possible we'll have multiple ExecuteSessions per HTTP session.
-//        if (attr != null) {
-//            HttpSession httpSession = attr.getRequest().getSession(true);
-//            httpSession.setAttribute(HTTP_SESSION_EXECUTE_SESSION_KEY, session);
-//            log.debug("Associated ExecuteSession {} with HTTP session {}",
-//                     session.getSessionId(), httpSession.getId());
-//        }
     }
 
     public boolean save(HmsMirrorConfig config, int maxThreads) throws SessionException {
@@ -166,25 +160,6 @@ public class SessionManager {
             SessionContextHolder.setSession(originalSession);
         }
     }
-
-//    public Boolean startSession(Integer concurrency) throws SessionException {
-//        return executeSessionService.startSession(concurrency);
-//    }
-//
-//    public Boolean startSession(String sessionId, Integer concurrency) throws SessionException {
-//        ExecuteSession session = getCurrentSession(sessionId);
-//        if (session == null) {
-//            throw new SessionException("Session not found: " + sessionId);
-//        }
-//
-//        ExecuteSession originalSession = SessionContextHolder.getSession();
-//        try {
-//            SessionContextHolder.setSession(session);
-//            return executeSessionService.startSession(concurrency);
-//        } finally {
-//            SessionContextHolder.setSession(originalSession);
-//        }
-//    }
 
     public void closeSession(String sessionId) throws SessionException {
         if (isBlank(sessionId) || DEFAULT_SESSION_ID.equals(sessionId)) {

@@ -49,14 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_ro extends E2EBaseTest {
-    //    String[] args = new String[]{
-    //                "-ro",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", HDP2_CDP,
-//                "-o", outputDir
-//        };
-//
-////        long rtn = ;
+    ////        long rtn = ;
 //        MirrorLegacy mirror = new MirrorLegacy();
 //        long rtn = mirror.go(args);
 //        long check = MessageCode.RO_DB_DOESNT_EXIST.getLong();
@@ -75,16 +68,5 @@ public class Test_so_ro extends E2EBaseTest {
                 MessageCode.RO_DB_DOESNT_EXIST);
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

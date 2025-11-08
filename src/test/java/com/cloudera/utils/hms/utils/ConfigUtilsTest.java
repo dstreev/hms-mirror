@@ -18,18 +18,14 @@
 
 package com.cloudera.utils.hms.utils;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.domain.support.SideType;
 import com.cloudera.utils.hms.mirror.testutils.ConversionResultTestFactory;
 import com.cloudera.utils.hms.util.ConfigUtils;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ConfigUtilsTest {

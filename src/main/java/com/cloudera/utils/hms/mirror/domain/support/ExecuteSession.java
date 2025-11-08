@@ -115,12 +115,7 @@ public class ExecuteSession implements Cloneable {
         return running;
     }
 
-//    public void clearRunStatus() {
-//        if (nonNull(runStatus)) {
-//            runStatus = null;
-//        }
-//    }
-    public RunStatus getRunStatus() {
+public RunStatus getRunStatus() {
         if (isNull(runStatus)) {
             this.runStatus = new RunStatus();
             try {

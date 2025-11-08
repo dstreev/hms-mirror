@@ -17,8 +17,6 @@
 
 package com.cloudera.utils.hms.stage;
 
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

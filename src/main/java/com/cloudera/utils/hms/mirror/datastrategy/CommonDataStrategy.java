@@ -62,17 +62,6 @@ public class CommonDataStrategy extends DataStrategyBase {
         this.tableService = tableService;
     }
 
-    //    public CommonDataStrategy(StatsCalculatorService statsCalculatorService,
-//                              ExecuteSessionService executeSessionService,
-//                              TranslatorService translatorService,
-//                              FeatureService featureService,
-//                              ConfigService configService,
-//                              TableService tableService) {
-//        super(statsCalculatorService, executeSessionService, translatorService, featureService);
-//        this.configService = configService;
-//        this.tableService = tableService;
-//    }
-
     @Override
     public Boolean buildOutDefinition(DBMirror dbMirror, TableMirror tableMirror) throws RequiredConfigurationException {
         Boolean rtn = Boolean.FALSE;

@@ -30,7 +30,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -65,22 +64,6 @@ public class Test_sm_smn_wd_epl_glm_fel_dc extends E2EBaseTest {
         long check = 0L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
-
-//    @Test
-//    public void validateSqlTest() {
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Location",
-//                "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
-//            fail("Alter Table Location not found");
-//        }
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//    }
 
     @Test
     public void validateTableLeftIssueCount() {

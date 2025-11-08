@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.*;
@@ -32,7 +31,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.N;
 import org.commonmark.Extension;
 import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
@@ -44,8 +42,6 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -101,8 +97,6 @@ public class ReportWriterService {
     }
 
     public void wrapup() {
-//        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-//        ConversionResult conversionResult = executeSessionService.getSession().getConversionResult();
         log.info("Wrapping up the Application Workflow");
 //        log.info("Setting 'running' to FALSE");
         //        executeSessionService.getSession().getRunning().set(Boolean.FALSE);
@@ -114,28 +108,13 @@ public class ReportWriterService {
         }
         log.info("Writing out report(s)");
         writeReport();
-        //        getCliReporter().refresh(Boolean.TRUE);
-        //        log.trace("==============================");
-        //        log.trace(conversion.toString());
-        //        log.trace("==============================");
-//        Date endTime = new Date();
-//        DecimalFormat df = new DecimalFormat("#.###");
-//        df.setRoundingMode(RoundingMode.CEILING);
     }
 
     public void writeReport() {
 //        TODO: Needs to be reworked for ConversionResult.
 
-//        ExecuteSession session = executeSessionService.getSession();
-//        HmsMirrorConfig config = session.getConfig();
-//        RunStatus runStatus = session.getRunStatus();
-//        runStatus.setReportName(session.getSessionId());
-//        ConversionResult conversionResult = session.getConversionResult();
-
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-//        HmsMirrorConfig hmsMirrorConfig = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-//                new IllegalStateException("HmsMirrorConfig not set."));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
                 new IllegalStateException("RunStatus not set."));
 
@@ -145,8 +124,6 @@ public class ReportWriterService {
         // Remove the abstract environments from config before reporting output.
         conversionResult.getConnections().remove(Environment.TRANSFER);
         conversionResult.getConnections().remove(Environment.SHADOW);
-//        config.getClusters().remove(Environment.TRANSFER);
-//        config.getClusters().remove(Environment.SHADOW);
 
         String reportOutputDir = conversionResult.getOutputDirectory();
         String ds = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(new Date());

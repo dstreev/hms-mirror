@@ -33,7 +33,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 class SessionManagerTest {

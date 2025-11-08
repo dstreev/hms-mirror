@@ -19,7 +19,6 @@ package com.cloudera.utils.hms.mirror.domain.core;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.support.*;
-import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -329,29 +328,6 @@ public class HmsMirrorConfig implements Cloneable {
 
     // No longer used.  Calling setupGSS in the EnvironmentService where
     // it will look at the Hadoop configs to determine if Kerberos is enabled.
-//    @JsonIgnore
-//    public boolean isHS2ConnectionKerberized() {
-//        boolean rtn = Boolean.FALSE;
-//
-//        Set<Environment> envs = getClusters().keySet();
-//        for (Environment env : envs) {
-//            Cluster cluster = getClusters().get(env);
-//            if (nonNull(cluster.getHiveServer2()) &&
-//                    cluster.getHiveServer2().isValidUri() &&
-//                    !isBlank(cluster.getHiveServer2().getUri()) &&
-//                    cluster.getHiveServer2().getUri().contains("principal")) {
-//                rtn = Boolean.TRUE;
-//            }
-//        }
-//
-//        // The connections may be through ZooKeeper so the URI may not contain the principal.
-//        // Review the hdfs configs for the cluster.
-//        if (!rtn) {
-//
-//        }
-//
-//        return rtn;
-//    }
 
 
     /*
@@ -528,22 +504,6 @@ public class HmsMirrorConfig implements Cloneable {
         return this.clone();
     }
 
-//    public void addError(MessageCode code) {
-//        getRunStatus().addError(code);
-//    }
-//
-//    public void addError(MessageCode code, Object... args) {
-//        getRunStatus().addError(code, args);
-//    }
-//
-//    public void addWarning(MessageCode code) {
-//        getRunStatus().addWarning(code);
-//    }
-//
-//    public void addWarning(MessageCode code, Object... args) {
-//        getRunStatus().addWarning(code, args);
-//    }
-
     public boolean convertManaged() {
         if (getCluster(Environment.LEFT).isLegacyHive() && !getCluster(Environment.RIGHT).isLegacyHive()) {
             return Boolean.TRUE;
@@ -636,32 +596,8 @@ public class HmsMirrorConfig implements Cloneable {
 
     // Deal with any clean up that changes the state of the config, leaving the original intact.
     // This allow us to 'reset' the config to the original state.
-//    @JsonIgnore // Needed to prevent recursion.
-//    public HmsMirrorConfig getResolvedConfig() {
-//        HmsMirrorConfig resolvedConfig = this.clone();
-//        if (resolvedConfig.isFlip()) {
-//            Cluster left = resolvedConfig.getCluster(Environment.LEFT);
-//            left.setEnvironment(Environment.RIGHT);
-//            Cluster right = resolvedConfig.getCluster(Environment.RIGHT);
-//            right.setEnvironment(Environment.LEFT);
-//            resolvedConfig.getClusters().put(Environment.RIGHT, left);
-//            resolvedConfig.getClusters().put(Environment.LEFT, right);
-//            // Need to unset this, so we don't flip again if the config is cloned.
-//            resolvedConfig.setFlip(Boolean.FALSE);
-//        }
-//        return resolvedConfig;
-//    }
 
     public void setFlip(Boolean flip) {
-//        this.flip = flip;
-//        if (this.flip) {
-//            Cluster origLeft = getCluster(Environment.LEFT);
-//            origLeft.setEnvironment(Environment.RIGHT);
-//            Cluster origRight = getCluster(Environment.RIGHT);
-//            origRight.setEnvironment(Environment.LEFT);
-//            getClusters().put(Environment.RIGHT, origLeft);
-//            getClusters().put(Environment.LEFT, origRight);
-//        }
     }
 
     @JsonIgnore

@@ -19,8 +19,6 @@ package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
-import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
@@ -72,17 +70,6 @@ public class ConnectionPoolsHybridImpl extends ConnectionPoolsBase implements Co
 
                             // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
                             // TODO: Fix for encrypted passwords.
-                            /*
-                            if (executeSession.getConfig().isEncryptedPasswords()) {
-                                if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
-                                    String encryptedPassword = connProperties.getProperty("password");
-                                    String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
-                                    connProperties.setProperty("password", decryptedPassword);
-                                } else {
-                                    throw new SessionException("Passwords encrypted, but no password key present.");
-                                }
-                            }
-                             */
 
                             // Make a copy.
                             Properties connProperties = new Properties();

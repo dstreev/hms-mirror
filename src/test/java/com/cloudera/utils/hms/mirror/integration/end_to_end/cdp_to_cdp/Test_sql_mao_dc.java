@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.integration.end_to_end.cdp_to_cdp;
 
-import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.cli.Mirror;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
@@ -77,16 +76,12 @@ public class Test_sql_mao_dc extends E2EBaseTest {
                 "FROM hms_mirror_shadow_acid_01 INSERT OVERWRITE TABLE acid_01 SELECT *");
         validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_LOCATION_DESC,
                 "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\"");
-//        validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_MNGD_LOCATION_DESC,
-//                "ALTER DATABASE assorted_test_db SET MANAGEDLOCATION \"hdfs://HOME90/warehouse/managed/assorted_test_db.db\"");
     }
 
     @Test
     public void dbLocationTest() {
         validateDBLocation("assorted_test_db", Environment.RIGHT,
                 "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
-//        validateDBManagedLocation("assorted_test_db", Environment.RIGHT,
-//                "hdfs://HOME90/warehouse/managed/assorted_test_db.db");
     }
 
     @Test

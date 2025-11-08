@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
-
 /**
  * Implementation of DBMirrorRepository that persists DBMirror instances to RocksDB.
  * <p>
@@ -78,9 +76,6 @@ public class DBMirrorRepositoryImpl extends AbstractRocksDBRepository<DBMirror, 
     @Override
     public void deleteByConversionKey(String conversionResultKey) throws RepositoryException {
         // Use full prefix including KEY_PREFIX to avoid picking up non-DBMirror records
-//        String prefix = KEY_PREFIX + conversionResultKey + DATABASE_PREFIX;
-
-//        Map<String, DBMirror> dbMirrors = findByConversionKey(conversionResultKey);
 
         try (RocksIterator iterator = rocksDB.newIterator(columnFamily)) {
             // Seek directly to the full prefix for efficiency

@@ -17,12 +17,10 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.support.DriverType;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.util.DriverShim;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

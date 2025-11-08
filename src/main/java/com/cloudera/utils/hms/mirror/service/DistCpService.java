@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.EnvironmentMap;
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
@@ -103,8 +102,6 @@ public class DistCpService {
             throw new RuntimeException(e);
         }
         for (String originalDatabase : databases) {
-//            String database = getConversionResultService().getResolvedDB(dbEntry.getKey());
-//            String originalDatabase = dbEntry.getKey();
 
             try {
                 Environment[] environments = null;

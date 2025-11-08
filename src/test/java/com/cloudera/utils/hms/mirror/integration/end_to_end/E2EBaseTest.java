@@ -152,10 +152,6 @@ public class E2EBaseTest {
         return expected * -1;
     }
 
-//    protected RunStatus getProgression() {
-//        return HMSMirrorAppService.getRunStatus();
-//    }
-
     protected DBMirror[] getResults(String outputDirBase, String sourceTestDataSet) {
         List<DBMirror> dbMirrorList = new ArrayList<>();
         System.out.println("Source Dataset: " + sourceTestDataSet);
@@ -757,8 +753,6 @@ public class E2EBaseTest {
         EnvironmentTable envTable = tableMirror.getEnvironmentTable(expectedEnvironment);
         assertNotNull(envTable, String.format("Environment table is null for %s.%s in %s", database, tableName, expectedEnvironment));
         // Validate envTable definition is not empty.
-//        assertFalse(envTable.getDefinition().isEmpty(),
-//                "The table should have a definition, but doesn't. Database: " + database + ", Table: " + tableName + ", Environment: " + expectedEnvironment);
         boolean found = Boolean.FALSE;
         for (String line : envTable.getAddProperties().keySet()) {
             if (line.contains(expectedAddPropertyKey)) {

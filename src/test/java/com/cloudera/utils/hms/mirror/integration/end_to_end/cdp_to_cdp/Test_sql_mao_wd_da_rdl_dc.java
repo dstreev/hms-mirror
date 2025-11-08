@@ -85,8 +85,6 @@ public class Test_sql_mao_wd_da_rdl_dc extends E2EBaseTest {
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_02");
         validateWorkingTableLocation("assorted_test_db", "acid_02", "hms_mirror_shadow_acid_02", Environment.SHADOW,
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_02");
-//        validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
-//                null);
     }
 
 }

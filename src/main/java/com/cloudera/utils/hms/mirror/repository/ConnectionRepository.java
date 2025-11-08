@@ -20,9 +20,6 @@ package com.cloudera.utils.hms.mirror.repository;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
-import java.util.List;
-import java.util.Optional;
-
 /**
  * Repository interface for Connection persistence operations.
  * Extends the base RocksDBRepository with Connection-specific operations.

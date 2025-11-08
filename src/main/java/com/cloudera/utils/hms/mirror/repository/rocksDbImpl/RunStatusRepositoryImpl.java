@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.repository.rocksDbImpl;
 
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;

@@ -19,8 +19,6 @@ package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
-import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.PasswordService;
 import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
@@ -72,17 +70,6 @@ public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements Con
 
                             // If the ExecuteSession has the 'passwordKey' set, resolve Encrypted PasswordApp first.
                             // TODO: Fix for encrypted passwords.
-                            /*
-                            if (executeSession.getConfig().isEncryptedPasswords()) {
-                                if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
-                                    String encryptedPassword = connProperties.getProperty("password");
-                                    String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
-                                    connProperties.setProperty("password", decryptedPassword);
-                                } else {
-                                    throw new SessionException("Passwords encrypted, but no password key present.");
-                                }
-                            }
-                             */
 
                             // Make a copy.
                             Properties connProperties = new Properties();
@@ -157,17 +144,6 @@ public class ConnectionPoolsDBCP2Impl extends ConnectionPoolsBase implements Con
                 connProperties.put("password", connection.getMetastoreDirectPassword());
 
                 // TODO: Fix for encrypted passwords.
-                /*
-                if (executeSession.getConfig().isEncryptedPasswords()) {
-                    if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
-                        String encryptedPassword = connProperties.getProperty("password");
-                        String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
-                        connProperties.setProperty("password", decryptedPassword);
-                    } else {
-                        throw new SessionException("Passwords encrypted, but no password key present.");
-                    }
-                }
-                 */
 
                 // Attempt to get the Driver Version for the Metastore Direct Connection.
                 try {

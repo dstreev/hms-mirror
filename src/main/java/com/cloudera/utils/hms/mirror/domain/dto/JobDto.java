@@ -67,21 +67,14 @@ public class JobDto implements Cloneable {
     private String loadTestDataFile = null;
     private boolean skipLinkCheck = Boolean.FALSE;
 
-//    private boolean replace = Boolean.FALSE;
-
-//    @Schema(description = "Flag to indicate if this job should reset the right table")
-//    private boolean resetRight = Boolean.FALSE;
-
     /*
-    When True, this will set the 'readOnly' and 'noPurge' legacy flags where appropriate.
-    TODO: WIP
-     */
+        When True, this will set the 'readOnly' and 'noPurge' legacy flags where appropriate.
+        TODO: WIP
+         */
     @Schema(description = "Flag to indicate if this job is for disaster recovery purposes")
     private boolean disasterRecovery = Boolean.FALSE;
 
     // Set by disasterRecovery.
-    //    @Schema(description = "When set, the table purge option will be removed.")
-//    private boolean noPurge = Boolean.FALSE;
 
     @Schema(description = "Flag to indicate if this job should perform a sync operation, only available if" +
             "the disasterRecovery flag is set to true")

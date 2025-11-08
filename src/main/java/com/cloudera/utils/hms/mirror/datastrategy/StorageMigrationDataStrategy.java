@@ -642,10 +642,6 @@ public class StorageMigrationDataStrategy extends DataStrategyBase {
                     }
                 }
             }
-//            if (rtn) {
-//                // Run the Transfer Scripts
-//                rtn = tableService.runTableSql(tableMirror, Environment.LEFT);
-//            }
         } catch (MissingDataPointException | RequiredConfigurationException e) {
             log.error(MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getDesc(), e);
             let.addError(MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getDesc());

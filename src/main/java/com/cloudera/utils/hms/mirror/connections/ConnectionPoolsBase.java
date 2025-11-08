@@ -117,14 +117,6 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
     }
 
 
-//    public void addHiveServer2(Environment environment, HiveServer2Config hiveServer2) {
-//        hiveServerConfigs.put(environment, hiveServer2);
-//    }
-//
-//    public void addMetastoreDirect(Environment environment, DBStore dbStore) {
-//        metastoreDirectConfigs.put(environment, dbStore);
-//    }
-
     public synchronized Connection getHS2EnvironmentConnection(Environment environment) throws SQLException {
         Driver lclDriver = getHS2EnvironmentDriver(environment);
         Connection conn = null;
@@ -199,17 +191,6 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
                 connProperties.put("password", connection.getMetastoreDirectPassword());
 
                 // TODO: Fix for encrypted passwords.
-                /*
-                if (executeSession.getConfig().isEncryptedPasswords()) {
-                    if (nonNull(executeSession.getConfig().getPasswordKey()) && !executeSession.getConfig().getPasswordKey().isEmpty()) {
-                        String encryptedPassword = connProperties.getProperty("password");
-                        String decryptedPassword = passwordService.decryptPassword(executeSession.getConfig().getPasswordKey(), encryptedPassword);
-                        connProperties.setProperty("password", decryptedPassword);
-                    } else {
-                        throw new SessionException("Passwords encrypted, but no password key present.");
-                    }
-                }
-                 */
 
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl(connection.getMetastoreDirectUri());

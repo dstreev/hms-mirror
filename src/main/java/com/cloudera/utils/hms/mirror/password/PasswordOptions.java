@@ -34,31 +34,6 @@ import org.springframework.core.annotation.Order;
 @Setter
 public class PasswordOptions {
 
-//    @Bean
-//    @Order(1)
-//    @ConditionalOnProperty(prefix = "hms-mirror",
-//            name = "config.filename",
-//            matchIfMissing = true)
-//    HmsMirrorConfig loadHmsMirrorConfigFromFile(@Value("${hms-mirror.config.filename}") String configFilename) {
-//        HmsMirrorConfig hmsMirrorConfig;
-//        try {
-//            hmsMirrorConfig = HmsMirrorConfig.loadConfig(configFilename);
-//        } catch(RuntimeException rte) {
-//            // Couldn't locate the config file.
-//            log.error("Couldn't locate the config file: {}. Creating empty hmsMirrorConfig object", configFilename);
-//            hmsMirrorConfig = new HmsMirrorConfig();
-//        }
-//        return hmsMirrorConfig;
-//    }
-
-//    @Bean
-//    ExecuteSession executeSession(HmsMirrorConfig hmsMirrorConfig) {
-//        ExecuteSession executeSession = new ExecuteSession();
-//        executeSession.setRunStatus(new RunStatus());
-//        executeSession.setConfig(hmsMirrorConfig);
-//        return executeSession;
-//    }
-
     @Bean("password")
     @Order(1)
     Password configPasswordInstance() {
@@ -88,8 +63,6 @@ public class PasswordOptions {
             log.info("password: {}", "********");
             password.setValue(value);
             password.setConversion(Password.Conversion.ENCRYPT);
-//            executeSession.setPassword(value);
-//            hmsMirrorConfig.setPassword(value);
         };
     }
 
@@ -101,8 +74,6 @@ public class PasswordOptions {
         return args -> {
             log.info("password-key: {}", value);
             password.setPasswordKey(value);
-//            executeSession.setPasswordKey(value);
-//            hmsMirrorConfig.setPasswordKey(value);
         };
     }
 

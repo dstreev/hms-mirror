@@ -53,10 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_encrypt_02 extends PasswordTestBase {
-//        String[] args = new String[]{"-pkey", PKEY,
-//                "-p", "myspecialpassword",
-//                "-cfg", ENCRYPTED
-//        };
 
     @Test
     public void validateEncryptPassword() throws EncryptionException {

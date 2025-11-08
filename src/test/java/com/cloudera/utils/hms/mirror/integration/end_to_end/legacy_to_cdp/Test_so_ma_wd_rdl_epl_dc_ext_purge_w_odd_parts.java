@@ -72,15 +72,4 @@ public class Test_so_ma_wd_rdl_epl_dc_ext_purge_w_odd_parts extends E2EBaseTest 
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
-
 }

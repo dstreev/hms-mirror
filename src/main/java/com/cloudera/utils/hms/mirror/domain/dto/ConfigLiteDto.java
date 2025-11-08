@@ -26,7 +26,6 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 /**
  * Lightweight DTO for HMS Mirror Configuration storage in RocksDB.
@@ -76,8 +75,6 @@ public class ConfigLiteDto implements Cloneable {
 
 //    private boolean quiet = Boolean.FALSE;
     // These features don't make sense.  May add back later.
-//    private boolean skipFeatures = Boolean.FALSE;
-//    private boolean skipLegacyTranslation = Boolean.FALSE;
 
     // Additional cluster settings
     private boolean createIfNotExists = Boolean.TRUE;
@@ -91,8 +88,6 @@ public class ConfigLiteDto implements Cloneable {
 
     // File and data handling
     private boolean copyAvroSchemaUrls = Boolean.FALSE;
-//    private boolean dumpTestData = Boolean.FALSE;
-//    private String loadTestDataFile = null;
 
     /**
      * Force external location in table DDLs.

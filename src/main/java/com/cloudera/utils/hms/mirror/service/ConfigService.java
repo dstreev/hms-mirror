@@ -79,9 +79,6 @@ public class ConfigService {
     private final DomainService domainService;
     @NonNull
     private final CliEnvironment cliEnvironment;
-//    @NonNull
-//    private final ExecuteSessionService executeSessionService;
-//    private TranslatorService translatorService;
 
     /**
      * Constructor for ConfigService.
@@ -355,25 +352,6 @@ public class ConfigService {
         }
 
         // No longer needed.  We're approaching this from a Dataset Perspective
-        /*
-        if (config.loadMetadataDetails()) {
-            switch (config.getDatabaseFilterType()) {
-                case WAREHOUSE_PLANS:
-                    // Need to ensure we have Warehouse Plans and Databases are in sync.
-                    config.getDatabases().clear();
-                    if (!config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
-                        for (Map.Entry<String, Warehouse> warehousePlan : config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().entrySet()) {
-                            config.getDatabases().add(warehousePlan.getKey());
-                        }
-                    }
-                    break;
-                case MANUAL:
-                case REGEX:
-                case UNDETERMINED:
-                    break;
-            }
-        }
-         */
 
         // Check for the unsupport Migration Scenarios
         // ==============================================================================================================
@@ -703,13 +681,6 @@ public class ConfigService {
 //        HmsMirrorConfig config = session.getConfig();
 
         // TODO: Fix for encrypted passwords
-//        if (config.isEncryptedPasswords()) {
-//            runStatus.addWarning(PASSWORDS_ENCRYPTED);
-//            if (isNull(config.getPasswordKey()) || config.getPasswordKey().isEmpty()) {
-//                runStatus.addError(PKEY_PASSWORD_CFG);
-//                rtn = Boolean.FALSE;
-//            }
-//        }
 
         List<Environment> envList = Arrays.asList(Environment.LEFT, Environment.RIGHT);
         Set<Environment> envSet = new TreeSet<>(envList);
@@ -936,28 +907,6 @@ public class ConfigService {
         if (!conversionResult.isMockTestDataset()) {
             Environment[] envs = Environment.getVisible();
             /* Under the idea, the jar files will be static or known, so no need to validate them. */
-            /*
-            for (Environment env : envs) {
-                Cluster cluster = config.getCluster(env);
-                if (nonNull(cluster)) {
-                    if (nonNull(cluster.getHiveServer2())) {
-                        if (isBlank(cluster.getHiveServer2().getJarFile())) {
-                            runStatus.addError(HS2_DRIVER_JARS_MISSING, env);
-                            rtn.set(Boolean.FALSE);
-                        } else {
-                            String[] jarFiles = cluster.getHiveServer2().getJarFile().split("\\:");
-                            // Go through each jar file and validate it exists.
-                            for (String jarFile : jarFiles) {
-                                if (!new File(jarFile).exists()) {
-                                    runStatus.addError(HS2_DRIVER_JAR_NOT_FOUND, jarFile, env);
-                                    rtn.set(Boolean.FALSE);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-             */
         }
 
         // Set distcp options.
@@ -1096,21 +1045,6 @@ public class ConfigService {
                         rtn.set(Boolean.FALSE);
                     }
                 }
-//            if (!config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().isEmpty()) {
-//                RunStatus finalRunStatus = runStatus;
-//                config.getTranslator().getWarehouseMapBuilder().getWarehousePlans().forEach((k, v) -> {
-//                    String externalDirectory = v.getExternalDirectory();
-//                    String managedDirectory = v.getManagedDirectory();
-//                    if (nonNull(externalDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(externalDirectory)).length() < 3) {
-//                        finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
-//                        rtn.set(Boolean.FALSE);
-//                    }
-//                    if (nonNull(managedDirectory) && Objects.requireNonNull(NamespaceUtils.getFirstDirectory(managedDirectory)).length() < 3) {
-//                        finalRunStatus.addError(OZONE_VOLUME_NAME_TOO_SHORT);
-//                        rtn.set(Boolean.FALSE);
-//                    }
-//                });
-//            }
             }
         }
 
@@ -1133,35 +1067,6 @@ public class ConfigService {
 
         // Messages about what controls the way the databases are filtered.
         // TODO: Since we're using Datasets, I don't think this is needed.
-        /*
-        switch (job.getStrategy()) {
-            case STORAGE_MIGRATION:
-                runStatus.addWarning(DATASTRATEGY_FILTER_CONTROLLED_BY, job.getStrategy().toString(), "Warehouse Plans");
-                break;
-            case DUMP:
-            case SCHEMA_ONLY:
-            case SQL:
-            case EXPORT_IMPORT:
-            case HYBRID:
-            case COMMON:
-            case LINKED:
-            default:
-                switch (config.getDatabaseFilterType()) {
-                    case MANUAL:
-                        runStatus.addWarning(DATABASE_FILTER_CONTROLLED_BY, "Manual Database Input");
-                        break;
-                    case WAREHOUSE_PLANS:
-                        runStatus.addWarning(DATABASE_FILTER_CONTROLLED_BY, "Warehouse Plans");
-                        break;
-                    case REGEX:
-                        runStatus.addWarning(DATABASE_FILTER_CONTROLLED_BY, "RegEx Filter");
-                        break;
-                    case UNDETERMINED:
-                        break;
-                }
-                break;
-        }
-         */
 
         AtomicBoolean tableFilterWarning = new AtomicBoolean(false);
 
@@ -1274,47 +1179,10 @@ public class ConfigService {
 
         // Check to ensure the Target Namespace is available.
         // TODO: Review this.
-        /*
-        try {
-            // Under this condition, there isn't a RIGHT cluster defined. So skip the check.
-            String targetNamespace = null;
-            switch (job.getStrategy()) {
-                case DUMP:
-                    // No check needed.
-                    break;
-                case EXPORT_IMPORT:
-                case SQL:
-                    if (configLite.getMigrateACID().isInplace()) {
-                        break;
-                    } else {
-                        targetNamespace = configLite.getTargetNamespace();
-                    }
-                default:
-                    targetNamespace = config.getTargetNamespace();
-                    break;
-            }
-        } catch (RequiredConfigurationException e) {
-            runStatus.addError(TARGET_NAMESPACE_NOT_DEFINED);
-            rtn.set(Boolean.FALSE);
-        }
-         */
 
         // Because some just don't get that you can't do this...
         // Check that the external and managed warehouse locations aren't the same.  hive won't allow this.
         // TODO: Fix
-        /*
-        if (nonNull(config.getTransfer().getWarehouse())) {
-            if ((!isBlank(config.getTransfer().getWarehouse().getManagedDirectory())) &&
-                    (!isBlank(config.getTransfer().getWarehouse().getExternalDirectory()))) {
-                // Make sure these aren't set to the same location.
-                if (config.getTransfer().getWarehouse().getManagedDirectory().equals(config.getTransfer().getWarehouse().getExternalDirectory())) {
-                    runStatus.addError(WAREHOUSE_DIRS_SAME_DIR, config.getTransfer().getWarehouse().getExternalDirectory()
-                            , config.getTransfer().getWarehouse().getManagedDirectory());
-                    rtn.set(Boolean.FALSE);
-                }
-            }
-        }
-         */
 
         if (job.getStrategy() == DataStrategyEnum.ACID) {
             runStatus.addError(ACID_NOT_TOP_LEVEL_STRATEGY);
@@ -1334,54 +1202,15 @@ public class ConfigService {
                 // Only do link test when NOT using intermediate storage.
                 // Downgrade inplace is a single cluster effort.
                 // TODO: Review and Fix
-                /*
-                if (!config.getMigrateACID().isInplace()) {
-                    if (conversionResult.getConnection(Environment.RIGHT).getHiveServer2() != null
-                            && !config.getCluster(Environment.RIGHT).getHiveServer2().isDisconnected()
-                            && isBlank(config.getTransfer().getIntermediateStorage())
-                    ) {
-
-                        try {
-                            if (!config.getMigrateACID().isInplace() && !linkTest(session, cli)) {
-                                runStatus.addError(LINK_TEST_FAILED);
-                                rtn.set(Boolean.FALSE);
-                            }
-                        } catch (DisabledException e) {
-                            log.error("Link Test Skipped because the CLI Interface is disabled.");
-                            runStatus.addError(LINK_TEST_FAILED);
-                            rtn.set(Boolean.FALSE);
-                        }
-                    } else {
-                        runStatus.addWarning(LINK_TEST_SKIPPED_WITH_OPTIONS);
-                    }
-                }
-                 */
                 break;
             case SCHEMA_ONLY:
                 if (config.isCopyAvroSchemaUrls()) {
                     log.info("CopyAVROSchemaUrls is TRUE, so the cluster must be linked to do this.  Testing...");
                     // TODO: Review
-                        /*
-                    try {
-                        if (!linkTest(session, cli)) {
-                            runStatus.addError(LINK_TEST_FAILED);
-                            rtn.set(Boolean.FALSE);
-                        }
-                    } catch (DisabledException e) {
-                        log.error("Link Test Skipped because the CLI Interface is disabled.");
-                        runStatus.addError(LINK_TEST_FAILED);
-                        rtn.set(Boolean.FALSE);
-                    }
-                         */
                 }
                 break;
             case DUMP:
                 // TODO: Review, I don't think we need this anymore.
-                /*
-                if (config.getDumpSource() == Environment.RIGHT) {
-                    runStatus.addWarning(DUMP_ENV_FLIP);
-                }
-                */
             case COMMON:
                 break;
             case CONVERT_LINKED:
@@ -1394,20 +1223,6 @@ public class ConfigService {
         }
 
         // TODO: Review
-        /*
-        if (job.isReplace()) {
-            if (job.getStrategy() != SQL) {
-                runStatus.addError(REPLACE_ONLY_WITH_SQL);
-                rtn.set(Boolean.FALSE);
-            }
-            if (configLite.getMigrateACID().isOn()) {
-                if (!configLite.getMigrateACID().isDowngrade()) {
-                    runStatus.addError(REPLACE_ONLY_WITH_DA);
-                    rtn.set(Boolean.FALSE);
-                }
-            }
-        }
-         */
 
         if (job.isReadOnly()) {
             switch (job.getStrategy()) {
@@ -1423,14 +1238,6 @@ public class ConfigService {
         }
 
         // TODO: Review
-        /*
-        if (config.getCluster(Environment.RIGHT) != null) {
-            if (job.getStrategy() != DataStrategyEnum.SCHEMA_ONLY &&
-                    configLite.isCreateIfNotExists()) {
-                runStatus.addWarning(CINE_WITH_DATASTRATEGY);
-            }
-        }
-        */
 
         /* TODO: Review? Wasn't enabled before.
         if (config.getTranslator().getOrderedGlobalLocationMap() != null) {

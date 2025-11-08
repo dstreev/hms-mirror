@@ -251,9 +251,7 @@ public class TranslatorService {
             
             // Exclude mismatch scenario tests that are designed to test failure cases
             // TODO: Fix
-//            boolean isMismatchScenario = config.getOutputDirectory() != null &&
-//                                       config.getOutputDirectory().contains("mismatch");
-            
+
             if ((hasSuccessfulGLMRemapping || isSchemaOnlyWithPartitions)
                     // TODO: Fix
 //                    && !isMismatchScenario
@@ -316,14 +314,6 @@ public class TranslatorService {
 
         String origNamespace = NamespaceUtils.getNamespace(originalLocation);
         // TODO: Fix
-        /*
-        if (config.getDataStrategy() == DataStrategyEnum.STORAGE_MIGRATION
-                && origNamespace.equals(config.getTransfer().getTargetNamespace())) {
-            tableMirror.setPhaseState(PhaseState.ERROR);
-            throw new MissingDataPointException("Location Mapping can't be determined.  No matching `glm` entry to make translation." +
-                    "Original Location: " + originalLocation);
-        }
-        */
     }
 
     /**

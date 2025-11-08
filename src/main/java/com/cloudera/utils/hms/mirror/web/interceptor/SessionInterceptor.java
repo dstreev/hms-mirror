@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.web.interceptor;
 
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.SessionContextHolder;
 import com.cloudera.utils.hms.mirror.service.SessionManager;
 import lombok.extern.slf4j.Slf4j;

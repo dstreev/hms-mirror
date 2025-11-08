@@ -176,9 +176,6 @@ public class LinkedDataStrategy extends DataStrategyBase {
         }
 
         // Execute the RIGHT sql if config.execute.
-//        if (rtn) {
-//            rtn = tableService.runTableSql(tableMirror, Environment.RIGHT);
-//        }
 
         return rtn;
 

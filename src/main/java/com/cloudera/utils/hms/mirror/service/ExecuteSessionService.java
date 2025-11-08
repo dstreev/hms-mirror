@@ -219,58 +219,5 @@ public class ExecuteSessionService {
         This allow us to keep the current and active sessionHistory separate.  The active session is the
         one that will be referenced during the run.
      */
-//    public Boolean startSession(Integer concurrency) throws SessionException {
-//        Boolean rtn = Boolean.TRUE;
-//
-//         ExecuteSession session = getSession();
-//        // Set the concurrency.
-//        session.setConcurrency(concurrency);
-//
-//        if (session.isRunning()) {
-//            throw new SessionException("Session is still running.  Cannot transition to active.");
-//        }
-//
-//        // Will create new RunStatus and set version info.
-//        RunStatus runStatus = new RunStatus();
-//        runStatus.setConcurrency(concurrency);
-//        // Link the RunStatus to the session so users know what session details to retrieve.
-//        runStatus.setSessionId(session.getSessionId());
-//        runStatus.setProgress(ProgressEnum.STARTED);
-//
-//        // Reset for each transition.
-//        // Set the active session id to the current date and time, only if not already set.
-//        if (session.getSessionId() == null || session.getSessionId().equals("default")) {
-//            DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-//            session.setSessionId(dtf.format(new Date()));
-//        }
-//
-//        // If it's connected (Active Session), don't go through all this again.
-//        log.debug("Configure and setup Session");
-//        HmsMirrorConfig config = session.getConfig();
-//
-//        // TODO: Set Metastore Direct Concurrency.
-//
-//        // Connection Service should be set to the resolved config.
-//        connectionPoolService.setExecuteSession(session);
-//
-//        try {
-//            runStatus.setAppVersion(Manifests.read("HMS-Mirror-Version"));
-//        } catch (IllegalArgumentException iae) {
-//            runStatus.setAppVersion("Unknown");
-//        }
-//        // Set/Reset the run status.
-//        session.setRunStatus(runStatus);
-//
-//        // New Conversion object for each run.
-//        session.setConversionResult(new ConversionResult());
-//
-//        // Register session for keep-alive during execution
-//        if (sessionKeepAliveService != null) {
-//            sessionKeepAliveService.registerRunningSession(session.getSessionId());
-//            log.debug("Registered session {} for keep-alive during execution", session.getSessionId());
-//        }
-//
-//        return rtn;
-//    }
 
 }

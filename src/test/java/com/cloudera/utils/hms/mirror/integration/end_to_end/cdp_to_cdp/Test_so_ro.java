@@ -33,8 +33,6 @@ import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -72,18 +70,11 @@ public class Test_so_ro extends E2EBaseTest {
     public void statisticsValidationTest() {
         // Validate operation statistics based on test output
         validateTableCount("assorted_test_db", 4);
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-//        assertEquals(4,
-//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Should have 4 tables discovered in read-only mode");
     }
 
     @Test
     public void phaseValidationTest() {
         // Validate phase state from test output - read-only reaches CALCULATED_SQL
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
-//        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
-//                "Must have tables to validate phases");
 
         Map<String, TableMirror> TableMap = null;
         try {
@@ -92,8 +83,6 @@ public class Test_so_ro extends E2EBaseTest {
             throw new RuntimeException(e);
         }
         String firstTable = TableMap.keySet().iterator().next();
-//        String firstTable = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().keySet().iterator().next();
         validatePhase("assorted_test_db", firstTable, PhaseState.CALCULATED_SQL);
     }
 

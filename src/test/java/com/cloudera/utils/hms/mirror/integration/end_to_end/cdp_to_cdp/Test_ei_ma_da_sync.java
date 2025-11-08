@@ -177,12 +177,6 @@ public class Test_ei_ma_da_sync extends E2EBaseTest {
     public void checkPhaseSummary() {
         // Validate phase summary shows 2 tables in CALCULATED_SQL phase
         // TODO: Fix, if still applicable
-        /*
-        var phaseSummary = getConversion().getDatabase("merge_files_migrate").getPhaseSummary();
-        assertNotNull(phaseSummary);
-        assertEquals(2, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(),
-                "Should have 2 tables in CALCULATED_SQL phase");
-         */
     }
 
 }

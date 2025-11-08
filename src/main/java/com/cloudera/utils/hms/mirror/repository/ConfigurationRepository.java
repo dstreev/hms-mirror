@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.repository;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
-import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 
 import java.util.List;

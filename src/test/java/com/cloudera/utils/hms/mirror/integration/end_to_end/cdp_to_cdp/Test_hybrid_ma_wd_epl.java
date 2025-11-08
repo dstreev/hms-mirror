@@ -83,13 +83,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         validateTableStrategy("assorted_test_db", "acid_02", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.ACID);
 
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02").getStrategy().toString());
-//        // acid_03 is partitioned ACID table and uses ACID strategy
-//        assertEquals("ACID", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getStrategy().toString());
     }
 
     @Test
@@ -100,13 +93,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         validateTableStrategy("assorted_test_db", "ext_part_02", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "legacy_mngd_01", DataStrategyEnum.EXPORT_IMPORT);
 
-//        assertEquals("SQL", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getStrategy().toString());
-//        // Non-partitioned tables use EXPORT_IMPORT
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
     }
 
     @Test
@@ -114,16 +100,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         // Database should be aligned to external warehouse directory
         validateDBSqlAction("assorted_test_db", RIGHT, "ALTER DATABASE assorted_test_db SET LOCATION");
         validateDBSqlAction("assorted_test_db", RIGHT, "/finance/ext-hive/assorted_test_db.db");
-//        var dbSql = getConversion().getDatabase("assorted_test_db").getSql(Environment.RIGHT);
-//        boolean foundDbLocation = false;
-//        for (var pair : dbSql) {
-//            if (pair.getAction().contains("ALTER DATABASE assorted_test_db SET LOCATION") &&
-//                pair.getAction().contains("/finance/ext-hive/assorted_test_db.db")) {
-//                foundDbLocation = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundDbLocation, "Database should be aligned to external warehouse directory");
     }
 
     @Test
@@ -131,16 +107,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         // Database should have managed location set to managed warehouse directory
         validateDBSqlAction("assorted_test_db", RIGHT, "ALTER DATABASE assorted_test_db SET MANAGEDLOCATION");
         validateDBSqlAction("assorted_test_db", RIGHT, "/finance/mngd-hive/assorted_test_db.db");
-//        var dbSql = getConversion().getDatabase("assorted_test_db").getSql(Environment.RIGHT);
-//        boolean foundManagedLocation = false;
-//        for (var pair : dbSql) {
-//            if (pair.getAction().contains("ALTER DATABASE assorted_test_db SET MANAGEDLOCATION") &&
-//                pair.getAction().contains("/finance/mngd-hive/assorted_test_db.db")) {
-//                foundManagedLocation = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundManagedLocation, "Database should have managed location set to managed warehouse directory");
     }
 
     @Test
@@ -171,9 +137,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         TableMirror tableMirror = getTableMirrorOrFail("assorted_test_db", "acid_01");
         assertNotNull(tableMirror.getEnvironmentTable(Environment.RIGHT), "RIGHT environment should exist for EXPORT_IMPORT");
 
-//        var acid01Right = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT);
-//        assertNotNull(acid01Right, "RIGHT environment should exist for EXPORT_IMPORT");
     }
 
     @Test
@@ -190,9 +153,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         tableMirror = getTableMirrorOrFail("assorted_test_db", "ext_part_01");
         assertNotNull(tableMirror.getEnvironmentTable(TRANSFER), "Partitioned external table should have TRANSFER table");
 
-//        var extPart01Transfer = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(TRANSFER);
-//        assertNotNull(extPart01Transfer, "Partitioned external table should have TRANSFER table");
     }
 
     @Test
@@ -200,16 +160,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         // SQL strategy should have data movement from TRANSFER tables
         validateTableSqlAction("assorted_test_db", "acid_03", LEFT, "INSERT OVERWRITE TABLE hms_mirror_transfer_acid_03");
 
-//        var acid03LeftSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getSql();
-//        boolean foundDataMovement = false;
-//        for (var pair : acid03LeftSql) {
-//            if (pair.getAction().contains("INSERT OVERWRITE TABLE hms_mirror_transfer_acid_03")) {
-//                foundDataMovement = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundDataMovement, "Should have data movement to TRANSFER table");
     }
 
     @Test
@@ -217,19 +167,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         // SQL strategy should create shadow tables
         validateTableProperty("assorted_test_db", "acid_03", SHADOW, "hms-mirror_shadow_table", "true");
 
-//        var acid03Shadow = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(SHADOW);
-//        assertNotNull(acid03Shadow, "SQL strategy should have SHADOW table");
-//
-//        // Shadow table should have hms-mirror properties
-//        boolean foundShadowProperty = false;
-//        for (var line : acid03Shadow.getDefinition()) {
-//            if (line.contains("'hms-mirror_shadow_table'='true'")) {
-//                foundShadowProperty = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundShadowProperty, "Shadow table should have hms-mirror_shadow_table property");
     }
 
     @Test
@@ -237,12 +174,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         // ACID strategy may have different downgrade handling with warehouse alignment
         TableMirror tableMirror = getTableMirrorOrFail("assorted_test_db", "acid_03");
         assertNotNull(tableMirror.getEnvironmentTable(Environment.RIGHT), "ACID strategy should have RIGHT table");
-        //
-//        var acid03Right = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.RIGHT);
-//
-//        // For ACID strategy, check that RIGHT table exists and has proper structure
-//        assertNotNull(acid03Right, "RIGHT table should exist for ACID strategy");
         validateTableEnvironmentHasDefinition("assorted_test_db", "acid_03", RIGHT);
 //        assertFalse(acid03Right.getDefinition().isEmpty(), "RIGHT table should have definition");
     }
@@ -253,9 +184,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.ACID);
         validateTablePhaseTotalCount("assorted_test_db", "acid_03", 3);
 
-//        var acid03 = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_03");
-//        assertEquals("ACID", acid03.getStrategy().toString());
-//        assertTrue(acid03.getTotalPhaseCount().get() > 1, "ACID strategy should have multiple phases");
     }
 
     @Test
@@ -289,14 +217,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         validateTableCleanupSqlGenerated("assorted_test_db", "acid_03", LEFT);
         validateTableCleanupSqlGenerated("assorted_test_db", "acid_03", RIGHT);
 
-//        var acid01LeftCleanup = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getCleanUpSql();
-//        var acid01RightCleanup = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getCleanUpSql();
-//
-//        // Cleanup lists should exist
-//        assertNotNull(acid01LeftCleanup);
-//        assertNotNull(acid01RightCleanup);
     }
 
     @Test
@@ -305,13 +225,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         validateTableIssues("assorted_test_db", "ext_missing_01", RIGHT);
         validateTableSqlNotGenerated("assorted_test_db", "ext_missing_01", LEFT);
 
-//        var extMissing = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("ext_missing_01");
-//        if (extMissing != null) {
-//            // Table might be skipped or have special handling
-//            assertTrue(!extMissing.getEnvironmentTable(Environment.LEFT).getIssues().isEmpty() ||
-//                      extMissing.getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                      "Missing table should have issues or no SQL");
-//        }
     }
 
     @Test
@@ -340,14 +253,6 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
         TableMirror tableMirror6 = getTableMirrorOrFail("assorted_test_db", "legacy_mngd_01");
         TableMirror tableMirror7 = getTableMirrorOrFail("assorted_test_db", "ext_missing_01");
 
-//        var db = getConversion().getDatabase("assorted_test_db");
-//        assertNotNull(db.getTableMirrors().get("acid_01"));
-//        assertNotNull(db.getTableMirrors().get("acid_02"));
-//        assertNotNull(db.getTableMirrors().get("acid_03"));
-//        assertNotNull(db.getTableMirrors().get("ext_part_01"));
-//        assertNotNull(db.getTableMirrors().get("ext_part_02"));
-//        assertNotNull(db.getTableMirrors().get("legacy_mngd_01"));
-//        assertNotNull(db.getTableMirrors().get("ext_missing_01"));
     }
 
 }

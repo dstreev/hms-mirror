@@ -53,10 +53,6 @@ public class Test_sql_da_ip_left_only extends E2EBaseTest {
 //        MirrorLegacy mirror = new MirrorLegacy();
 //        rtn = mirror.go(args);
 //        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,ACID_W_PARTS_05);
-//
 
     @Test
     public void issueCountTest() {

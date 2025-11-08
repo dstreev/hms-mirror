@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.web.controller;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
-import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.cloudera.utils.hms.mirror.service.ConnectionManagementService;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
@@ -34,7 +33,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/connections")
@@ -422,49 +420,5 @@ public class ConnectionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-
-    /*
-    @PostMapping(value = "/{id}/set-default", produces = "application/json")
-    public ResponseEntity<Map<String, Object>> setDefaultConnection(@PathVariable("id") String id) {
-        try {
-            log.info("Setting connection as default: {}", id);
-            
-            connectionService.setDefaultConnection(id);
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Connection set as default successfully");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (RocksDBException e) {
-            log.error("Error setting default connection {}", id, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-                errorResponse.put("error", "Connection not found: " + id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-            } else {
-                errorResponse.put("error", "Failed to set default connection: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-            }
-        }
-    }
-     */
-
-//    @GetMapping(value = "/default", produces = "application/json")
-//    public ResponseEntity<ConnectionDto> getDefaultConnection() {
-//        try {
-//            log.info("Getting default connection");
-//
-//            Optional<ConnectionDto> defaultConnection = getConnectionService().getDefaultConnection();
-//            if (defaultConnection.isPresent()) {
-//                return ResponseEntity.ok(defaultConnection.get());
-//            } else {
-//                return ResponseEntity.notFound().build();
-//            }
-//
-//        } catch (RocksDBException e) {
-//            log.error("Error retrieving default connection", e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
 
 }

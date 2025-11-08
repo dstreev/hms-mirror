@@ -53,10 +53,6 @@ public class Test_sql_leg_mngd_bucket_ip_already extends E2EBaseTest {
 //        MirrorLegacy mirror = new MirrorLegacy();
 //        rtn = mirror.go(args);
 //        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir,LEGACY_MNGD_NO_PARTS_02);
-//
 
     @Test
     public void returnCodeTest() {

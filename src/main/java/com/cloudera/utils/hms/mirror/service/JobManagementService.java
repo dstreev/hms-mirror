@@ -511,8 +511,6 @@ public class JobManagementService {
             conversionResult.setJob(jobDto);
 
             // Initialize RunStatus
-//            RunStatus runStatus = new RunStatus();
-//            conversionResult.setRunStatus(runStatus);
 
             log.debug("ConversionResult built successfully from job: {}", jobDto.getName());
             return conversionResult;

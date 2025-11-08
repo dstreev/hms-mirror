@@ -23,13 +23,11 @@ import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.integration.end_to_end.E2EBaseTest;
 import com.cloudera.utils.hms.mirror.PhaseState;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.xbill.DNS.dnssec.R;
 
 import static com.cloudera.utils.hms.mirror.domain.support.Environment.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -101,10 +99,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
 //        assertEquals("SQL", getConversion().getDatabase("assorted_test_db")
 //                .getTableMirrors().get("ext_part_01").getStrategy().toString());
         // Non-partitioned tables use EXPORT_IMPORT
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
     }
 
     @Test
@@ -115,17 +109,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "acid_01", Environment.LEFT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
-//        var acid01LeftSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
-//        boolean foundIntermediateStorage = false;
-//        for (var pair : acid01LeftSql) {
-//            if (pair.getAction().contains("EXPORT TABLE acid_01 TO") &&
-//                pair.getAction().contains("s3a://my_is_bucket/hms_mirror_working")) {
-//                foundIntermediateStorage = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundIntermediateStorage, "Should use intermediate storage for EXPORT operations");
     }
 
     @Test
@@ -139,18 +122,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "ext_part_02", Environment.RIGHT,
                 "hdfs://HOME90");
 
-//        var extPart02RightSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundImportWithLocation = false;
-//        for (var pair : extPart02RightSql) {
-//            if (pair.getAction().contains("IMPORT EXTERNAL TABLE ext_part_02 FROM") &&
-//                    pair.getAction().contains("LOCATION") &&
-//                    pair.getAction().contains("hdfs://HOME90")) {
-//                foundImportWithLocation = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundImportWithLocation, "IMPORT should include LOCATION for external tables");
     }
 
     @Test
@@ -159,18 +130,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "acid_03", Environment.RIGHT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
-//        var acid03Shadow = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(SHADOW);
-//
-//        // Check that shadow table definition contains intermediate storage location
-//        boolean foundShadowWithIS = false;
-//        for (var line : acid03Shadow.getDefinition()) {
-//            if (line.contains("s3a://my_is_bucket/hms_mirror_working")) {
-//                foundShadowWithIS = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundShadowWithIS, "Shadow table should point to intermediate storage");
     }
 
     @Test
@@ -179,17 +138,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "acid_03", LEFT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
-//        var acid03Transfer = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(TRANSFER);
-//        assertNotNull(acid03Transfer, "SQL strategy should have TRANSFER table");
-//        boolean foundTransferLocation = false;
-//        for (var line : acid03Transfer.getDefinition()) {
-//            if (line.contains("s3a://my_is_bucket/hms_mirror_working")) {
-//                foundTransferLocation = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundTransferLocation, "TRANSFER table should use intermediate storage location");
     }
 
     @Test
@@ -218,12 +166,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableEnvironmentAddPropertiesHas("assorted_test_db", "acid_03", RIGHT,
                 "external.table.purge");
 
-//        var acid03Right = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.RIGHT);
-//        assertTrue(acid03Right.getAddProperties().containsKey("downgraded_from_acid"),
-//                "Should have downgraded_from_acid property");
-//        assertTrue(acid03Right.getAddProperties().containsKey("external.table.purge"),
-//                "Should have external.table.purge property");
     }
 
     @Test
@@ -258,15 +200,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
 //        boolean foundInProperties = acid03Shadow.getAddProperties().containsKey("hms-mirror_shadow_table");
 
         // Check in definition
-//        boolean foundInDefinition = false;
-//        for (var line : acid03Shadow.getDefinition()) {
-//            if (line.contains("'hms-mirror_shadow_table'='true'")) {
-//                foundInDefinition = true;
-//                break;
-//            }
-//        }
 
-//        assertTrue(foundInProperties || foundInDefinition, "Shadow table should have hms-mirror_shadow_table property");
     }
 
     @Test
@@ -275,16 +209,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "acid_03", LEFT,
                 "INSERT OVERWRITE TABLE hms_mirror_transfer_acid_03");
 
-//        var acid03LeftSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getSql();
-//        boolean foundDataMovement = false;
-//        for (var pair : acid03LeftSql) {
-//            if (pair.getAction().contains("INSERT OVERWRITE TABLE hms_mirror_transfer_acid_03")) {
-//                foundDataMovement = true;
-//                break;
-//            }
-//        }
-//        assertTrue(foundDataMovement, "Should have data movement to TRANSFER table");
     }
 
     @Test
@@ -293,13 +217,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         validateTableSqlNotGenerated("assorted_test_db", "ext_missing_01", RIGHT);
         validateTableIssues("assorted_test_db","ext_missing_01", RIGHT);
 
-//        var extMissing = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("ext_missing_01");
-//        if (extMissing != null) {
-//            // Table might be skipped or have special handling
-//            assertTrue(!extMissing.getEnvironmentTable(Environment.LEFT).getIssues().isEmpty() ||
-//                            extMissing.getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                    "Missing table should have issues or no SQL");
-//        }
     }
 
     @Test
@@ -313,14 +230,6 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         TableMirror tableMirror6 = getTableMirrorOrFail("assorted_test_db", "legacy_mngd_01");
         TableMirror tableMirror7 = getTableMirrorOrFail("assorted_test_db", "ext_missing_01");
 
-//        var db = getConversion().getDatabase("assorted_test_db");
-//        assertNotNull(db.getTableMirrors().get("acid_01"));
-//        assertNotNull(db.getTableMirrors().get("acid_02"));
-//        assertNotNull(db.getTableMirrors().get("acid_03"));
-//        assertNotNull(db.getTableMirrors().get("ext_part_01"));
-//        assertNotNull(db.getTableMirrors().get("ext_part_02"));
-//        assertNotNull(db.getTableMirrors().get("legacy_mngd_01"));
-//        assertNotNull(db.getTableMirrors().get("ext_missing_01"));
     }
 
 }

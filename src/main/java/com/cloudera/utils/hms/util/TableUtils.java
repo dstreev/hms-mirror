@@ -478,9 +478,6 @@ public class TableUtils {
     public static Boolean isManaged(EnvironmentTable envTable) {
         Boolean rtn = Boolean.FALSE;
         log.trace("Checking if table '{}' is 'managed'", envTable.getName());
-//        if (isNull(envTable.getDefinition())) {
-//            throw new RuntimeException("Table definition for " + envTable.getName() + " is null.");
-//        }
         if (nonNull(envTable.getDefinition())) {
             for (String line : envTable.getDefinition()) {
                 if (!isBlank(line) && line.startsWith(CREATE_TABLE)) {

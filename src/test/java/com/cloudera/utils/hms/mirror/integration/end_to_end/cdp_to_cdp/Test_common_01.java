@@ -79,10 +79,6 @@ public class Test_common_01 extends E2EBaseTest {
     public void tableCountTest() {
         // Validate that 4 tables are processed with COMMON strategy
         validateTableCount("assorted_test_db", 4);
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-//        assertEquals(4,
-//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Should have 4 tables");
     }
 
     @Test
@@ -117,14 +113,6 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableStrategy("assorted_test_db","legacy_mngd_01", DataStrategyEnum.COMMON);
         validateTableStrategy("assorted_test_db","ext_missing_01", DataStrategyEnum.COMMON);
 
-//        assertEquals("COMMON", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getStrategy().toString());
-//        assertEquals("COMMON", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getStrategy().toString());
-//        assertEquals("COMMON", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
-//        assertEquals("COMMON", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
     }
 
     @Test
@@ -147,17 +135,6 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "ext_part_01", Environment.RIGHT,
                 "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01");
 
-//        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundLocation = false;
-//        for (var pair : ext_part_01_right_sql) {
-//            if (pair.getDescription().equals("Creating Table")) {
-//                assertTrue(pair.getAction().contains("hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_01"),
-//                        "RIGHT table should point to LEFT data location");
-//                foundLocation = true;
-//            }
-//        }
-//        assertTrue(foundLocation, "Should have CREATE TABLE with LEFT location");
     }
 
     @Test
@@ -166,31 +143,12 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "ext_part_01", Environment.RIGHT,
                 "MSCK REPAIR TABLE ext_part_01");
 
-//        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundMSCK = false;
-//        for (var pair : ext_part_01_right_sql) {
-//            if (pair.getDescription().equals("Repairing Table (MSCK)")) {
-//                assertEquals("MSCK REPAIR TABLE ext_part_01", pair.getAction());
-//                foundMSCK = true;
-//            }
-//        }
-//        assertTrue(foundMSCK, "Partitioned table should have MSCK REPAIR");
     }
 
     @Test
     public void checkNonPartitionedTableNoMSCK() {
         // ext_part_02 is non-partitioned - should NOT have MSCK REPAIR
         // TODO: Negative check
-//        var ext_part_02_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundMSCK = false;
-//        for (var pair : ext_part_02_right_sql) {
-//            if (pair.getDescription().equals("Repairing Table (MSCK)")) {
-//                foundMSCK = true;
-//            }
-//        }
-//        assertFalse(foundMSCK, "Non-partitioned table should not have MSCK REPAIR");
     }
 
     @Test
@@ -198,17 +156,6 @@ public class Test_common_01 extends E2EBaseTest {
         // All tables should have external.table.purge=true
         validateTableSqlAction("assorted_test_db", "ext_part_01", Environment.RIGHT,
                 "'external.table.purge'='true'");
-//        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundPurge = false;
-//        for (var pair : ext_part_01_right_sql) {
-//            if (pair.getDescription().equals("Creating Table")) {
-//                assertTrue(pair.getAction().contains("'external.table.purge'='true'"),
-//                        "Table should have external.table.purge property");
-//                foundPurge = true;
-//            }
-//        }
-//        assertTrue(foundPurge, "Should have external.table.purge property");
     }
 
     @Test
@@ -217,17 +164,6 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "ext_part_01", Environment.RIGHT,
                 "'discover.partitions'='true'");
 
-//        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundDiscover = false;
-//        for (var pair : ext_part_01_right_sql) {
-//            if (pair.getDescription().equals("Creating Table")) {
-//                assertTrue(pair.getAction().contains("'discover.partitions'='true'"),
-//                        "Partitioned table should have discover.partitions property");
-//                foundDiscover = true;
-//            }
-//        }
-//        assertTrue(foundDiscover, "Should have discover.partitions property");
     }
 
     @Test
@@ -236,37 +172,18 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableEnvironment("assorted_test_db", "ext_part_01", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "ext_part_01", Environment.RIGHT);
 
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).isExists());
-
         validateTableEnvironment("assorted_test_db", "ext_part_02", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "ext_part_02", Environment.RIGHT);
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).isExists());
 
 
         validateTableEnvironment("assorted_test_db", "legacy_mngd_01", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "legacy_mngd_01", Environment.RIGHT);
-//        assertTrue(tableMirror3.getEnvironmentTable(Environment.LEFT).isExists(),
-//                "legacy_mngd_01 should exist on LEFT");
-//        assertTrue(tableMirror3.getEnvironmentTable(Environment.RIGHT).isExists(),
-//                "legacy_mngd_01 should exist on RIGHT");
 
         TableMirror tableMirror4 = getTableMirrorOrFail("assorted_test_db", "ext_missing_01");
         assertFalse(tableMirror4.getEnvironmentTable(Environment.LEFT).isExists(),
                 "ext_missing_01 should NOT exist on LEFT");
         validateTableEnvironment("assorted_test_db", "ext_missing_01", Environment.RIGHT);
 
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists(),
-//                "ext_missing_01 should not exist on LEFT");
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).isExists(),
-//                "ext_missing_01 should exist on RIGHT");
     }
 
     @Test
@@ -283,10 +200,6 @@ public class Test_common_01 extends E2EBaseTest {
         
         // No SQL generated for RIGHT since table already exists there
         validateTableSqlNotGenerated("assorted_test_db", "ext_missing_01", Environment.RIGHT);
-//        var ext_missing_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        assertTrue(ext_missing_right_sql.isEmpty(), "ext_missing_01 should have no SQL on RIGHT");
-//
         validateTableEnvironmentCreateStrategy("assorted_test_db", "ext_missing_01", Environment.RIGHT,
                 CreateStrategy.NOTHING);
 //        assertEquals("NOTHING", getConversion().getDatabase("assorted_test_db")
@@ -299,18 +212,6 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableSqlAction("assorted_test_db", "legacy_mngd_01", Environment.RIGHT,
                 "CREATE TABLE");
 
-//        var legacy_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundCreate = false;
-//        for (var pair : legacy_right_sql) {
-//            if (pair.getDescription().equals("Creating Table")) {
-//                // Should create as regular table, not EXTERNAL
-//                assertTrue(pair.getAction().startsWith("CREATE TABLE"));
-//                assertFalse(pair.getAction().contains("EXTERNAL"));
-//                foundCreate = true;
-//            }
-//        }
-//        assertTrue(foundCreate, "Should have CREATE TABLE for legacy managed table");
     }
 
     @Test
@@ -348,10 +249,6 @@ public class Test_common_01 extends E2EBaseTest {
     public void checkPhaseSummary() {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
         validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.PROCESSED, 4);
-//        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
-//        assertNotNull(phaseSummary);
-//        assertEquals(4, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(),
-//                "Should have 4 tables in CALCULATED_SQL phase");
     }
 
     @Test
@@ -362,18 +259,6 @@ public class Test_common_01 extends E2EBaseTest {
         validateTablePhaseTotalCount("assorted_test_db", "legacy_mngd_01", 3);
         validateTablePhaseTotalCount("assorted_test_db", "ext_missing_01", 3);
 
-//        assertEquals(5, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getTotalPhaseCount().get(),
-//                "ext_part_01 should have 5 total phases");
-//        assertEquals(4, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getTotalPhaseCount().get(),
-//                "ext_part_02 should have 4 total phases");
-//        assertEquals(4, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getTotalPhaseCount().get(),
-//                "legacy_mngd_01 should have 4 total phases");
-//        assertEquals(2, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getTotalPhaseCount().get(),
-//                "ext_missing_01 should have 2 total phases");
     }
 
     @Test
@@ -383,20 +268,7 @@ public class Test_common_01 extends E2EBaseTest {
         validateTableSqlGenerated("assorted_test_db", "ext_part_02", Environment.RIGHT);
         validateTableSqlGenerated("assorted_test_db", "legacy_mngd_01", Environment.RIGHT);
         // Removed after upgrade.  Seems to have been wrong in the past.
-//        validateTableSqlGenerated("assorted_test_db", "ext_missing_01", Environment.LEFT);
 
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                "RIGHT SQL should be generated for ext_part_01");
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                "RIGHT SQL should be generated for ext_part_02");
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                "RIGHT SQL should be generated for legacy_mngd_01");
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getSql().isEmpty(),
-//                "RIGHT SQL should NOT be generated for ext_missing_01");
     }
 
 }

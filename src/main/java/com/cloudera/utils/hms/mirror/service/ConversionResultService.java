@@ -21,7 +21,6 @@ import com.cloudera.utils.hms.mirror.MirrorConf;
 import com.cloudera.utils.hms.mirror.Pair;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
@@ -41,13 +40,9 @@ import com.cloudera.utils.hms.util.TableUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.Conversion;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -239,47 +234,6 @@ public class ConversionResultService {
         }
     }
 
-//    private final ExecuteSessionService executeSessionService;
-
-//    /**
-//     * Generates action SQL script for a specific environment and database.
-//     * NOTE: Currently commented out because it depends on TableMirror.getTableActions() and
-//     * EnvironmentTable.actions field which are also commented out.
-//     *
-//     * @param conversionResult The conversion result containing database mirrors
-//     * @param env             The target environment
-//     * @param database        The database name
-//     * @return SQL script as a string
-//     */
-//    public String actionsSql(ConversionResult conversionResult, Environment env, String database) {
-//        StringBuilder sb = new StringBuilder();
-//        sb.append("-- ACTION script for ").append(env).append(" cluster\n\n");
-//        sb.append("-- HELPER Script to assist with MANUAL updates.\n");
-//        sb.append("-- RUN AT OWN RISK  !!!\n");
-//        sb.append("-- REVIEW and UNDERSTAND the adjustments below before running.\n\n");
-//        DBMirror dbMirror = conversionResult.getDatabases().get(database);
-//        sb.append("-- DATABASE: ").append(database).append("\n");
-//        Set<String> tables = dbMirror.getTableMirrors().keySet();
-//        for (String table : tables) {
-//            TableMirror tblMirror = dbMirror.getTableMirrors().get(table);
-//            sb.append("--    Table: ").append(table).append("\n");
-//            // LEFT Table Actions
-//            for (String item : tblMirror.getTableActions(env)) {
-//                sb.append(item).append(";\n");
-//            }
-//            sb.append("\n");
-//        }
-//        return sb.toString();
-//    }
-
-//    public DBMirror getDatabase(String database) {
-//        ConversionResult conversionResult = executionContextService.getConversionResult().orElseThrow(() ->
-//                new IllegalStateException("ConversionResult not set."));
-//        // TODO: Go to the ConversionResult Repo and get the DBMirror from persistence.
-//
-//        return null;
-//    }
-
     public boolean convertManaged() {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
@@ -468,43 +422,6 @@ public class ConversionResultService {
             }
 
             // TODO: Fix
-                /*
-                if (nonNull(leftPath) && nonNull(rightPath) && config.isCopyAvroSchemaUrls() && job.isExecute()) {
-                    // Copy over.
-                    log.info("{}: Attempting to copy AVRO schema file to target cluster.", let.getName());
-                    try {
-                        CommandReturn cr = null;
-                        if (relative) {
-                            // checked..
-                            rightPath = conversionResult.getTargetNamespace() + rightPath;
-                        }
-                        log.info("AVRO Schema COPY from: {} to {}", leftPath, rightPath);
-                        // Ensure the path for the right exists.
-                        String parentDirectory = NamespaceUtils.getParentDirectory(rightPath);
-                        if (nonNull(parentDirectory)) {
-                            cr = cliEnvironment.processInput("mkdir -p " + parentDirectory);
-                            if (cr.isError()) {
-                                ret.addError("Problem creating directory " + parentDirectory + ". " + cr.getError());
-                                rtn = Boolean.FALSE;
-                            } else {
-                                cr = cliEnvironment.processInput("cp -f " + leftPath + " " + rightPath);
-                                if (cr.isError()) {
-                                    ret.addError("Problem copying AVRO schema file from " + leftPath + " to " + parentDirectory + ".\n```" + cr.getError() + "```");
-                                    rtn = Boolean.FALSE;
-                                }
-                            }
-                        }
-                    } catch (Throwable t) {
-                        log.error("{}: AVRO file copy issue", ret.getName(), t);
-                        ret.addError(t.getMessage());
-                        rtn = Boolean.FALSE;
-                    }
-                } else {
-                    log.info("{}: did NOT attempt to copy AVRO schema file to target cluster.", let.getName());
-                }
-                tableMirror.addStep("AVRO", "Checked");
-
-                 */
         } else {
             // Not AVRO, so no action (passthrough)
             rtn = Boolean.TRUE;
@@ -636,8 +553,6 @@ public class ConversionResultService {
         // TODO: Should we build this from ConversionResult?
         ConversionResult config = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
-//        HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-//                new IllegalStateException("HmsMirrorConfig not set."));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
                 new IllegalStateException("RunStatus not set."));
 
@@ -664,8 +579,6 @@ public class ConversionResultService {
 
         sb.append("## Config:\n");
 
-//        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-//        mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         String yamlStr = yamlMapper.writeValueAsString(config);
         // Mask User/Passwords in Control File
         yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
@@ -761,9 +674,6 @@ public class ConversionResultService {
         sb.append("<th style=\"test-align:right\">Duration</th>").append("\n");
 //        sb.append("<th style=\"test-align:right\">Partition<br/>Count</th>").append("\n");
         sb.append("<th style=\"test-align:left\">Steps</th>").append("\n");
-//        if (dbMirror.hasActions()) {
-//            sb.append("<th style=\"test-align:left\">Actions</th>").append("\n");
-//        }
         if (dbMirror.hasAddedProperties()) {
             sb.append("<th style=\"test-align:left\">Added<br/>Properties</th>").append("\n");
         }

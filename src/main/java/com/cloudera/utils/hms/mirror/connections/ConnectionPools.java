@@ -17,21 +17,12 @@
 
 package com.cloudera.utils.hms.mirror.connections;
 
-import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
-import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
-import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 public interface ConnectionPools {
-
-//    void addHiveServer2(Environment environment, HiveServer2Config hiveServer2);
-
-//    void addMetastoreDirect(Environment environment, DBStore dbStore);
 
     void close();
 

@@ -327,10 +327,6 @@ public class ExportImportDataStrategy extends DataStrategyBase {
 
         if (ret.isExists() && !job.isSync() && let.isExists()) {
             ret.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-//            let.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-//            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
-//                    SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-//            log.warn(msg);
             return Boolean.TRUE;
         } else if (ret.isExists() && !let.isExists()) {
             ret.addIssue(MessageCode.SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());

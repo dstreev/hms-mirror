@@ -330,9 +330,6 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
                 rtn = Boolean.FALSE;
             }
         }
-//        if (rtn) {
-//            rtn = getTableService().runTableSql(tableMirror, Environment.RIGHT);
-//        }
         return rtn;
     }
 

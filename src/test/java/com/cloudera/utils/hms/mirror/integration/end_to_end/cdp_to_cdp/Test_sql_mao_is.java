@@ -28,7 +28,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_LOCATION_DESC;
-import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_MNGD_LOCATION_DESC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(SpringExtension.class)
@@ -62,16 +61,12 @@ public class Test_sql_mao_is extends E2EBaseTest {
                 "FROM hms_mirror_shadow_acid_01 INSERT OVERWRITE TABLE acid_01 SELECT *");
         validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_LOCATION_DESC,
                 "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\"");
-//        validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_MNGD_LOCATION_DESC,
-//                "ALTER DATABASE assorted_test_db SET MANAGEDLOCATION \"hdfs://HOME90/warehouse/managed/assorted_test_db.db\"");
     }
 
     @Test
     public void dbLocationTest() {
         validateDBLocation("assorted_test_db", Environment.RIGHT,
                 "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
-//        validateDBManagedLocation("assorted_test_db", Environment.RIGHT,
-//                "hdfs://HOME90/warehouse/managed/assorted_test_db.db");
     }
 
     @Test
@@ -83,16 +78,5 @@ public class Test_sql_mao_is extends E2EBaseTest {
         validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
                 null);
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

@@ -60,11 +60,6 @@ public class CliInit {
     private final ObjectMapper yamlMapper;
     @NonNull
 
-//    @NonNull
-//    private final ConversionResultRepository conversionResultRepository;
-//    @NonNull
-//    private final RunStatusRepository runStatusRepository;
-
     public CliInit(@NonNull ConversionResultService conversionResultService,
                    @NonNull ExecutionContextService executionContextService,
                    @NonNull @Qualifier("yamlMapper") ObjectMapper yamlMapper
@@ -73,23 +68,6 @@ public class CliInit {
         this.executionContextService = executionContextService;
         this.yamlMapper = yamlMapper;
     }
-
-    //    /**
-//     * Initializes the CliInit class with required services and utilities.
-//     *
-//     * @param domainService the service responsible for managing domain-specific logic.
-//     * @param executeSessionService the service responsible for managing execution sessions.
-//     * @param yamlMapper the object mapper for parsing and generating YAML files.
-//     */
-//    public CliInit(
-//            DomainService domainService,
-//            ExecuteSessionService executeSessionService,
-//            @Qualifier("yamlMapper") ObjectMapper yamlMapper
-//    ) {
-//        this.domainService = domainService;
-//        this.executeSessionService = executeSessionService;
-//        this.yamlMapper = yamlMapper;
-//    }
 
     /**
      * Initializes the HmsMirrorConfig object by loading the configuration information
@@ -247,9 +225,7 @@ public class CliInit {
             DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
             String cliSessionId = "cli-" + dtf.format(new Date());
 
-//            HmsMirrorConfig config = getExecutionContextService().getHmsMirrorConfig().orElseThrow(() ->
-//                    new IllegalStateException("HmsMirrorConfig not set"));
-            ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, "cliSessionId");
+        ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, "cliSessionId");
             getExecutionContextService().setConversionResult(conversionResult);
             getExecutionContextService().setHmsMirrorConfig(config);
             RunStatus runStatus = conversionResult.getRunStatus();

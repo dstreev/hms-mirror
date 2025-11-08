@@ -115,11 +115,6 @@ public class TableMirror implements Cloneable {
         steps.add(new Marker(secStr, key, value));
     }
 
-//    public void addTableAction(Environment environment, String action) {
-//        List<String> tableActions = getTableActions(environment);
-//        tableActions.add(action);
-//    }
-
     public List<Pair> getCleanUpSql(Environment environment) {
         EnvironmentTable et = getEnvironmentTable(environment);
         return et.getCleanUpSql();
@@ -171,8 +166,6 @@ public class TableMirror implements Cloneable {
     public String getProgressIndicator(int width) {
         StringBuilder sb = new StringBuilder();
         int progressLength = Math.floorDiv(Math.multiplyExact(width, currentPhase.get()), totalPhaseCount.get());
-//        log.debug("{}:{} CurrentPhase: {} -> TotalPhaseCount: {}", this.getParent().getName(), this.getName(), currentPhase.get(), totalPhaseCount.get());
-//        log.debug("{}:{} Progress: {} of {}", this.getParent().getName(), this.getName(), progressLength, width);
         sb.append("\u001B[32m");
         sb.append(StringUtils.rightPad("=", progressLength - 1, "="));
         sb.append("\u001B[33m");
@@ -191,26 +184,10 @@ public class TableMirror implements Cloneable {
         return et.getSql();
     }
 
-//    public List<String> getTableActions(Environment environment) {
-//        EnvironmentTable et = getEnvironmentTable(environment);
-//        return et.getActions();
-//    }
-
     public List<String> getTableDefinition(Environment environment) {
         EnvironmentTable et = getEnvironmentTable(environment);
         return et.getDefinition();
     }
-
-//    public boolean hasActions() {
-//        boolean rtn = Boolean.FALSE;
-//        for (Map.Entry<Environment, EnvironmentTable> entry : getEnvironments().entrySet()) {
-//            if (!entry.getValue().getActions().isEmpty()) {
-//                rtn = Boolean.TRUE;
-//                break;
-//            }
-//        }
-//        return rtn;
-//    }
 
     public boolean hasAddedProperties() {
         boolean rtn = Boolean.FALSE;

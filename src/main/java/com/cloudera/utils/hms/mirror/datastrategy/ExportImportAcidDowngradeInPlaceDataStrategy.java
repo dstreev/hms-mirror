@@ -106,9 +106,6 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         }
 
         // run queries.
-//        if (rtn) {
-//            getTableService().runTableSql(tableMirror, Environment.LEFT);
-//        }
 
         return rtn;
     }

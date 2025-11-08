@@ -27,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_DB_LOCATION_DESC;
 import static com.cloudera.utils.hms.mirror.MirrorConf.RENAME_TABLE_DESC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

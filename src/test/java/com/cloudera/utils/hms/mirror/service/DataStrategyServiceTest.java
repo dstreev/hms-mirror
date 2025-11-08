@@ -18,17 +18,8 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.datastrategy.*;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
-import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 //@ExtendWith(SpringExtension.class)
 //@SpringBootTest(classes = MockMirror.class,

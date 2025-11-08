@@ -50,12 +50,6 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
     @JsonIgnore
     private final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-//    @JsonIgnore
-//    private HmsMirrorConfig hmsMirrorConfig;
-
-//    @JsonIgnore
-//    private ConnectionPools pools = null;
-
     @JsonIgnore
     private boolean initialized = Boolean.FALSE;
     @JsonIgnore
@@ -193,10 +187,6 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
         return getPlatformType().getHiveVersion().isLegacy();
     }
 
-//    public void setLegacyHive(boolean legacyHive) {
-//        this.legacyHive = legacyHive;
-//    }
-
     public boolean isHdpHive3() {
         if (getPlatformType() == PlatformType.HDP3) {
             return Boolean.TRUE;
@@ -204,10 +194,6 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
             return Boolean.FALSE;
         }
     }
-
-//    public void setHdpHive3(boolean hdpHive3) {
-//        this.hdpHive3 = hdpHive3;
-//    }
 
     public PlatformType getPlatformType() {
         if (isNull(platformType)) {
@@ -221,34 +207,6 @@ public class Cluster implements Comparable<Cluster>, Cloneable {
         }
         return platformType;
     }
-
-//    @JsonIgnore
-//    public Connection getConnection() throws SQLException {
-//        Connection conn = null;
-//        if (pools != null) {
-//            try {
-//                conn = pools.getHS2EnvironmentConnection(getEnvironment());
-//            } catch (RuntimeException rte) {
-//                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
-//                throw rte;
-//            }
-//        }
-//        return conn;
-//    }
-
-//    @JsonIgnore
-//    public Connection getMetastoreDirectConnection() throws SQLException {
-//        Connection conn = null;
-//        if (pools != null) {
-//            try {
-//                conn = pools.getMetastoreDirectEnvironmentConnection(getEnvironment());
-//            } catch (RuntimeException rte) {
-//                getHmsMirrorConfig().addError(MessageCode.CONNECTION_ISSUE);
-//                throw rte;
-//            }
-//        }
-//        return conn;
-//    }
 
     @Override
     public int hashCode() {

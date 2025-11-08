@@ -18,7 +18,6 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.datastrategy.*;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import org.springframework.stereotype.Service;
 

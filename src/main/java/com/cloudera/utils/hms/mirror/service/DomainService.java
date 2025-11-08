@@ -90,8 +90,6 @@ public class DomainService {
             }
         }
         log.info("Loading config: {}", configFilename);
-//        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-//        yamlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         URL cfgUrl = null;
         try {
             // Load file from classpath and convert to string
@@ -115,8 +113,6 @@ public class DomainService {
                 }
             }
             fileAsString = IOUtils.toString(cfgUrl, StandardCharsets.UTF_8);
-//            config = yamlMapper.readerFor(HmsMirrorConfig.class).readValue(yamlCfgFile);
-//            config.setConfigFilename(configFilename);
         } catch (IOException e) {
             log.error("IO Exception", e);
             return null;

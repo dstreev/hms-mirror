@@ -115,14 +115,6 @@ class LegacyConversionWrapperTestDeserializationTest {
 
         // Verify deep copy - modifying clone doesn't affect original
         // TODO: Fix
-        /*
-        if (!original.getFilteredOut().isEmpty()) {
-            String firstKey = original.getFilteredOut().keySet().iterator().next();
-            cloned.getFilteredOut().remove(firstKey);
-            assertTrue(original.getFilteredOut().containsKey(firstKey),
-                    "Original should still contain the removed key");
-        }
-         */
     }
 
     /**

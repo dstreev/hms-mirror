@@ -41,19 +41,6 @@ public class QueryDefinitionsServiceTest {
     /**
      * Test case when the environment exists in the queryDefinitionsMap cache.
      */
-//    @Test
-//    void testGetQueryDefinitions_CachedEnvironment() {
-//        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
-//        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
-//
-//        QueryDefinitions cachedQueryDefinitions = new QueryDefinitions();
-//        queryDefinitionsService.queryDefinitionsMap.put(Environment.LEFT, cachedQueryDefinitions);
-//
-//        QueryDefinitions result = queryDefinitionsService.getQueryDefinitions(Environment.LEFT);
-//
-//        assertNotNull(result);
-//        assertEquals(cachedQueryDefinitions, result, "QueryDefinitions from cache should match.");
-//    }
 
     /**
      * Test case when the environment refers to a cluster without a metastoreDirect configuration.
@@ -64,11 +51,6 @@ public class QueryDefinitionsServiceTest {
         ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
         HmsMirrorConfig mockHmsMirrorConfig = mock(HmsMirrorConfig.class);
         Cluster mockCluster = mock(Cluster.class);
-//        DBStore mockMetastoreDirect = mock(DBStore.class);
-
-//        lenient().when(mockMetastoreDirect.getType()).thenReturn(type);
-
-//        when(mockCluster.getMetastoreDirect()).thenReturn(mockMetastoreDirect);
 
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         ExecuteSession mockExecuteSession = mock(ExecuteSession.class);
@@ -79,11 +61,6 @@ public class QueryDefinitionsServiceTest {
         // mockCluster.getMetastoreDirect() returns null by default, which is what we want for this test
 
         QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
-
-//        URL mockURL = this.getClass().getResource("/"+type.toString()+"/metastoreDirect.yaml");
-//        assertNotNull(mockURL, "Resource file for "+type.toString()+"/metastoreDirect.yaml must exist");
-
-//        String yamlContent = IOUtils.toString(mockURL, StandardCharsets.UTF_8);
 
         QueryDefinitions result = queryDefinitionsService.getQueryDefinitions(Environment.LEFT);
 

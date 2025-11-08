@@ -34,7 +34,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 
 import java.io.File;
@@ -1910,18 +1909,10 @@ public class HmsMirrorCommandLineOptions {
         Option mnnOption = new Option("mnn", "migrate-non-native", false,
                 "Migrate Non-Native tables (if strategy allows). These include table definitions that rely on " +
                         "external connections to systems like: HBase, Kafka, JDBC");
-//        mnnOption.setArgs(1);
-//        mnnOption.setOptionalArg(Boolean.TRUE);
         mnnOption.setRequired(Boolean.FALSE);
         options.addOption(mnnOption);
 
         // TODO: Implement this feature...  If requested.  Needs testings, not complete after other downgrade work.
-//        Option replaceOption = new Option("r", "replace", false,
-//                "When downgrading an ACID table as its transferred to the 'RIGHT' cluster, this option " +
-//                        "will replace the current ACID table on the LEFT cluster with a 'downgraded' table (EXTERNAL). " +
-//                        "The option only works with options '-da' and '-cs'.");
-//        replaceOption.setRequired(Boolean.FALSE);
-//        options.addOption(replaceOption);
 
         Option syncOption = new Option("s", "sync", false,
                 "For SCHEMA_ONLY, COMMON, and LINKED data strategies.  Drop and Recreate Schema's when different.  " +
@@ -1952,11 +1943,6 @@ public class HmsMirrorCommandLineOptions {
         options.addOption(acceptOption);
 
         // TODO: Add addition Storage Migration Strategies (current default and only option is SQL)
-//        Option translateConfigOption = new Option("t", "translate-config", true,
-//                "Translator Configuration File (Experimental)");
-//        translateConfigOption.setRequired(Boolean.FALSE);
-//        translateConfigOption.setArgName("translate-config-file");
-//        options.addOption(translateConfigOption);
 
         Option outputOption = new Option("o", "output-dir", true,
                 "Output Directory (default: $HOME/.hms-mirror/reports/<yyyy-MM-dd_HH-mm-ss>");
@@ -2174,7 +2160,7 @@ public class HmsMirrorCommandLineOptions {
     }
 
     public static String[] toSpringBootOption(Boolean withoutWeb, String[] args) {
-        List<String> options = new ArrayList(Arrays.asList(args));
+        List<String> options = new ArrayList<>(Arrays.asList(args));
         List<String> springOptions = new ArrayList<>();
 
         // Remove any item from options that starts with '--spring.' and place them into springOptions.

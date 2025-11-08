@@ -130,10 +130,6 @@ public class DBMirror implements Cloneable {
 
     public Map<String, String> getEnvironmentProperties(Environment environment) {
         Map<String, String> rtn = properties.get(environment);
-//        if (isNull(rtn)) {
-//            rtn = new TreeMap<>();
-//            properties.put(environment, rtn);
-//        }
         return rtn;
     }
 
@@ -232,23 +228,6 @@ public class DBMirror implements Cloneable {
                     }
                 }
             }
-
-            /*
-            // Clone tableMirrors map and its contents
-            if (this.tableMirrors != null) {
-                clone.tableMirrors = new TreeMap<>();
-                for (Map.Entry<String, TableMirror> entry : this.tableMirrors.entrySet()) {
-                    if (entry.getValue() != null) {
-                        // Deep clone TableMirror objects
-                        TableMirror clonedTableMirror = entry.getValue().clone();
-                        clonedTableMirror.setParent(clone);  // Set the cloned table's parent to the clone
-                        clone.tableMirrors.put(entry.getKey(), clonedTableMirror);
-                    } else {
-                        clone.tableMirrors.put(entry.getKey(), null);
-                    }
-                }
-            }
-            */
 
             // Clone environmentStatistics map
             if (this.environmentStatistics != null) {

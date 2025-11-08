@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 //@Component("transfer")
 @Slf4j
@@ -69,28 +68,5 @@ public class TransferConfig implements Cloneable {
             storageMigration = new StorageMigration();
         return storageMigration;
     }
-
-//    public Warehouse getWarehouse() {
-//        if (warehouse == null)
-//            warehouse = new Warehouse();
-//        return warehouse;
-//    }
-
-//    public void setTargetNamespace(String targetNamespace) {
-//        if (!isBlank(targetNamespace)) {
-//            this.targetNamespace = targetNamespace.trim();
-//            if (this.targetNamespace.endsWith("/")) {
-//                // Remove trailing slash.
-//                this.targetNamespace = this.targetNamespace.substring(0, this.targetNamespace.length() - 1);
-//            }
-//        } else {
-//            this.targetNamespace = null;
-//        }
-//    }
-
-//    @JsonIgnore
-//    public int getConcurrency() {
-//        return concurrency;
-//    }
 
 }

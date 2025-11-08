@@ -118,11 +118,6 @@ public class DatabaseService {
                 return;
             }
 
-//            // Need to have this set to ensure we're picking everything up.
-//            if (!config.isEvaluatePartitionLocation()) {
-//                throw new RequiredConfigurationException("The 'evaluatePartitionLocation' setting must be set to 'true' to build out the database sources.");
-//            }
-
             for (String database : warehouseMapBuilder.getWarehousePlans().keySet()) {
                 // Reset the database in the translation map.
                 conversionResult.getTranslator().removeDatabaseFromTranslationMap(database);
@@ -139,13 +134,6 @@ public class DatabaseService {
     }
 
     // TODO: Fix
-    /*
-    public Map<String, SourceLocationMap> getDatabaseSources() {
-        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-        WarehouseMapBuilder warehouseMapBuilder = hmsMirrorConfig.getTranslator().getWarehouseMapBuilder();
-        return warehouseMapBuilder.getSources();
-    }
-    */
 
     // Load sources from the test data set.
     protected void loadDatabaseLocationMetadataFromTestData(String database, Environment environment,
@@ -194,9 +182,6 @@ public class DatabaseService {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet resultSet = null;
-//        ExecuteSession session = executeSessionService.getSession();
-//        HmsMirrorConfig config = session.getConfig();
-//        RunStatus runStatus = session.getRunStatus();
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult is null"));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
@@ -432,9 +417,6 @@ public class DatabaseService {
         JobDto job = conversionResult.getJob();
         RunStatus runStatus = conversionResult.getRunStatus();
 
-//        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-//        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-
         boolean buildLeft = Boolean.FALSE;
         boolean buildRight = Boolean.TRUE;
         boolean createRight = Boolean.FALSE;
@@ -530,8 +512,6 @@ public class DatabaseService {
 
 
             // Start with the LEFT definition.
-//            Map<String, String> dbDefLeft = dbMirror.getDBDefinition(Environment.LEFT);
-//            Map<String, String> dbDefRight = dbMirror.getDBDefinition(Environment.RIGHT);
             String originalDatabase = dbMirror.getName();
             String targetDatabase = getConversionResultService().getResolvedDB(dbMirror.getName());
             log.info("Original Database: {} Target Database: {}", originalDatabase, targetDatabase);
@@ -578,8 +558,6 @@ public class DatabaseService {
                         if (isNull(originalLocation)) {
                             originalLocation = "/warehouse/tablespace/external/hive/" + targetDatabase + ".db";
                             log.error("Original Location is (still) NULL.  Setting to default");
-//                            runStatus.addError("The original database location is NULL.  Skipping.");
-//                            return Boolean.FALSE;
                         } else {
                             originalLocation = originalLocation + "/" + targetDatabase + ".db";
                         }
@@ -732,8 +710,6 @@ public class DatabaseService {
                         // Can't determine location.
                         // TODO: What to do here.
                         log.error("{}: Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in 'read-only' mode without knowing where it should go and validating existance.", targetDatabase);
-//                        throw new RuntimeException(targetDatabase + ": Couldn't determine DB directory on RIGHT cluster.  Can't CREATE database in " +
-//                                "'read-only' mode without knowing where it should go and validating existence.");
                     }
 
                 }
@@ -746,30 +722,6 @@ public class DatabaseService {
             switch (job.getStrategy()) {
                 case CONVERT_LINKED:
                     // ALTER the 'existing' database to ensure locations are set to the RIGHT hcfsNamespace.
-                    /*
-                    database = HmsMirrorConfigUtil.getResolvedDB(dbMirror.getName(), config);
-                    originalLocation = dbDefRight.get(DB_LOCATION);
-                    originalManagedLocation = dbDefRight.get(DB_MANAGED_LOCATION);
-
-                    if (originalLocation != null && !config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                        originalLocation = NamespaceUtils.replaceNamespace(originalLocation, targetNamespace);
-                        String alterDB_location = MessageFormat.format(ALTER_DB_LOCATION, database, originalLocation);
-                        dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDB_location));
-                        dbDefRight.put(DB_LOCATION, originalLocation);
-                    }
-                    if (originalManagedLocation != null) {
-                        originalManagedLocation = NamespaceUtils.replaceNamespace(originalManagedLocation, targetNamespace);
-                        if (!config.getCluster(Environment.RIGHT).isHdpHive3()) {
-                            String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_MNGD_LOCATION, database, originalManagedLocation);
-                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_MNGD_LOCATION_DESC, alterDBMngdLocationSql));
-                        } else {
-                            String alterDBMngdLocationSql = MessageFormat.format(ALTER_DB_LOCATION, database, originalManagedLocation);
-                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_LOCATION_DESC, alterDBMngdLocationSql));
-                            dbMirror.addIssue(Environment.RIGHT, HDPHIVE3_DB_LOCATION.getDesc());
-                        }
-                        dbDefRight.put(DB_MANAGED_LOCATION, originalManagedLocation);
-                    }
-                    */
                     break;
                 case DUMP:
                     // Build LEFT DB SQL.
@@ -923,17 +875,6 @@ public class DatabaseService {
                     // Build the DBPROPERITES
                     // Check if the user has specified any DB Properties to skip.
                     // TODO: FIX
-                    /*
-                    Set<String> lclSkipList = new HashSet<>(skipList);
-                    Map<String, String> dbProperties = DatabaseUtils.getParameters(dbPropsRight, lclSkipList, config.getFilter().getDbPropertySkipListPattern());
-                    if (!dbProperties.isEmpty()) {
-                        for (Map.Entry<String, String> entry : dbProperties.entrySet()) {
-                            String alterDbProps = MessageFormat.format(ALTER_DB_PROPERTIES, targetDatabase, entry.getKey(), entry.getValue());
-                            dbMirror.getSql(Environment.RIGHT).add(new Pair(ALTER_DB_PROPERTIES_DESC, alterDbProps));
-                            log.trace("RIGHT DB Properties SQL: {}", alterDbProps);
-                        }
-                    }
-                     */
 
                     if (config.getOwnershipTransfer().isDatabase()) {
                         String ownerFromLeft = dbPropsLeft.get(OWNER_NAME);
@@ -982,9 +923,6 @@ public class DatabaseService {
             return true;
         }
 
-//        ConversionResult conversionResult = session.getConversionResult();
-//        RunStatus runStatus = session.getRunStatus();
-//        OperationStatistics stats = runStatus.getOperationStatistics();
         for (DatasetDto.DatabaseSpec dbSpec : conversionResult.getDataset().getDatabases()) {
             String database = dbSpec.getDatabaseName();
             log.info("Building Database commands: {}", database);
@@ -1078,74 +1016,6 @@ public class DatabaseService {
         final AtomicBoolean rtn = new AtomicBoolean(true);
 
         // TODO: Fix this
-        /*
-        // Open the connections and ensure we are running this on the "RIGHT" cluster.
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-
-        // Skip when running test data.
-        if (!executeSessionService.getSession().getConversionResult().getConfigLite().isLoadingTestData()) {
-            for (Map.Entry<Environment, Set<String>> entry : uniqueSql.entrySet()) {
-                Environment environment = entry.getKey();
-                Set<String> uniqueSqlSet = entry.getValue();
-                if (uniqueSqlSet.isEmpty()) {
-                    continue;
-                }
-                log.info("Checking SET SQL Statements for {}", environment);
-
-                try (final Connection conn = connectionPoolService.getHS2EnvironmentConnection(environment)) {
-
-                    if (isNull(conn) && config.isExecute()
-                            && !config.getCluster(environment).getHiveServer2().isDisconnected()) {
-                        // this is a problem.
-                        rtn.set(Boolean.FALSE);
-                        dbMirror.addIssue(environment, "Connection missing. This is a bug.");
-                    }
-
-                    if (isNull(conn) && config.getCluster(environment).getHiveServer2().isDisconnected()) {
-                        dbMirror.addIssue(environment, "Running in 'disconnected' mode.  NO RIGHT operations will be done.  " +
-                                "The scripts will need to be run 'manually'.");
-                    }
-
-                    if (!isNull(conn)) {
-                        try (final Statement stmt = conn.createStatement()) {
-                            for (String sql : uniqueSqlSet) {
-                                log.info("{}:{}", environment, sql);
-                                try {
-                                    log.info("Checking {}:{}", environment, sql);
-                                    stmt.execute(sql);
-                                } catch (SQLException throwables) {
-                                    log.error("Failed SQL {}:{} - {}", environment, sql, throwables.getMessage());
-                                    dbMirror.addProblemSQL(environment, sql, throwables.getMessage());
-                                    rtn.set(Boolean.FALSE);
-                                }
-                            }
-                        } catch (SQLException stmtException) {
-                            log.error("Issue building statement", stmtException);
-                            rtn.set(Boolean.FALSE);
-                        }
-                    } else {
-                        log.info("DRY-RUN: {} - {}", environment, dbMirror.getName());
-                        uniqueSqlSet.forEach(sql -> {
-                            log.info("{}:{}", environment, sql);
-                        });
-                    }
-                } catch (SQLException connException) {
-                    log.error(environment.toString(), connException);
-                } catch (NullPointerException npe) {
-                    // Thrown when the connection is null, ignore
-                }
-            }
-        } else {
-            uniqueSql.forEach((environment, uniqueSqlSet) -> {
-                log.info("TEST DATA RUN: {} - {}", environment, dbMirror.getName());
-                uniqueSqlSet.forEach(sql -> {
-                    log.info("SQL {}:{}", environment, sql);
-                });
-
-            });
-        }
-
-         */
         return rtn.get();
     }
 
@@ -1156,35 +1026,6 @@ public class DatabaseService {
         // Setup return structure.
 
         // TODO: Fix this to retrieve the tables from the appropriate service.
-        /*
-        Map<Environment, List<Pair>> envSetPairs = new TreeMap<>();
-
-        // Build Temp Structure to hold the SET SQL statements.
-        for (Environment environment : Environment.values()) {
-            List<Pair> sqlPair = new ArrayList<>();
-            envSetPairs.put(environment, sqlPair);
-            Set<String> uniqueSets = new HashSet<>();
-            rtn.put(environment, uniqueSets);
-        }
-
-        // Extract the SET SQL statements from the TableMirrors.
-        dbMirror.getTableMirrors().values().forEach(tableMirror -> tableMirror.getEnvironments()
-                .forEach((env, tbl) -> {
-                    List<Pair> sqlPair = envSetPairs.get(env);
-                    sqlPair.addAll(tbl.getSql().stream().
-                            filter(s -> s.getAction().trim().startsWith("SET")).collect(Collectors.toList()));
-
-                }));
-
-        // Extract the unique SET SQL statements.
-        for (Environment environment : Environment.values()) {
-            Set<String> uniqueSets = rtn.get(environment);
-            List<Pair> sqlPair = envSetPairs.get(environment);
-            for (Pair pair : sqlPair) {
-                uniqueSets.add(pair.getAction());
-            }
-        }
-         */
 
         return rtn;
     }

@@ -72,15 +72,4 @@ public class Test_hybrid_mao_da_ro_cs extends E2EBaseTest {
         assertEquals(expected * -1, actual, "Return Code Failure: ");
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
-
 }

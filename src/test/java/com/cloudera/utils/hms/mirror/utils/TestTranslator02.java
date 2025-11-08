@@ -15,18 +15,10 @@
  */
 package com.cloudera.utils.hms.mirror.utils;
 
-import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.springframework.test.util.AssertionErrors.assertTrue;
 
 /**
  * Integration test class for validating table location translation logic.
@@ -46,17 +38,7 @@ public class TestTranslator02 extends TranslatorTestBase {
         log.info("Setting up TestTranslator01");
     }
 
-//    @Override
-//    protected void initializeConfig() throws IOException {
-//        translator = deserializeResource("/translator/testcase_02.yaml");
-//
-//        config = ConfigTest.deserializeResource("/config/default_01.yaml");
-//        config.setTranslator(translator);
-//        config.setLoadTestDataFile("something.yaml");
-//
-//    }
-
-    /**
+/**
      * Verifies that the table location is correctly translated
      * for the "web_sales" table with an alternative location mapping.
      */

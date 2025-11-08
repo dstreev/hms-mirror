@@ -18,10 +18,7 @@
 package com.cloudera.utils.hms.mirror.domain.testdata;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
-import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

@@ -48,63 +48,6 @@ Issues: Need to post warning when table/partition(s) new location isn't in the -
  */
 public class Test_sm_smn_wd_epl_glm_fel_dc_strict extends E2EBaseTest {
 
-    //    @Test
-//    public void sm_smn_wd_epl_glm_fel_dc() {
-//        String nameofCurrMethod = new Throwable()
-//                .getStackTrace()[0]
-//                .getMethodName();
-//
-//        String outputDir = getOutputDirBase() + nameofCurrMethod;
-//
-//        String[] args = new String[]{"-d", "STORAGE_MIGRATION",
-//                "-wd", "/finance/managed-fso",
-//                "-ewd", "/finance/external-fso",
-//                "-smn", "ofs://OHOME90",
-//                "-epl",
-//                "-glm", "/user/dstreev/datasets/alt-locations/load_web_sales=/finance/external-fso/load_web_sales,/warehouse/tablespace/external/hive=/finance/external-fso",
-//                "-fel",
-//                "-dc",
-//                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
-//
-//        // Read the output and verify the results.
-//        DBMirror[] resultsMirrors = getResults(outputDir, EXT_PURGE_ODD_PARTS_03);
-//
-//        validatePhase(resultsMirrors[0], "web_sales", PhaseState.CALCULATED_SQL);
-//        validateTableIssueCount(resultsMirrors[0], "web_sales", Environment.LEFT, 3);
-//        /*
-//        - description: "Alter Table Location"
-//          action: "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\""
-//        - description: "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location "
-//          action: "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET\
-//            \ LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\""
-//        - description: "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location "
-//          action: "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET\
-//            \ LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\""
-//        - description: "Alter Table Partition Spec `ws_sold_date_sk`='2452035' Location "
-//          action: "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2452035') SET\
-//            \ LOCATION \"ofs://OHOME90/finance/external-fso/load_web_sales/odd\""
-//         */
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",  "Alter Table Location",
-//                "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
-//            fail("Alter Table Location not found");
-//        }
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",  "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//        if (!validateSqlPair(resultsMirrors[0], Environment.LEFT, "web_sales",  "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//
-//    }
-
     @Test
     public void phaseTest() {
         validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.ERROR);
@@ -121,22 +64,6 @@ public class Test_sm_smn_wd_epl_glm_fel_dc_strict extends E2EBaseTest {
         long check = 1L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
-
-//    @Test
-//    public void validateSqlTest() {
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Location",
-//                "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales\"")) {
-//            fail("Alter Table Location not found");
-//        }
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/finance/external-fso/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//        if (!validateSqlPair("ext_purge_odd_parts", Environment.LEFT, "web_sales", "Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location",
-//                "ALTER TABLE web_sales PARTITION (`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"")) {
-//            fail("Alter Table Partition Location not found");
-//        }
-//    }
 
     @Test
     public void validateTableIssueCount() {

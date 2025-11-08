@@ -297,10 +297,6 @@ public enum MessageCode {
         return expected * -1;
     }
 
-//    public int getCode() {
-//        return code;
-//    }
-
     public String getDesc() {
         return desc;
     }

@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
-import com.cloudera.utils.hms.mirror.domain.core.Optimization;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionStatus;
 import com.cloudera.utils.hms.mirror.domain.support.DriverType;
@@ -26,14 +25,12 @@ import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import java.sql.Driver;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;

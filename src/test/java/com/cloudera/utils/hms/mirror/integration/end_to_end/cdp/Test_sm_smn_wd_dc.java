@@ -27,7 +27,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -72,17 +71,6 @@ public class Test_sm_smn_wd_dc extends E2EBaseTest {
 //            fail("Alter Table Location not found");
 //        }
 //
-//    }
-
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("assorted_test_db", "ext_part_01",
-//                Environment.LEFT, 882);
-//    }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
 //    }
 
     @Test

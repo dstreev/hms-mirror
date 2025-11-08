@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.repository;
 
-import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 

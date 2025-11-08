@@ -101,13 +101,6 @@ public class Filter implements Cloneable {
         // Do nothing here, as this is a derived field
     }
 
-    //    public void removeDbPropertySkipItem(String dbPropertySkipItem) {
-//        if (!isBlank(dbPropertySkipItem)) {
-//            this.dbPropertySkipList.remove(dbPropertySkipItem);
-//            dbPropertySkipListPattern.remove(Pattern.compile(dbPropertySkipItem));
-//        }
-//    }
-//
     public void removeDbPropertySkipItemByIndex(int index) {
         try {
             this.dbPropertySkipList.remove(index);
