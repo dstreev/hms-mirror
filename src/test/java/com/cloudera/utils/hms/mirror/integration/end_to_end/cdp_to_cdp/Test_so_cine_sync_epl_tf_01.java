@@ -28,6 +28,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static com.cloudera.utils.hms.mirror.MirrorConf.ALTER_TABLE_PARTITION_ADD_LOCATION_DESC;
+import static com.cloudera.utils.hms.mirror.MirrorConf.MSCK_REPAIR_TABLE_DESC;
+import static com.cloudera.utils.hms.util.TableUtils.REPAIR_DESC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(SpringExtension.class)
@@ -56,9 +58,9 @@ public class Test_so_cine_sync_epl_tf_01 extends E2EBaseTest {
     @Test
     public void sqlPairTest() {
         // Validate the SQL Pair.
-        // msck off, so ALTER ADD PARTS
-        validateTableSqlPair("ext_purge_odd_parts", Environment.RIGHT, "web_sales", ALTER_TABLE_PARTITION_ADD_LOCATION_DESC,
-                "ALTER TABLE web_sales ADD IF NOT EXISTS");
+        // msck on (right)
+        validateTableSqlPair("ext_purge_odd_parts", Environment.RIGHT, "web_sales", REPAIR_DESC,
+                "MSCK REPAIR TABLE");
     }
 
     @Test
