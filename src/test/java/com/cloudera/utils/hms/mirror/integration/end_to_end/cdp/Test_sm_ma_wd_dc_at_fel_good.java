@@ -58,11 +58,6 @@ public class Test_sm_ma_wd_dc_at_fel_good extends E2EBaseTest {
     public void phaseTest() {
         validatePhase("assort_test_db", "acid_03", PhaseState.PROCESSED);
     }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
+
 
 }

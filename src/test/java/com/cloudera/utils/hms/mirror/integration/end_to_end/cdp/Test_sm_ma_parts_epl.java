@@ -76,33 +76,4 @@ public class Test_sm_ma_parts_epl extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void sqlTest() {
-//        Boolean foundAT = Boolean.FALSE;
-//        Boolean foundOddPart = Boolean.FALSE;
-//        Boolean foundOddPart2 = Boolean.FALSE;
-//
-//        for (Pair pair : getConversion().getDatabase("assort_test_db")
-//                .getTableMirrors().get("acid_03")
-//                .getEnvironmentTable(Environment.LEFT).getSql()) {
-//            if (pair.getDescription().trim().equals("Alter Table Location")) {
-//                assertEquals("Location doesn't match", "ALTER TABLE web_sales SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales\"", pair.getAction());
-//                foundAT = Boolean.TRUE;
-//            }
-//            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451180' Location")) {
-//                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
-//                        "(`ws_sold_date_sk`='2451180') SET LOCATION \"ofs://OHOME90/warehouse/tablespace/external/hive/ext_purge_odd_parts.db/web_sales/ws_sold_date_sk=2451180\"", pair.getAction());
-//                foundOddPart = Boolean.TRUE;
-//            }
-//            if (pair.getDescription().trim().equals("Alter Table Partition Spec `ws_sold_date_sk`='2451188' Location")) {
-//                assertEquals("Location doesn't match", "ALTER TABLE web_sales PARTITION " +
-//                        "(`ws_sold_date_sk`='2451188') SET LOCATION \"ofs://OHOME90/user/dstreev/datasets/alt-locations/web_sales/ws_sold_date_sk=2451188\"", pair.getAction());
-//                foundOddPart2 = Boolean.TRUE;
-//            }
-//        }
-//        assertEquals("Alter Table Location not found", Boolean.TRUE, foundAT);
-//        assertEquals("Alter Odd Part Location not found", Boolean.TRUE, foundOddPart);
-//        assertEquals("Alter Odd Part 2 Location not found", Boolean.TRUE, foundOddPart2);
-//    }
-
 }

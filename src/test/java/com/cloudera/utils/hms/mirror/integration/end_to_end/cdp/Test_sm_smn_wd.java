@@ -40,21 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sm_smn_wd extends E2EBaseTest {
-    //        String[] args = new String[]{
-//                "-d", "STORAGE_MIGRATION",
-//                "-smn", TARGET_NAMESPACE,
-//                "-wd", "/warehouse/managed_tables", "-ewd", "/warehouse/external_tables",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
-
 
     @Test
     public void returnCodeTest() {
@@ -65,15 +50,5 @@ public class Test_sm_smn_wd extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }
