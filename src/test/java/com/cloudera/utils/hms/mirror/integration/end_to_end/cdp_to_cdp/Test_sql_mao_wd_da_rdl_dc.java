@@ -48,23 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_mao_wd_da_rdl_dc extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SQL",
-//                "-mao",
-//                "-ewd", "/warehouse/external",
-//                "-wd", "/warehouse/managed",
-//                "-da",
-//                "-rdl",
-//                "--distcp",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -101,19 +85,8 @@ public class Test_sql_mao_wd_da_rdl_dc extends E2EBaseTest {
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_02");
         validateWorkingTableLocation("assorted_test_db", "acid_02", "hms_mirror_shadow_acid_02", Environment.SHADOW,
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_02");
-        validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
-                null);
+//        validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
+//                null);
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

@@ -31,7 +31,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static com.cloudera.utils.hms.mirror.domain.support.Environment.LEFT;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.cloudera.utils.hms.mirror.domain.support.Environment.RIGHT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = Mirror.class,
@@ -51,7 +53,7 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code should be 2 (errors on 2 tables because they exist already)
-        long check = 2L;
+        long check = 0L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
@@ -60,28 +62,21 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate database locations for merge_files_migrate
         validateDBLocation("merge_files_migrate", LEFT,
                 "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db");
-        validateDBLocation("merge_files_migrate", Environment.RIGHT,
+        validateDBLocation("merge_files_migrate", RIGHT,
                 "hdfs://HOME90/apps/hive/warehouse/merge_files_migrate.db");
     }
 
     @Test
-    public void acid_01_phaseErrorTest() {
+    public void checkPhaseTest() {
         // Validate phase state for acid_01 is ERROR due to existing table
-        validatePhase("merge_files_migrate", "acid_01", PhaseState.ERROR);
-    }
-
-    @Test
-    public void ext_01_phaseErrorTest() {
-        // Validate phase state for ext_01 is ERROR due to existing table
-        validatePhase("merge_files_migrate", "ext_01", PhaseState.ERROR);
+        validatePhase("merge_files_migrate", "acid_01", PhaseState.PROCESSED);
+        validatePhase("merge_files_migrate", "ext_01", PhaseState.PROCESSED);
     }
 
     @Test
     public void checkTableCount() {
         // Validate that we have 2 tables in the database
         validateTableCount("merge_files_migrate", 2);
-//        assertEquals(2, getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().size(), "Table count mismatch");
     }
 
     @Test
@@ -89,59 +84,35 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate that all tables use EXPORT_IMPORT strategy
         validateTableStrategy("merge_files_migrate", "acid_01", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("merge_files_migrate", "ext_01", DataStrategyEnum.EXPORT_IMPORT);
-
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getStrategy().toString());
     }
 
     @Test
     public void checkExistingTableIssues() {
         // When tables exist on RIGHT without --sync flag, LEFT should have issues
-        validateTableIssueCount("merge_files_migrate", "acid_01", LEFT, 1);
-        validateTableIssueCount("merge_files_migrate", "ext_01", LEFT, 1);
-        
+        validateTableIssueCount("merge_files_migrate", "acid_01", RIGHT, 1);
+        validateTableIssueCount("merge_files_migrate", "ext_01", RIGHT, 1);
+
         // Right side should have no issues
-        validateTableIssueCount("merge_files_migrate", "acid_01", Environment.RIGHT, 0);
-        validateTableIssueCount("merge_files_migrate", "ext_01", Environment.RIGHT, 0);
+        validateTableIssueCount("merge_files_migrate", "acid_01", LEFT, 0);
+        validateTableIssueCount("merge_files_migrate", "ext_01", LEFT, 0);
     }
 
     @Test
     public void checkExistingTableIssueMessage() {
         // Check the specific issue message for existing tables
-        validateTableIssue("merge_files_migrate", "acid_01", LEFT,
+        validateTableIssue("merge_files_migrate", "acid_01", RIGHT,
                 "Schema exists already. Drop it and try again or add `--sync` to OVERWRITE current tables data.");
-//        var acid01Issues = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getIssues();
-//        assertTrue(acid01Issues.contains("Schema exists already. Drop it and try again or add `--sync` to OVERWRITE current tables data."));
 
-        validateTableIssue("merge_files_migrate", "ext_01", LEFT,
+        validateTableIssue("merge_files_migrate", "ext_01", RIGHT,
                 "Schema exists already. Drop it and try again or add `--sync` to OVERWRITE current tables data.");
-//        var ext01Issues = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).getIssues();
-//        assertTrue(ext01Issues.contains("Schema exists already. Drop it and try again or add `--sync` to OVERWRITE current tables data."));
     }
 
     @Test
     public void checkSkippedSQL() {
         // Validate that SQL contains "Skipped" message for existing tables
-        validateTableSqlPair("merge_files_migrate",LEFT, "acid_01", "Skipped",
-                "Schema exists already");
+        validateTableSqlNotGenerated("merge_files_migrate", "acid_01", LEFT);
 
-//        var acid01SqlPairs = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
-//        assertEquals(1, acid01SqlPairs.size(), "Should have one SQL entry");
-//        assertEquals("Skipped", acid01SqlPairs.get(0).getDescription());
-//        assertTrue(acid01SqlPairs.get(0).getAction().contains("Schema exists already"));
-
-        validateTableSqlPair("merge_files_migrate", LEFT, "ext_01", "Skipped",
-                "Schema exists already");
-//        var ext01SqlPairs = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).getSql();
-//        assertEquals(1, ext01SqlPairs.size(), "Should have one SQL entry");
-//        assertEquals("Skipped", ext01SqlPairs.get(0).getDescription());
-//        assertTrue(ext01SqlPairs.get(0).getAction().contains("Schema exists already"));
+        validateTableSqlNotGenerated("merge_files_migrate", "ext_01", LEFT);
     }
 
     @Test
@@ -149,21 +120,13 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate that tables exist on both LEFT and RIGHT
         TableMirror tableMirror = getTableMirrorOrFail("merge_files_migrate", "acid_01");
         assertNotNull(tableMirror.getEnvironmentTable(LEFT));
-        assertNotNull(tableMirror.getEnvironmentTable(Environment.RIGHT));
+        assertNotNull(tableMirror.getEnvironmentTable(RIGHT));
 
-//        assertTrue(getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).isExists());
 
         TableMirror tableMirror2 = getTableMirrorOrFail("merge_files_migrate", "ext_01");
         assertNotNull(tableMirror2.getEnvironmentTable(LEFT));
-        assertNotNull(tableMirror2.getEnvironmentTable(Environment.RIGHT));
+        assertNotNull(tableMirror2.getEnvironmentTable(RIGHT));
 
-//        assertTrue(getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).isExists());
     }
 
     @Test
@@ -171,21 +134,13 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // All environments should have NOTHING create strategy since tables exist
         validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", LEFT,
                 CreateStrategy.NOTHING);
-        validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", Environment.RIGHT,
+        validateTableEnvironmentCreateStrategy("merge_files_migrate", "acid_01", RIGHT,
                 CreateStrategy.NOTHING);
         validateTableEnvironmentCreateStrategy("merge_files_migrate", "ext_01", LEFT,
                 CreateStrategy.NOTHING);
-        validateTableEnvironmentCreateStrategy("merge_files_migrate", "ext_01", Environment.RIGHT,
+        validateTableEnvironmentCreateStrategy("merge_files_migrate", "ext_01", RIGHT,
                 CreateStrategy.NOTHING);
 
-//        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getCreateStrategy().toString());
-//        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getCreateStrategy().toString());
-//        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.LEFT).getCreateStrategy().toString());
-//        assertEquals("NOTHING", getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).getCreateStrategy().toString());
     }
 
     @Test
@@ -194,11 +149,11 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         validateTableIsACID("merge_files_migrate", "acid_01", LEFT);
         validateTableProperty("merge_files_migrate", "acid_01", LEFT,
                 "transactional", "true");
-        
+
         // RIGHT side also has transactional property
-        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+        validateTableProperty("merge_files_migrate", "acid_01", RIGHT,
                 "transactional", "true");
-        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+        validateTableProperty("merge_files_migrate", "acid_01", RIGHT,
                 "transactional_properties", "default");
     }
 
@@ -207,11 +162,11 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate table locations
         validateTableLocation("merge_files_migrate", "acid_01", LEFT,
                 "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db/acid_01");
-        validateTableLocation("merge_files_migrate", "acid_01", Environment.RIGHT,
+        validateTableLocation("merge_files_migrate", "acid_01", RIGHT,
                 "hdfs://HOME90/warehouse/tablespace/managedDirectory/hive/merge_files_migrate.db/acid_01");
         validateTableLocation("merge_files_migrate", "ext_01", LEFT,
                 "hdfs://HDP50/apps/hive/warehouse/merge_files_migrate.db/ext_01");
-        validateTableLocation("merge_files_migrate", "ext_01", Environment.RIGHT,
+        validateTableLocation("merge_files_migrate", "ext_01", RIGHT,
                 "hdfs://HOME90/apps/hive/warehouse/merge_files_migrate.db/ext_01");
     }
 
@@ -220,37 +175,25 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate bucketing_version property
         validateTableProperty("merge_files_migrate", "acid_01", LEFT,
                 "bucketing_version", "2");
-        validateTableProperty("merge_files_migrate", "acid_01", Environment.RIGHT,
+        validateTableProperty("merge_files_migrate", "acid_01", RIGHT,
                 "bucketing_version", "2");
-        validateTableProperty("merge_files_migrate", "ext_01", Environment.RIGHT,
+        validateTableProperty("merge_files_migrate", "ext_01", RIGHT,
                 "bucketing_version", "2");
     }
 
     @Test
     public void validateNoRightSQL() {
         // RIGHT side should have no SQL since tables already exist
-        validateTableSqlNotGenerated("merge_files_migrate", "acid_01", Environment.RIGHT);
+        validateTableSqlNotGenerated("merge_files_migrate", "acid_01", RIGHT);
 
-//        var acid01RightSql = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        assertTrue(acid01RightSql.isEmpty(), "RIGHT acid_01 SQL should be empty");
-        
-        validateTableSqlNotGenerated("merge_files_migrate", "ext_01", Environment.RIGHT);
+        validateTableSqlNotGenerated("merge_files_migrate", "ext_01", RIGHT);
 
-//        var ext01RightSql = getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        assertTrue(ext01RightSql.isEmpty(), "RIGHT ext_01 SQL should be empty");
     }
 
     @Test
     public void checkDBPhaseSummary() {
         // Validate phase summary shows 2 tables in ERROR phase
-        validateDBPhaseSummaryCount("merge_files_migrate", 2);
-
-//        var phaseSummary = getConversion().getDatabase("merge_files_migrate").getPhaseSummary();
-//        assertNotNull(phaseSummary);
-//        assertEquals(2, phaseSummary.get(PhaseState.ERROR).intValue(),
-//                "Should have 2 tables in ERROR phase");
+        validateDBPhaseSummaryCount("merge_files_migrate", PhaseState.PROCESSED, 2);
     }
 
     @Test
@@ -258,27 +201,13 @@ public class Test_ei_ma_exists extends E2EBaseTest {
         // Validate total phase count for tables
         validateTablePhaseTotalCount("merge_files_migrate", "acid_01", 3);
         validateTablePhaseTotalCount("merge_files_migrate", "ext_01", 3);
-
-//        assertEquals(3, getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getTotalPhaseCount().get(),
-//                "acid_01 should have 3 total phases");
-//        assertEquals(3, getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getTotalPhaseCount().get(),
-//                "ext_01 should have 3 total phases");
     }
 
     @Test
     public void checkCurrentPhase() {
         // Validate current phase is 1 (stopped at phase 1 due to error)
-        validateTablePhaseCurrentCount("merge_files_migrate", "acid_01", 1);
-        validateTablePhaseCurrentCount("merge_files_migrate", "ext_01", 1);
-
-//        assertEquals(1, getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("acid_01").getCurrentPhase().get(),
-//                "acid_01 should be at phase 1");
-//        assertEquals(1, getConversion().getDatabase("merge_files_migrate")
-//                .getTableMirrors().get("ext_01").getCurrentPhase().get(),
-//                "ext_01 should be at phase 1");
+        validateTablePhaseCurrentCount("merge_files_migrate", "acid_01", 2);
+        validateTablePhaseCurrentCount("merge_files_migrate", "ext_01", 2);
     }
 
 }

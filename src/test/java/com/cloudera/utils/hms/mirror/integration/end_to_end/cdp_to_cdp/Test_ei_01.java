@@ -41,19 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
         })
 @Slf4j
 public class Test_ei_01 extends E2EBaseTest {
-//        String[] args = new String[]{"-d", "EXPORT_IMPORT",
-//                "-sql", "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 1;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
-//
-//    }
+
 
     @Test
     public void returnCodeTest() {
@@ -76,10 +64,6 @@ public class Test_ei_01 extends E2EBaseTest {
     public void tableCountTest() {
         // Validate that 4 tables are processed
         validateTableCount("assorted_test_db", 4);
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-//        assertEquals(4,
-//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Should have 4 tables");
     }
 
     @Test
@@ -89,21 +73,12 @@ public class Test_ei_01 extends E2EBaseTest {
     }
 
     @Test
-    public void ext_part_02_phaseTest() {
+    public void checkTablePhaseTest() {
         // Validate phase state for ext_part_02 - successful
-        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
-    }
-
-    @Test
-    public void legacy_mngd_01_phaseTest() {
-        // Validate phase state for legacy_mngd_01 - successful
-        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
-    }
-
-    @Test
-    public void ext_missing_01_phaseTest() {
-        // Validate phase state for ext_missing_01 - successful despite issue
-        validatePhase("assorted_test_db", "ext_missing_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_missing_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.ERROR);
     }
 
     @Test
@@ -113,11 +88,6 @@ public class Test_ei_01 extends E2EBaseTest {
                 "The number of partitions: 440 exceeds the configuration limit");
         validateTableError("assorted_test_db", "ext_part_01", Environment.LEFT,
                 "100");
-//        var ext_part_01_errors = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getErrors();
-//        assertFalse(ext_part_01_errors.isEmpty(), "ext_part_01 should have errors");
-//        assertTrue(ext_part_01_errors.get(0).contains("The number of partitions: 440 exceeds the configuration limit"));
-//        assertTrue(ext_part_01_errors.get(0).contains("100"));
     }
 
     @Test
@@ -128,14 +98,6 @@ public class Test_ei_01 extends E2EBaseTest {
         validateTableStrategy("assorted_test_db", "legacy_mngd_01", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "ext_missing_01", DataStrategyEnum.EXPORT_IMPORT);
 
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getStrategy().toString());
     }
 
     @Test
@@ -149,17 +111,6 @@ public class Test_ei_01 extends E2EBaseTest {
         // Validate export paths for successful tables
         validateTableSqlPair("assorted_test_db", Environment.LEFT, "ext_part_02", "EXPORT Table",
         "EXPORT TABLE ext_part_02 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\"");
-//        var ext_part_02_left_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).getSql();
-//        boolean foundExport = false;
-//        for (var pair : ext_part_02_left_sql) {
-//            if (pair.getDescription().equals("EXPORT Table")) {
-//                assertEquals("EXPORT TABLE ext_part_02 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\"",
-//                        pair.getAction());
-//                foundExport = true;
-//            }
-//        }
-//        assertTrue(foundExport, "EXPORT statement not found for ext_part_02");
     }
 
     @Test
@@ -167,38 +118,17 @@ public class Test_ei_01 extends E2EBaseTest {
         // Validate import paths for successful tables
         validateTableSqlPair("assorted_test_db", Environment.RIGHT, "ext_part_02", "IMPORT Table",
                 "IMPORT EXTERNAL TABLE ext_part_02 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_02\"");
-
-//        var ext_part_02_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundImport = false;
-//        for (var pair : ext_part_02_right_sql) {
-//            if (pair.getDescription().equals("IMPORT Table")) {
-//                assertEquals("IMPORT EXTERNAL TABLE ext_part_02 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/ext_part_02\" LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_part_02\"",
-//                        pair.getAction());
-//                foundImport = true;
-//            }
-//        }
-//        assertTrue(foundImport, "IMPORT statement not found for ext_part_02");
     }
 
     @Test
     public void checkExtMissingHandling() {
         // ext_missing_01 exists on RIGHT but not on LEFT
-        // TODO: Fix.. But I'm not sure how this is a valid test.
-//        validateTableEnvironmentNotExist("assorted_test_db", "ext_missing_01", Environment.LEFT);
+        validateTableEnvironmentNotExist("assorted_test_db", "ext_missing_01", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "ext_missing_01", Environment.RIGHT);
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).isExists());
-        
+
         // Should have issue on RIGHT
         validateTableIssue("assorted_test_db", "ext_missing_01", Environment.RIGHT,
-                "Schema exists on the target, but not on the source");
-//        var issues = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.RIGHT).getIssues();
-//        assertFalse(issues.isEmpty());
-//        assertTrue(issues.get(0).contains("Schema exists on the target, but not on the source"));
+                "Schema exists on the target, but not on the source.");
     }
 
     @Test
@@ -207,55 +137,21 @@ public class Test_ei_01 extends E2EBaseTest {
         validateTableEnvironment("assorted_test_db", "ext_part_01", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "ext_part_02", Environment.LEFT);
         validateTableEnvironment("assorted_test_db", "legacy_mngd_01", Environment.LEFT);
-        // TODO: I'm suspect on this, because ext_missing_01 exists on RIGHT but not on LEFT.
-        validateTableEnvironment("assorted_test_db", "ext_missing_01", Environment.LEFT);
-
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_02").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("legacy_mngd_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_missing_01").getEnvironmentTable(Environment.LEFT).isExists());
+        validateTableEnvironment("assorted_test_db", "ext_missing_01", Environment.RIGHT);
     }
 
     @Test
     public void checkErrorTableStillGeneratesSQL() {
-        // ext_part_01 with ERROR still generates SQL (but won't be executed)
         validateTableSqlNotGenerated("assorted_test_db", "ext_part_01", Environment.LEFT);
-//        var ext_part_01_left_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.LEFT).getSql();
-//        assertFalse(ext_part_01_left_sql.isEmpty(), "LEFT SQL is still generated for ERROR table");
-        validateTableSqlDescription("assorted_test_db", "ext_part_01",Environment.LEFT,  "EXPORT Table");
-        // Check that EXPORT is in LEFT SQL
-//        boolean foundExport = false;
-//        for (var pair : ext_part_01_left_sql) {
-//            if (pair.getDescription().equals("EXPORT Table")) {
-//                foundExport = true;
-//            }
-//        }
-//        assertTrue(foundExport, "EXPORT should be in LEFT SQL even with error");
-        
-        // RIGHT SQL is also generated
-        validateTableSqlGenerated("assorted_test_db", "ext_part_01", Environment.RIGHT);
-//        var ext_part_01_right_sql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("ext_part_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        assertFalse(ext_part_01_right_sql.isEmpty(), "RIGHT SQL is still generated for ERROR table");
+        validateTableSqlDescription("assorted_test_db", "ext_part_02",Environment.LEFT,  "EXPORT Table");
+        validateTableSqlNotGenerated("assorted_test_db", "ext_part_01", Environment.RIGHT);
     }
 
     @Test
     public void checkPhaseSummary() {
         // Validate phase summary
         validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.ERROR, 1);
-        validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.CALCULATED_SQL, 3);
-
-//        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
-//        assertNotNull(phaseSummary);
-//        assertEquals(1, phaseSummary.get(PhaseState.ERROR).intValue(),
-//                "Should have 1 table in ERROR phase");
-//        assertEquals(3, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(),
-//                "Should have 3 tables in CALCULATED_SQL phase");
+        validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.PROCESSED, 3);
     }
 
     @Test
@@ -294,6 +190,4 @@ public class Test_ei_01 extends E2EBaseTest {
         validateTableIssueCount("assorted_test_db", "ext_missing_01", Environment.RIGHT, 1);
         validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.LEFT, 0);
     }
-
-
 }

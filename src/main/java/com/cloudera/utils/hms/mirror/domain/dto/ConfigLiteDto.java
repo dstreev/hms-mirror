@@ -128,7 +128,8 @@ public class ConfigLiteDto implements Cloneable {
         if (transfer != null && transfer.getStorageMigration() != null) {
             if ((transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.ALIGNED
                     || transfer.getStorageMigration().getTranslationType() == com.cloudera.utils.hms.mirror.domain.support.TranslationTypeEnum.RELATIVE)
-                    && transfer.getStorageMigration().isDistcp()) {
+                    // && transfer.getStorageMigration().isDistcp()
+             ) {
                 return Boolean.TRUE;
             }
         }

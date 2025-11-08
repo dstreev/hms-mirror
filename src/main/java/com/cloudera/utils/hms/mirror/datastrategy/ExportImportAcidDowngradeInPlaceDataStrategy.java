@@ -24,6 +24,7 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.*;
@@ -72,6 +73,8 @@ public class ExportImportAcidDowngradeInPlaceDataStrategy extends DataStrategyBa
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
         JobDto job = conversionResult.getJob();
+
+        tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE);
         /*
         rename original to archive
         export original table

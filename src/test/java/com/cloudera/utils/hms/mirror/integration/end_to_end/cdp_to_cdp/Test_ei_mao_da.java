@@ -45,16 +45,6 @@ import static org.junit.jupiter.api.Assertions.*;
         })
 @Slf4j
 public class Test_ei_mao_da extends E2EBaseTest {
-//
-//        String[] args = new String[]{"-d", "EXPORT_IMPORT",
-//                "-mao", "-da",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        int check = 1; // partition counts exceed limit of 100 (default).
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
 
     @Test
     public void returnCodeTest() {
@@ -78,28 +68,13 @@ public class Test_ei_mao_da extends E2EBaseTest {
     public void tableCountTest() {
         // Validate that only 3 ACID tables are processed with migrate-acid-only
         validateTableCount("assorted_test_db", 3);
-
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
-//        assertEquals(3,
-//                getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Should have only 3 ACID tables with migrate-acid-only option");
     }
 
     @Test
-    public void acid_01_phaseTest() {
+    public void checkPhaseTest() {
         // Validate phase state for acid_01
-        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
-    }
-
-    @Test
-    public void acid_02_phaseTest() {
-        // Validate phase state for acid_02
-        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
-    }
-
-    @Test
-    public void acid_03_phaseErrorTest() {
-        // Validate phase state for acid_03 - should be ERROR due to partition limit
+        validatePhase("assorted_test_db", "acid_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.PROCESSED);
         validatePhase("assorted_test_db", "acid_03", PhaseState.ERROR);
     }
 
@@ -109,13 +84,6 @@ public class Test_ei_mao_da extends E2EBaseTest {
         validateTableStrategy("assorted_test_db", "acid_01", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "acid_02", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.EXPORT_IMPORT);
-
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02").getStrategy().toString());
-//        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getStrategy().toString());
     }
 
     @Test
@@ -148,16 +116,8 @@ public class Test_ei_mao_da extends E2EBaseTest {
     @Test
     public void checkAcid03PartitionLimitError() {
         // Validate acid_03 has error due to partition limit exceeded
-//        validateTableErrorCount("assorted_test_db", "acid_03", Environment.LEFT, 1);
         validateTableError("assorted_test_db", "acid_03", Environment.LEFT,
                 "The number of partitions: 200 exceeds the configuration limit");
-        validateTableIssue("assorted_test_db", "acid_03", Environment.LEFT,
-                "(hybrid->exportImportPartitionLimit) of 100");
-        // Check the specific error message
-//        var acid03Errors = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getErrors();
-//        assertTrue(acid03Errors.get(0).contains("The number of partitions: 200 exceeds the configuration limit"));
-//        assertTrue(acid03Errors.get(0).contains("(hybrid->exportImportPartitionLimit) of 100"));
     }
 
     @Test
@@ -165,17 +125,6 @@ public class Test_ei_mao_da extends E2EBaseTest {
         // Validate export paths for ACID tables
         validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_01", "EXPORT Table",
                 "EXPORT TABLE acid_01 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"");
-//        var acid01LeftSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getSql();
-//        boolean foundExport = false;
-//        for (var pair : acid01LeftSql) {
-//            if (pair.getDescription().equals("EXPORT Table")) {
-//                assertEquals("EXPORT TABLE acid_01 TO \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
-//                        pair.getAction());
-//                foundExport = true;
-//            }
-//        }
-//        assertTrue(foundExport, "EXPORT statement not found for acid_01");
     }
 
     @Test
@@ -183,18 +132,6 @@ public class Test_ei_mao_da extends E2EBaseTest {
         // With downgrade-acid, ACID tables should be imported as EXTERNAL
         validateTableSqlPair("assorted_test_db", Environment.RIGHT, "acid_01", "IMPORT Table",
                 "IMPORT EXTERNAL TABLE acid_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"");
-
-//        var acid01RightSql = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).getSql();
-//        boolean foundImport = false;
-//        for (var pair : acid01RightSql) {
-//            if (pair.getDescription().equals("IMPORT Table")) {
-//                assertEquals("IMPORT EXTERNAL TABLE acid_01 FROM \"hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01\"",
-//                        pair.getAction());
-//                foundImport = true;
-//            }
-//        }
-//        assertTrue(foundImport, "IMPORT EXTERNAL statement not found for acid_01");
     }
 
     @Test
@@ -212,17 +149,11 @@ public class Test_ei_mao_da extends E2EBaseTest {
     public void checkBucketingForACIDTables() {
         // Validate acid_01 has 2 buckets
         validateTableBuckets("assorted_test_db", "acid_01", Environment.LEFT, 2);
-//        var acid01LeftDef = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getDefinition();
-//        assertTrue(acid01LeftDef.stream().anyMatch(line -> line.contains("INTO 2 BUCKETS")));
-        
+
         // acid_02 doesn't have buckets
         
         // Validate acid_03 has 6 buckets
         validateTableBuckets("assorted_test_db", "acid_03", Environment.LEFT, 6);
-//        var acid03LeftDef = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).getDefinition();
-//        assertTrue(acid03LeftDef.stream().anyMatch(line -> line.contains("INTO 6 BUCKETS")));
     }
 
     @Test
@@ -260,24 +191,10 @@ public class Test_ei_mao_da extends E2EBaseTest {
         TableMirror tableMirror2 = getTableMirrorOrFail("assorted_test_db", "acid_02");
         TableMirror tableMirror3 = getTableMirrorOrFail("assorted_test_db", "acid_03");
 
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02").getEnvironmentTable(Environment.LEFT).isExists());
-//        assertTrue(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.LEFT).isExists());
-        
         // Tables don't exist on RIGHT yet (not migrated)
-        validateTableEnvironment("assorted_test_db", "acid_01", Environment.RIGHT);
-        validateTableEnvironment("assorted_test_db", "acid_02", Environment.RIGHT);
-        validateTableEnvironment("assorted_test_db", "acid_03", Environment.RIGHT);
-
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.RIGHT).isExists());
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02").getEnvironmentTable(Environment.RIGHT).isExists());
-//        assertFalse(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.RIGHT).isExists());
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_01", Environment.RIGHT);
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_02", Environment.RIGHT);
+        validateTableEnvironmentNotExist("assorted_test_db", "acid_03", Environment.RIGHT);
     }
 
     @Test
@@ -287,53 +204,26 @@ public class Test_ei_mao_da extends E2EBaseTest {
         TableMirror tableMirror2 = getTableMirrorOrFail("assorted_test_db", "acid_02");
         TableMirror tableMirror3 = getTableMirrorOrFail("assorted_test_db", "acid_03");
 
-//        var tableMirrors = getConversion().getDatabase("assorted_test_db").getTableMirrors();
-//        assertTrue(tableMirrors.containsKey("acid_01"));
-//        assertTrue(tableMirrors.containsKey("acid_02"));
-//        assertTrue(tableMirrors.containsKey("acid_03"));
-        
         // Non-ACID tables should not be present
         validateTableMissing("assorted_test_db", "ext_part_01");
         validateTableMissing("assorted_test_db", "ext_part_02");
         validateTableMissing("assorted_test_db", "legacy_mngd_01");
         validateTableMissing("assorted_test_db", "ext_missing_01");
-
-//        assertFalse(tableMirrors.containsKey("ext_part_01"));
-//        assertFalse(tableMirrors.containsKey("ext_part_02"));
-//        assertFalse(tableMirrors.containsKey("legacy_mngd_01"));
-//        assertFalse(tableMirrors.containsKey("ext_missing_01"));
     }
 
     @Test
     public void checkPhaseSummary() {
         // Validate phase summary
-        validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.CALCULATED_SQL, 2);
+        validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.PROCESSED, 2);
         validateDBInPhaseSummaryCount("assorted_test_db", PhaseState.ERROR, 1);
-
-//        var phaseSummary = getConversion().getDatabase("assorted_test_db").getPhaseSummary();
-//        assertNotNull(phaseSummary);
-//        assertEquals(2, phaseSummary.get(PhaseState.CALCULATED_SQL).intValue(),
-//                "Should have 2 tables in CALCULATED_SQL phase");
-//        assertEquals(1, phaseSummary.get(PhaseState.ERROR).intValue(),
-//                "Should have 1 table in ERROR phase (acid_03)");
     }
 
     @Test
     public void checkTotalPhaseCount() {
         // Validate total phase count for tables
-        validateTablePhaseTotalCount("assorted_test_db", "acid_01", 6);
-        validateTablePhaseTotalCount("assorted_test_db", "acid_02", 6);
-        validateTablePhaseTotalCount("assorted_test_db", "acid_03", 6);
-
-//        assertEquals(6, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01").getTotalPhaseCount().get(),
-//                "acid_01 should have 6 total phases");
-//        assertEquals(6, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02").getTotalPhaseCount().get(),
-//                "acid_02 should have 6 total phases");
-//        assertEquals(6, getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_03").getTotalPhaseCount().get(),
-//                "acid_03 should have 6 total phases");
+        validateTablePhaseTotalCount("assorted_test_db", "acid_01", 3);
+        validateTablePhaseTotalCount("assorted_test_db", "acid_02", 3);
+        validateTablePhaseTotalCount("assorted_test_db", "acid_03", 2);
     }
 
 

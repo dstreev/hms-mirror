@@ -45,28 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_01 extends E2EBaseTest {
-    //    @Test
-//    public void so_01() {
-//        String nameofCurrMethod = new Throwable()
-//                .getStackTrace()[0]
-//                .getMethodName();
-//
-//        String outputDir = getOutputDirBase() + nameofCurrMethod;
-//
-//        String[] args = new String[]{
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
-//
-//
-//    }
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -79,22 +58,16 @@ public class Test_so_01 extends E2EBaseTest {
     @Test
     public void sqlPairTest() {
         // Validate the SQL Pair.
-//        validateTableSqlPair("assorted_test_db", Environment.LEFT, "ext_part_01", REPAIR_DESC,
-//                "FROM acid_01 INSERT OVERWRITE TABLE hms_mirror_transfer_acid_01 SELECT *");
         validateTableSqlPair("assorted_test_db", Environment.RIGHT, "ext_part_01", REPAIR_DESC,
                 "MSCK REPAIR TABLE ext_part_01");
         validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_LOCATION_DESC,
                 "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\"");
-//        validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_MNGD_LOCATION_DESC,
-//                "ALTER DATABASE assorted_test_db SET MANAGEDLOCATION \"hdfs://HOME90/warehouse/managed/assorted_test_db.db\"");
     }
 
     @Test
     public void dbLocationTest() {
         validateDBLocation("assorted_test_db", Environment.RIGHT,
                 "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
-//        validateDBManagedLocation("assorted_test_db", Environment.RIGHT,
-//                "hdfs://HOME90/warehouse/managed/assorted_test_db.db");
     }
 
     @Test
@@ -105,7 +78,7 @@ public class Test_so_01 extends E2EBaseTest {
 
     @Test
     public void phaseTest() {
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
     }
 
     @Test

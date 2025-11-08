@@ -41,7 +41,6 @@ public class TransferConfig implements Cloneable {
     private String remoteWorkingDirectory = "hms_mirror_working";
     @Deprecated // Moved to Job.
     private String targetNamespace = null;
-    @Deprecated
     private String intermediateStorage = null;
 
     private StorageMigration storageMigration = null;

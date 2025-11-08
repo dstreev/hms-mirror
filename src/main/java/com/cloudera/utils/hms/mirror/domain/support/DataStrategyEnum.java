@@ -134,6 +134,7 @@ public enum DataStrategyEnum {
     COMMON(Boolean.FALSE, CommonDataStrategy.class, "common"),
 //    ICEBERG_CONVERSION(Boolean.FALSE, IcebergConversionDataStrategy.class, "iceberg-conversion"),
     INTERMEDIATE(Boolean.TRUE, IntermediateDataStrategy.class, "intermediate"),
+    SQL_INTERMEDIATE(Boolean.TRUE, IntermediateDataStrategy.class, "sql-intermediate"),
     SQL_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, SQLAcidInPlaceDataStrategy.class, "sql-acid-downgrade-inplace"),
     EXPORT_IMPORT_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, ExportImportAcidDowngradeInPlaceDataStrategy.class, "export-import-acid-downgrade-inplace"),
     HYBRID_ACID_DOWNGRADE_INPLACE(Boolean.TRUE, HybridAcidDowngradeInPlaceDataStrategy.class, "hybrid-acid-downgrade-inplace"),;

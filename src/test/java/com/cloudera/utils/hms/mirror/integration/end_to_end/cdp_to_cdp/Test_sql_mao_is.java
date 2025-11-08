@@ -43,18 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_mao_is extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SQL",
-//                "-mao", "-is", INTERMEDIATE_STORAGE,
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -88,9 +77,9 @@ public class Test_sql_mao_is extends E2EBaseTest {
     @Test
     public void tableLocationTest() {
         validateWorkingTableLocation("assorted_test_db", "acid_01", "hms_mirror_transfer_acid_01", Environment.TRANSFER,
-                "s3a://my_is_bucket/hms_mirror_working/[0-9]{8}_[0-9]{6}/assorted_test_db/acid_01");
+                "s3a://my_is_bucket/hms_mirror_working/[0-9]{8}_[0-9]{9}_[0-9|a-z]{4}/assorted_test_db/acid_01");
         validateWorkingTableLocation("assorted_test_db", "acid_01", "hms_mirror_shadow_acid_01", Environment.SHADOW,
-                "s3a://my_is_bucket/hms_mirror_working/[0-9]{8}_[0-9]{6}/assorted_test_db/acid_01");
+                "s3a://my_is_bucket/hms_mirror_working/[0-9]{8}_[0-9]{9}_[0-9|a-z]{4}/assorted_test_db/acid_01");
         validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
                 null);
     }

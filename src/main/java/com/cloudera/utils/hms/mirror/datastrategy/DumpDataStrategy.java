@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.*;
@@ -136,6 +137,8 @@ public class DumpDataStrategy extends DataStrategyBase {
     @Override
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
+
+        tableMirror.setStrategy(DataStrategyEnum.DUMP);
 
         rtn = buildOutDefinition(dbMirror, tableMirror);
         if (rtn) {

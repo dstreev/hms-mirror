@@ -756,21 +756,39 @@ public class TableUtils {
         return rtn;
     }
 
-    public static String tableFieldsFingerPrint(List<String> tableDef) {
+    public static String tableFieldsFingerPrint(List<String> tableDef, boolean withoutCreate) {
         StringBuilder hashText = null;
         StringBuilder sb = new StringBuilder();
+        boolean skip = false;
         for (int i = 1; i < tableDef.size(); i++) {
             String item2 = tableDef.get(i);
-            if (!item2.equals(LOCATION)) {
-                sb.append(item2.trim());
+            // Intent here is to remove BUCKETING from the Schema Compare.
+            //   This is because we have situations where we remove/change bucketing
+            //     so we don't want to have this in the calculation.
+            if (item2.trim().startsWith(CLUSTERED_BY)) {
+                skip = true;
+                continue;
+            }
+            if (skip) {
+                // Looking for "INTO". This removes the Bucket details from the Schema.
+                if (item2.trim().startsWith(INTO)) {
+                    skip = false;
+                }
+                continue;
             } else {
-                break;
+                if (!item2.equals(LOCATION)) {
+                    if (!(item2.startsWith(CREATE_TABLE) && withoutCreate)) {
+                        sb.append(item2.trim());
+                    }
+                } else {
+                    break;
+                }
             }
         }
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-1");
-
-            byte[] messageDigest = md.digest(sb.toString().getBytes());
+            String fingerPrintText = sb.toString();
+            byte[] messageDigest = md.digest(fingerPrintText.getBytes());
 
             BigInteger no = new BigInteger(1, messageDigest);
             hashText = new StringBuilder(no.toString(16));

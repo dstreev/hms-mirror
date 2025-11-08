@@ -139,7 +139,6 @@ public class TransferService {
 
             // Set Database to Transfer DB.
             tableMirror.setPhaseState(PhaseState.CALCULATING_SQL);
-            tableMirror.setStrategy(job.getStrategy());
             tableMirror.incPhase();
             tableMirror.addStep("Build TRANSFER", job.getStrategy().toString());
             try {
@@ -274,7 +273,7 @@ public class TransferService {
         // Set Database to Transfer DB.
         tableMirror.setPhaseState(PhaseState.APPLYING_SQL);
 
-        tableMirror.setStrategy(job.getStrategy());
+//        tableMirror.setStrategy(job.getStrategy());
 
         tableMirror.incPhase();
         tableMirror.addStep("Processing TRANSFER", job.getStrategy().toString());

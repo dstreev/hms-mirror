@@ -45,21 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_mao_da_dc_ewd extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SQL",
-//                "-mao",
-//                "-da",
-//                "--distcp",
-//                "-ewd", "/warehouse/external",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -78,16 +64,12 @@ public class Test_sql_mao_da_dc_ewd extends E2EBaseTest {
                 "FROM hms_mirror_shadow_acid_01 INSERT OVERWRITE TABLE acid_01 SELECT *");
         validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_LOCATION_DESC,
                 "ALTER DATABASE assorted_test_db SET LOCATION \"hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db\"");
-//        validateDBSqlPair("assorted_test_db", Environment.RIGHT, ALTER_DB_MNGD_LOCATION_DESC,
-//                "ALTER DATABASE assorted_test_db SET MANAGEDLOCATION \"hdfs://HOME90/warehouse/managed/assorted_test_db.db\"");
     }
 
     @Test
     public void dbLocationTest() {
         validateDBLocation("assorted_test_db", Environment.RIGHT,
                 "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db");
-//        validateDBManagedLocation("assorted_test_db", Environment.RIGHT,
-//                "hdfs://HOME90/warehouse/managed/assorted_test_db.db");
     }
 
     @Test
@@ -97,18 +79,7 @@ public class Test_sql_mao_da_dc_ewd extends E2EBaseTest {
         validateWorkingTableLocation("assorted_test_db", "acid_01", "hms_mirror_shadow_acid_01", Environment.SHADOW,
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_01");
         validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT,
-                null);
+                "hdfs://HOME90/warehouse/tablespace/managed/hive/assorted_test_db.db/acid_01");
     }
-
-//    @Test
-//    public void phaseTest() {
-//        validatePhase("ext_purge_odd_parts", "web_sales", PhaseState.CALCULATED_SQL);
-//    }
-//
-//    @Test
-//    public void issueTest() {
-//        validateTableIssueCount("ext_purge_odd_parts", "web_sales",
-//                Environment.LEFT, 17);
-//    }
 
 }

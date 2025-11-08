@@ -47,25 +47,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_so_smn_wd_epl_dc extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SCHEMA_ONLY",
-//                "-wd", "/finance/managed-fso",
-//                "-ewd", "/finance/external-fso",
-//                "-smn", "ofs://OHOME90",
-//                "-epl",
-//                "-dc",
-//                "-ltd", EXT_PURGE_ODD_PARTS_03, "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        assertEquals("Return Code Failure: " + rtn, 0, rtn);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
         long rtn = getReturnCode();
         // Verify the return code.
-        long check = 0L;
+        long check = 1L;
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 

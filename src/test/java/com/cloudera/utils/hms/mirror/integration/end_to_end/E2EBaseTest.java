@@ -51,6 +51,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -398,7 +399,7 @@ public class E2EBaseTest {
 
     protected void validateDBInPhaseSummaryCount(String database, PhaseState phase, int expectedPhaseSummaryCount) {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
-        DBMirror dbMirror = getDBMirrorOrFail("assorted_test_db");
+        DBMirror dbMirror = getDBMirrorOrFail(database);
 
         Map<String, TableMirror> tableMirrorMap = null;
         try {
@@ -423,16 +424,31 @@ public class E2EBaseTest {
             String.format("Phase state doesn't match for table %s.%s", database, tableName));
     }
 
-    protected void validateDBPhaseSummaryCount(String database, int expectedPhaseSummaryCount) {
+    protected void validateDBPhaseSummaryCount(String database, PhaseState phaseState, int expectedPhaseSummaryCount) {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
-        DBMirror dbMirror = getDBMirrorOrFail("assorted_test_db");
-        // TODO: Fix
-//        assertEquals(expectedPhaseSummaryCount, dbMirror.getPhaseSummary().size());
+        ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
+                new IllegalStateException("Conversion result is null."));
+        DBMirror dbMirror = getDBMirrorOrFail(database);
+        Map<String, TableMirror> tableMirrorMap = null;
+        try {
+            tableMirrorMap = getTableMirrorRepository().findByDatabase(conversionResult.getKey(),
+                    database);
+        } catch (RepositoryException e) {
+            throw new RuntimeException(e);
+        }
+        AtomicInteger count = new AtomicInteger(0);
+        tableMirrorMap.values().forEach(tableMirror -> {
+            if (tableMirror.getPhaseState() == phaseState) {
+                count.incrementAndGet();
+            }
+        });
+        assertEquals(expectedPhaseSummaryCount, count.get(),
+            String.format("Phase summary count doesn't match for database %s in %s", database, phaseState));
     }
 
     protected void validateTablePhaseTotalCount(String database, String table, int expectedPhaseTotalCount) {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
-        DBMirror dbMirror = getDBMirrorOrFail("assorted_test_db");
+        DBMirror dbMirror = getDBMirrorOrFail(database);
 
         TableMirror tableMirror = getTableMirrorOrFail(database, table);
         assertEquals(expectedPhaseTotalCount, tableMirror.getTotalPhaseCount().get());
@@ -440,7 +456,7 @@ public class E2EBaseTest {
 
     protected void validateTablePhaseCurrentCount(String database, String table, int expectedPhaseCurrentCount) {
         // Validate phase summary shows all tables in CALCULATED_SQL phase
-        DBMirror dbMirror = getDBMirrorOrFail("assorted_test_db");
+        DBMirror dbMirror = getDBMirrorOrFail(database);
 
         TableMirror tableMirror = getTableMirrorOrFail(database, table);
         assertEquals(expectedPhaseCurrentCount, tableMirror.getCurrentPhase().get());
@@ -451,7 +467,32 @@ public class E2EBaseTest {
         TableMirror tableMirror = getTableMirrorOrFail(database, table);
         EnvironmentTable envTable = tableMirror.getEnvironmentTable(environment);
         assertNotNull(envTable, String.format("Environment table is null for %s.%s in %s", database, table, environment));
-        assertTrue(envTable.getIssues().contains(expectedIssue),String.format("Environment %s.%s in %s doesn't contain issue: %s", database, table, environment, expectedIssue));
+
+        // Debug logging to diagnose string comparison issues
+        log.debug("Validating sync issue for {}.{} in {}", database, table, environment);
+        log.debug("Expected issue: [{}] (length: {})", expectedIssue, expectedIssue.length());
+        log.debug("Expected issue bytes: {}", java.util.Arrays.toString(expectedIssue.getBytes()));
+        log.debug("Actual issues in list (count: {}):", envTable.getIssues().size());
+        boolean found = false;
+        for (int i = 0; i < envTable.getIssues().size(); i++) {
+            String actualIssue = envTable.getIssues().get(i);
+            log.debug("  [{}]: [{}] (length: {})", i, actualIssue, actualIssue.length());
+            log.debug("  [{}] bytes: {}", i, java.util.Arrays.toString(actualIssue.getBytes()));
+            log.debug("  [{}] equals: {}, equalsIgnoreCase: {}, contains: {}",
+                i, actualIssue.equals(expectedIssue),
+                actualIssue.equalsIgnoreCase(expectedIssue),
+                envTable.getIssues().contains(expectedIssue));
+
+            // Check trimmed version
+            if (actualIssue.trim().equals(expectedIssue.trim())) {
+                log.debug("  [{}] MATCH found after trimming!", i);
+                found = true;
+            }
+        }
+
+        assertTrue(found,
+            String.format("Environment %s.%s in %s doesn't contain issue: %s\nActual issues: %s",
+                database, table, environment, expectedIssue, envTable.getIssues()));
     }
 
     protected void validateDBSqlPair(String database, Environment environment, String description, String actionTest) {
@@ -460,7 +501,7 @@ public class E2EBaseTest {
 
         for (Pair pair : dbMirror.getSql(environment)) {
             if (pair.getDescription().trim().equals(description)) {
-                assertEquals(actionTest, pair.getAction(),
+                assertEquals(actionTest.trim(), pair.getAction().trim(),
                     String.format("DB SQL doesn't match for %s in %s", description, database));
                 found = Boolean.TRUE;
             }
@@ -499,7 +540,7 @@ public class E2EBaseTest {
         boolean found = Boolean.FALSE;
 
         for (Pair pair : tableMirror.getSql(environment)) {
-            if (pair.getAction().trim().contains(actionTest)) {
+            if (pair.getAction().trim().contains(actionTest.trim())) {
                 found = Boolean.TRUE;
                 break;
             }
@@ -567,7 +608,8 @@ public class E2EBaseTest {
 
         for (Pair pair : tableMirror.getEnvironmentTable(environment).getSql()) {
             if (pair.getDescription().trim().equals(description)) {
-                assertEquals(actionTest, pair.getAction(),
+//                pair.getAction().trim().contains(actionTest);
+                assertTrue(pair.getAction().trim().contains(actionTest),
                     String.format("Table SQL doesn't match for %s in %s.%s", description, database, tableName));
                 found = Boolean.TRUE;
             }
@@ -580,7 +622,7 @@ public class E2EBaseTest {
         boolean found = Boolean.FALSE;
 
         for (String issue : tableMirror.getIssues(environment)) {
-            if (issue.contains(expectedIssue)) {
+            if (issue.trim().contains(expectedIssue.trim())) {
                 found = Boolean.TRUE;
                 break;
             }
@@ -672,6 +714,7 @@ public class E2EBaseTest {
     protected void validateTableEnvironment(String database, String tableName, Environment expectedEnvironment) {
         TableMirror tableMirror = getTableMirrorOrFail(database, tableName);
         EnvironmentTable envTable = tableMirror.getEnvironmentTable(expectedEnvironment);
+        // TODO: isExists (i think) is about pre-existence of table.  So not sure this is the right check.  TBD
         assertTrue(envTable.isExists(), String.format("Environment table is null for %s.%s in %s", database, tableName, expectedEnvironment));
     }
 

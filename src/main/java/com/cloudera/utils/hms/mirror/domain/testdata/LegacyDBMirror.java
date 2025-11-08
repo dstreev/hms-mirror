@@ -114,6 +114,7 @@ public class LegacyDBMirror {
         return rtn;
     }
 
+    @JsonIgnore
     public Map<PhaseState, Integer> getPhaseSummary() {
         Map<PhaseState, Integer> rtn = new HashMap<>();
         for (String tableName : getTableMirrors().keySet()) {
@@ -147,6 +148,7 @@ public class LegacyDBMirror {
         }
         return sqlList;
     }
+
     public static LegacyDBMirror fromDBMirror(DBMirror dbMirror) {
         if (dbMirror == null) {
             return null;

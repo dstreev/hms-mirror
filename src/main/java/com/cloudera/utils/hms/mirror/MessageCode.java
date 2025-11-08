@@ -199,6 +199,7 @@ public enum MessageCode {
             "try again or add `--sync` to OVERWRITE current tables data."),
     SCHEMA_EXISTS_NOT_MATCH_WITH_PURGE("Schema exists AND DOESN'T match.  But the 'RIGHT' table is has a PURGE option set. " +
             "We can NOT safely replace the table without compromising the data. No action will be taken."),
+    SCHEMA_EXISTS_NOT_MATCH_DROP("Schema exists AND DOESN'T match.  Table will be dropped and re-created."),
     SCHEMA_EXISTS_SYNC_ACID("Schema already exists.  You've specified '--sync', the target table will be dropped and " +
             "re-created.  The data will be overwritten."),
     SCHEMA_EXISTS_SYNC_PARTS("Schema exists already and matches. `--sync` and `-epl` specified, adding partition sync."),

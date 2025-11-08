@@ -299,12 +299,12 @@ public class TableMirror implements Cloneable {
         setMigrationStageMessage(null);
     }
 
-    public boolean schemasEqual(Environment one, Environment two) {
+    public boolean schemasEqual(Environment one, Environment two, boolean withoutCreate) {
         List<String> schemaOne = getTableDefinition(one);
         List<String> schemaTwo = getTableDefinition(two);
         if (nonNull(schemaOne) && nonNull(schemaTwo)) {
-            String fpOne = TableUtils.tableFieldsFingerPrint(schemaOne);
-            String fpTwo = TableUtils.tableFieldsFingerPrint(schemaTwo);
+            String fpOne = TableUtils.tableFieldsFingerPrint(schemaOne, withoutCreate);
+            String fpTwo = TableUtils.tableFieldsFingerPrint(schemaTwo, withoutCreate);
             return fpOne.equals(fpTwo);
         }
         return false;

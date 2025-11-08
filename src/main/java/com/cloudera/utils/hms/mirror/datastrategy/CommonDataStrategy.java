@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -111,7 +112,7 @@ public class CommonDataStrategy extends DataStrategyBase {
                     } else if (let.isExists() && ret.isExists()) {
                         // If left and right, check schema change and replace if necessary.
                         // Compare Schemas.
-                        if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
+                        if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT, Boolean.FALSE)) {
                             ret.addIssue(SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                             ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
                             ret.setCreateStrategy(CreateStrategy.LEAVE);
@@ -256,6 +257,8 @@ public class CommonDataStrategy extends DataStrategyBase {
     public Boolean build(DBMirror dbMirror, TableMirror tableMirror) {
         Boolean rtn = Boolean.FALSE;
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+
+        tableMirror.setStrategy(DataStrategyEnum.COMMON);
 
         if (TableUtils.isACID(let)) {
             rtn = Boolean.FALSE;

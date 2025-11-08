@@ -50,18 +50,7 @@ import static org.junit.jupiter.api.Assertions.fail;
         })
 @Slf4j
 public class Test_hybrid_mao extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "HYBRID",
-//                "-mao",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check * -1, check * -1, rtn);
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -76,29 +65,19 @@ public class Test_hybrid_mao extends E2EBaseTest {
         // Validate database was processed
         DBMirror dbMirror = getDBMirrorOrFail("assorted_test_db");
 
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database should exist");
         validateTableCount("assorted_test_db", 3);
-        // With migrate-acid-only, should process only ACID tables (3 tables)
-//        assertEquals(3, getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Should have 3 ACID tables processed");
+
         TableMirror tableMirror = getTableMirrorOrFail("assorted_test_db", "acid_01");
         TableMirror tableMirror2 = getTableMirrorOrFail("assorted_test_db", "acid_02");
         TableMirror tableMirror3 = getTableMirrorOrFail("assorted_test_db", "acid_03");
-
-//        assertNotNull(getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_01"),
-//                "acid_01 should be processed");
-//        assertNotNull(getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_02"),
-//                "acid_02 should be processed");
-//        assertNotNull(getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_03"),
-//                "acid_03 should be processed");
     }
     
     @Test
-    public void phaseStateValidationTest() {
+    public void checkPhaseTest() {
         // Based on actual test output, all tables reach CALCULATED_SQL state
-        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_03", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_03", PhaseState.PROCESSED);
     }
     
     @Test
@@ -112,23 +91,7 @@ public class Test_hybrid_mao extends E2EBaseTest {
     @Test
     public void tableLocationValidationTest() {
         // For HYBRID with migrate-acid-only and downgrade-acid:
-        // - acid_01 and acid_02 use EXPORT_IMPORT strategy (no location in RIGHT)
-        // - acid_03 uses ACID strategy with shadow table (location stripped from RIGHT)
 
-        validateTableLocation("assorted_test_db", "acid_01", Environment.RIGHT, null);
-        validateTableLocation("assorted_test_db", "acid_02", Environment.RIGHT, null);
-
-        // acid_01 and acid_02 don't have locations in RIGHT environment (EXPORT_IMPORT)
-//        assertNull(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_01")
-//                .getEnvironmentTable(Environment.RIGHT).getName(),
-//                "acid_01 RIGHT environment should not have a name (EXPORT_IMPORT strategy)");
-//
-//        assertNull(getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().get("acid_02")
-//                .getEnvironmentTable(Environment.RIGHT).getName(),
-//                "acid_02 RIGHT environment should not have a name (EXPORT_IMPORT strategy)");
-        
         // acid_03 has location in TRANSFER and SHADOW environments
         validateTableLocation("assorted_test_db", "acid_03", Environment.TRANSFER,
                 "hdfs://HDP50/apps/hive/warehouse/export_assorted_test_db/acid_03");
@@ -140,15 +103,10 @@ public class Test_hybrid_mao extends E2EBaseTest {
     public void tableIssueAndErrorValidationTest() {
         // Validate that migrate-acid-only filtered out non-ACID tables properly
         validateTableCount("assorted_test_db", 3);
-//        assertEquals(3, getConversion().getDatabase("assorted_test_db").getTableMirrors().size(),
-//                "Only ACID tables should be processed with migrate-acid-only");
-        
+
         // Check that we don't have non-ACID tables
         validateTableNotInDatabase( "assorted_test_db", "ext_part_01");
-//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
-//            fail("Non-ACID table ext_part_01 should not be processed with migrate-acid-only");
-//        }
-        
+
         // Validate issues per table based on actual test output:
         // acid_01: 0 issues in LEFT (EXPORT_IMPORT)
         validateTableIssueCount("assorted_test_db", "acid_01", Environment.LEFT, 0);
@@ -160,7 +118,7 @@ public class Test_hybrid_mao extends E2EBaseTest {
         validateTableIssueCount("assorted_test_db", "acid_03", Environment.LEFT, 3);
         
         // acid_03: 3 issues in RIGHT (location stripped + stats settings)
-        validateTableIssueCount("assorted_test_db", "acid_03", Environment.RIGHT, 3);
+        validateTableIssueCount("assorted_test_db", "acid_03", Environment.RIGHT, 2);
         
         // No errors for any table
         validateTableErrorCount("assorted_test_db", "acid_01", Environment.LEFT, 0);

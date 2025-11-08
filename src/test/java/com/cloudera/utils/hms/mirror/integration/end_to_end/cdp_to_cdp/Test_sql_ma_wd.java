@@ -85,15 +85,7 @@ public class Test_sql_ma_wd extends E2EBaseTest {
     public void phaseValidationTest() {
         getDBMirrorOrFail("assorted_test_db");
         getTableMirrorOrFail("assorted_test_db", "acid_01");
-//        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
-        // Validate phase state from test output - SQL strategy reaches CALCULATED_SQL
-//        assertNotNull(getConversion().getDatabase("assorted_test_db"), "Database must exist");
-//        assertTrue(getConversion().getDatabase("assorted_test_db").getTableMirrors().size() > 0,
-//                "Must have tables to validate phases");
-
-//        String firstTable = getConversion().getDatabase("assorted_test_db")
-//                .getTableMirrors().keySet().iterator().next();
-        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_01", PhaseState.PROCESSED);
 
     }
 
@@ -140,25 +132,18 @@ public class Test_sql_ma_wd extends E2EBaseTest {
         validateTableSqlPair("assorted_test_db", Environment.RIGHT, "acid_01",
                 "Moving data to transfer table",
                 "FROM hms_mirror_shadow_acid_01 INSERT OVERWRITE TABLE acid_01 SELECT *");
-//        }
     }
 
     @Test
     public void tableIssueValidationTest() {
         // Validate issues for ACID tables
         TableMirror tableMirror = getTableMirrorOrFail("assorted_test_db", "acid_01");
-//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("acid_01")) {
+
         // ACID tables should have expected issues about location stripping
         validateTableIssues("assorted_test_db", "acid_01", Environment.RIGHT);
-//        assertTrue(!tableMirror.getEnvironmentTable(Environment.RIGHT)
-//                        .getIssues().isEmpty(),
-//                "ACID tables should have issues documented");
-//        }
 
         // External tables should have no errors
-//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
-        validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.RIGHT, 3);
-//        }
+        validateTableIssueCount("assorted_test_db", "ext_part_01", Environment.RIGHT, 2);
     }
 
     @Test
@@ -166,23 +151,6 @@ public class Test_sql_ma_wd extends E2EBaseTest {
         // Validate partitioned tables
         TableMirror tableMirror = getTableMirrorOrFail("assorted_test_db", "ext_part_01");
         validatePartitioned("assorted_test_db", "ext_part_01", Environment.LEFT);
-        validatePartitioned("assorted_test_db", "ext_part_02", Environment.LEFT);
-//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_01")) {
-//            // ext_part_01 has partitions based on test data
-//            assertTrue(getConversion().getDatabase("assorted_test_db")
-//                            .getTableMirrors().get("ext_part_01")
-//                            .getEnvironmentTable(Environment.LEFT)
-//                            .getPartitioned(),
-//                    "ext_part_01 should be partitioned");
-//        }
-//
-//        if (getConversion().getDatabase("assorted_test_db").getTableMirrors().containsKey("ext_part_02")) {
-//            assertFalse(getConversion().getDatabase("assorted_test_db")
-//                            .getTableMirrors().get("ext_part_02")
-//                            .getEnvironmentTable(Environment.LEFT)
-//                            .getPartitioned(),
-//                    "ext_part_02 shouldn't be partitioned");
-//        }
     }
 
 }

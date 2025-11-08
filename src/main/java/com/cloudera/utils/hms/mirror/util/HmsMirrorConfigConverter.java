@@ -243,7 +243,12 @@ public class HmsMirrorConfigConverter {
         }
 
         // Core configuration
-        dto.setHcfsNamespace(cluster.getHcfsNamespace());
+        // We need to overlay the hcfs value if the targetNameSpace was set.
+        if (!isBlank(config.getTransfer().getTargetNamespace())) {
+            dto.setHcfsNamespace(config.getTransfer().getTargetNamespace());
+        } else {
+            dto.setHcfsNamespace(cluster.getHcfsNamespace());
+        }
 
         // HiveServer2 configuration
         if (nonNull(cluster.getHiveServer2())) {
@@ -359,6 +364,12 @@ public class HmsMirrorConfigConverter {
         // Strategy
         dto.setStrategy(config.getDataStrategy());
 
+        // Intermediate Storage
+        dto.setIntermediateStorage(config.getTransfer().getIntermediateStorage());
+
+        // Target Namespace
+        dto.setTargetNamespace(config.getTransfer().getTargetNamespace());
+
         // Hybrid configuration
         if (nonNull(config.getHybrid())) {
             dto.setHybrid(config.getHybrid());
@@ -366,6 +377,9 @@ public class HmsMirrorConfigConverter {
 
         // Database only flag
         dto.setDatabaseOnly(config.isDatabaseOnly());
+
+        // Skip Link Check
+        dto.setSkipLinkCheck(config.isSkipLinkCheck());
 
         // Disaster recovery and related flags
         boolean isReadOnly = config.isReadOnly();

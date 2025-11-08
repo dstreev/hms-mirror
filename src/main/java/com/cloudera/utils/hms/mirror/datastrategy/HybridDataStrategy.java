@@ -103,21 +103,19 @@ public class HybridDataStrategy extends DataStrategyBase {
                             + job.getHybrid().getExportImportPartitionLimit() +
                             ".  Hence, the SQL method has been selected for the migration.");
 
-                    tableMirror.setStrategy(DataStrategyEnum.SQL);
                     if (!isBlank(job.getIntermediateStorage())
                             || !isBlank(job.getTargetNamespace())) {
+                        tableMirror.setStrategy(DataStrategyEnum.SQL_INTERMEDIATE);
                         rtn = intermediateDataStrategy.build(dbMirror, tableMirror);
                     } else {
                         rtn = sqlDataStrategy.build(dbMirror, tableMirror);
                     }
                 } else {
                     // EXPORT
-                    tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
                     rtn = exportImportDataStrategy.build(dbMirror, tableMirror);
                 }
             } else {
                 // EXPORT
-                tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
                 rtn = exportImportDataStrategy.build(dbMirror, tableMirror);
             }
         }

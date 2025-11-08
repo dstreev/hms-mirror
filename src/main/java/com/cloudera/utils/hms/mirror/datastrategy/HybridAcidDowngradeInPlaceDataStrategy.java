@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.service.*;
@@ -68,6 +69,10 @@ public class HybridAcidDowngradeInPlaceDataStrategy extends DataStrategyBase {
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
         JobDto job = conversionResult.getJob();
+
+        if (tableMirror.getStrategy() == null) {
+            tableMirror.setStrategy(DataStrategyEnum.HYBRID_ACID_DOWNGRADE_INPLACE);
+        }
 
         /*
         Check environment is Hive 3.

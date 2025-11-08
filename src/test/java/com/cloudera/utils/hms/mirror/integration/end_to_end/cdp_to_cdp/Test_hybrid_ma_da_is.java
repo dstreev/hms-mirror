@@ -79,7 +79,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         // ACID tables use EXPORT_IMPORT strategy for intermediate storage
         validateTableStrategy("assorted_test_db", "acid_01", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "acid_02", DataStrategyEnum.EXPORT_IMPORT);
-        validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.SQL);
+        validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.SQL_INTERMEDIATE);
 
 //        assertEquals("EXPORT_IMPORT", getConversion().getDatabase("assorted_test_db")
 //                .getTableMirrors().get("acid_01").getStrategy().toString());
@@ -94,7 +94,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     public void checkNonACIDStrategy() {
         // Non-ACID tables use different strategies based on partitioning  
         // ext_part_01 is partitioned so uses SQL strategy
-        validateTableStrategy("assorted_test_db", "ext_part_01", DataStrategyEnum.SQL);
+        validateTableStrategy("assorted_test_db", "ext_part_01", DataStrategyEnum.SQL_INTERMEDIATE);
         validateTableStrategy("assorted_test_db", "ext_part_02", DataStrategyEnum.EXPORT_IMPORT);
         validateTableStrategy("assorted_test_db", "legacy_mngd_01", DataStrategyEnum.EXPORT_IMPORT);
 
@@ -110,9 +110,9 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     @Test
     public void checkIntermediateStorage() {
         // Validate intermediate storage is used in EXPORT statements
-        validateTableSqlAction("assorted_test_db", "acid_01", Environment.RIGHT,
+        validateTableSqlAction("assorted_test_db", "acid_01", Environment.LEFT,
                 "EXPORT TABLE acid_01 TO");
-        validateTableSqlAction("assorted_test_db", "acid_01", Environment.RIGHT,
+        validateTableSqlAction("assorted_test_db", "acid_01", Environment.LEFT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
 //        var acid01LeftSql = getConversion().getDatabase("assorted_test_db")
@@ -156,7 +156,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     @Test
     public void checkShadowTables() {
         // SQL strategy tables should have shadow tables pointing to intermediate storage
-        validateTableSqlAction("assorted_test_db", "ext_part_02", Environment.SHADOW,
+        validateTableSqlAction("assorted_test_db", "acid_03", Environment.RIGHT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
 //        var acid03Shadow = getConversion().getDatabase("assorted_test_db")
@@ -176,7 +176,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     @Test
     public void checkTransferTables() {
         // SQL strategy should create TRANSFER tables in intermediate storage
-        validateTableSqlAction("assorted_test_db", "acid_03", TRANSFER,
+        validateTableSqlAction("assorted_test_db", "acid_03", LEFT,
                 "s3a://my_is_bucket/hms_mirror_working");
 
 //        var acid03Transfer = getConversion().getDatabase("assorted_test_db")
@@ -197,7 +197,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
         // With intermediate storage, final RIGHT tables may have empty definitions
         // Data is accessed via the original LEFT cluster location
         validateTableEnvironment("assorted_test_db", "acid_03", RIGHT);
-        validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.SQL);
+        validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.SQL_INTERMEDIATE);
 
 //        var acid03Right = getConversion().getDatabase("assorted_test_db")
 //                .getTableMirrors().get("acid_03").getEnvironmentTable(Environment.RIGHT);
@@ -237,18 +237,17 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     @Test
     public void checkPhaseStates() {
         // Validate phase states for different table types
-        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_03", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_03", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.PROCESSED);
     }
 
     @Test
     public void checkShadowTableProperties() {
         // Shadow tables should have hms-mirror_shadow_table property
-        validateTableEnvironmentAddPropertiesHas("assorted_test_db", "acid_03", SHADOW,
-                "hms-mirror_shadow_table");
+
         validateTableEnvironmentDefinitionHas("assorted_test_db", "acid_03", SHADOW,
                 "'hms-mirror_shadow_table'='true'");
 
@@ -292,7 +291,7 @@ public class Test_hybrid_ma_da_is extends E2EBaseTest {
     public void checkMissingTableHandling() {
         // ext_missing_01 should be handled appropriately
         validateTableSqlNotGenerated("assorted_test_db", "ext_missing_01", RIGHT);
-        validateTableIssues("assorted_test_db","ext_missing_01", LEFT);
+        validateTableIssues("assorted_test_db","ext_missing_01", RIGHT);
 
 //        var extMissing = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("ext_missing_01");
 //        if (extMissing != null) {

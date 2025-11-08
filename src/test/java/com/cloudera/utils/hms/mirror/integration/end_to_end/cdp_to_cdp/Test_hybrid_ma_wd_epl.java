@@ -251,7 +251,7 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
     public void checkPartitionHandling() {
         // ACID strategy tables should handle partitions appropriately
         validateTableStrategy("assorted_test_db", "acid_03", DataStrategyEnum.ACID);
-        validateTablePhaseTotalCount("assorted_test_db", "acid_03", 2);
+        validateTablePhaseTotalCount("assorted_test_db", "acid_03", 3);
 
 //        var acid03 = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("acid_03");
 //        assertEquals("ACID", acid03.getStrategy().toString());
@@ -275,19 +275,19 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
     @Test
     public void validatePhaseStates() {
         // All tables should reach CALCULATED_SQL phase
-        validatePhase("assorted_test_db", "acid_01", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_02", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "acid_03", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "ext_part_01", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "ext_part_02", PhaseState.CALCULATED_SQL);
-        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.CALCULATED_SQL);
+        validatePhase("assorted_test_db", "acid_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_02", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "acid_03", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_part_01", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "ext_part_02", PhaseState.PROCESSED);
+        validatePhase("assorted_test_db", "legacy_mngd_01", PhaseState.PROCESSED);
     }
 
     @Test
     public void checkCleanupOperations() {
         // Tables should have appropriate cleanup operations
-        validateTableCleanupSqlGenerated("assorted_test_db", "acid_01", LEFT);
-        validateTableCleanupSqlGenerated("assorted_test_db", "acid_01", RIGHT);
+        validateTableCleanupSqlGenerated("assorted_test_db", "acid_03", LEFT);
+        validateTableCleanupSqlGenerated("assorted_test_db", "acid_03", RIGHT);
 
 //        var acid01LeftCleanup = getConversion().getDatabase("assorted_test_db")
 //                .getTableMirrors().get("acid_01").getEnvironmentTable(Environment.LEFT).getCleanUpSql();
@@ -302,7 +302,7 @@ public class Test_hybrid_ma_wd_epl extends E2EBaseTest {
     @Test
     public void checkMissingTableHandling() {
         // ext_missing_01 should be handled appropriately
-        validateTableIssues("assorted_test_db", "ext_missing_01", LEFT);
+        validateTableIssues("assorted_test_db", "ext_missing_01", RIGHT);
         validateTableSqlNotGenerated("assorted_test_db", "ext_missing_01", LEFT);
 
 //        var extMissing = getConversion().getDatabase("assorted_test_db").getTableMirrors().get("ext_missing_01");

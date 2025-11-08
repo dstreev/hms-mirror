@@ -44,18 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_mao_da_ip extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SQL",
-//                "-mao", "-da", "-ip",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, rtn, check);
+
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -70,7 +60,7 @@ public class Test_sql_mao_da_ip extends E2EBaseTest {
         // Validate the SQL Pair.
         validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_01", TableUtils.STORAGE_MIGRATION_TRANSFER_DESC,
                 "FROM acid_01_archive INSERT OVERWRITE TABLE acid_01 SELECT *");
-        validateTableSqlPair("assorted_test_db", Environment.RIGHT, "acid_01", RENAME_TABLE_DESC,
+        validateTableSqlPair("assorted_test_db", Environment.LEFT, "acid_01", RENAME_TABLE_DESC,
                 "ALTER TABLE acid_01 RENAME TO acid_01_archive");
     }
 

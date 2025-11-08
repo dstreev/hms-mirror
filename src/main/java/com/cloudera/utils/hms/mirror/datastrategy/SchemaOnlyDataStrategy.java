@@ -27,6 +27,7 @@ import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -115,7 +116,12 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
             } else if (let.isExists() && ret.isExists()) {
                 // If left and right, check schema change and replace if necessary.
                 // Compare Schemas.
-                if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
+                boolean withoutCreate = false;
+                // If we are Downgrading from ACID, take that into account.
+                if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
+                    withoutCreate = true;
+                }
+                if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT, withoutCreate)) {
                     if (let.getPartitioned() && config.loadMetadataDetails()) {
                         ret.setCreateStrategy(CreateStrategy.AMEND_PARTS);
                         ret.addIssue(SCHEMA_EXISTS_SYNC_PARTS.getDesc());
@@ -303,6 +309,8 @@ public class SchemaOnlyDataStrategy extends DataStrategyBase implements DataStra
         Boolean rtn = Boolean.FALSE;
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
+
+        tableMirror.setStrategy(DataStrategyEnum.SCHEMA_ONLY);
 
         try {
             rtn = this.buildOutDefinition(dbMirror, tableMirror);

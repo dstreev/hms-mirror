@@ -76,6 +76,8 @@ public class ConvertLinkedDataStrategy extends DataStrategyBase {
                 new IllegalStateException("No ConversionResult found in the execution context."));
 //        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
 
+        tableMirror.setStrategy(DataStrategyEnum.CONVERT_LINKED);
+
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
         try {

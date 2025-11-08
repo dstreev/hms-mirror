@@ -21,6 +21,7 @@ import com.cloudera.utils.hadoop.cli.CliEnvironment;
 import com.cloudera.utils.hms.mirror.CopySpec;
 import com.cloudera.utils.hms.mirror.CreateStrategy;
 import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -280,6 +281,23 @@ public class SQLDataStrategy extends DataStrategyBase {
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
 
         String targetNamespace = conversionResult.getTargetNamespace();
+
+        // Setting resolved strategy
+        tableMirror.setStrategy(DataStrategyEnum.SQL);
+
+        if (let.getPartitions().size() > job.getHybrid().getSqlPartitionLimit() &&
+                job.getHybrid().getSqlPartitionLimit() > 0) {
+            tableMirror.setPhaseState(PhaseState.ERROR);
+            // The partition limit has been exceeded.  The process will need to be done manually.
+            let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
+                    "limit (hybrid->sqlImportPartitionLimit) of "
+                    + job.getHybrid().getSqlPartitionLimit() +
+                    ".  This value is used to abort migrations that have a high potential for failure.  " +
+                    "The migration will need to be done manually OR try increasing the limit.");
+            // Return without further processing.
+            return Boolean.FALSE;
+        }
+
 
         // Select which Strategy Implementation: Acid Inplace, Intermediate, just this one (SQL).
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {

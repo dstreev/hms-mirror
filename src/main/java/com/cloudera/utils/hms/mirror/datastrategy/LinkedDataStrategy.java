@@ -97,7 +97,7 @@ public class LinkedDataStrategy extends DataStrategyBase {
                     } else if (let.isExists() && ret.isExists()) {
                         // If left and right, check schema change and replace if necessary.
                         // Compare Schemas.
-                        if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT)) {
+                        if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT, Boolean.FALSE)) {
                             ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
                             ret.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION.getDesc());
                             ret.setCreateStrategy(CreateStrategy.LEAVE);

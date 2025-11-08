@@ -18,10 +18,7 @@
 package com.cloudera.utils.hms.mirror.datastrategy;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.CopySpec;
-import com.cloudera.utils.hms.mirror.CreateStrategy;
-import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.MirrorConf;
+import com.cloudera.utils.hms.mirror.*;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
@@ -29,6 +26,7 @@ import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DataStrategyEnum;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.MissingDataPointException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
@@ -42,7 +40,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 
-import static com.cloudera.utils.hms.mirror.MessageCode.*;
+import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NOT_MATCH_DROP;
+import static com.cloudera.utils.hms.mirror.MessageCode.SCHEMA_EXISTS_NO_ACTION;
 import static com.cloudera.utils.hms.mirror.TablePropertyVars.TRANSLATED_TO_EXTERNAL;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -136,7 +135,7 @@ public class ExportImportDataStrategy extends DataStrategyBase {
 
     @Override
     public Boolean buildOutSql(DBMirror dbMirror, TableMirror tableMirror) throws MissingDataPointException {
-        Boolean rtn = Boolean.FALSE;
+        Boolean rtn = Boolean.TRUE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
         ConfigLiteDto config = conversionResult.getConfig();
@@ -152,7 +151,45 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         String leftNamespace = NamespaceUtils.getNamespace(TableUtils.getLocation(let.getName(), let.getDefinition()));
 
         EnvironmentTable ret = getConversionResultService().getEnvironmentTable(Environment.RIGHT, tableMirror);
+
+        if (let.getPartitions().size() > job.getHybrid().getExportImportPartitionLimit() &&
+                job.getHybrid().getExportImportPartitionLimit() > 0) {
+            tableMirror.setPhaseState(PhaseState.ERROR);
+            // The partition limit has been exceeded.  The process will need to be done manually.
+            let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
+                    "limit (hybrid->exportImportPartitionLimit) of "
+                    + job.getHybrid().getExportImportPartitionLimit() +
+                    ".  This value is used to abort migrations that have a high potential for failure.  " +
+                    "The migration will need to be done manually OR try increasing the limit. Review commandline option '-ep'.");
+            // Return without further processing.
+            return Boolean.FALSE;
+        }
+
         try {
+
+            boolean dropRight = Boolean.FALSE;
+            if (ret.isExists() && job.isSync() && let.isExists()) {
+                // The Table exists on both sides.
+                // Compare the schemas and determine what next.
+                boolean withoutCreate = false;
+                // If we are Downgrading from ACID, take that into account.
+                if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
+                    withoutCreate = true;
+                }
+                if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT, withoutCreate)) {
+                    // Same, nothing to do.
+                    ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
+                    return Boolean.TRUE;
+                } else {
+                    // They don't match.  So we need to drop the table and recreate it.
+                    if (job.isSync()) {
+                        ret.addIssue(SCHEMA_EXISTS_NOT_MATCH_DROP.getDesc());
+                        ret.setCreateStrategy(CreateStrategy.REPLACE);
+                        dropRight = Boolean.TRUE;
+                    }
+                }
+            }
+
             // LEFT Export to directory
             String useLeftDb = MessageFormat.format(MirrorConf.USE, dbMirror.getName());
             let.addSql(TableUtils.USE_DESC, useLeftDb);
@@ -229,19 +266,11 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 }
             }
 
-            if (ret.isExists()) {
-                if (job.isSync()) {
-                    // Need to Drop table first.
-                    String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, let.getName());
-                    if (isACIDInPlace(tableMirror, Environment.LEFT)) {
-                        let.addSql(MirrorConf.DROP_TABLE_DESC, dropExistingTable);
-                        let.addIssue(EXPORT_IMPORT_SYNC.getDesc());
-                    } else {
-                        ret.addSql(MirrorConf.DROP_TABLE_DESC, dropExistingTable);
-                        ret.addIssue(EXPORT_IMPORT_SYNC.getDesc());
-                    }
-                }
+            if (dropRight) {
+                String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
+                ret.addSql(MirrorConf.DROP_TABLE_DESC, dropExistingTable);
             }
+
             if (isACIDInPlace(tableMirror, Environment.LEFT)) {
                 let.addSql(TableUtils.IMPORT_TABLE, importSql);
             } else {
@@ -253,20 +282,9 @@ public class ExportImportDataStrategy extends DataStrategyBase {
                 }
             }
 
-            if (let.getPartitions().size() > job.getHybrid().getExportImportPartitionLimit() &&
-                    job.getHybrid().getExportImportPartitionLimit() > 0) {
-                // The partition limit has been exceeded.  The process will need to be done manually.
-                let.addError("The number of partitions: " + let.getPartitions().size() + " exceeds the configuration " +
-                        "limit (hybrid->exportImportPartitionLimit) of "
-                        + job.getHybrid().getExportImportPartitionLimit() +
-                        ".  This value is used to abort migrations that have a high potential for failure.  " +
-                        "The migration will need to be done manually OR try increasing the limit. Review commandline option '-ep'.");
-                rtn = Boolean.FALSE;
-            } else {
-                rtn = Boolean.TRUE;
-            }
         } catch (Throwable t) {
             log.error("Error executing EXPORT_IMPORT", t);
+            tableMirror.setPhaseState(PhaseState.ERROR);
             let.addError(t.getMessage());
             rtn = Boolean.FALSE;
         }
@@ -278,25 +296,65 @@ public class ExportImportDataStrategy extends DataStrategyBase {
         Boolean rtn = Boolean.FALSE;
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("No ConversionResult found in the execution context."));
+        ConfigLiteDto config = conversionResult.getConfig();
         JobDto job = conversionResult.getJob();
 //        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
 
         EnvironmentTable let = tableMirror.getEnvironmentTable(Environment.LEFT);
         EnvironmentTable ret = tableMirror.getEnvironmentTable(Environment.RIGHT);
-        if (ret.isExists()) {
-            if (!job.isSync() && let.isExists()) {
-                let.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-                let.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-                String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
-                        SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
-                log.error(msg);
-                return Boolean.FALSE;
-            } else {
-                ret.addIssue(SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
-                ret.setCreateStrategy(CreateStrategy.LEAVE);
-                return Boolean.TRUE;
-            }
+
+        // Setting resolved strategy
+        if (tableMirror.getStrategy() == null) {
+            tableMirror.setStrategy(DataStrategyEnum.EXPORT_IMPORT);
         }
+
+        if (ret.isExists() && !job.isSync() && let.isExists()) {
+            ret.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//            let.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//            String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
+//                    SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//            log.warn(msg);
+            return Boolean.TRUE;
+        } else if (ret.isExists() && !let.isExists()) {
+            ret.addIssue(MessageCode.SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
+            return Boolean.TRUE;
+        }
+
+//        if (ret.isExists()) {
+//            if (!job.isSync() && let.isExists()) {
+//                let.addIssue(MessageCode.SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//                let.addSql(SKIPPED.getDesc(), "-- " + SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//                String msg = MessageFormat.format(TABLE_ISSUE.getDesc(), dbMirror.getName(), tableMirror.getName(),
+//                        SCHEMA_EXISTS_NO_ACTION_DATA.getDesc());
+//                log.error(msg);
+//                return Boolean.FALSE;
+//            } else {
+//                // The Table exists on both sides.
+//                // Compare the schemas and determine what next.
+//                boolean withoutCreate = false;
+//                // If we are Downgrading from ACID, take that into account.
+//                if (TableUtils.isACID(let) && config.getMigrateACID().isDowngrade()) {
+//                    withoutCreate = true;
+//                }
+//                if (tableMirror.schemasEqual(Environment.LEFT, Environment.RIGHT, withoutCreate)) {
+//                    // Same, nothing to do.
+//                    ret.addIssue(SCHEMA_EXISTS_NO_ACTION.getDesc());
+//                } else {
+//                    // They don't match.  So we need to drop the table and recreate it.
+//                    if (job.isSync()) {
+//                        // Need to Drop table on the RIGHT.
+//                        // First check to see if the table has been set to purge on the right.
+//                        //    we don't want to drop data, only the table.
+//                        //    AH, but for EXPORT_IMPORT, this is a bootstrap....
+//                        ret.addIssue(SCHEMA_EXISTS_NOT_MATCH_DROP.getDesc());
+//                        String dropExistingTable = MessageFormat.format(MirrorConf.DROP_TABLE, ret.getName());
+//                    }
+//                }
+////                ret.addIssue(SCHEMA_EXISTS_TARGET_MISMATCH.getDesc());
+////                ret.setCreateStrategy(CreateStrategy.LEAVE);
+////                return Boolean.TRUE;
+//            }
+//        }
 
         if (isACIDInPlace(tableMirror, Environment.LEFT)) {
             rtn = getExportImportAcidDowngradeInPlaceDataStrategy().build(dbMirror, tableMirror);//doEXPORTIMPORTACIDInplaceDowngrade();

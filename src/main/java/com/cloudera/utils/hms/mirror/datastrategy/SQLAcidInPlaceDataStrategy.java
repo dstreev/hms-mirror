@@ -126,7 +126,7 @@ public class SQLAcidInPlaceDataStrategy extends DataStrategyBase {
         String newTblName = let.getName() + "_archive";
         String renameSql = MessageFormat.format(MirrorConf.RENAME_TABLE, origTableName, newTblName);
         TableUtils.changeTableName(let, newTblName);
-        let.addSql(TableUtils.RENAME_TABLE, renameSql);
+        let.addSql(MirrorConf.RENAME_TABLE_DESC, renameSql);
 
         // Check Buckets and Strip.
         int buckets = TableUtils.numOfBuckets(ret);
