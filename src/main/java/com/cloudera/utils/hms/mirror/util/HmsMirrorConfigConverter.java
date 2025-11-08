@@ -367,6 +367,9 @@ public class HmsMirrorConfigConverter {
         // Intermediate Storage
         dto.setIntermediateStorage(config.getTransfer().getIntermediateStorage());
 
+        // Consolidate DB Statements
+        dto.setConsolidateDBCreateStatements(config.isConsolidateDBCreateStatements());
+
         // Target Namespace
         dto.setTargetNamespace(config.getTransfer().getTargetNamespace());
 
