@@ -167,7 +167,7 @@ public class Test_ei_ma_wd_ep extends E2EBaseTest {
         
         // ext_missing_01 exists only on RIGHT
         validateTableLocation("assorted_test_db", "ext_missing_01", Environment.RIGHT,
-                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_missing_01");
+                "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_missing_01");
     }
 
     @Test

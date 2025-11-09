@@ -53,19 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 public class Test_ei_rdl_dc extends E2EBaseTest {
 
-    //        String[] args = new String[]{"-d", "EXPORT_IMPORT",
-//                "--distcp",
-//                "-rdl",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", HDP2_CDP,
-//                "-o", outputDir};
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//
-//        long check = MessageCode.DISTCP_VALID_STRATEGY.getLong();
-//        check = check | MessageCode.ALIGN_LOCATIONS_WITHOUT_WAREHOUSE_PLANS.getLong();
 
     @Test
     public void returnCodeTest() {

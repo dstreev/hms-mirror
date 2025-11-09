@@ -49,18 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_cs extends E2EBaseTest {
-    //        String[] args = new String[]{"-d", "SQL",
-//                "-cs", "s3a://my_common_bucket",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", HDP2_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
 
     @Test
     public void returnCodeTest() {

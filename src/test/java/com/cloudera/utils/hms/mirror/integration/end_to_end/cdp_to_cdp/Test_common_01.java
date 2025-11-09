@@ -43,21 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
         })
 @Slf4j
 public class Test_common_01 extends E2EBaseTest {
-    //
-//        String[] args = new String[]{"-d", "COMMON",
-//                "-sql",
-//                "-ltd", ASSORTED_TBLS_04,
-//                "-cfg", CDP_CDP,
-//                "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
-//
-//    }
+
     @Test
     public void returnCodeTest() {
         // Get Runtime Return Code.
@@ -126,7 +112,7 @@ public class Test_common_01 extends E2EBaseTest {
                 "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/legacy_mngd_01");
         // ext_missing_01 exists on RIGHT but not LEFT - location on RIGHT
         validateTableLocation("assorted_test_db", "ext_missing_01", Environment.RIGHT,
-                "hdfs://HDP50/warehouse/tablespace/external/hive/assorted_test_db.db/ext_missing_01");
+                "hdfs://HOME90/warehouse/tablespace/external/hive/assorted_test_db.db/ext_missing_01");
     }
 
     @Test

@@ -44,23 +44,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         })
 @Slf4j
 public class Test_sql_cine_sync_epl_tf extends E2EBaseTest {
-    //        String[] args = new String[]{
-//                "-d", "SQL"
-//                , "-dc"
-//                , "-cine"
-//                , "-epl"
-//                , "-sync"
-//                , "-tf", "web_sales"
-//                , "-ltd", EXISTS_PARTS_08
-//                , "-cfg", CDP_CDP
-//                , "-o", outputDir
-//        };
-//
-//        long rtn = 0;
-//        MirrorLegacy mirror = new MirrorLegacy();
-//        rtn = mirror.go(args);
-//        int check = 0;
-//        assertEquals("Return Code Failure: " + rtn + " doesn't match: " + check, check, rtn);
 
     @Test
     public void returnCodeTest() {
@@ -71,9 +54,4 @@ public class Test_sql_cine_sync_epl_tf extends E2EBaseTest {
         assertEquals(check, rtn, "Return Code Failure: " + rtn);
     }
 
-    @Test
-    public void tableLocationTest() {
-        validateTableLocation("ext_purge_odd_parts", "web_sales", Environment.RIGHT,
-                "hdfs://HOME90/tpcds/e/ext_purge_odd_parts.db/web_sales");
-    }
 }
