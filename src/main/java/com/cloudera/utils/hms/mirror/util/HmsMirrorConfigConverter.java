@@ -336,7 +336,7 @@ public class HmsMirrorConfigConverter {
         // System fields
         dto.setCreated(LocalDateTime.now());
         dto.setModified(LocalDateTime.now());
-        dto.setDefault(false);
+//        dto.setDefault(false);
 
         return dto;
     }

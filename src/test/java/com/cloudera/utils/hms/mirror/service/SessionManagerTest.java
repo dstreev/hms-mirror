@@ -58,10 +58,10 @@ class SessionManagerTest {
     void testCreateSession() throws SessionException {
         // Given
         String sessionId = "test-session";
-        HmsMirrorConfig config = new HmsMirrorConfig();
+//        HmsMirrorConfig config = new HmsMirrorConfig();
 
         // When
-        ExecuteSession result = sessionManager.createSession(sessionId, config);
+        ExecuteSession result = sessionManager.createSession(sessionId);
 
         // Then
         assertNotNull(result);
@@ -75,7 +75,7 @@ class SessionManagerTest {
         String sessionId = "web-session";
         
         // When
-        sessionManager.createSession(sessionId, null);
+        sessionManager.createSession(sessionId);
         ExecuteSession result = sessionManager.getCurrentSession();
 
         // Then
@@ -120,10 +120,10 @@ class SessionManagerTest {
     void testGetSessionById() throws SessionException {
         // Given
         String sessionId = "specific-session";
-        HmsMirrorConfig config = new HmsMirrorConfig();
+//        HmsMirrorConfig config = new HmsMirrorConfig();
 
         // When
-        sessionManager.createSession(sessionId, config);
+        sessionManager.createSession(sessionId);
         ExecuteSession result = sessionManager.getCurrentSession(sessionId);
 
         // Then
@@ -135,10 +135,10 @@ class SessionManagerTest {
     void testCloseSession() throws SessionException {
         // Given
         String sessionId = "session-to-close";
-        HmsMirrorConfig config = new HmsMirrorConfig();
+//        HmsMirrorConfig config = new HmsMirrorConfig();
 
         // When
-        sessionManager.createSession(sessionId, config);
+        sessionManager.createSession(sessionId);
         assertTrue(sessionManager.isSessionExists(sessionId));
         
         sessionManager.closeSession(sessionId);
@@ -154,8 +154,8 @@ class SessionManagerTest {
         String session2Id = "session2";
 
         // When
-        sessionManager.createSession(session1Id, null);
-        sessionManager.createSession(session2Id, null);
+        sessionManager.createSession(session1Id);
+        sessionManager.createSession(session2Id);
         sessionManager.getDefaultSession(); // Initialize default session
         Map<String, ExecuteSession> allSessions = sessionManager.getAllSessions();
 
@@ -173,7 +173,7 @@ class SessionManagerTest {
 
         // When
         assertFalse(sessionManager.isSessionExists(sessionId));
-        sessionManager.createSession(sessionId, null);
+        sessionManager.createSession(sessionId);
 
         // Then
         assertTrue(sessionManager.isSessionExists(sessionId));

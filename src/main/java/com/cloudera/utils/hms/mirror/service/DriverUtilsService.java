@@ -158,7 +158,10 @@ public class DriverUtilsService {
     public Driver getHs2Driver(ConnectionDto connection, Environment environment) {
         Driver hiveShim = null;
         try {
-            String jarFile = buildDriverClasspath(connection.getHs2DriverType());
+            List<DriverType> driversByPlatform = DriverType.findByPlatformType(connection.getPlatformType());
+            // TODO: At some point we may want to offer multiple options.
+            DriverType driverType = driversByPlatform.get(0);
+            String jarFile = buildDriverClasspath(driverType);
             if (!isBlank(jarFile)) {
                 String[] files = jarFile.split(":");
                 URL[] urls = new URL[files.length];
@@ -175,7 +178,7 @@ public class DriverUtilsService {
                 log.trace("Building Classloader to isolate JDBC Library for: {}", jarFile);
                 URLClassLoader hive3ClassLoader = URLClassLoader.newInstance(urls, connection.getClass().getClassLoader());
                 log.trace("Loading Hive JDBC Driver");
-                Class<?> classToLoad = hive3ClassLoader.loadClass(connection.getHs2DriverType().getDriverClass());
+                Class<?> classToLoad = hive3ClassLoader.loadClass(driverType.getDriverClass());
                 Package aPackage = classToLoad.getPackage();
                 String implementationVersion = aPackage.getImplementationVersion();
                 connection.setHs2Version(implementationVersion);

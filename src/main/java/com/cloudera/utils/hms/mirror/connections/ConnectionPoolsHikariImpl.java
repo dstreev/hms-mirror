@@ -18,6 +18,7 @@
 package com.cloudera.utils.hms.mirror.connections;
 
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.DriverType;
 import com.cloudera.utils.hms.mirror.domain.support.HiveDriverEnum;
 import com.cloudera.utils.hms.mirror.service.ConnectionPoolService;
 import com.cloudera.utils.hms.mirror.service.DriverUtilsService;
@@ -70,7 +71,12 @@ public class ConnectionPoolsHikariImpl extends ConnectionPoolsBase implements Co
                             // Make a copy.
                             Properties connProperties = new Properties();
                             // Trim properties to include only those supported by the driver.
-                            connProperties.putAll(HiveDriverEnum.getDriverEnum(connection.getHs2DriverType().getDriverClass())
+
+                            List<DriverType> driversByPlatform = DriverType.findByPlatformType(connection.getPlatformType());
+                            // TODO: At some point we may want to offer multiple options.
+                            DriverType driverType = driversByPlatform.get(0);
+
+                            connProperties.putAll(HiveDriverEnum.getDriverEnum(driverType.getDriverClass())
                                     .reconcileForDriver(props));
 
                             // We need to review any property overrides for the environment to see

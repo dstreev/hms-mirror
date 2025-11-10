@@ -70,7 +70,7 @@ public class SessionContextHolder {
         DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         String sessionId = "session-" + dtf.format(new Date());
         session.setSessionId(sessionId);
-        session.setConfig(new HmsMirrorConfig());
+//        session.setConfig(new HmsMirrorConfig());
         log.debug("Created default ExecuteSession with ID: {} and default config", sessionId);
         return session;
     }
@@ -79,7 +79,7 @@ public class SessionContextHolder {
         ExecuteSession session = new ExecuteSession();
         String actualSessionId = (sessionId != null && !sessionId.trim().isEmpty()) ? sessionId : generateSessionId();
         session.setSessionId(actualSessionId);
-        session.setConfig(new HmsMirrorConfig());
+//        session.setConfig(new HmsMirrorConfig());
         log.debug("Created ExecuteSession with ID: {} and default config", actualSessionId);
         return session;
     }

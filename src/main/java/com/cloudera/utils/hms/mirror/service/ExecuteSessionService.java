@@ -44,7 +44,7 @@ public class ExecuteSessionService {
     private final ConnectionPoolService connectionPoolService;
     
     // Optional injection to avoid circular dependency
-    private SessionKeepAliveService sessionKeepAliveService;
+//    private SessionKeepAliveService sessionKeepAliveService;
 
     private String reportOutputDirectory;
 
@@ -70,11 +70,11 @@ public class ExecuteSessionService {
      * Optional setter for SessionKeepAliveService to avoid circular dependency.
      * This is called after bean initialization if the service is available.
      */
-    @Autowired(required = false)
-    public void setSessionKeepAliveService(SessionKeepAliveService sessionKeepAliveService) {
-        this.sessionKeepAliveService = sessionKeepAliveService;
-        log.debug("SessionKeepAliveService injected into ExecuteSessionService");
-    }
+//    @Autowired(required = false)
+//    public void setSessionKeepAliveService(SessionKeepAliveService sessionKeepAliveService) {
+//        this.sessionKeepAliveService = sessionKeepAliveService;
+//        log.debug("SessionKeepAliveService injected into ExecuteSessionService");
+//    }
 
     public void setReportOutputDirectory(String reportOutputDirectory, boolean amendSessionIdToReportDir) {
         this.amendSessionIdToReportDir = amendSessionIdToReportDir;
@@ -101,87 +101,6 @@ public class ExecuteSessionService {
 
         ExecuteSession session = getSession();
 
-        // Reset the connection status.
-        session.setConnected(Boolean.FALSE);
-
-        if (session.isRunning()) {
-            throw new SessionException("Can't save while running.");
-        } else {
-            session.getRunStatus().reset();
-        }
-
-        HmsMirrorConfig currentConfig = session.getConfig();
-
-        // Reload Databases
-        config.getDatabases().addAll(currentConfig.getDatabases());
-
-        // Merge Passwords
-        config.getClusters().forEach((env, cluster) -> {
-            // HS2
-            if (nonNull(cluster.getHiveServer2())) {
-                String currentPassword = (String) currentConfig.getClusters().get(env).getHiveServer2().getConnectionProperties().get("password");
-                String newPassword = (String) cluster.getHiveServer2().getConnectionProperties().get("password");
-                if (newPassword != null && !newPassword.isEmpty()) {
-                    // Set new Password, IF the current passwords aren't ENCRYPTED...  set warning if they attempted.
-                    if (config.isEncryptedPasswords()) {
-                        // Restore original password
-                        cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
-                        passwordCheck.set(Boolean.TRUE);
-                    } else {
-                        cluster.getHiveServer2().getConnectionProperties().put("password", newPassword);
-                    }
-                } else if (currentPassword != null) {
-                    // Restore original password
-                    cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
-                } else {
-                    cluster.getHiveServer2().getConnectionProperties().remove("password");
-                }
-            }
-
-            // Metastore
-            if (nonNull(cluster.getMetastoreDirect())) {
-                String currentPassword = (String) currentConfig.getClusters().get(env).getMetastoreDirect().getConnectionProperties().get("password");
-                String newPassword = (String) cluster.getMetastoreDirect().getConnectionProperties().get("password");
-                if (newPassword != null && !newPassword.isEmpty()) {
-                    // Set new password
-                    if (config.isEncryptedPasswords()) {
-                        // Restore original password
-                        cluster.getHiveServer2().getConnectionProperties().put("password", currentPassword);
-                        passwordCheck.set(Boolean.TRUE);
-                    } else {
-                        cluster.getMetastoreDirect().getConnectionProperties().put("password", newPassword);
-                    }
-                } else if (currentPassword != null) {
-                    // Restore Original password
-                    cluster.getMetastoreDirect().getConnectionProperties().put("password", currentPassword);
-                } else {
-                    cluster.getMetastoreDirect().getConnectionProperties().remove("password");
-                }
-            }
-        });
-
-        // Merge Translator
-        config.setTranslator(currentConfig.getTranslator());
-
-        // Merge the Property Overrides
-        config.getOptimization().setOverrides(currentConfig.getOptimization().getOverrides());
-
-        // Apply rules for the DataStrategy that are not in the config.
-        // TODO: Fix
-//        configService.alignConfigurationSettings(session, config);
-
-        // Reset to the merged config.
-        session.setConfig(config);
-
-//        model.addAttribute(READ_ONLY, Boolean.TRUE);
-        // TODO: Fix
-//        configService.validate(session, null);
-
-        if (passwordCheck.get()) {
-            ExecuteSession session1 = getSession();
-            session1.getRunStatus().addError(ENCRYPTED_PASSWORD_CHANGE_ATTEMPT);
-            rtn = Boolean.FALSE;
-        }
 
         return rtn;
     }

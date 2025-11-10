@@ -21,126 +21,182 @@ import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
 import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
 import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
-import com.cloudera.utils.hms.mirror.service.UIModelService;
-import com.cloudera.utils.hms.mirror.web.controller.ControllerReferences;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.ExtendedModelMap;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.ModelAndView;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.sql.SQLInvalidAuthorizationSpecException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler for the application.
+ * Returns JSON error responses for all exceptions to support the React Web UI.
+ */
 @ControllerAdvice
+@Slf4j
 public class MirrorExceptionHandler {
 
-    private final UIModelService uiModelService;
-
-    public MirrorExceptionHandler(UIModelService uiModelService) {
-        this.uiModelService = uiModelService;
+    /**
+     * Creates a standard error response map with timestamp, error details, and request path.
+     */
+    private Map<String, Object> createErrorResponse(String type, String message, String path) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        errorResponse.put("error", type);
+        errorResponse.put("message", message);
+        errorResponse.put("path", path);
+        return errorResponse;
     }
 
     @ExceptionHandler(value = SessionException.class)
-    public ModelAndView sessionExceptionHandler(HttpServletRequest request, SessionException exception) {
-        ModelAndView mv = new ModelAndView();
-        mv.addObject(ControllerReferences.TYPE, "Session Exception");
-        mv.addObject(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(mv, 0, false);
-        mv.setViewName("error");
-        return mv;
+    public ResponseEntity<Map<String, Object>> sessionExceptionHandler(HttpServletRequest request, SessionException exception) {
+        log.error("Session exception occurred: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Session Exception",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = RequiredConfigurationException.class)
-    public ModelAndView reqConfigExceptionHandler(HttpServletRequest request, RequiredConfigurationException exception) {
-        ModelAndView mv = new ModelAndView();
-        mv.getModel().put(ControllerReferences.TYPE, "Required Configuration");
-        mv.getModel().put(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(mv.getModel(), 0, false);
-        mv.setViewName("error");
-        return mv;
+    public ResponseEntity<Map<String, Object>> reqConfigExceptionHandler(HttpServletRequest request, RequiredConfigurationException exception) {
+        log.error("Required configuration exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Required Configuration",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = EncryptionException.class)
-    public String encryptionExceptionHandler(Model model, EncryptionException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Password Encryption/Decryption Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> encryptionExceptionHandler(HttpServletRequest request, EncryptionException exception) {
+        log.error("Encryption/Decryption exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Password Encryption/Decryption Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = MismatchException.class)
-    public String misMatchExceptionHandler(Model model, MismatchException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Mismatch Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> misMatchExceptionHandler(HttpServletRequest request, MismatchException exception) {
+        log.error("Mismatch exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Mismatch Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = IOException.class)
-    public String ioExceptionHandler(Model model, IOException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "IO Exception Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> ioExceptionHandler(HttpServletRequest request, IOException exception) {
+        log.error("IO exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "IO Exception Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = UnknownHostException.class)
-    public String unKnownHostHandler(Model model, UnknownHostException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "Unknown Host Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> unKnownHostHandler(HttpServletRequest request, UnknownHostException exception) {
+        log.error("Unknown host exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Unknown Host Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = SQLException.class)
-    public String sqlExceptionHandler(Model model, SQLException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "SQL Exception Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> sqlExceptionHandler(HttpServletRequest request, SQLException exception) {
+        log.error("SQL exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "SQL Exception Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = SQLInvalidAuthorizationSpecException.class)
-    public String SQLInvalidAuthorizationSpecExceptionHandler(Model model, SQLInvalidAuthorizationSpecException exception) {
-        model.addAttribute(ControllerReferences.TYPE, "SQL Invalid Auth Exception Issue");
-        model.addAttribute(ControllerReferences.MESSAGE, exception.getMessage());
-        uiModelService.sessionToModel(model, 0, false);
-        return "error";
+    public ResponseEntity<Map<String, Object>> sqlInvalidAuthorizationSpecExceptionHandler(HttpServletRequest request, SQLInvalidAuthorizationSpecException exception) {
+        log.error("SQL invalid authorization exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "SQL Invalid Auth Exception Issue",
+            exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.UNAUTHORIZED)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(value = IllegalStateException.class)
-    public Object illegalStateExceptionHandler(HttpServletRequest request, HttpServletResponse response, IllegalStateException exception) {
-        String requestUri = request.getRequestURI();
-        
-        // Check if this is an API request
-        if (requestUri != null && requestUri.startsWith("/hms-mirror/api/")) {
-            // For API requests, return JSON response
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Internal Server Error");
-            errorResponse.put("message", "An internal error occurred while processing the request");
-            errorResponse.put("path", requestUri);
-            
-            return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(errorResponse);
-        } else {
-            // For web requests, return view name
-            Model model = new ExtendedModelMap();
-            model.addAttribute(ControllerReferences.TYPE, "Internal Server Error");
-            model.addAttribute(ControllerReferences.MESSAGE, "An internal error occurred while processing the request");
-            uiModelService.sessionToModel(model, 0, false);
-            return "error";
-        }
+    public ResponseEntity<Map<String, Object>> illegalStateExceptionHandler(HttpServletRequest request, IllegalStateException exception) {
+        log.error("Illegal state exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Internal Server Error",
+            "An internal error occurred while processing the request",
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
+    }
+
+    /**
+     * Catch-all exception handler for any unhandled exceptions.
+     */
+    @ExceptionHandler(value = Exception.class)
+    public ResponseEntity<Map<String, Object>> generalExceptionHandler(HttpServletRequest request, Exception exception) {
+        log.error("Unhandled exception: {}", exception.getMessage(), exception);
+        Map<String, Object> errorResponse = createErrorResponse(
+            "Internal Server Error",
+            "An unexpected error occurred: " + exception.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 }

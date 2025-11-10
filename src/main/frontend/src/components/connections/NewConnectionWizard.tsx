@@ -287,15 +287,18 @@ const NewConnectionWizard: React.FC = () => {
       const result = await response.json();
       console.log('Success response:', result);
 
-      // Show brief success message before navigation to provide user feedback
+      // Update formData with the returned connection key so testing can work
+      if (result.key) {
+        console.log('Updating formData with connection key:', result.key);
+        setFormData({ ...formData, key: result.key });
+      }
+
+      // Show success message - user can now test the connection
       console.log(`Connection ${isEditMode ? 'updated' : 'created'} successfully`);
       setSaveSuccess(true);
-      
-      // Add a small delay to show success state, then navigate
-      setTimeout(() => {
-        console.log('Navigating to /connections');
-        navigate('/connections');
-      }, 500);
+
+      // Don't auto-navigate - let user test the connection first
+      // Navigation will happen when user clicks "Done" or "Back to Connections"
     } catch (error) {
       console.error('Error creating connection:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

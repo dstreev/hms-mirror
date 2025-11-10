@@ -97,7 +97,7 @@ public class SampleDataInitializationService {
                         .enableAutoTableStats(false)
                         .enableAutoColumnStats(false)
                         .created(LocalDateTime.now())
-                        .isDefault(false)
+//                        .isDefault(false)
                         .build(),
 
                 // 2. CDH6 Production Cluster
@@ -130,7 +130,7 @@ public class SampleDataInitializationService {
                         .enableAutoTableStats(true)
                         .enableAutoColumnStats(false)
                         .created(LocalDateTime.now())
-                        .isDefault(false)
+//                        .isDefault(false)
                         .build(),
 
                 // 3. CDP Private Cloud Base 7.1.9 (Default)
@@ -164,7 +164,7 @@ public class SampleDataInitializationService {
                         .enableAutoTableStats(true)
                         .enableAutoColumnStats(true)
                         .created(LocalDateTime.now())
-                        .isDefault(true)
+//                        .isDefault(true)
                         .build(),
 
                 // 4. CDP Public Cloud Development
@@ -197,7 +197,7 @@ public class SampleDataInitializationService {
                         .enableAutoTableStats(false)
                         .enableAutoColumnStats(false)
                         .created(LocalDateTime.now())
-                        .isDefault(false)
+//                        .isDefault(false)
                         .build()
         };
 

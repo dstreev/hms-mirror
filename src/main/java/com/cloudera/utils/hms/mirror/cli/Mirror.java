@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.cli;
 
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import com.cloudera.utils.hms.mirror.service.HMSMirrorAppService;
 import lombok.extern.slf4j.Slf4j;
@@ -61,8 +62,9 @@ public class Mirror {
         long returnCode = appService.getReturnCode();
         int rtnCode = (int) returnCode;
         if ((returnCode * -1) > Integer.MAX_VALUE) {
+            RunStatus runStatus = appService.getRunStatus();
             log.error("Return code is greater than Integer.MAX_VALUE.  Setting return code to Integer.MAX_VALUE. Check Logs for errors.");
-            for (String message : executeSessionService.getSession().getRunStatus().getErrors().getMessages()) {
+            for (String message : runStatus.getErrors().getMessages()) {
                 log.error(message);
             }
             rtnCode = Integer.MAX_VALUE;

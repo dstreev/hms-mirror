@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BeakerIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ConnectionFormData, ConnectionTestResults } from '../../../types/Connection';
 
@@ -12,6 +13,7 @@ interface TestAndSaveStepProps {
   isLastStep: boolean;
   saving?: boolean;
   saveSuccess?: boolean;
+  isEditMode?: boolean;
 }
 
 const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
@@ -21,62 +23,67 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
   onBack,
   onSave,
   saving = false,
-  saveSuccess = false
+  saveSuccess = false,
+  isEditMode = false
 }) => {
+  const navigate = useNavigate();
   const [testResults, setTestResults] = useState<ConnectionTestResults | null>(null);
   const [testing, setTesting] = useState(false);
   const [saveTestResults, setSaveTestResults] = useState(true);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const handleTestConnection = async () => {
+    // Check if connection has a key (has been saved)
+    const connectionKey = formData.key || formData.name;
+
+    if (!connectionKey) {
+      setTestError('Please save the connection first before testing');
+      return;
+    }
+
     setTesting(true);
     setTestResults(null);
+    setTestError(null);
 
     try {
-      // Simulate connection testing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Mock successful test results
-      const mockResults: ConnectionTestResults = {
-        status: 'SUCCESS',
+      console.log('Testing connection with key:', connectionKey);
+
+      const response = await fetch(`/hms-mirror/api/v1/connections/${connectionKey}/test`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to test connection: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Test result:', result);
+
+      // Convert backend response to UI format
+      const testResults: ConnectionTestResults = {
+        status: result.testPassed ? 'SUCCESS' : 'FAILED',
         lastTested: new Date().toISOString(),
-        duration: 2.3,
-        results: [
-          {
-            component: 'HDFS',
-            status: 'SUCCESS',
-            message: 'Connected to ' + formData.hcfsNamespace,
-            responseTime: 0.8
-          },
-          {
-            component: 'HIVESERVER2',
-            status: 'SUCCESS',
-            message: 'Connected via JDBC',
-            responseTime: 1.2,
-            details: { driverVersion: '3.1.2' }
-          },
-          {
-            component: 'METASTORE',
-            status: formData.metastoreDirectEnabled ? 'SUCCESS' : 'SUCCESS',
-            message: formData.metastoreDirectEnabled ? 'Direct database connection established' : 'Using HiveServer2 for metadata',
-            responseTime: formData.metastoreDirectEnabled ? 0.9 : 0.1,
-            details: formData.metastoreDirectEnabled ? { schemaVersion: '3.1.0' } : undefined
-          }
-        ]
+        duration: result.duration || 0,
+        results: parseTestDetails(result.details),
+        logs: result.details ? [result.details] : []
       };
 
-      setTestResults(mockResults);
+      setTestResults(testResults);
     } catch (error) {
-      // Mock failed test results
+      console.error('Error testing connection:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setTestError(errorMessage);
+
+      // Set failed test results
       const failedResults: ConnectionTestResults = {
         status: 'FAILED',
         lastTested: new Date().toISOString(),
-        duration: 5.2,
+        duration: 0,
         results: [
           {
-            component: 'HDFS',
+            component: 'HIVESERVER2',
             status: 'FAILED',
-            message: 'Connection timeout',
-            responseTime: 5.0
+            message: errorMessage
           }
         ]
       };
@@ -84,6 +91,33 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
     } finally {
       setTesting(false);
     }
+  };
+
+  // Helper function to parse test details from backend response
+  const parseTestDetails = (details: string | undefined): Array<{ component: 'HDFS' | 'HIVESERVER2' | 'METASTORE'; status: 'SUCCESS' | 'FAILED'; message: string; responseTime?: number }> => {
+    if (!details) return [];
+
+    const results: Array<{ component: 'HDFS' | 'HIVESERVER2' | 'METASTORE'; status: 'SUCCESS' | 'FAILED'; message: string; responseTime?: number }> = [];
+
+    // Parse the details string to extract component results
+    const lines = details.split('\n');
+    for (const line of lines) {
+      if (line.includes('HS2 connection')) {
+        results.push({
+          component: 'HIVESERVER2',
+          status: line.includes('SUCCESS') ? 'SUCCESS' : 'FAILED',
+          message: line.trim()
+        });
+      } else if (line.includes('Metastore Direct connection')) {
+        results.push({
+          component: 'METASTORE',
+          status: line.includes('SUCCESS') ? 'SUCCESS' : 'FAILED',
+          message: line.trim()
+        });
+      }
+    }
+
+    return results;
   };
 
   const renderTestResults = () => {
@@ -176,17 +210,36 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
       {/* Connection Test */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">🧪 Connection Test</h3>
-        
+
+        {/* Info message about saving first */}
+        {!formData.key && !saveSuccess && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+            <p className="text-sm text-blue-700">
+              💡 <strong>Tip:</strong> Save the connection first, then you can test it to verify connectivity.
+            </p>
+          </div>
+        )}
+
+        {/* Test Error */}
+        {testError && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-sm text-red-700">
+              ❌ <strong>Error:</strong> {testError}
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center space-x-4 mb-4">
           <button
             onClick={handleTestConnection}
-            disabled={testing}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+            disabled={testing || (!formData.key && !saveSuccess)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!formData.key && !saveSuccess ? 'Save the connection first to test it' : 'Test connection'}
           >
             <BeakerIcon className="h-4 w-4 mr-2" />
             {testing ? 'Testing Connection...' : '🧪 Test Connection'}
           </button>
-          
+
           {testing && (
             <div className="flex items-center text-sm text-gray-600">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
@@ -241,8 +294,8 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
             onClick={onSave}
             disabled={saving || saveSuccess}
             className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${
-              saveSuccess 
-                ? 'bg-emerald-600 text-white' 
+              saveSuccess
+                ? 'bg-emerald-600 text-white'
                 : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50'
             }`}
           >
@@ -260,6 +313,15 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
               '💾 Save Connection'
             )}
           </button>
+
+          {saveSuccess && (
+            <button
+              onClick={() => navigate('/connections')}
+              className="px-6 py-2 font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              ✓ Done
+            </button>
+          )}
         </div>
       </div>
 

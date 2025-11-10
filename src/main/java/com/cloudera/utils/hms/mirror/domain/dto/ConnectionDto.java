@@ -25,6 +25,7 @@ import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -41,11 +42,16 @@ import java.util.Map;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
+/**
+ * Data Transfer Object for HMS-Mirror connection configuration.
+ * Supports backward/forward compatibility by ignoring unknown JSON fields during deserialization.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ConnectionDto implements Cloneable {
 
     private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
@@ -69,7 +75,7 @@ public class ConnectionDto implements Cloneable {
     private ConnectionStatus hs2Status = ConnectionStatus.NOT_CONFIGURED;
     private boolean hs2Connected = Boolean.FALSE;
     private String hs2StatusMessage;
-    private DriverType hs2DriverType;
+//    private DriverType hs2DriverType;
     private String hs2Uri;
     private String hs2Username;
     private String hs2Password;
@@ -222,11 +228,16 @@ public class ConnectionDto implements Cloneable {
         DEV, TEST, PROD, UAT, STAGING
     }
 
+    /**
+     * Nested class for connection test results.
+     * Supports backward/forward compatibility by ignoring unknown JSON fields during deserialization.
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ConnectionTestResults implements Cloneable {
         private TestStatus status;
 

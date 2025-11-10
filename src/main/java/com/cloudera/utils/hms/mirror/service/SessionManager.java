@@ -43,25 +43,13 @@ public class SessionManager {
     private final ExecuteSessionService executeSessionService;
     
     private final Map<String, ExecuteSession> sessions = new ConcurrentHashMap<>();
-    
-    // Optional injection to avoid circular dependency
-    private SessionKeepAliveService sessionKeepAliveService;
-    
+
     private ExecuteSession defaultSession;
 
     @Autowired
     public SessionManager(ExecuteSessionService executeSessionService) {
         this.executeSessionService = executeSessionService;
         log.debug("SessionManager initialized");
-    }
-
-    /**
-     * Optional setter for SessionKeepAliveService to avoid circular dependency.
-     */
-    @Autowired(required = false)
-    public void setSessionKeepAliveService(@Lazy SessionKeepAliveService sessionKeepAliveService) {
-        this.sessionKeepAliveService = sessionKeepAliveService;
-        log.debug("SessionKeepAliveService injected into SessionManager");
     }
 
     public ExecuteSession getCurrentSession() {
@@ -110,15 +98,12 @@ public class SessionManager {
         return defaultSession;
     }
 
-    public ExecuteSession createSession(String sessionId, HmsMirrorConfig config) {
+    public ExecuteSession createSession(String sessionId) {
         String actualSessionId = isBlank(sessionId) ? DEFAULT_SESSION_ID : sessionId;
         
         // Use SessionContextHolder for centralized session creation
         ExecuteSession session = SessionContextHolder.getOrCreateSession(actualSessionId);
-        if (config != null) {
-            session.setConfig(config.clone());
-        }
-        
+
         if (DEFAULT_SESSION_ID.equals(actualSessionId)) {
             defaultSession = session;
         } else {
@@ -168,12 +153,12 @@ public class SessionManager {
         
         ExecuteSession session = sessions.remove(sessionId);
         if (session != null) {
-            session.close();
+//            session.close();
             
             // Unregister from keep-alive service
-            if (sessionKeepAliveService != null) {
-                sessionKeepAliveService.unregisterRunningSession(sessionId);
-            }
+//            if (sessionKeepAliveService != null) {
+//                sessionKeepAliveService.unregisterRunningSession(sessionId);
+//            }
             
             log.debug("Closed session: {}", sessionId);
         }

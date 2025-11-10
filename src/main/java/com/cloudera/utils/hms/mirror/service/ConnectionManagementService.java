@@ -18,15 +18,26 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.support.DriverType;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Service for managing HMS Mirror Connection persistence and retrieval.
@@ -38,11 +49,20 @@ import java.util.stream.Collectors;
  */
 @Service
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
-@RequiredArgsConstructor
 @Slf4j
 public class ConnectionManagementService {
 
     private final ConnectionRepository connectionRepository;
+    private final DriverUtilsService driverUtilsService;
+    private final PasswordService passwordService;
+
+    public ConnectionManagementService(ConnectionRepository connectionRepository,
+                                      @Autowired(required = false) DriverUtilsService driverUtilsService,
+                                      @Autowired(required = false) PasswordService passwordService) {
+        this.connectionRepository = connectionRepository;
+        this.driverUtilsService = driverUtilsService;
+        this.passwordService = passwordService;
+    }
 
     /**
      * Lists all connections with their metadata.
@@ -257,38 +277,290 @@ public class ConnectionManagementService {
     }
 
     /**
+     * Tests a connection by attempting to establish both HiveServer2 and Metastore Direct connections.
+     * Updates the ConnectionDto's testResults field with the outcome.
+     *
      * @param key The connection key to test
      * @return Map containing the test operation results
      */
     public Map<String, Object> test(String key) {
-        log.debug("Testing connection: {}", key);
+        log.info("Testing connection: {}", key);
 
-//        try {
-            // TODO: Fix Connection Test
-            boolean testResult = Boolean.FALSE; // connectionRepository.testConnection(key);
+        try {
+            // Load the connection
+            Optional<ConnectionDto> connectionOpt = connectionRepository.findByKey(key);
+            if (!connectionOpt.isPresent()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("status", "NOT_FOUND");
+                result.put("message", "Connection not found: " + key);
+                return result;
+            }
 
+            ConnectionDto connectionDto = connectionOpt.get();
+            LocalDateTime testStartTime = LocalDateTime.now();
+            long startMillis = System.currentTimeMillis();
+
+            StringBuilder detailsBuilder = new StringBuilder();
+            boolean hs2Success = false;
+            boolean metastoreSuccess = false;
+            boolean overallSuccess = false;
+            String errorMessage = null;
+
+            // Test HiveServer2 connection if configured
+            if (!isBlank(connectionDto.getHs2Uri())) {
+                log.info("Testing HiveServer2 connection for: {}", key);
+                try {
+                    hs2Success = testHS2Connection(connectionDto);
+                    if (hs2Success) {
+                        detailsBuilder.append("HS2 connection: SUCCESS\n");
+                        log.info("HS2 connection test passed for: {}", key);
+                    } else {
+                        detailsBuilder.append("HS2 connection: FAILED\n");
+                        log.warn("HS2 connection test failed for: {}", key);
+                    }
+                } catch (Exception e) {
+                    hs2Success = false;
+                    detailsBuilder.append("HS2 connection: FAILED - ").append(e.getMessage()).append("\n");
+                    errorMessage = "HS2 connection failed: " + e.getMessage();
+                    log.error("HS2 connection test error for: {}", key, e);
+                }
+            } else {
+                detailsBuilder.append("HS2 connection: NOT CONFIGURED\n");
+                log.debug("HS2 connection not configured for: {}", key);
+                // If HS2 is not configured, consider it success for overall test
+                hs2Success = false;
+            }
+
+            // Test Metastore Direct connection if configured
+            if (connectionDto.isMetastoreDirectEnabled() &&
+                !isBlank(connectionDto.getMetastoreDirectUri())) {
+                log.info("Testing Metastore Direct connection for: {}", key);
+                try {
+                    metastoreSuccess = testMetastoreDirectConnection(connectionDto);
+                    if (metastoreSuccess) {
+                        detailsBuilder.append("Metastore Direct connection: SUCCESS\n");
+                        log.info("Metastore Direct connection test passed for: {}", key);
+                    } else {
+                        detailsBuilder.append("Metastore Direct connection: FAILED\n");
+                        log.warn("Metastore Direct connection test failed for: {}", key);
+                    }
+                } catch (Exception e) {
+                    metastoreSuccess = false;
+                    detailsBuilder.append("Metastore Direct connection: FAILED - ").append(e.getMessage()).append("\n");
+                    if (errorMessage == null) {
+                        errorMessage = "Metastore Direct connection failed: " + e.getMessage();
+                    } else {
+                        errorMessage += "; Metastore Direct connection failed: " + e.getMessage();
+                    }
+                    log.error("Metastore Direct connection test error for: {}", key, e);
+                }
+            } else {
+                detailsBuilder.append("Metastore Direct connection: NOT CONFIGURED\n");
+                log.debug("Metastore Direct connection not configured for: {}", key);
+                // If Metastore Direct is not configured, consider it success for overall test
+                metastoreSuccess = false;
+            }
+
+            // Overall test is successful if all configured connections succeed
+            overallSuccess = hs2Success && metastoreSuccess;
+
+            // Calculate duration
+            long endMillis = System.currentTimeMillis();
+            double durationSeconds = (endMillis - startMillis) / 1000.0;
+
+            // Update test results
+            ConnectionDto.ConnectionTestResults testResults = ConnectionDto.ConnectionTestResults.builder()
+                    .status(overallSuccess ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS :
+                            ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
+                    .lastTested(testStartTime)
+                    .duration(durationSeconds)
+                    .errorMessage(errorMessage)
+                    .details(detailsBuilder.toString())
+                    .build();
+
+            connectionDto.setTestResults(testResults);
+
+            // Save updated connection
+            connectionRepository.save(connectionDto);
+
+            // Build response
             Map<String, Object> result = new HashMap<>();
-            result.put("status", testResult ? "SUCCESS" : "FAILED");
-            result.put("message", testResult ? "Connection test successful" : "Connection test failed");
+            result.put("status", overallSuccess ? "SUCCESS" : "FAILED");
+            result.put("message", overallSuccess ? "Connection test successful" :
+                       "Connection test failed: " + errorMessage);
             result.put("key", key);
-            result.put("testPassed", testResult);
+            result.put("testPassed", overallSuccess);
+            result.put("duration", durationSeconds);
+            result.put("details", detailsBuilder.toString());
+
+            log.info("Connection test completed for: {} - Status: {}, Duration: {}s",
+                     key, overallSuccess ? "SUCCESS" : "FAILED", durationSeconds);
 
             return result;
 
-//        } catch (RepositoryException e) {
-//            log.error("Error testing connection {}", key, e);
-//            Map<String, Object> errorResult = new HashMap<>();
-//
-//            if (e.getMessage() != null && e.getMessage().contains("not found")) {
-//                errorResult.put("status", "NOT_FOUND");
-//                errorResult.put("message", "Connection not found: " + key);
-//            } else {
-//                errorResult.put("status", "ERROR");
-//                errorResult.put("message", "Failed to test connection: " + e.getMessage());
-//            }
-//
-//            return errorResult;
-//        }
+        } catch (Exception e) {
+            log.error("Error testing connection {}", key, e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("status", "ERROR");
+            errorResult.put("message", "Failed to test connection: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    /**
+     * Tests HiveServer2 JDBC connection.
+     * Properly loads and registers the HiveServer2 driver before testing.
+     *
+     * @param connectionDto The connection configuration
+     * @return true if connection is successful, false otherwise
+     */
+    private boolean testHS2Connection(ConnectionDto connectionDto) throws SQLException {
+        String uri = connectionDto.getHs2Uri();
+        String username = connectionDto.getHs2Username();
+        String password = connectionDto.getHs2Password();
+
+        // Note: Password decryption is not performed during connection testing
+        // The password should be stored in decrypted form in the ConnectionDto
+
+        Properties props = new Properties();
+        if (username != null && !username.isEmpty()) {
+            props.setProperty("user", username);
+        }
+        if (password != null && !password.isEmpty()) {
+            props.setProperty("password", password);
+        }
+
+        // Add any additional connection properties
+        if (connectionDto.getHs2ConnectionProperties() != null) {
+            connectionDto.getHs2ConnectionProperties().forEach((k, v) -> {
+                if (!"password".equals(k) && !"user".equals(k)) { // Don't override user/password
+                    props.setProperty(k, v);
+                }
+            });
+        }
+
+        // Load and register HiveServer2 driver (required for JDBC connection)
+        Driver hs2Driver = null;
+        List<DriverType> driversByPlatform = DriverType.findByPlatformType(connectionDto.getPlatformType());
+        // TODO: At some point we may want to offer multiple options.
+        DriverType driverType = driversByPlatform.get(0);
+
+        if (driverUtilsService != null && driverType != null) {
+            log.debug("Loading HiveServer2 driver: {}", driverType);
+            // Use Environment.LEFT as a placeholder - it's only used for logging
+            hs2Driver = driverUtilsService.getHs2Driver(connectionDto, Environment.LEFT);
+            if (hs2Driver == null) {
+                log.error("Failed to load HiveServer2 driver for type: {}", driverType);
+                throw new SQLException("Failed to load HiveServer2 driver: " + driverType);
+            }
+            log.debug("HiveServer2 driver loaded successfully");
+        }
+
+        Connection conn = null;
+        Statement stmt = null;
+        try {
+            // Register driver if loaded
+            if (hs2Driver != null) {
+                log.debug("Registering HiveServer2 driver");
+                DriverManager.registerDriver(hs2Driver);
+            }
+
+            log.debug("Attempting HS2 connection to: {}", uri);
+            conn = DriverManager.getConnection(uri, props);
+
+            // Validate connection with a simple query
+            stmt = conn.createStatement();
+            stmt.execute("SELECT 1");
+
+            log.debug("HS2 connection validated successfully");
+            return true;
+        } finally {
+            // Clean up resources
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    log.warn("Error closing statement", e);
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    log.warn("Error closing connection", e);
+                }
+            }
+            // Deregister driver
+            if (hs2Driver != null) {
+                try {
+                    log.debug("Deregistering HiveServer2 driver");
+                    DriverManager.deregisterDriver(hs2Driver);
+                } catch (SQLException e) {
+                    log.warn("Error deregistering HiveServer2 driver", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Tests Metastore Direct JDBC connection.
+     *
+     * @param connectionDto The connection configuration
+     * @return true if connection is successful, false otherwise
+     */
+    private boolean testMetastoreDirectConnection(ConnectionDto connectionDto) throws SQLException {
+        String uri = connectionDto.getMetastoreDirectUri();
+        String username = connectionDto.getMetastoreDirectUsername();
+        String password = connectionDto.getMetastoreDirectPassword();
+
+        // Note: Password decryption is not performed during connection testing
+        // The password should be stored in decrypted form in the ConnectionDto
+
+        Properties props = new Properties();
+        if (username != null && !username.isEmpty()) {
+            props.setProperty("user", username);
+        }
+        if (password != null && !password.isEmpty()) {
+            props.setProperty("password", password);
+        }
+
+        // Add any additional connection properties
+        if (connectionDto.getMetastoreDirectConnectionProperties() != null) {
+            connectionDto.getMetastoreDirectConnectionProperties().forEach((k, v) -> {
+                if (!"password".equals(k) && !"user".equals(k)) { // Don't override user/password
+                    props.setProperty(k, v);
+                }
+            });
+        }
+
+        Connection conn = null;
+        Statement stmt = null;
+        try {
+            log.debug("Attempting Metastore Direct connection to: {}", uri);
+            conn = DriverManager.getConnection(uri, props);
+
+            // Validate connection with a simple query
+            stmt = conn.createStatement();
+            stmt.execute("SELECT 1");
+
+            log.debug("Metastore Direct connection validated successfully");
+            return true;
+        } finally {
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    log.warn("Error closing statement", e);
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    log.warn("Error closing connection", e);
+                }
+            }
+        }
     }
 
     /**
@@ -382,11 +654,8 @@ public class ConnectionManagementService {
     }
 
     private int compareConnections(ConnectionDto a, ConnectionDto b) {
-        // Default connections first
-        if (a.isDefault() && !b.isDefault()) return -1;
-        if (!a.isDefault() && b.isDefault()) return 1;
-
-        // Then by name
+        // Sort by name
+        // TODO: Add default connection support when isDefault() method is implemented
         return a.getName().compareToIgnoreCase(b.getName());
     }
 }

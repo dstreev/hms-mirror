@@ -131,6 +131,12 @@ public class HMSMirrorAppService {
         return rtn;
     }
 
+    public RunStatus getRunStatus() {
+        RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
+                new IllegalStateException("RunStatus is not set in the current thread context."));
+        return runStatus;
+    }
+
     /*
     In this case, we want the session to remain the same as the calling thread.
     The session for this thread is the same via the "ThreadPoolConfigurator" and the Decorator process that inherits

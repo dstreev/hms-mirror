@@ -48,19 +48,20 @@ public class QueryDefinitionsServiceTest {
     @Test
     void testGetQueryDefinitions_ClusterWithoutMetastore() {
         DBStore.DB_TYPE type = DBStore.DB_TYPE.MYSQL;
-        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
+        ExecutionContextService mockExecutionContextService = mock(ExecutionContextService.class);
+//        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
         HmsMirrorConfig mockHmsMirrorConfig = mock(HmsMirrorConfig.class);
         Cluster mockCluster = mock(Cluster.class);
 
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         ExecuteSession mockExecuteSession = mock(ExecuteSession.class);
 
-        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
-        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
+//        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
+//        when(mockExecutionContextService.getSession()).thenReturn(mockExecuteSession);
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         // mockCluster.getMetastoreDirect() returns null by default, which is what we want for this test
 
-        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
+        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecutionContextService);
 
         QueryDefinitions result = queryDefinitionsService.getQueryDefinitions(Environment.LEFT);
 
@@ -73,7 +74,8 @@ public class QueryDefinitionsServiceTest {
     @Test
     void testGetQueryDefinitions_ValidYAMLMYSQLConfig() throws Exception {
         DBStore.DB_TYPE type = DBStore.DB_TYPE.MYSQL;
-        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
+        ExecutionContextService mockExecutionContextService = mock(ExecutionContextService.class);
+//        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
         HmsMirrorConfig mockHmsMirrorConfig = mock(HmsMirrorConfig.class);
         Cluster mockCluster = mock(Cluster.class);
 
@@ -81,13 +83,13 @@ public class QueryDefinitionsServiceTest {
         DBStore mockDBStore = mock(DBStore.class);
         ExecuteSession mockExecuteSession = mock(ExecuteSession.class);
 
-        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
-        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
+//        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
+//        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         when(mockCluster.getMetastoreDirect()).thenReturn(mockDBStore);
         when(mockDBStore.getType()).thenReturn(type);
 
-        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
+        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecutionContextService);
 
         URL mockURL = this.getClass().getResource("/"+type.toString()+"/metastoreDirect.yaml");
         assertNotNull(mockURL, "Resource file for "+type.toString()+"/metastoreDirect.yaml must exist");
@@ -105,7 +107,8 @@ public class QueryDefinitionsServiceTest {
     @Test
     void testGetQueryDefinitions_ValidYAMLPostgreSConfig() throws Exception {
         DBStore.DB_TYPE type = DBStore.DB_TYPE.POSTGRES;
-        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
+        ExecutionContextService mockExecutionContextService = mock(ExecutionContextService.class);
+//        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
         HmsMirrorConfig mockHmsMirrorConfig = mock(HmsMirrorConfig.class);
         Cluster mockCluster = mock(Cluster.class);
 
@@ -113,13 +116,13 @@ public class QueryDefinitionsServiceTest {
         DBStore mockDBStore = mock(DBStore.class);
         ExecuteSession mockExecuteSession = mock(ExecuteSession.class);
 
-        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
-        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
+//        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
+//        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         when(mockCluster.getMetastoreDirect()).thenReturn(mockDBStore);
         when(mockDBStore.getType()).thenReturn(type);
 
-        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
+        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecutionContextService);
 
         URL mockURL = this.getClass().getResource("/"+type.toString()+"/metastoreDirect.yaml");
         assertNotNull(mockURL, "Resource file for "+type.toString()+"/metastoreDirect.yaml must exist");
@@ -137,7 +140,8 @@ public class QueryDefinitionsServiceTest {
     @Test
     void testGetQueryDefinitions_ValidYAMLOracleConfig() throws Exception {
         DBStore.DB_TYPE type = DBStore.DB_TYPE.ORACLE;
-        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
+        ExecutionContextService mockExecutionContextService = mock(ExecutionContextService.class);
+//        ExecuteSessionService mockExecuteSessionService = mock(ExecuteSessionService.class);
         HmsMirrorConfig mockHmsMirrorConfig = mock(HmsMirrorConfig.class);
         Cluster mockCluster = mock(Cluster.class);
 
@@ -145,13 +149,13 @@ public class QueryDefinitionsServiceTest {
         DBStore mockDBStore = mock(DBStore.class);
         ExecuteSession mockExecuteSession = mock(ExecuteSession.class);
 
-        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
-        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
+//        when(mockExecuteSession.getConfig()).thenReturn(mockHmsMirrorConfig);
+//        when(mockExecuteSessionService.getSession()).thenReturn(mockExecuteSession);
         when(mockHmsMirrorConfig.getCluster(Environment.LEFT)).thenReturn(mockCluster);
         when(mockCluster.getMetastoreDirect()).thenReturn(mockDBStore);
         when(mockDBStore.getType()).thenReturn(type);
 
-        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecuteSessionService);
+        QueryDefinitionsService queryDefinitionsService = new QueryDefinitionsService(mockExecutionContextService);
 
         URL mockURL = this.getClass().getResource("/"+type.toString()+"/metastoreDirect.yaml");
         assertNotNull(mockURL, "Resource file for "+type.toString()+"/metastoreDirect.yaml must exist");

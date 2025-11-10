@@ -71,7 +71,7 @@ public class ReactSpaController {
             log.debug("Creating ExecuteSession {} for HTTP session {}", sessionId, httpSession.getId());
             
 //            try {
-                executeSession = sessionManager.createSession(sessionId, null);
+                executeSession = sessionManager.createSession(sessionId);
                 if (executeSession != null) {
                     httpSession.setAttribute("executeSession", executeSession);
                     log.info("Created ExecuteSession {} for React UI", sessionId);

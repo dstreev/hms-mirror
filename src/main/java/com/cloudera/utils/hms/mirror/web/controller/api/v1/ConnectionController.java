@@ -406,13 +406,19 @@ public class ConnectionController {
         String status = (String) result.get("status");
 
         Map<String, Object> response = new HashMap<>();
+
+        // Always include these fields that the UI expects
+        response.put("testPassed", "SUCCESS".equals(status));
+        response.put("message", result.get("message"));
+        response.put("duration", result.get("duration"));
+        response.put("details", result.get("details"));
+        response.put("key", result.get("key"));
+
         if ("SUCCESS".equals(status)) {
             response.put("success", true);
-            response.put("message", result.get("message"));
             return ResponseEntity.ok(response);
         } else if ("FAILED".equals(status)) {
             response.put("success", false);
-            response.put("message", result.get("message"));
             return ResponseEntity.ok(response);
         } else if ("NOT_FOUND".equals(status)) {
             response.put("error", result.get("message"));

@@ -53,7 +53,7 @@ public class ConnectionSummary {
                 .description(connectionDto.getDescription())
                 .environment(connectionDto.getEnvironment() != null ? connectionDto.getEnvironment().name() : null)
                 .platformType(connectionDto.getPlatformType())
-                .isDefault(connectionDto.isDefault())
+//                .isDefault(connectionDto.isDefault())
                 .testStatus(testStatus)
                 .created(connectionDto.getCreated())
                 .modified(connectionDto.getModified())
