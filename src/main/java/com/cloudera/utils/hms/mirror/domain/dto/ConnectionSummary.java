@@ -42,10 +42,8 @@ public class ConnectionSummary {
     private LocalDateTime modified;
 
     public static ConnectionSummary fromConnection(ConnectionDto connectionDto) {
-        String testStatus = "never_tested";
-        if (connectionDto.getTestResults() != null && connectionDto.getTestResults().getStatus() != null) {
-            testStatus = connectionDto.getTestResults().getStatus().name().toLowerCase();
-        }
+        // Determine overall test status from individual test results
+        String testStatus = determineOverallTestStatus(connectionDto);
 
         return ConnectionSummary.builder()
                 .id(connectionDto.getKey())
@@ -58,5 +56,33 @@ public class ConnectionSummary {
                 .created(connectionDto.getCreated())
                 .modified(connectionDto.getModified())
                 .build();
+    }
+
+    private static String determineOverallTestStatus(ConnectionDto connectionDto) {
+        // Collect all test results
+        java.util.List<ConnectionDto.ConnectionTestResults> allResults = new java.util.ArrayList<>();
+        if (connectionDto.getHcfsTestResults() != null) allResults.add(connectionDto.getHcfsTestResults());
+        if (connectionDto.getHs2TestResults() != null) allResults.add(connectionDto.getHs2TestResults());
+        if (connectionDto.getMetastoreDirectTestResults() != null) allResults.add(connectionDto.getMetastoreDirectTestResults());
+
+        if (allResults.isEmpty()) {
+            return "never_tested";
+        }
+
+        // If any test failed, overall status is FAILED
+        boolean anyFailed = allResults.stream()
+                .anyMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.FAILED);
+        if (anyFailed) {
+            return "failed";
+        }
+
+        // If all tests succeeded, overall status is SUCCESS
+        boolean allSuccess = allResults.stream()
+                .allMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS);
+        if (allSuccess) {
+            return "success";
+        }
+
+        return "never_tested";
     }
 }

@@ -97,13 +97,24 @@ const ConnectionsPage: React.FC = () => {
       const response = await fetch(`/hms-mirror/api/v1/connections/${connectionId}/test`, {
         method: 'POST'
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to test connection');
       }
-      
-      // Refresh connections to get updated test results
-      await loadConnections();
+
+      const result = await response.json();
+
+      // Update the specific connection with the test results from the response
+      if (result.connection) {
+        setConnections(prevConnections =>
+          prevConnections.map(conn =>
+            conn.key === connectionId ? result.connection : conn
+          )
+        );
+      } else {
+        // Fallback: refresh all connections if response doesn't include the updated connection
+        await loadConnections();
+      }
     } catch (err) {
       console.error('Error testing connection:', err);
       setError(err instanceof Error ? err.message : 'Failed to test connection');

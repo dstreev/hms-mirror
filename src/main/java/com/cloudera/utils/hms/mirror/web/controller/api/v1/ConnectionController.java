@@ -49,6 +49,34 @@ public class ConnectionController {
     @NonNull
     private final ConnectionRepository connectionRepository;
 
+    private String determineOverallTestStatus(ConnectionDto conn) {
+        // Collect all test results
+        List<ConnectionDto.ConnectionTestResults> allResults = new java.util.ArrayList<>();
+        if (conn.getHcfsTestResults() != null) allResults.add(conn.getHcfsTestResults());
+        if (conn.getHs2TestResults() != null) allResults.add(conn.getHs2TestResults());
+        if (conn.getMetastoreDirectTestResults() != null) allResults.add(conn.getMetastoreDirectTestResults());
+
+        if (allResults.isEmpty()) {
+            return "never_tested";
+        }
+
+        // If any test failed, overall status is FAILED
+        boolean anyFailed = allResults.stream()
+                .anyMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.FAILED);
+        if (anyFailed) {
+            return "failed";
+        }
+
+        // If all tests succeeded, overall status is SUCCESS
+        boolean allSuccess = allResults.stream()
+                .allMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS);
+        if (allSuccess) {
+            return "success";
+        }
+
+        return "never_tested";
+    }
+
     private Map<String, Object> convertConnectionToMap(ConnectionDto conn) {
         Map<String, Object> connData = new HashMap<>();
         connData.put("key", conn.getKey());
@@ -126,12 +154,20 @@ public class ConnectionController {
         config.put("connectionPool", topLevelConnectionPool);
         
         connData.put("config", config);
-        
-        // Add test status and timestamps using safe string formatting
-        String testStatus = "never_tested";
-        if (conn.getTestResults() != null && conn.getTestResults().getStatus() != null) {
-            testStatus = conn.getTestResults().getStatus().name().toLowerCase();
+
+        // Add individual test results for each component
+        if (conn.getHcfsTestResults() != null) {
+            connData.put("hcfsTestResults", conn.getHcfsTestResults());
         }
+        if (conn.getHs2TestResults() != null) {
+            connData.put("hs2TestResults", conn.getHs2TestResults());
+        }
+        if (conn.getMetastoreDirectTestResults() != null) {
+            connData.put("metastoreDirectTestResults", conn.getMetastoreDirectTestResults());
+        }
+
+        // Add overall test status using safe string formatting
+        String testStatus = determineOverallTestStatus(conn);
         connData.put("testStatus", testStatus);
         
         // Format dates as strings to avoid serialization issues
@@ -265,12 +301,20 @@ public class ConnectionController {
                         config.put("connectionPool", topLevelConnectionPool);
                         
                         connData.put("config", config);
-                        
-                        // Add test status and timestamps using safe string formatting
-                        String testStatus = "never_tested";
-                        if (conn.getTestResults() != null && conn.getTestResults().getStatus() != null) {
-                            testStatus = conn.getTestResults().getStatus().name().toLowerCase();
+
+                        // Add individual test results for each component
+                        if (conn.getHcfsTestResults() != null) {
+                            connData.put("hcfsTestResults", conn.getHcfsTestResults());
                         }
+                        if (conn.getHs2TestResults() != null) {
+                            connData.put("hs2TestResults", conn.getHs2TestResults());
+                        }
+                        if (conn.getMetastoreDirectTestResults() != null) {
+                            connData.put("metastoreDirectTestResults", conn.getMetastoreDirectTestResults());
+                        }
+
+                        // Add overall test status using safe string formatting
+                        String testStatus = determineOverallTestStatus(conn);
                         connData.put("testStatus", testStatus);
                         
                         // Format dates as strings to avoid serialization issues
@@ -413,6 +457,14 @@ public class ConnectionController {
         response.put("duration", result.get("duration"));
         response.put("details", result.get("details"));
         response.put("key", result.get("key"));
+
+        // Load and include the updated connection with test results
+        Map<String, Object> loadResult = connectionManagementService.load(key);
+        if ("SUCCESS".equals(loadResult.get("status"))) {
+            ConnectionDto updatedConnection = (ConnectionDto) loadResult.get("data");
+            Map<String, Object> connectionData = convertConnectionToMap(updatedConnection);
+            response.put("connection", connectionData);
+        }
 
         if ("SUCCESS".equals(status)) {
             response.put("success", true);

@@ -28,25 +28,6 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
 }) => {
   const statusColor = getConnectionStatusColor(connection);
   const statusIcon = getConnectionStatusIcon(connection);
-  
-  const getTestStatusText = () => {
-    if (!connection.testResults || connection.testResults.status === 'NEVER_TESTED') {
-      return '⚠️ Never tested';
-    }
-    
-    const lastTested = connection.testResults.lastTested;
-    if (!lastTested) return '⚠️ Never tested';
-    
-    const testDate = new Date(lastTested).toLocaleDateString();
-    
-    if (connection.testResults.status === 'SUCCESS') {
-      return `✅ Last tested: ${testDate}`;
-    } else if (connection.testResults.status === 'FAILED') {
-      return `❌ Last test failed`;
-    } else {
-      return `⚠️ Test status unknown`;
-    }
-  };
 
   const formatCreatedDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
@@ -102,8 +83,61 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
                   <span className="mr-1">📅</span>
                   Created: {formatCreatedDate(connection.created)}
                 </div>
-                <div className={`flex items-center ${statusColor}`}>
-                  {getTestStatusText()}
+              </div>
+
+              {/* Connection Endpoint Test Results - Always show all endpoints */}
+              <div className="mt-3 space-y-2">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Connection Test Status:</div>
+
+                {/* HCFS Namespace Test Result */}
+                <div className="flex items-center text-xs">
+                  <span className="w-40 font-medium text-gray-700">HCFS Namespace:</span>
+                  {connection.hcfsTestResults ? (
+                    <span className={connection.hcfsTestResults.status === 'SUCCESS' ? 'text-green-600' : connection.hcfsTestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+                      {connection.hcfsTestResults.status === 'SUCCESS' ? '✅ Connected' : connection.hcfsTestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+                      {connection.hcfsTestResults.lastTested && (
+                        <span className="text-gray-400 ml-1">
+                          ({new Date(connection.hcfsTestResults.lastTested).toLocaleDateString()})
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-yellow-600">⚠️ Never Tested</span>
+                  )}
+                </div>
+
+                {/* HiveServer2 Test Result */}
+                <div className="flex items-center text-xs">
+                  <span className="w-40 font-medium text-gray-700">HiveServer2:</span>
+                  {connection.hs2TestResults ? (
+                    <span className={connection.hs2TestResults.status === 'SUCCESS' ? 'text-green-600' : connection.hs2TestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+                      {connection.hs2TestResults.status === 'SUCCESS' ? '✅ Connected' : connection.hs2TestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+                      {connection.hs2TestResults.lastTested && (
+                        <span className="text-gray-400 ml-1">
+                          ({new Date(connection.hs2TestResults.lastTested).toLocaleDateString()})
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-yellow-600">⚠️ Never Tested</span>
+                  )}
+                </div>
+
+                {/* Metastore Direct Test Result */}
+                <div className="flex items-center text-xs">
+                  <span className="w-40 font-medium text-gray-700">Metastore Direct:</span>
+                  {connection.metastoreDirectTestResults ? (
+                    <span className={connection.metastoreDirectTestResults.status === 'SUCCESS' ? 'text-green-600' : connection.metastoreDirectTestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+                      {connection.metastoreDirectTestResults.status === 'SUCCESS' ? '✅ Connected' : connection.metastoreDirectTestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+                      {connection.metastoreDirectTestResults.lastTested && (
+                        <span className="text-gray-400 ml-1">
+                          ({new Date(connection.metastoreDirectTestResults.lastTested).toLocaleDateString()})
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-yellow-600">⚠️ Never Tested</span>
+                  )}
                 </div>
               </div>
 

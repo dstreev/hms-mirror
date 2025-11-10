@@ -68,25 +68,17 @@ public class ConnectionDto implements Cloneable {
 
     // Core configuration
     private String hcfsNamespace;
-    private ConnectionStatus hcfsStatus = ConnectionStatus.NOT_CONFIGURED;
-    private String hcfsStatusMessage;
 
     // HiveServer2 configuration (flattened)
-    private ConnectionStatus hs2Status = ConnectionStatus.NOT_CONFIGURED;
     private boolean hs2Connected = Boolean.FALSE;
-    private String hs2StatusMessage;
-//    private DriverType hs2DriverType;
     private String hs2Uri;
     private String hs2Username;
     private String hs2Password;
     private Map<String, String> hs2ConnectionProperties;
     private String hs2Version;
     private List<String> hs2EnvSets = new ArrayList<>();
-//    private Optimization hs2Optimization = new Optimization();
 
     // Metastore Direct configuration (flattened, optional)
-    private ConnectionStatus metastoreDirectStatus = ConnectionStatus.NOT_CONFIGURED;
-    private String metastoreDirectStatusMessage;
     private boolean metastoreDirectEnabled;
     private String metastoreDirectUri;
     private String metastoreDirectType;
@@ -117,8 +109,15 @@ public class ConnectionDto implements Cloneable {
     @Schema(description = "Warehouse configuration for connection with managed and external directories")
     private Warehouse warehouse = new Warehouse(WarehouseSource.ENVIRONMENT, null, null);
 
-    // System fields
-    private ConnectionTestResults testResults;
+    // System fields - Individual test results for each component
+    @Schema(description = "HCFS Namespace connection test results")
+    private ConnectionTestResults hcfsTestResults;
+
+    @Schema(description = "HiveServer2 connection test results")
+    private ConnectionTestResults hs2TestResults;
+
+    @Schema(description = "Metastore Direct connection test results")
+    private ConnectionTestResults metastoreDirectTestResults;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime created;
@@ -137,6 +136,7 @@ public class ConnectionDto implements Cloneable {
         return key;
     }
 
+    @JsonIgnore
     public DBStore getMetastoreDirectDBStore() {
         // If this hasn't been set, construct one based on the values in this
         // object.
@@ -157,9 +157,10 @@ public class ConnectionDto implements Cloneable {
     }
 
     public void reset() {
-        hcfsStatus = ConnectionStatus.NOT_CONFIGURED;
-        hs2Status = ConnectionStatus.NOT_CONFIGURED;
-        metastoreDirectStatus = ConnectionStatus.NOT_CONFIGURED;
+        // Reset test results to null (will be re-tested)
+        hcfsTestResults = null;
+        hs2TestResults = null;
+        metastoreDirectTestResults = null;
     }
 
     @JsonIgnore
@@ -213,9 +214,19 @@ public class ConnectionDto implements Cloneable {
                 clone.metastoreDirectConnectionProperties = new HashMap<>(this.metastoreDirectConnectionProperties);
             }
 
-            // Deep clone testResults
-            if (this.testResults != null) {
-                clone.testResults = this.testResults.clone();
+            // Deep clone hcfsTestResults
+            if (this.hcfsTestResults != null) {
+                clone.hcfsTestResults = this.hcfsTestResults.clone();
+            }
+
+            // Deep clone hs2TestResults
+            if (this.hs2TestResults != null) {
+                clone.hs2TestResults = this.hs2TestResults.clone();
+            }
+
+            // Deep clone metastoreDirectTestResults
+            if (this.metastoreDirectTestResults != null) {
+                clone.metastoreDirectTestResults = this.metastoreDirectTestResults.clone();
             }
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("Clone not supported", e);

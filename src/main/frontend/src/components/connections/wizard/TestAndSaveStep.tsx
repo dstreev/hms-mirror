@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BeakerIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { ConnectionFormData, ConnectionTestResults } from '../../../types/Connection';
+import { ConnectionFormData, ConnectionTestResults, Connection } from '../../../types/Connection';
 
 interface TestAndSaveStepProps {
   formData: ConnectionFormData;
@@ -27,158 +27,249 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
   isEditMode = false
 }) => {
   const navigate = useNavigate();
-  const [testResults, setTestResults] = useState<ConnectionTestResults | null>(null);
+  const [currentConnection, setCurrentConnection] = useState<Connection | null>(null);
+  const [originalConfig, setOriginalConfig] = useState<Partial<ConnectionFormData> | null>(null);
   const [testing, setTesting] = useState(false);
-  const [saveTestResults, setSaveTestResults] = useState(true);
   const [testError, setTestError] = useState<string | null>(null);
 
-  const handleTestConnection = async () => {
-    // Check if connection has a key (has been saved)
-    const connectionKey = formData.key || formData.name;
+  // Load current connection test results when editing
+  useEffect(() => {
+    const loadCurrentConnection = async () => {
+      const connectionKey = formData.key || formData.name;
+      if (!connectionKey) return;
 
-    if (!connectionKey) {
-      setTestError('Please save the connection first before testing');
-      return;
+      try {
+        const response = await fetch(`/hms-mirror/api/v1/connections/${connectionKey}`);
+        if (response.ok) {
+          const connection = await response.json();
+          setCurrentConnection(connection);
+
+          // Store original configuration for comparison
+          setOriginalConfig({
+            hcfsNamespace: formData.hcfsNamespace,
+            hs2Uri: formData.hs2Uri,
+            hs2Username: formData.hs2Username,
+            hs2Password: formData.hs2Password,
+            metastoreDirectEnabled: formData.metastoreDirectEnabled,
+            metastoreDirectUri: formData.metastoreDirectUri,
+            metastoreDirectUsername: formData.metastoreDirectUsername,
+            metastoreDirectPassword: formData.metastoreDirectPassword
+          });
+        }
+      } catch (error) {
+        console.error('Error loading connection:', error);
+      }
+    };
+
+    loadCurrentConnection();
+  }, [formData.key, formData.name]);
+
+  // Reset test results when configuration changes
+  useEffect(() => {
+    if (!originalConfig || !currentConnection) return;
+
+    // Check if any critical configuration has changed
+    const configChanged =
+      formData.hcfsNamespace !== originalConfig.hcfsNamespace ||
+      formData.hs2Uri !== originalConfig.hs2Uri ||
+      formData.hs2Username !== originalConfig.hs2Username ||
+      formData.hs2Password !== originalConfig.hs2Password ||
+      formData.metastoreDirectEnabled !== originalConfig.metastoreDirectEnabled ||
+      formData.metastoreDirectUri !== originalConfig.metastoreDirectUri ||
+      formData.metastoreDirectUsername !== originalConfig.metastoreDirectUsername ||
+      formData.metastoreDirectPassword !== originalConfig.metastoreDirectPassword;
+
+    if (configChanged) {
+      // Reset test results to null when configuration changes
+      setCurrentConnection({
+        ...currentConnection,
+        hcfsTestResults: undefined,
+        hs2TestResults: undefined,
+        metastoreDirectTestResults: undefined
+      });
     }
+  }, [
+    formData.hcfsNamespace,
+    formData.hs2Uri,
+    formData.hs2Username,
+    formData.hs2Password,
+    formData.metastoreDirectEnabled,
+    formData.metastoreDirectUri,
+    formData.metastoreDirectUsername,
+    formData.metastoreDirectPassword,
+    originalConfig,
+    currentConnection
+  ]);
 
+  const handleTestConnection = async () => {
     setTesting(true);
-    setTestResults(null);
     setTestError(null);
 
     try {
-      console.log('Testing connection with key:', connectionKey);
+      // Step 1: Save the connection with current formData values
+      console.log('Saving connection before testing...');
 
-      const response = await fetch(`/hms-mirror/api/v1/connections/${connectionKey}/test`, {
+      const requestPayload = {
+        name: formData.name,
+        description: formData.description,
+        environment: formData.environment,
+        config: {
+          platformType: formData.platformType,
+          hcfsNamespace: formData.hcfsNamespace,
+          hiveServer2: {
+            uri: formData.hs2Uri,
+            connectionProperties: {
+              user: formData.hs2Username,
+              password: formData.hs2Password,
+              ...formData.hs2ConnectionProperties
+            }
+          },
+          metastoreDirect: formData.metastoreDirectEnabled ? {
+            uri: formData.metastoreDirectUri,
+            type: formData.metastoreDirectType,
+            connectionProperties: {
+              user: formData.metastoreDirectUsername,
+              password: formData.metastoreDirectPassword
+            },
+            connectionPool: {
+              min: formData.metastoreDirectMinConnections,
+              max: formData.metastoreDirectMaxConnections
+            }
+          } : undefined,
+          partitionDiscovery: {
+            auto: formData.partitionDiscoveryAuto,
+            initMSCK: formData.partitionDiscoveryInitMSCK,
+            partitionBucketLimit: formData.partitionBucketLimit
+          },
+          createIfNotExists: formData.createIfNotExists,
+          enableAutoTableStats: formData.enableAutoTableStats,
+          enableAutoColumnStats: formData.enableAutoColumnStats
+        }
+      };
+
+      const connectionKey = formData.key || formData.name;
+      const url = formData.key
+        ? `/hms-mirror/api/v1/connections/${formData.key}`
+        : '/hms-mirror/api/v1/connections';
+      const method = formData.key ? 'PUT' : 'POST';
+
+      const saveResponse = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestPayload)
+      });
+
+      if (!saveResponse.ok) {
+        const errorText = await saveResponse.text();
+        throw new Error(`Failed to save connection before testing: ${saveResponse.status} ${errorText}`);
+      }
+
+      const saveResult = await saveResponse.json();
+      const savedKey = saveResult.key || connectionKey;
+
+      console.log('Connection saved successfully, now testing with key:', savedKey);
+
+      // Step 2: Test the connection
+      const testResponse = await fetch(`/hms-mirror/api/v1/connections/${savedKey}/test`, {
         method: 'POST'
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to test connection: ${response.status} ${response.statusText}`);
+      if (!testResponse.ok) {
+        throw new Error(`Failed to test connection: ${testResponse.status} ${testResponse.statusText}`);
       }
 
-      const result = await response.json();
-      console.log('Test result:', result);
+      const testResult = await testResponse.json();
+      console.log('Test result:', testResult);
 
-      // Convert backend response to UI format
-      const testResults: ConnectionTestResults = {
-        status: result.testPassed ? 'SUCCESS' : 'FAILED',
-        lastTested: new Date().toISOString(),
-        duration: result.duration || 0,
-        results: parseTestDetails(result.details),
-        logs: result.details ? [result.details] : []
-      };
+      // Step 3: Update current connection with the test results from the response
+      if (testResult.connection) {
+        setCurrentConnection(testResult.connection);
+      }
 
-      setTestResults(testResults);
+      // Update formData with key if it was a new connection
+      if (!formData.key && savedKey) {
+        onChange({ key: savedKey });
+      }
     } catch (error) {
       console.error('Error testing connection:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setTestError(errorMessage);
-
-      // Set failed test results
-      const failedResults: ConnectionTestResults = {
-        status: 'FAILED',
-        lastTested: new Date().toISOString(),
-        duration: 0,
-        results: [
-          {
-            component: 'HIVESERVER2',
-            status: 'FAILED',
-            message: errorMessage
-          }
-        ]
-      };
-      setTestResults(failedResults);
     } finally {
       setTesting(false);
     }
   };
 
-  // Helper function to parse test details from backend response
-  const parseTestDetails = (details: string | undefined): Array<{ component: 'HDFS' | 'HIVESERVER2' | 'METASTORE'; status: 'SUCCESS' | 'FAILED'; message: string; responseTime?: number }> => {
-    if (!details) return [];
-
-    const results: Array<{ component: 'HDFS' | 'HIVESERVER2' | 'METASTORE'; status: 'SUCCESS' | 'FAILED'; message: string; responseTime?: number }> = [];
-
-    // Parse the details string to extract component results
-    const lines = details.split('\n');
-    for (const line of lines) {
-      if (line.includes('HS2 connection')) {
-        results.push({
-          component: 'HIVESERVER2',
-          status: line.includes('SUCCESS') ? 'SUCCESS' : 'FAILED',
-          message: line.trim()
-        });
-      } else if (line.includes('Metastore Direct connection')) {
-        results.push({
-          component: 'METASTORE',
-          status: line.includes('SUCCESS') ? 'SUCCESS' : 'FAILED',
-          message: line.trim()
-        });
-      }
+  const renderConnectionStatus = () => {
+    if (!currentConnection) {
+      return (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600">
+            No test results available yet. Save and test the connection to see status.
+          </div>
+        </div>
+      );
     }
 
-    return results;
-  };
-
-  const renderTestResults = () => {
-    if (!testResults) return null;
-
-    const isSuccess = testResults.status === 'SUCCESS';
+    const formatDate = (dateString: string | undefined) => {
+      if (!dateString) return '';
+      return new Date(dateString).toLocaleDateString();
+    };
 
     return (
-      <div className={`border rounded-lg p-4 ${
-        isSuccess ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-      }`}>
-        <div className="flex items-center mb-3">
-          {isSuccess ? (
-            <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
+      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <div className="text-xs font-semibold text-gray-700 mb-2">Connection Endpoint Status:</div>
+
+        {/* HCFS Namespace Test Result */}
+        <div className="flex items-center text-xs">
+          <span className="w-40 font-medium text-gray-700">HCFS Namespace:</span>
+          {currentConnection.hcfsTestResults ? (
+            <span className={currentConnection.hcfsTestResults.status === 'SUCCESS' ? 'text-green-600' : currentConnection.hcfsTestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+              {currentConnection.hcfsTestResults.status === 'SUCCESS' ? '✅ Connected' : currentConnection.hcfsTestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+              {currentConnection.hcfsTestResults.lastTested && (
+                <span className="text-gray-400 ml-1">
+                  ({formatDate(currentConnection.hcfsTestResults.lastTested)})
+                </span>
+              )}
+            </span>
           ) : (
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-yellow-600">⚠️ Never Tested</span>
           )}
-          <h4 className={`font-medium ${
-            isSuccess ? 'text-green-900' : 'text-red-900'
-          }`}>
-            {isSuccess ? '✅ Connection Test Results' : '❌ Connection Test Failed'}
-          </h4>
         </div>
 
-        <div className="space-y-3">
-          <div className={`text-sm ${
-            isSuccess ? 'text-green-700' : 'text-red-700'
-          }`}>
-            🕐 Test completed in {testResults.duration} seconds
-          </div>
+        {/* HiveServer2 Test Result */}
+        <div className="flex items-center text-xs">
+          <span className="w-40 font-medium text-gray-700">HiveServer2:</span>
+          {currentConnection.hs2TestResults ? (
+            <span className={currentConnection.hs2TestResults.status === 'SUCCESS' ? 'text-green-600' : currentConnection.hs2TestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+              {currentConnection.hs2TestResults.status === 'SUCCESS' ? '✅ Connected' : currentConnection.hs2TestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+              {currentConnection.hs2TestResults.lastTested && (
+                <span className="text-gray-400 ml-1">
+                  ({formatDate(currentConnection.hs2TestResults.lastTested)})
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-yellow-600">⚠️ Never Tested</span>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <h5 className={`text-sm font-medium ${
-              isSuccess ? 'text-green-900' : 'text-red-900'
-            }`}>
-              Component Test Results
-            </h5>
-            
-            {testResults.results?.map((result, index) => (
-              <div key={index} className={`text-sm pl-4 border-l-2 ${
-                result.status === 'SUCCESS' 
-                  ? 'border-green-300 text-green-700' 
-                  : 'border-red-300 text-red-700'
-              }`}>
-                <div className="font-medium">
-                  {result.status === 'SUCCESS' ? '✅' : '❌'} {result.component} Connection
-                </div>
-                <div className="text-xs mt-1">
-                  └─ {result.message}
-                  {result.responseTime && ` (${result.responseTime}s)`}
-                </div>
-                {result.details && (
-                  <div className="text-xs mt-1">
-                    {Object.entries(result.details).map(([key, value]) => (
-                      <div key={key}>└─ {key}: {value}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        {/* Metastore Direct Test Result */}
+        <div className="flex items-center text-xs">
+          <span className="w-40 font-medium text-gray-700">Metastore Direct:</span>
+          {currentConnection.metastoreDirectTestResults ? (
+            <span className={currentConnection.metastoreDirectTestResults.status === 'SUCCESS' ? 'text-green-600' : currentConnection.metastoreDirectTestResults.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}>
+              {currentConnection.metastoreDirectTestResults.status === 'SUCCESS' ? '✅ Connected' : currentConnection.metastoreDirectTestResults.status === 'FAILED' ? '❌ Failed' : '⚠️ Never Tested'}
+              {currentConnection.metastoreDirectTestResults.lastTested && (
+                <span className="text-gray-400 ml-1">
+                  ({formatDate(currentConnection.metastoreDirectTestResults.lastTested)})
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-yellow-600">⚠️ Never Tested</span>
+          )}
         </div>
       </div>
     );
@@ -211,14 +302,18 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">🧪 Connection Test</h3>
 
-        {/* Info message about saving first */}
-        {!formData.key && !saveSuccess && (
-          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
-            <p className="text-sm text-blue-700">
-              💡 <strong>Tip:</strong> Save the connection first, then you can test it to verify connectivity.
-            </p>
-          </div>
-        )}
+        {/* Current Connection Status */}
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Current Status:</h4>
+          {renderConnectionStatus()}
+        </div>
+
+        {/* Info message about auto-save before test */}
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-700">
+            💡 <strong>Note:</strong> Testing will automatically save your current configuration before running the connection tests.
+          </p>
+        </div>
 
         {/* Test Error */}
         {testError && (
@@ -229,44 +324,34 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
           </div>
         )}
 
+        {/* Test Success Message */}
+        {currentConnection && !testing && !testError && (
+          currentConnection.hcfsTestResults || currentConnection.hs2TestResults || currentConnection.metastoreDirectTestResults
+        ) && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-3">
+            <p className="text-sm text-green-700">
+              ✅ Connection endpoints have been tested. Status shown above.
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center space-x-4 mb-4">
           <button
             onClick={handleTestConnection}
-            disabled={testing || (!formData.key && !saveSuccess)}
+            disabled={testing}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={!formData.key && !saveSuccess ? 'Save the connection first to test it' : 'Test connection'}
+            title="Save and test connection"
           >
             <BeakerIcon className="h-4 w-4 mr-2" />
-            {testing ? 'Testing Connection...' : '🧪 Test Connection'}
+            {testing ? 'Saving & Testing...' : '🧪 Test Connection'}
           </button>
 
           {testing && (
             <div className="flex items-center text-sm text-gray-600">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-              Testing connection components...
+              Saving and testing connection endpoints...
             </div>
           )}
-        </div>
-
-        {renderTestResults()}
-      </div>
-
-      {/* Save Options */}
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Save Options</h3>
-        
-        <div className="space-y-3">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={saveTestResults}
-              onChange={(e) => setSaveTestResults(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <span className="ml-3 text-sm text-gray-700">
-              Save test results with connection
-            </span>
-          </label>
         </div>
       </div>
 
@@ -281,15 +366,6 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
         </button>
         
         <div className="flex space-x-3">
-          {testResults && testResults.status === 'SUCCESS' && (
-            <button
-              onClick={handleTestConnection}
-              className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              🧪 Test Again
-            </button>
-          )}
-          
           <button
             onClick={onSave}
             disabled={saving || saveSuccess}

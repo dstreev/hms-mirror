@@ -76,7 +76,12 @@ export interface Connection {
   description?: string;
   environment?: 'DEV' | 'TEST' | 'PROD' | 'UAT' | 'STAGING';
   config: ConnectionConfig;
-  testResults?: ConnectionTestResults;
+
+  // Individual test results for each component
+  hcfsTestResults?: ConnectionTestResults;
+  hs2TestResults?: ConnectionTestResults;
+  metastoreDirectTestResults?: ConnectionTestResults;
+
   created: string;
   modified: string;
 }

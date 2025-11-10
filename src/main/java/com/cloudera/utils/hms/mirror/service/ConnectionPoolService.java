@@ -230,21 +230,19 @@ public class ConnectionPoolService {
                     CommandReturn cr = cliEnvironment.processInput(checkConnectionStr);
                     if (cr.isError()) {
                         log.error("HCFS Connection Failed for {} with: {}", k, cr.getError());
-                        v.setHcfsStatus(ConnectionStatus.FAILED);
-                        v.setHcfsStatusMessage(cr.getError());
+                        // TODO: Create hcfsTestResults with FAILED status
                         rtn.set(Boolean.FALSE);
                     } else {
                         log.info("HCFS Connection Successful for {}", k);
-                        v.setHcfsStatus(ConnectionStatus.SUCCESS);
+                        // TODO: Create hcfsTestResults with SUCCESS status
                     }
                 } catch (DisabledException e) {
                     log.info("HCFS Connection Disabled for {}", k);
-                    v.setHcfsStatus(ConnectionStatus.DISABLED);
-//                        throw new RuntimeException(e);
+                    // TODO: Create hcfsTestResults with appropriate status
                 }
             } else {
                 log.info("HCFS Connection Not Configured for {}", k);
-                v.setHcfsStatus(ConnectionStatus.NOT_CONFIGURED);
+                // HCFS not configured, no test results needed
             }
         });
         return rtn.get();
@@ -274,20 +272,19 @@ public class ConnectionPoolService {
                             log.error("Metastore Direct Connection Failed for {}", k);
                             rtn.set(Boolean.FALSE);
                         }
-                        v.setMetastoreDirectStatus(ConnectionStatus.SUCCESS);
+                        // TODO: Create metastoreDirectTestResults with SUCCESS status
                     } catch (SQLException se) {
                         log.error("Metastore Direct Connection Failed for {}", k, se);
-                        v.setMetastoreDirectStatus(ConnectionStatus.FAILED);
-                        v.setMetastoreDirectStatusMessage(se.getMessage());
+                        // TODO: Create metastoreDirectTestResults with FAILED status
                     }
                 }
 
             } else if (!isNull(v)) {
                 log.info("Metastore Direct Connection Check Configuration for {}", k);
-                v.setMetastoreDirectStatus(ConnectionStatus.CHECK_CONFIGURATION);
+                // TODO: Create metastoreDirectTestResults with CHECK_CONFIGURATION status
             } else {
                 log.info("Metastore Direct Connection Not Configured for {}", k);
-                v.setMetastoreDirectStatus(ConnectionStatus.NOT_CONFIGURED);
+                // Metastore Direct not configured, no test results needed
             }
         });
         return rtn.get();
@@ -402,8 +399,7 @@ public class ConnectionPoolService {
                         }
 
                         log.info("HS2 Connection validated (resources) for {}", environment);
-                        connection.setHs2Status(ConnectionStatus.SUCCESS);
-                        connection.setHs2StatusMessage("Connection Successful and Validated.");
+                        // TODO: Create hs2TestResults with SUCCESS status
                     }
                 } catch (SQLException se) {
                     if (environment == Environment.RIGHT && !conversionResult.getConnection(environment).isHs2Connected()) {
@@ -412,15 +408,13 @@ public class ConnectionPoolService {
                     } else {
                         log.error(se.getMessage(), se);
                         runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, environment, se.getMessage());
-                        connection.setHs2Status(ConnectionStatus.FAILED);
-                        connection.setHs2StatusMessage(se.getMessage());
+                        // TODO: Create hs2TestResults with FAILED status
                         rtn.set(Boolean.FALSE);
                     }
                 } catch (Throwable t) {
                     log.error(t.getMessage(), t);
                     runStatus.addError(ENVIRONMENT_CONNECTION_ISSUE, environment, t.getMessage());
-                    connection.setHs2Status(ConnectionStatus.FAILED);
-                    connection.setHs2StatusMessage(t.getMessage());
+                    // TODO: Create hs2TestResults with FAILED status
                     rtn.set(Boolean.FALSE);
                 } finally {
                     if (nonNull(stmt)) {

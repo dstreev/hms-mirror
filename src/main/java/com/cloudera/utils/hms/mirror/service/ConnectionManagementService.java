@@ -214,10 +214,36 @@ public class ConnectionManagementService {
             Map<String, Object> result = new HashMap<>();
 
             if (existingConnectionOpt.isPresent()) {
-                // Preserve original creation date if it exists
+                // Preserve original creation date
                 ConnectionDto existingConnection = existingConnectionOpt.get();
                 if (existingConnection.getCreated() != null) {
                     connectionDto.setCreated(existingConnection.getCreated());
+                }
+
+                // Check if configuration has changed - if so, reset test results
+                // Configuration changes invalidate previous test results
+                boolean configChanged = hasConfigurationChanged(existingConnection, connectionDto);
+
+                if (configChanged) {
+                    // Reset test results when configuration changes
+                    log.info("Connection configuration changed for {}. Resetting test results.", connectionDto.getKey());
+                    connectionDto.setHcfsTestResults(null);
+                    connectionDto.setHs2TestResults(null);
+                    connectionDto.setMetastoreDirectTestResults(null);
+                } else {
+                    // Preserve test results from existing connection to prevent loss during updates.
+                    // Test results should only be updated by the test() endpoint, never by save/update operations.
+                    // This ensures that if a user tests a connection, then makes non-configuration changes and saves,
+                    // the test results are preserved rather than being reset to null.
+                    if (existingConnection.getHcfsTestResults() != null) {
+                        connectionDto.setHcfsTestResults(existingConnection.getHcfsTestResults());
+                    }
+                    if (existingConnection.getHs2TestResults() != null) {
+                        connectionDto.setHs2TestResults(existingConnection.getHs2TestResults());
+                    }
+                    if (existingConnection.getMetastoreDirectTestResults() != null) {
+                        connectionDto.setMetastoreDirectTestResults(existingConnection.getMetastoreDirectTestResults());
+                    }
                 }
 
                 // Save the updated connection
@@ -368,17 +394,43 @@ public class ConnectionManagementService {
             long endMillis = System.currentTimeMillis();
             double durationSeconds = (endMillis - startMillis) / 1000.0;
 
-            // Update test results
-            ConnectionDto.ConnectionTestResults testResults = ConnectionDto.ConnectionTestResults.builder()
-                    .status(overallSuccess ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS :
-                            ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
-                    .lastTested(testStartTime)
-                    .duration(durationSeconds)
-                    .errorMessage(errorMessage)
-                    .details(detailsBuilder.toString())
-                    .build();
+            // Update individual test results for HiveServer2
+            if (!isBlank(connectionDto.getHs2Uri())) {
+                String hs2Details = detailsBuilder.toString().lines()
+                        .filter(line -> line.contains("HS2 connection"))
+                        .findFirst()
+                        .orElse("HS2 connection: NOT TESTED");
 
-            connectionDto.setTestResults(testResults);
+                ConnectionDto.ConnectionTestResults hs2TestResults = ConnectionDto.ConnectionTestResults.builder()
+                        .status(hs2Success ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS :
+                                ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
+                        .lastTested(testStartTime)
+                        .duration(durationSeconds)
+                        .errorMessage(hs2Success ? null : (errorMessage != null && errorMessage.contains("HS2") ? errorMessage : "HS2 connection failed"))
+                        .details(hs2Details)
+                        .build();
+
+                connectionDto.setHs2TestResults(hs2TestResults);
+            }
+
+            // Update individual test results for Metastore Direct
+            if (connectionDto.isMetastoreDirectEnabled() && !isBlank(connectionDto.getMetastoreDirectUri())) {
+                String metastoreDetails = detailsBuilder.toString().lines()
+                        .filter(line -> line.contains("Metastore Direct"))
+                        .findFirst()
+                        .orElse("Metastore Direct connection: NOT TESTED");
+
+                ConnectionDto.ConnectionTestResults metastoreTestResults = ConnectionDto.ConnectionTestResults.builder()
+                        .status(metastoreSuccess ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS :
+                                ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
+                        .lastTested(testStartTime)
+                        .duration(durationSeconds)
+                        .errorMessage(metastoreSuccess ? null : (errorMessage != null && errorMessage.contains("Metastore") ? errorMessage : "Metastore Direct connection failed"))
+                        .details(metastoreDetails)
+                        .build();
+
+                connectionDto.setMetastoreDirectTestResults(metastoreTestResults);
+            }
 
             // Save updated connection
             connectionRepository.save(connectionDto);
@@ -637,25 +689,89 @@ public class ConnectionManagementService {
             return true;
         }
 
-        ConnectionDto.ConnectionTestResults.TestStatus testStatus =
-                conn.getTestResults() != null ? conn.getTestResults().getStatus() :
-                ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
+        // Check all test results to determine overall status
+        ConnectionDto.ConnectionTestResults.TestStatus overallStatus = determineOverallTestStatus(conn);
 
         switch (status) {
             case "success":
-                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS;
+                return overallStatus == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS;
             case "failed":
-                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.FAILED;
+                return overallStatus == ConnectionDto.ConnectionTestResults.TestStatus.FAILED;
             case "never_tested":
-                return testStatus == ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
+                return overallStatus == ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
             default:
                 return true;
         }
+    }
+
+    private ConnectionDto.ConnectionTestResults.TestStatus determineOverallTestStatus(ConnectionDto conn) {
+        List<ConnectionDto.ConnectionTestResults> allResults = new ArrayList<>();
+        if (conn.getHcfsTestResults() != null) allResults.add(conn.getHcfsTestResults());
+        if (conn.getHs2TestResults() != null) allResults.add(conn.getHs2TestResults());
+        if (conn.getMetastoreDirectTestResults() != null) allResults.add(conn.getMetastoreDirectTestResults());
+
+        if (allResults.isEmpty()) {
+            return ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
+        }
+
+        // If any test failed, overall status is FAILED
+        boolean anyFailed = allResults.stream()
+                .anyMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.FAILED);
+        if (anyFailed) {
+            return ConnectionDto.ConnectionTestResults.TestStatus.FAILED;
+        }
+
+        // If all tests succeeded, overall status is SUCCESS
+        boolean allSuccess = allResults.stream()
+                .allMatch(r -> r.getStatus() == ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS);
+        if (allSuccess) {
+            return ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS;
+        }
+
+        // Otherwise, never tested
+        return ConnectionDto.ConnectionTestResults.TestStatus.NEVER_TESTED;
     }
 
     private int compareConnections(ConnectionDto a, ConnectionDto b) {
         // Sort by name
         // TODO: Add default connection support when isDefault() method is implemented
         return a.getName().compareToIgnoreCase(b.getName());
+    }
+
+    /**
+     * Checks if the connection configuration has changed between existing and new connection.
+     * Configuration changes include changes to URIs, credentials, or connection settings.
+     *
+     * @param existing The existing connection
+     * @param updated The updated connection
+     * @return true if configuration has changed, false otherwise
+     */
+    private boolean hasConfigurationChanged(ConnectionDto existing, ConnectionDto updated) {
+        // Check HCFS Namespace changes
+        if (!Objects.equals(existing.getHcfsNamespace(), updated.getHcfsNamespace())) {
+            return true;
+        }
+
+        // Check HiveServer2 configuration changes
+        if (!Objects.equals(existing.getHs2Uri(), updated.getHs2Uri()) ||
+            !Objects.equals(existing.getHs2Username(), updated.getHs2Username()) ||
+            !Objects.equals(existing.getHs2Password(), updated.getHs2Password())) {
+            return true;
+        }
+
+        // Check Metastore Direct configuration changes
+        if (existing.isMetastoreDirectEnabled() != updated.isMetastoreDirectEnabled()) {
+            return true;
+        }
+
+        if (existing.isMetastoreDirectEnabled() && updated.isMetastoreDirectEnabled()) {
+            if (!Objects.equals(existing.getMetastoreDirectUri(), updated.getMetastoreDirectUri()) ||
+                !Objects.equals(existing.getMetastoreDirectUsername(), updated.getMetastoreDirectUsername()) ||
+                !Objects.equals(existing.getMetastoreDirectPassword(), updated.getMetastoreDirectPassword())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
