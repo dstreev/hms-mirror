@@ -17,6 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.dto;
 
+import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.ConnectionStatus;
 import com.cloudera.utils.hms.mirror.domain.support.DriverType;
@@ -26,14 +27,17 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -49,17 +53,6 @@ public class ConnectionDto implements Cloneable {
     // This would be the top level Key for the RocksDB columnFamily.
     private String key = null;
     //    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
-    public String getKey() {
-        if (key == null) {
-            if (name == null) {
-                throw new IllegalStateException("name is required");
-            } else {
-                key = name;
-            }
-        }
-        return key;
-    }
-
     private String name;
     private String description;
     private Environment environment;
@@ -97,6 +90,8 @@ public class ConnectionDto implements Cloneable {
     private Integer metastoreDirectMaxConnections;
     private Map<String, String> metastoreDirectConnectionProperties;
     private String metastoreDirectVersion;
+    @JsonIgnore
+    private DBStore metastoreDirectDBStore;
 
     // Partition discovery settings (flattened)
     private boolean partitionDiscoveryAuto;
@@ -125,7 +120,35 @@ public class ConnectionDto implements Cloneable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 
-    private boolean isDefault;
+    public String getKey() {
+        if (key == null) {
+            if (name == null) {
+                throw new IllegalStateException("name is required");
+            } else {
+                key = name;
+            }
+        }
+        return key;
+    }
+
+    public DBStore getMetastoreDirectDBStore() {
+        // If this hasn't been set, construct one based on the values in this
+        // object.
+        if (metastoreDirectDBStore == null) {
+            metastoreDirectDBStore = new DBStore();
+            metastoreDirectDBStore.setType(DBStore.DB_TYPE.valueOf(metastoreDirectType));
+            metastoreDirectDBStore.setUri(metastoreDirectUri);
+            if (metastoreDirectConnectionProperties != null) {
+                metastoreDirectConnectionProperties = new HashMap<>(metastoreDirectConnectionProperties);
+            }
+            // Add the username and password to the connection properties.
+            metastoreDirectDBStore.getConnectionProperties().put("user", metastoreDirectUsername);
+            metastoreDirectDBStore.getConnectionProperties().put("password", metastoreDirectPassword);
+            // TODO: Add initSql support.
+
+        }
+        return metastoreDirectDBStore;
+    }
 
     public void reset() {
         hcfsStatus = ConnectionStatus.NOT_CONFIGURED;

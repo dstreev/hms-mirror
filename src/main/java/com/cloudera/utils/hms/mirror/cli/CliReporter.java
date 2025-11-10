@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.cli;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;

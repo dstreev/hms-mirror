@@ -18,6 +18,9 @@
 package com.cloudera.utils.hms.mirror.domain;
 
 import com.cloudera.utils.hms.mirror.domain.core.*;
+import com.cloudera.utils.hms.mirror.domain.legacy.Acceptance;
+import com.cloudera.utils.hms.mirror.domain.legacy.Cluster;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.cloudera.utils.hms.mirror.utils.ConfigTest;

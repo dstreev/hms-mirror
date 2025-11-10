@@ -25,6 +25,8 @@ import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.legacy.Cluster;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.util.NamespaceUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;

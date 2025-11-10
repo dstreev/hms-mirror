@@ -17,11 +17,9 @@
 
 package com.cloudera.utils.hms.mirror.web.config;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.DomainService;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -49,50 +47,6 @@ public class WebInit {
     public WebInit(DomainService domainService, ExecuteSessionService executeSessionService) {
         this.domainService = domainService;
         this.executeSessionService = executeSessionService;
-    }
-
-    /**
-     * Initializes the default HMS Mirror configuration on application startup.
-     * Loads the configuration file from the specified path if it exists, or logs a warning if not found.
-     *
-     * @param configPath     Path where the configuration file is located
-     * @param configFilename Name of the configuration file
-     * @return A CommandLineRunner bean that executes this logic
-     */
-    @Bean
-    public CommandLineRunner initDefaultConfig(@Value("${hms-mirror.config.path}") String configPath,
-                                               @Value("${hms-mirror.config.filename}") String configFilename) {
-        return args -> {
-            // hms-mirror.config.filename is set in the application.yaml file with the
-            //    default location.  It can be overridden by setting the commandline
-            //    --hms-mirror.config.filename=<filename>.
-            String configFullFilename = configPath + File.separator + configFilename;
-            File cfg = new File(configFullFilename);
-            HmsMirrorConfig hmsMirrorConfig;
-            if (cfg.exists()) {
-                log.info("Loading config from: {}", configFullFilename);
-                hmsMirrorConfig = domainService.deserializeConfig(configFullFilename);
-            } else {
-                // Return empty config.  This will require the user to setup the config.
-                log.warn("Default config not found.");
-                // hmsMirrorConfig = new HmsMirrorConfig();
-            }
-        };
-    }
-
-    /**
-     * Configures the report output directory if the 'hms-mirror.config.output-dir' property is set.
-     * Ensures the directory exists and is writable.
-     *
-     * @param value Output directory path for reports
-     * @return CommandLineRunner that sets up and validates the directory
-     */
-    @Bean
-    @Order(1)
-    @ConditionalOnProperty(
-            name = "hms-mirror.config.output-dir")
-    CommandLineRunner configOutputDir(@Value("${hms-mirror.config.output-dir}") String value) {
-        return configOutputDirInternal(value);
     }
 
     /**

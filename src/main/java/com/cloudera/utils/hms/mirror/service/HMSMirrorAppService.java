@@ -22,7 +22,7 @@ import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.PhaseState;
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
 import com.cloudera.utils.hms.mirror.domain.core.EnvironmentTable;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.DatasetDto;

@@ -18,9 +18,9 @@
 package com.cloudera.utils.hms.mirror.util;
 
 import com.cloudera.utils.hive.config.DBStore;
-import com.cloudera.utils.hms.mirror.domain.core.Cluster;
+import com.cloudera.utils.hms.mirror.domain.legacy.Cluster;
 import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.core.PartitionDiscovery;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;

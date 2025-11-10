@@ -17,7 +17,6 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ExecuteSession;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.SessionContextHolder;

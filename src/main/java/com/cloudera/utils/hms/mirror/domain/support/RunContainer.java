@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.domain.support;
 
-import com.cloudera.utils.hms.mirror.domain.core.Acceptance;
+import com.cloudera.utils.hms.mirror.domain.legacy.Acceptance;
 import lombok.Getter;
 import lombok.Setter;
 

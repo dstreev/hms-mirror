@@ -15,37 +15,32 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain.support;
+package com.cloudera.utils.hms.mirror.domain.legacy;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.*;
 
 @Getter
 @Setter
-@Slf4j
-public class ConversionRequest implements Cloneable {
+@Schema(description = "Acceptance criteria for the migration that ensures the user is aware of the potential risks")
+public class Acceptance implements Cloneable {
 
-    /*
-    A map of databases to the tables that need to be converted.
-     */
-    private Map<String, List<String>> databases = new TreeMap<>();
+    private boolean silentOverride = Boolean.FALSE;
+    private boolean backedUpHDFS= Boolean.FALSE;
+    private boolean backedUpMetastore = Boolean.FALSE;
+    private boolean trashConfigured = Boolean.FALSE;
+    private boolean potentialDataLoss = Boolean.FALSE;
 
     @Override
-    public ConversionRequest clone() {
+    public Acceptance clone() {
         try {
-            ConversionRequest clone = (ConversionRequest) super.clone();
-            if (this.databases != null) {
-                clone.databases = new TreeMap<>();
-                for (Map.Entry<String, List<String>> entry : this.databases.entrySet()) {
-                    clone.databases.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-                }
-            }
+            Acceptance clone = (Acceptance) super.clone();
+            // All fields are boolean primitives, which are copied by value automatically.
+            // No additional deep copying needed.
             return clone;
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError("Clone not supported for ConversionRequest", e);
+            throw new AssertionError();
         }
     }
 }

@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.jcabi.manifests.Manifests;
 import lombok.Getter;
@@ -40,15 +40,15 @@ public class ExecuteSession implements Cloneable {
 
     private String sessionId;
     private AtomicInteger counter = new AtomicInteger(0);
-    private int concurrency = 10; // Default
+//    private int concurrency = 10; // Default
     private boolean connected = Boolean.FALSE;
-    private Connections connections = new Connections();
+//    private Connections connections = new Connections();
     // This is the List of RunStatuses.  The main session will have all of the RunStatuses for each of the sub-sessions
     // kicked off for each of the sub-sessions.
-    private RunStatus runStatus;
-    private List<RunStatus> subRunStatuses = new ArrayList<RunStatus>();
-    private HmsMirrorConfig config;
-    private ConversionRequest conversionRequest;
+//    private RunStatus runStatus;
+//    private List<RunStatus> subRunStatuses = new ArrayList<RunStatus>();
+//    private HmsMirrorConfig config;
+//    private ConversionRequest conversionRequest;
     private ConversionResult conversionResult;
     
     public void addError(MessageCode code) {

@@ -15,12 +15,13 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.web.controller;
+package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
 import com.cloudera.utils.hms.mirror.service.ConnectionManagementService;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionRequest;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/connections")
 @Getter
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
+@Tag(name = "Connection Management", description = "HMS Mirror Connection CRUD operations")
 @RequiredArgsConstructor
 @Slf4j
 public class ConnectionController {

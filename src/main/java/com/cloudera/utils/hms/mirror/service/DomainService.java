@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

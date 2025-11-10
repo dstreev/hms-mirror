@@ -15,9 +15,12 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain.core;
+package com.cloudera.utils.hms.mirror.domain.legacy;
 
 import com.cloudera.utils.hive.config.DBStore;
+import com.cloudera.utils.hms.mirror.domain.core.HiveServer2Config;
+import com.cloudera.utils.hms.mirror.domain.core.PartitionDiscovery;
+import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;

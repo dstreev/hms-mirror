@@ -1,6 +1,6 @@
 package com.cloudera.utils.hms.mirror.service;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
 import lombok.extern.slf4j.Slf4j;

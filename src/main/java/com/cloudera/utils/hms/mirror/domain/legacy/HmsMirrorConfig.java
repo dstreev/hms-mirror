@@ -15,9 +15,10 @@
  *
  */
 
-package com.cloudera.utils.hms.mirror.domain.core;
+package com.cloudera.utils.hms.mirror.domain.legacy;
 
 import com.cloudera.utils.hive.config.DBStore;
+import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.feature.LegacyTranslations;
 import com.fasterxml.jackson.annotation.JsonIgnore;

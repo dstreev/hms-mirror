@@ -18,7 +18,7 @@
 package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hadoop.cli.CliEnvironment;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import org.springframework.beans.factory.annotation.Autowired;

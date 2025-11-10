@@ -19,12 +19,17 @@ package com.cloudera.utils.hms.mirror.service;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hive.config.QueryDefinitions;
-import com.cloudera.utils.hms.mirror.domain.core.Cluster;
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
+import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
+import com.cloudera.utils.hms.mirror.domain.legacy.Cluster;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
@@ -44,30 +49,22 @@ import static java.util.Objects.isNull;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class QueryDefinitionsService {
 
-    private final ExecuteSessionService executeSessionService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
+    @NonNull
     private final Map<Environment, QueryDefinitions> queryDefinitionsMap = new HashMap<>();
 
-    /**
-     * Constructor for QueryDefinitionsService.
-     *
-     * @param executeSessionService Service for executing sessions
-     */
-    public QueryDefinitionsService(ExecuteSessionService executeSessionService) {
-        this.executeSessionService = executeSessionService;
-        log.debug("QueryDefinitionsService initialized");
-    }
-
     public QueryDefinitions getQueryDefinitions(Environment environment) {
-        HmsMirrorConfig config = executeSessionService.getSession().getConfig();
-
+        ConversionResult conversionResult = executionContextService.getConversionResult().orElseThrow(() ->
+                new IllegalStateException("ConversionResult not set."));
         QueryDefinitions queryDefinitions = queryDefinitionsMap.get(environment);
         if (isNull(queryDefinitions)) {
-            Cluster cluster = config.getCluster(environment);
-            DBStore metastoreDirect = cluster.getMetastoreDirect();
-            if (metastoreDirect != null) {
-                DBStore.DB_TYPE dbType = metastoreDirect.getType();
+            ConnectionDto connection = conversionResult.getConnection(environment);
+            if (connection != null) {
+                DBStore.DB_TYPE dbType = DBStore.DB_TYPE.valueOf(connection.getMetastoreDirectType());
 
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
                 mapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -92,6 +89,8 @@ public class QueryDefinitionsService {
                 } catch (Exception e) {
                     throw new RuntimeException("Issue getting configs", e);
                 }
+            } else {
+                throw new RuntimeException("Connection not found for environment: " + environment);
             }
         }
         return queryDefinitions;

@@ -17,7 +17,7 @@
 
 package com.cloudera.utils.hms.mirror.infrastructure.configuration;
 
-import com.cloudera.utils.hms.mirror.domain.core.HmsMirrorConfig;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.service.ExecuteSessionService;
 
 /**

@@ -23,6 +23,7 @@ import com.cloudera.utils.hms.mirror.core.model.*;
 import com.cloudera.utils.hms.mirror.domain.core.*;
 import com.cloudera.utils.hms.mirror.domain.dto.ConfigLiteDto;
 import com.cloudera.utils.hms.mirror.domain.dto.JobDto;
+import com.cloudera.utils.hms.mirror.domain.legacy.HmsMirrorConfig;
 import com.cloudera.utils.hms.mirror.domain.support.*;
 import com.cloudera.utils.hms.mirror.exceptions.*;
 import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
