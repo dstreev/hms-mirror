@@ -8,6 +8,11 @@ export interface DatasetFormData {
 }
 
 export interface DatabaseSpec {
+  // Entry mode configuration
+  entryMode?: 'manual' | 'connection'; // NEW - determines how database/tables are specified
+  sourceConnectionKey?: string; // NEW - connection key when using connection mode
+
+  // Database configuration
   databaseName: string;
   tables: string[];
   filter?: TableFilter;
@@ -44,6 +49,8 @@ export const DEFAULT_DATASET_FORM: DatasetFormData = {
 };
 
 export const createDefaultDatabaseSpec = (): DatabaseSpec => ({
+  entryMode: 'manual', // Default to manual entry mode
+  sourceConnectionKey: undefined,
   databaseName: '',
   tables: [],
   filter: undefined,

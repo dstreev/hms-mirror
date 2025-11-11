@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { PlusIcon, TrashIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import { DatasetWizardStepProps, createDefaultDatabaseSpec, DEFAULT_TABLE_FILTER, DatabaseSpec } from '../../../types/Dataset';
+import ConnectionSelector from './ConnectionSelector';
+import DatabaseSelector from './DatabaseSelector';
+import TableMultiSelector from './TableMultiSelector';
 
 const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, updateFormData }) => {
   const [expandedDatabase, setExpandedDatabase] = useState<number | null>(null);
@@ -57,6 +60,27 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
       newDatabases[dbIndex].filter = undefined;
     }
     newDatabases[dbIndex].tables.push('');
+    updateFormData({ databases: newDatabases });
+  };
+
+  const toggleEntryMode = (dbIndex: number) => {
+    const newDatabases = [...formData.databases];
+    const currentMode = newDatabases[dbIndex].entryMode || 'manual';
+    const newMode = currentMode === 'manual' ? 'connection' : 'manual';
+
+    newDatabases[dbIndex].entryMode = newMode;
+
+    // When switching to connection mode, clear manual fields
+    if (newMode === 'connection') {
+      newDatabases[dbIndex].sourceConnectionKey = undefined;
+      newDatabases[dbIndex].databaseName = '';
+      newDatabases[dbIndex].tables = [];
+      newDatabases[dbIndex].filter = undefined;
+    } else {
+      // When switching to manual mode, clear connection reference
+      newDatabases[dbIndex].sourceConnectionKey = undefined;
+    }
+
     updateFormData({ databases: newDatabases });
   };
 
@@ -117,16 +141,20 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                 <div className="flex-1">
                   <label htmlFor={`database-${dbIndex}`} className="block text-sm font-medium text-gray-700 mb-2">
                     Database Name *
+                    {database.entryMode === 'connection' && (
+                      <span className="ml-2 text-xs font-normal text-blue-600">(select from connection below)</span>
+                    )}
                   </label>
                   <input
                     type="text"
                     id={`database-${dbIndex}`}
                     value={database.databaseName}
                     onChange={(e) => updateDatabase(dbIndex, { databaseName: e.target.value })}
+                    disabled={database.entryMode === 'connection'}
                     className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                       errors[`database_${dbIndex}_name`] ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter database name"
+                    } ${database.entryMode === 'connection' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
+                    placeholder={database.entryMode === 'connection' ? 'Select from connection below' : 'Enter database name'}
                   />
                   {errors[`database_${dbIndex}_name`] && (
                     <p className="mt-1 text-sm text-red-600">{errors[`database_${dbIndex}_name`]}</p>
@@ -156,6 +184,111 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
               {errors[`database_${dbIndex}_config`] && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-600">{errors[`database_${dbIndex}_config`]}</p>
+                </div>
+              )}
+
+              {/* Entry Mode Toggle */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900">Entry Mode</label>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Choose how to specify database and tables
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleEntryMode(dbIndex)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                        (database.entryMode || 'manual') === 'manual'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300'
+                      }`}
+                    >
+                      Manual Entry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleEntryMode(dbIndex)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                        database.entryMode === 'connection'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300'
+                      }`}
+                    >
+                      From Connection
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Connection-Based Discovery UI */}
+              {database.entryMode === 'connection' && (
+                <div className="space-y-4 mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      1. Select Connection
+                    </label>
+                    <ConnectionSelector
+                      value={database.sourceConnectionKey}
+                      onChange={(connectionKey) => {
+                        updateDatabase(dbIndex, {
+                          sourceConnectionKey: connectionKey,
+                          databaseName: '', // Reset database when connection changes
+                          tables: [] // Reset tables when connection changes
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {database.sourceConnectionKey && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          2. Select Database
+                        </label>
+                        <DatabaseSelector
+                          connectionKey={database.sourceConnectionKey}
+                          value={database.databaseName}
+                          onChange={(databaseName) => {
+                            updateDatabase(dbIndex, {
+                              databaseName,
+                              tables: [] // Reset tables when database changes
+                            });
+                          }}
+                        />
+                      </div>
+
+                      {database.databaseName && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            3. Select Tables
+                          </label>
+                          <TableMultiSelector
+                            connectionKey={database.sourceConnectionKey}
+                            databaseName={database.databaseName}
+                            selectedTables={database.tables}
+                            onChange={(tables) => {
+                              updateDatabase(dbIndex, { tables });
+                            }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Manual Entry: Show database name input when in manual mode */}
+              {(database.entryMode || 'manual') === 'manual' && database.databaseName && (
+                <div className="mb-2 text-sm text-gray-600">
+                  <span className="font-medium">Database:</span> {database.databaseName}
+                  {database.tables.length > 0 && (
+                    <span className="ml-3">
+                      <span className="font-medium">Tables:</span> {database.tables.length}
+                    </span>
+                  )}
                 </div>
               )}
 
