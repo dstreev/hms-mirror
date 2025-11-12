@@ -70,7 +70,7 @@ const App: React.FC = () => {
 
         {/* Runtime Reports routes - always accessible */}
         <Route path="/runtime/reports" element={<RuntimeReportsPage />} />
-        <Route path="/runtime/reports/:key" element={<RuntimeReportDetailsPage />} />
+        <Route path="/runtime/reports/details" element={<RuntimeReportDetailsPage />} />
 
         {/* Protected feature routes */}
         <Route path="/encryption" element={<RequireConfiguration><PasswordEncryptionPage /></RequireConfiguration>} />

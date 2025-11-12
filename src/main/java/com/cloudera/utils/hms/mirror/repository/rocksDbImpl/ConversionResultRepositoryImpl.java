@@ -75,6 +75,26 @@ public class ConversionResultRepositoryImpl extends AbstractRocksDBRepository<Co
     }
 
     @Override
+    public java.util.Optional<ConversionResult> findByKey(String key) throws RepositoryException {
+        String compositeKey = buildKey(key);
+        log.debug("Finding ConversionResult by composite key: {}", compositeKey);
+        return super.findByKey(compositeKey);
+    }
+
+    @Override
+    public boolean deleteById(String key) throws RepositoryException {
+        String compositeKey = buildKey(key);
+        log.debug("Deleting ConversionResult by composite key: {}", compositeKey);
+        return super.deleteById(compositeKey);
+    }
+
+    @Override
+    public boolean existsById(String key) throws RepositoryException {
+        String compositeKey = buildKey(key);
+        return super.existsById(compositeKey);
+    }
+
+    @Override
     public ConversionResult save(ConversionResult conversionResult) throws RepositoryException {
 
         log.debug("Saving ConversionResult with key: {}", conversionResult.getKey());

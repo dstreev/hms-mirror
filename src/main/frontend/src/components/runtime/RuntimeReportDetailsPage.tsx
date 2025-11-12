@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { ArrowLeftIcon, ArrowPathIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { runtimeReportsApi, ConversionResult } from '../../services/api/runtimeReportsApi';
 
 const RuntimeReportDetailsPage: React.FC = () => {
-  const { key } = useParams<{ key: string }>();
+  const [searchParams] = useSearchParams();
+  const key = searchParams.get('key');
   const navigate = useNavigate();
   const [report, setReport] = useState<ConversionResult | null>(null);
+  const [reportFiles, setReportFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filesLoading, setFilesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (key) {
       loadReport();
+      loadReportFiles();
     }
   }, [key]);
 
@@ -34,6 +38,55 @@ const RuntimeReportDetailsPage: React.FC = () => {
       setError(err.message || 'Failed to load report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReportFiles = async () => {
+    if (!key) return;
+
+    try {
+      setFilesLoading(true);
+      const response = await fetch(`/hms-mirror/api/v1/runtime/reports/files?key=${encodeURIComponent(key)}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'SUCCESS' && data.files) {
+          setReportFiles(data.files);
+        }
+      } else {
+        console.error('Failed to load report files');
+      }
+    } catch (err: any) {
+      console.error('Failed to load report files:', err);
+    } finally {
+      setFilesLoading(false);
+    }
+  };
+
+  const handleDownloadFile = async (filename: string) => {
+    if (!key) return;
+
+    try {
+      const response = await fetch(
+        `/hms-mirror/api/v1/runtime/reports/file?key=${encodeURIComponent(key)}&filename=${encodeURIComponent(filename)}`
+      );
+
+      if (response.ok) {
+        const content = await response.text();
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error('Failed to download file');
+      }
+    } catch (err: any) {
+      console.error('Failed to download file:', err);
     }
   };
 
@@ -129,15 +182,128 @@ const RuntimeReportDetailsPage: React.FC = () => {
             </dl>
           </div>
 
-          {/* Placeholder message */}
+          {/* Report Files Section */}
           <div className="border-t border-gray-200 pt-6">
-            <div className="rounded-md bg-blue-50 p-4">
-              <p className="text-sm text-blue-700">
-                <strong>Note:</strong> Full report details rendering will be implemented in a future update.
-                This page will display comprehensive conversion results, table migration status,
-                SQL scripts, and detailed statistics.
-              </p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Generated Reports</h2>
+              {filesLoading && (
+                <ArrowPathIcon className="h-5 w-5 text-gray-400 animate-spin" />
+              )}
             </div>
+
+            {reportFiles.length === 0 && !filesLoading ? (
+              <div className="rounded-md bg-yellow-50 p-4">
+                <p className="text-sm text-yellow-700">
+                  No report files available for this conversion result.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Session Configuration Files */}
+                {reportFiles.filter(f => f.includes('session-')).length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Session Configuration</h3>
+                    <div className="bg-gray-50 rounded-md divide-y divide-gray-200">
+                      {reportFiles
+                        .filter(f => f.includes('session-'))
+                        .map(filename => (
+                          <div key={filename} className="flex items-center justify-between p-3">
+                            <div className="flex items-center">
+                              <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                              <span className="text-sm text-gray-900">{filename}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDownloadFile(filename)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                              Download
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Run Status */}
+                {reportFiles.filter(f => f.includes('run-status')).length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Run Status</h3>
+                    <div className="bg-gray-50 rounded-md divide-y divide-gray-200">
+                      {reportFiles
+                        .filter(f => f.includes('run-status'))
+                        .map(filename => (
+                          <div key={filename} className="flex items-center justify-between p-3">
+                            <div className="flex items-center">
+                              <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                              <span className="text-sm text-gray-900">{filename}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDownloadFile(filename)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                              Download
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Database Reports (YAML files) */}
+                {reportFiles.filter(f => f.endsWith('_hms-mirror.yaml')).length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Database Reports</h3>
+                    <div className="bg-gray-50 rounded-md divide-y divide-gray-200">
+                      {reportFiles
+                        .filter(f => f.endsWith('_hms-mirror.yaml'))
+                        .map(filename => (
+                          <div key={filename} className="flex items-center justify-between p-3">
+                            <div className="flex items-center">
+                              <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                              <span className="text-sm text-gray-900">{filename}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDownloadFile(filename)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                              Download
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SQL Scripts */}
+                {reportFiles.filter(f => f.endsWith('.sql')).length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">SQL Scripts</h3>
+                    <div className="bg-gray-50 rounded-md divide-y divide-gray-200">
+                      {reportFiles
+                        .filter(f => f.endsWith('.sql'))
+                        .map(filename => (
+                          <div key={filename} className="flex items-center justify-between p-3">
+                            <div className="flex items-center">
+                              <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                              <span className="text-sm text-gray-900">{filename}</span>
+                            </div>
+                            <button
+                              onClick={() => handleDownloadFile(filename)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                              Download
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

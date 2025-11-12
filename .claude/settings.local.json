@@ -95,7 +95,8 @@
       "Bash(then)",
       "Bash(http://localhost:8090/hms-mirror/api/v1/jobs/20251111_124154255_ab6a/validate)",
       "Bash(open http://localhost:8090/hms-mirror/)",
-      "Bash(/dev/null sleep 3 echo 'Killed existing server')"
+      "Bash(/dev/null sleep 3 echo 'Killed existing server')",
+      "Bash(open http://localhost:8090/hms-mirror/reports)"
     ],
     "deny": [],
     "ask": [],

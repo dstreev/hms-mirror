@@ -98,7 +98,7 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
     public Optional<RunStatus> findByKey(String conversionResultKey) throws RepositoryException {
         String compositeKey = buildCompositeKey(conversionResultKey);
         log.debug("Finding RunStatus by composite key: {}", compositeKey);
-        return this.findByKey(compositeKey);
+        return super.findByKey(compositeKey);
     }
 
     @Override

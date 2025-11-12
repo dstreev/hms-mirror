@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.service.RocksDBReportGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -49,6 +50,7 @@ import java.util.stream.Collectors;
 public class ConversionResultController {
 
     private final ConversionResultRepository conversionResultRepository;
+    private final RocksDBReportGeneratorService reportGeneratorService;
 
     @GetMapping(produces = "application/json")
     @Operation(summary = "List conversion results",
@@ -123,7 +125,7 @@ public class ConversionResultController {
         }
     }
 
-    @GetMapping(value = "/{key}", produces = "application/json")
+    @GetMapping(produces = "application/json", params = "key")
     @Operation(summary = "Get conversion result by key",
                description = "Retrieves details of a specific conversion result")
     @ApiResponses(value = {
@@ -133,7 +135,7 @@ public class ConversionResultController {
     })
     public ResponseEntity<Map<String, Object>> getConversionResult(
             @Parameter(description = "Conversion result key", required = true)
-            @PathVariable String key) {
+            @RequestParam String key) {
 
         log.info("ConversionResultController.getConversionResult() called - key: {}", key);
 
@@ -161,7 +163,7 @@ public class ConversionResultController {
         }
     }
 
-    @DeleteMapping(value = "/{key}", produces = "application/json")
+    @DeleteMapping(produces = "application/json", params = "key")
     @Operation(summary = "Delete conversion result",
                description = "Deletes a specific conversion result")
     @ApiResponses(value = {
@@ -171,7 +173,7 @@ public class ConversionResultController {
     })
     public ResponseEntity<Map<String, Object>> deleteConversionResult(
             @Parameter(description = "Conversion result key", required = true)
-            @PathVariable String key) {
+            @RequestParam String key) {
 
         log.info("ConversionResultController.deleteConversionResult() called - key: {}", key);
 
@@ -195,6 +197,92 @@ public class ConversionResultController {
                 "status", "error",
                 "message", "Failed to delete conversion result: " + e.getMessage()
             ));
+        }
+    }
+
+    @GetMapping(value = "/files", produces = "application/json")
+    @Operation(summary = "List available report files",
+               description = "Lists all generated report files for a conversion result")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Report files listed successfully"),
+        @ApiResponse(responseCode = "404", description = "Conversion result not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to generate reports")
+    })
+    public ResponseEntity<Map<String, Object>> listReportFiles(
+            @Parameter(description = "Conversion result key", required = true)
+            @RequestParam String key) {
+
+        log.info("ConversionResultController.listReportFiles() called - key: {}", key);
+
+        try {
+            Map<String, String> files = reportGeneratorService.listReportFiles(key);
+
+            if (files.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "NOT_FOUND");
+                response.put("message", "No reports found for key: " + key);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("key", key);
+            response.put("fileCount", files.size());
+            response.put("files", files.keySet()); // Return list of filenames
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error listing report files for {}", key, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "error",
+                "message", "Failed to list report files: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping(value = "/file", produces = {"text/plain", "application/x-yaml"})
+    @Operation(summary = "Download a specific report file",
+               description = "Downloads a specific generated report file")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Report file retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Report file not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to generate report")
+    })
+    public ResponseEntity<String> downloadReportFile(
+            @Parameter(description = "Conversion result key", required = true)
+            @RequestParam String key,
+            @Parameter(description = "Report filename", required = true)
+            @RequestParam String filename) {
+
+        log.info("ConversionResultController.downloadReportFile() called - key: {}, filename: {}", key, filename);
+
+        try {
+            java.util.Optional<String> fileContent = reportGeneratorService.getReportFile(key, filename);
+
+            if (fileContent.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Set content type based on file extension
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            if (filename.endsWith(".sql")) {
+                headers.setContentType(org.springframework.http.MediaType.TEXT_PLAIN);
+            } else if (filename.endsWith(".yaml") || filename.endsWith(".yml")) {
+                headers.setContentType(org.springframework.http.MediaType.valueOf("application/x-yaml"));
+            } else if (filename.endsWith(".md")) {
+                headers.setContentType(org.springframework.http.MediaType.TEXT_MARKDOWN);
+            } else {
+                headers.setContentType(org.springframework.http.MediaType.TEXT_PLAIN);
+            }
+            headers.setContentDispositionFormData("attachment", filename);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(fileContent.get());
+
+        } catch (Exception e) {
+            log.error("Error downloading report file {} for {}", filename, key, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

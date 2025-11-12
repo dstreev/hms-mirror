@@ -53,7 +53,7 @@ class RuntimeReportsApi extends BaseApi {
    */
   async list(page: number = 0, pageSize: number = 10): Promise<RuntimeReportsListResponse | null> {
     try {
-      const response = await this.get<RuntimeReportsListResponse>(`/runtime/reports?page=${page}&pageSize=${pageSize}`);
+      const response = await super.get<RuntimeReportsListResponse>(`/runtime/reports?page=${page}&pageSize=${pageSize}`);
       return response;
     } catch (error) {
       console.error('Failed to fetch runtime reports:', error);
@@ -66,7 +66,7 @@ class RuntimeReportsApi extends BaseApi {
    */
   async get(key: string): Promise<ConversionResult | null> {
     try {
-      const response = await this.get<RuntimeReportResponse>(`/runtime/reports/${key}`);
+      const response = await super.get<RuntimeReportResponse>(`/runtime/reports?key=${encodeURIComponent(key)}`);
       if (response?.status === 'SUCCESS' && response.conversionResult) {
         return response.conversionResult;
       }
@@ -82,7 +82,7 @@ class RuntimeReportsApi extends BaseApi {
    */
   async delete(key: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await this.delete<RuntimeReportResponse>(`/runtime/reports/${key}`);
+      const response = await super.delete<RuntimeReportResponse>(`/runtime/reports?key=${encodeURIComponent(key)}`);
 
       if (response?.status === 'SUCCESS') {
         return {
