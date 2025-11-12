@@ -55,7 +55,7 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
     private static final String RUN_STATUS_SUFFIX = "runStatus";
 
     public RunStatusRepositoryImpl(RocksDB rocksDB,
-                                   @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle columnFamily,
+                                   @Qualifier("runStatusColumnFamily") ColumnFamilyHandle columnFamily,
                                    @Qualifier("rocksDBObjectMapper") ObjectMapper objectMapper) {
         super(rocksDB, columnFamily, objectMapper, new TypeReference<RunStatus>() {
         });

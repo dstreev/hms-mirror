@@ -8,6 +8,8 @@ import {
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
   DocumentArrowUpIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
   ExclamationTriangleIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
@@ -15,6 +17,8 @@ import { datasetApi, DatasetListResponse } from '../../services/api/datasetApi';
 import { DatasetFormData } from '../../types/Dataset';
 import DatasetFilters, { DatasetListFilters } from './DatasetFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import ImportDialog from '../common/ImportDialog';
+import { exportToJson, generateExportFilename } from '../../utils/importExport';
 
 interface DatasetSummary {
   key: string;
@@ -44,6 +48,7 @@ const ListDatasetsPage: React.FC = () => {
     isOpen: boolean;
     dataset: DatasetSummary | null;
   }>({ isOpen: false, dataset: null });
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     loadDatasets();
@@ -168,8 +173,63 @@ const ListDatasetsPage: React.FC = () => {
     navigate('/datasets/new');
   };
 
-  const handleImport = () => {
-    navigate('/datasets/import');
+  const handleExport = async (datasetKey: string, datasetName: string) => {
+    try {
+      setActionLoading(datasetName);
+      const dataset = await datasetApi.getDataset(datasetKey);
+
+      if (dataset) {
+        const filename = generateExportFilename(datasetName, 'dataset');
+        exportToJson(dataset, filename);
+      } else {
+        setError(`Failed to load dataset: ${datasetName}`);
+      }
+    } catch (err: any) {
+      console.error(`Failed to export dataset ${datasetName}:`, err);
+      setError(err.message || `Failed to export dataset: ${datasetName}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleImportClick = () => {
+    setShowImportDialog(true);
+  };
+
+  const handleImport = async (data: DatasetFormData, newName?: string): Promise<{ success: boolean; message?: string; status?: number }> => {
+    try {
+      // If a new name was provided (due to conflict), update both name and key
+      if (newName) {
+        data = { ...data, name: newName, key: newName };
+      }
+
+      const result = await datasetApi.saveDataset(data);
+
+      if (result.success) {
+        // Success - reload datasets list
+        await loadDatasets();
+        return { success: true };
+      } else if (result.status === 409) {
+        // Name conflict
+        return {
+          success: false,
+          status: 409,
+          message: result.message || `A dataset with the name "${data.name}" already exists.`
+        };
+      } else {
+        // Other error
+        return {
+          success: false,
+          message: result.message || 'Failed to import dataset'
+        };
+      }
+    } catch (error: any) {
+      console.error('Error importing dataset:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred while importing dataset'
+      };
+    }
   };
 
   const matchesDatabaseCountFilter = (count: number, filter: string): boolean => {
@@ -260,10 +320,10 @@ const ListDatasetsPage: React.FC = () => {
               Refresh
             </button>
             <button
-              onClick={handleImport}
+              onClick={handleImportClick}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             >
-              <DocumentArrowUpIcon className="h-4 w-4 mr-2" />
+              <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
               Import
             </button>
             <button
@@ -401,6 +461,16 @@ const ListDatasetsPage: React.FC = () => {
                     </button>
 
                     <button
+                      onClick={() => handleExport(dataset.key, dataset.name)}
+                      disabled={actionLoading === dataset.name}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Export dataset to JSON"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                      Export
+                    </button>
+
+                    <button
                       onClick={() => handleCopyDataset(dataset.key, dataset.name)}
                       disabled={actionLoading === dataset.name}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -437,6 +507,17 @@ const ListDatasetsPage: React.FC = () => {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog<DatasetFormData>
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImport}
+        title="Import Dataset"
+        itemType="Dataset"
+        getNameFromData={(data) => data.name}
+        setNameInData={(data, newName) => ({ ...data, name: newName, key: newName })}
       />
     </div>
   );

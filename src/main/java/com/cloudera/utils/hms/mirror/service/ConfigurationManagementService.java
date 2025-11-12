@@ -147,6 +147,41 @@ public class ConfigurationManagementService {
     }
 
     /**
+     * Creates a new configuration. Fails if configuration already exists.
+     *
+     * @param configDto The configuration DTO to save
+     * @return Map containing the save operation results
+     */
+    public Map<String, Object> create(ConfigLiteDto configDto) {
+        log.debug("Creating new configuration: {}", configDto.getKey());
+        try {
+            // Check if a configuration with this name already exists
+            if (configurationRepository.existsById(configDto.getKey())) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("status", "CONFLICT");
+                result.put("message", "Configuration with name '" + configDto.getName() + "' already exists");
+                return result;
+            }
+
+            // Save using repository (timestamps and name are handled by repository layer)
+            configurationRepository.save(configDto);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", "SUCCESS");
+            result.put("message", "Configuration created successfully");
+            result.put("key", configDto.getKey());
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error creating configuration {}", configDto.getKey(), e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("status", "ERROR");
+            errorResult.put("message", "Failed to create configuration: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    /**
      * Deletes a configuration by data strategy and name.
      *
      * @param configName   The configuration name

@@ -247,6 +247,7 @@ public enum MessageCode {
             "The LOCATION element was adjusted and will be explicitly set during table creation."),
     TARGET_DB_MISSING(""),
     TARGET_NAMESPACE_NOT_DEFINED("Unable to determine the Target Namespace. Check the settings for the RIGHT hcfsNamespace or set the 'targetNamespace'"),
+    TERMINATED_JOB("This job was terminated, probably due to a restart."),
     VALIDATE_SQL_STATEMENT_ISSUE("There was an issue validating the SQL statements.  Please check the 'Database-Problem SQL Statements' section for details."),
     VALID_ACID_DA_IP_STRATEGIES("Inplace Downgrade of ACID tables only valid for the SQL data strategy"),
     VALID_ACID_STRATEGIES("Migrating ACID tables only valid for SCHEMA_ONLY, DUMP, SQL, EXPORT_IMPORT, " +

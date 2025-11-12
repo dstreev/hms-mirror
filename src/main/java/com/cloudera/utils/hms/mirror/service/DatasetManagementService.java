@@ -202,6 +202,54 @@ public class DatasetManagementService {
     }
 
     /**
+     * Renames a dataset by deleting the old key and saving with the new name.
+     *
+     * @param oldKey The original dataset key (name)
+     * @param datasetDto The dataset DTO with the new name
+     * @return Map containing the rename operation results
+     */
+    public Map<String, Object> rename(String oldKey, DatasetDto datasetDto) {
+        log.info("Renaming dataset from '{}' to '{}'", oldKey, datasetDto.getName());
+        try {
+            // Load the existing dataset to preserve creation date
+            Map<String, Object> loadResult = load(oldKey);
+
+            if (!"SUCCESS".equals(loadResult.get("status"))) {
+                return loadResult; // Return the error from loading
+            }
+
+            DatasetDto existingDataset = (DatasetDto) loadResult.get("data");
+
+            // Preserve the creation date
+            if (existingDataset.getCreated() != null) {
+                datasetDto.setCreated(existingDataset.getCreated());
+            }
+
+            // Delete the old key
+            datasetRepository.deleteById(oldKey);
+            log.debug("Deleted old dataset key: {}", oldKey);
+
+            // Save with the new key (derived from datasetDto.getName())
+            Map<String, Object> saveResult = save(datasetDto);
+
+            if ("SUCCESS".equals(saveResult.get("status"))) {
+                saveResult.put("operation", "renamed");
+                saveResult.put("oldName", oldKey);
+                saveResult.put("newName", datasetDto.getName());
+            }
+
+            return saveResult;
+
+        } catch (Exception e) {
+            log.error("Error renaming dataset from '{}' to '{}'", oldKey, datasetDto.getName(), e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("status", "ERROR");
+            errorResult.put("message", "Failed to rename dataset: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    /**
      * Copies a dataset with a new name.
      *
      * @param sourceDatasetName The source dataset name

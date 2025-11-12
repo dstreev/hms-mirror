@@ -33,16 +33,27 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/")
-                .setViewName("forward:/config/");
-        registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        // Allow SpaFallbackController to handle root path
+        // Remove old Thymeleaf redirect
+        registry.setOrder(Ordered.LOWEST_PRECEDENCE);
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(sessionInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/images/**", "/favicon.ico");
+                .excludePathPatterns(
+                        // IMPORTANT: context-path strips /hms-mirror, so paths here are relative
+                        // Static resources and React SPA files (not API endpoints)
+                        "/static/**",      // React bundled assets (JS, CSS)
+                        "/css/**",
+                        "/js/**",
+                        "/images/**",
+                        "/favicon.ico",
+                        "/manifest.json",
+                        "/index.html"     // React SPA entry point
+                        // Note: API endpoints /api/** are NOT excluded - session interceptor runs on them
+                );
     }
 
 }

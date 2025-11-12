@@ -43,6 +43,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -224,7 +225,7 @@ public class HMSMirrorAppService {
         }
 
         // Reset Start time to the actual 'execution' start time.
-        runStatus.setStart(new Date());
+        runStatus.setStart(LocalDateTime.now());
         runStatus.setProgress(ProgressEnum.STARTED);
         log.info("Starting HMSMirrorAppService.run()");
 
@@ -1049,7 +1050,7 @@ public class HMSMirrorAppService {
 
         runStatus.setStage(StageEnum.SAVING_REPORTS, CollectionEnum.IN_PROGRESS);
         // Set RunStatus End Date.
-        runStatus.setEnd(new Date());
+        runStatus.setEnd(LocalDateTime.now());
 
         // Set Run Status Progress.
         if (rtn) {

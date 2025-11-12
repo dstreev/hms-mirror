@@ -84,6 +84,7 @@ public class RocksDBConfig {
     private ColumnFamilyHandle datasetsColumnFamily;
     private ColumnFamilyHandle jobsColumnFamily;
     private ColumnFamilyHandle conversionResultColumnFamily;
+    private ColumnFamilyHandle runStatusColumnFamily;
     
     // Thread-safety for cleanup
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
@@ -223,6 +224,7 @@ public class RocksDBConfig {
         datasetsColumnFamily = columnFamilyHandles.get(4); // datasets
         jobsColumnFamily = columnFamilyHandles.get(5); // jobs
         conversionResultColumnFamily = columnFamilyHandles.get(6); // conversionResult
+        runStatusColumnFamily = columnFamilyHandles.get(7); // RunStatus
 
         log.info("✓ RocksDB database opened successfully");
         log.info("✓ Column families initialized: default, configurations, sessions, connections, datasets, jobs, conversionResult");
@@ -281,6 +283,7 @@ public class RocksDBConfig {
             }
             
             // Close column families in reverse order
+            closeColumnFamilyHandle("runStatus", runStatusColumnFamily);
             closeColumnFamilyHandle("conversionResult", conversionResultColumnFamily);
             closeColumnFamilyHandle("jobs", jobsColumnFamily);
             closeColumnFamilyHandle("datasets", datasetsColumnFamily);
@@ -289,13 +292,14 @@ public class RocksDBConfig {
             closeColumnFamilyHandle("configurations", configurationsColumnFamily);
 
             // Null out column family references before closing main DB
+            runStatusColumnFamily = null;
             conversionResultColumnFamily = null;
             jobsColumnFamily = null;
             datasetsColumnFamily = null;
             connectionsColumnFamily = null;
             sessionsColumnFamily = null;
             configurationsColumnFamily = null;
-            
+
             // Close the main RocksDB instance
             if (rocksDB != null) {
                 try {
@@ -464,6 +468,15 @@ public class RocksDBConfig {
             return null;
         }
         return conversionResultColumnFamily;
+    }
+
+    @Bean("runStatusColumnFamily")
+    public ColumnFamilyHandle runStatusColumnFamily() {
+        if (isShutdown.get()) {
+            log.warn("Run Status column family bean requested after shutdown - returning null");
+            return null;
+        }
+        return runStatusColumnFamily;
     }
 
     @Bean("rocksDBObjectMapper")

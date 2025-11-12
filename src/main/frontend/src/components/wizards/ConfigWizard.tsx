@@ -517,11 +517,9 @@ const ConfigWizard: React.FC = () => {
               value={config.configName}
               onChange={(e) => updateConfig('configName', e.target.value)}
               readOnly={location.state?.isEditing}
-              className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${
-                location.state?.isEditing
-                  ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
-                  : 'focus:ring-blue-500 focus:border-blue-500'
-              }`}
+              className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                errors['configName'] ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
+              } ${location.state?.isEditing ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder={location.state?.isCopying ? `Copy of ${location.state.configName || ''} Configuration` : `My Migration Configuration`}
             />
             {errors['configName'] && (
@@ -541,7 +539,7 @@ const ConfigWizard: React.FC = () => {
               rows={3}
               value={config.description}
               onChange={(e) => updateConfig('description', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Optional description of the configuration purpose"
             />
           </div>
@@ -756,7 +754,9 @@ const ConfigWizard: React.FC = () => {
                     id="artificialBucketThreshold"
                     value={config.migrateACID.artificialBucketThreshold}
                     onChange={(e) => updateConfig('migrateACID.artificialBucketThreshold', parseInt(e.target.value) || 0)}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      errors['migrateACID.artificialBucketThreshold'] ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
+                    }`}
                   />
                   {errors['migrateACID.artificialBucketThreshold'] && (
                     <p className="mt-1 text-sm text-red-600">{errors['migrateACID.artificialBucketThreshold']}</p>
@@ -773,7 +773,9 @@ const ConfigWizard: React.FC = () => {
                     id="partitionLimit"
                     value={config.migrateACID.partitionLimit}
                     onChange={(e) => updateConfig('migrateACID.partitionLimit', parseInt(e.target.value) || 0)}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      errors['migrateACID.partitionLimit'] ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
+                    }`}
                   />
                   {errors['migrateACID.partitionLimit'] && (
                     <p className="mt-1 text-sm text-red-600">{errors['migrateACID.partitionLimit']}</p>
@@ -959,7 +961,7 @@ const ConfigWizard: React.FC = () => {
               id="warehouseSource"
               value={config.transfer.warehouse.source}
               readOnly
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed"
             />
             <p className="mt-1 text-xs text-gray-500">Source of the warehouse location (read-only)</p>
           </div>
@@ -973,7 +975,9 @@ const ConfigWizard: React.FC = () => {
               id="externalDirectory"
               value={config.transfer.warehouse.externalDirectory}
               onChange={(e) => updateConfig('transfer.warehouse.externalDirectory', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                errors['transfer.warehouse.externalDirectory'] ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
+              }`}
               placeholder="/user/hive/external"
             />
             {errors['transfer.warehouse.externalDirectory'] && (
@@ -991,7 +995,9 @@ const ConfigWizard: React.FC = () => {
               id="managedDirectory"
               value={config.transfer.warehouse.managedDirectory}
               onChange={(e) => updateConfig('transfer.warehouse.managedDirectory', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                errors['transfer.warehouse.managedDirectory'] ? 'border-red-300 text-red-900 placeholder-red-300' : 'border-gray-300'
+              }`}
               placeholder="/user/hive/warehouse"
             />
             {errors['transfer.warehouse.managedDirectory'] && (
@@ -1050,7 +1056,7 @@ const ConfigWizard: React.FC = () => {
                 id="transferPrefix"
                 value={config.transfer.transferPrefix}
                 onChange={(e) => updateConfig('transfer.transferPrefix', e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 placeholder="hms_mirror_transfer_"
               />
               <p className="mt-1 text-xs text-gray-500">Prefix for transfer tables (default: hms_mirror_transfer_)</p>
@@ -1065,7 +1071,7 @@ const ConfigWizard: React.FC = () => {
                 id="shadowPrefix"
                 value={config.transfer.shadowPrefix}
                 onChange={(e) => updateConfig('transfer.shadowPrefix', e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 placeholder="hms_mirror_shadow_"
               />
               <p className="mt-1 text-xs text-gray-500">Prefix for shadow tables (default: hms_mirror_shadow_)</p>
@@ -1080,7 +1086,7 @@ const ConfigWizard: React.FC = () => {
                 id="storageMigrationPostfix"
                 value={config.transfer.storageMigrationPostfix}
                 onChange={(e) => updateConfig('transfer.storageMigrationPostfix', e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 placeholder="_storage_migration"
               />
               <p className="mt-1 text-xs text-gray-500">Postfix for storage migration tables (default: _storage_migration)</p>
@@ -1095,7 +1101,7 @@ const ConfigWizard: React.FC = () => {
                 id="exportBaseDirPrefix"
                 value={config.transfer.exportBaseDirPrefix}
                 onChange={(e) => updateConfig('transfer.exportBaseDirPrefix', e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 placeholder="/apps/hive/warehouse/export_"
               />
               <p className="mt-1 text-xs text-gray-500">Base directory for export operations (default: /apps/hive/warehouse/export_)</p>
@@ -1110,7 +1116,7 @@ const ConfigWizard: React.FC = () => {
                 id="remoteWorkingDirectory"
                 value={config.transfer.remoteWorkingDirectory}
                 onChange={(e) => updateConfig('transfer.remoteWorkingDirectory', e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 placeholder="hms_mirror_working"
               />
               <p className="mt-1 text-xs text-gray-500">Remote working directory (default: hms_mirror_working)</p>
@@ -1153,7 +1159,7 @@ const ConfigWizard: React.FC = () => {
                   rows={3}
                   value={config.icebergConversion.fileTypeTranslation}
                   onChange={(e) => updateConfig('icebergConversion.fileTypeTranslation', e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="ORC:Parquet"
                 />
                 <p className="mt-1 text-xs text-gray-500">Map source formats to Iceberg (e.g., "ORC:Parquet")</p>
@@ -1185,7 +1191,7 @@ const ConfigWizard: React.FC = () => {
                   rows={3}
                   value={config.icebergConversion.tableProperties}
                   onChange={(e) => updateConfig('icebergConversion.tableProperties', e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="write.format.default=parquet"
                 />
                 <p className="mt-1 text-xs text-gray-500">Custom properties (e.g., "write.format.default=parquet")</p>

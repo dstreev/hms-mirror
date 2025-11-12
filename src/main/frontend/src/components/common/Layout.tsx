@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  HomeIcon, 
-  CogIcon, 
-  CircleStackIcon, 
-  PlayIcon, 
+import {
+  HomeIcon,
+  CogIcon,
+  CircleStackIcon,
+  PlayIcon,
   DocumentTextIcon,
   WifiIcon,
   KeyIcon,
@@ -13,7 +13,9 @@ import {
   LinkIcon,
   TableCellsIcon,
   ChevronRightIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  WrenchScrewdriverIcon,
+  FolderArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { useConfiguration } from '../../contexts/ConfigurationContext';
 import SessionInfo from './SessionInfo';
@@ -29,6 +31,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hasEncryptedPasswordsWithoutKey = state.config?.encryptedPasswords && !state.config?.passwordKey;
   const [settingsExpanded, setSettingsExpanded] = React.useState(true);
 
+  const [runtimeExpanded, setRuntimeExpanded] = React.useState(true);
+  const [utilitiesExpanded, setUtilitiesExpanded] = React.useState(true);
+
   const navigation = [
     {
       name: 'Settings',
@@ -43,22 +48,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ]
     },
     {
-      name: 'Jobs',
+      name: 'Runtime',
       icon: PlayIcon,
       isGroup: true,
-      expanded: true,
-      onToggle: () => {},
+      expanded: runtimeExpanded,
+      onToggle: () => setRuntimeExpanded(!runtimeExpanded),
       children: [
-        { name: 'Build', href: '/jobs/build', icon: CogIcon, requiresConfig: false, requiresPasswordKey: false },
-        { name: 'Execute', href: '/jobs/execute', icon: PlayIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Define', href: '/jobs/build', icon: CogIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Jobs', href: '/jobs/execute', icon: PlayIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'Reports', href: '/reports', icon: DocumentTextIcon, requiresConfig: false, requiresPasswordKey: false },
       ]
     },
-    { name: 'RocksDB', href: '/rocksdb', icon: CircleStackIcon, requiresConfig: false, requiresPasswordKey: false },
+    {
+      name: 'Utilities',
+      icon: WrenchScrewdriverIcon,
+      isGroup: true,
+      expanded: utilitiesExpanded,
+      onToggle: () => setUtilitiesExpanded(!utilitiesExpanded),
+      children: [
+        { name: 'RocksDB', href: '/rocksdb', icon: CircleStackIcon, requiresConfig: false, requiresPasswordKey: false },
+        { name: 'CLI Reports', href: '/utilities/cli-reports', icon: FolderArrowDownIcon, requiresConfig: false, requiresPasswordKey: false },
+      ]
+    },
     { name: 'Configuration', href: '/config/current', icon: CogIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Password Encryption', href: '/encryption', icon: KeyIcon, requiresConfig: true, requiresPasswordKey: false },
     { name: 'Execution', href: '/execution', icon: PlayIcon, requiresConfig: true, requiresPasswordKey: true },
     { name: 'Summary View', href: '/summary', icon: CodeBracketIcon, requiresConfig: true, requiresPasswordKey: false },
-    { name: 'Reports', href: '/reports', icon: DocumentTextIcon, requiresConfig: false, requiresPasswordKey: false },
   ];
 
   return (

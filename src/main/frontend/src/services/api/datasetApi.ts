@@ -148,7 +148,7 @@ class DatasetApi extends BaseApi {
     }
   }
 
-  async saveDataset(formData: DatasetFormData): Promise<{ success: boolean; message?: string; operation?: string }> {
+  async saveDataset(formData: DatasetFormData): Promise<{ success: boolean; message?: string; operation?: string; status?: number }> {
     try {
       const dto = this.mapFormDataToDto(formData);
       console.log('Saving dataset - DTO being sent:', JSON.stringify(dto, null, 2));
@@ -158,6 +158,14 @@ class DatasetApi extends BaseApi {
         return {
           success: true,
           operation: response.operation || 'saved'
+        };
+      } else if (response?.status === 'CONFLICT') {
+        // Name already exists - return 409 status
+        console.warn('Dataset name conflict:', response.message);
+        return {
+          success: false,
+          status: 409,
+          message: response?.message || 'A dataset with this name already exists'
         };
       } else {
         console.error('Save dataset failed with response:', response);
@@ -169,20 +177,39 @@ class DatasetApi extends BaseApi {
     } catch (error: any) {
       console.error('Failed to save dataset - error:', error);
       console.error('Error response data:', error.response?.data);
+
+      // Check for 409 Conflict status
+      if (error.response?.status === 409) {
+        return {
+          success: false,
+          status: 409,
+          message: error.response?.data?.message || 'A dataset with this name already exists'
+        };
+      }
+
       return {
         success: false,
+        status: error.response?.status,
         message: error.response?.data?.message || error.message || 'Network error occurred while saving dataset'
       };
     }
   }
 
-  async updateDataset(datasetKey: string, formData: DatasetFormData): Promise<{ success: boolean; message?: string }> {
+  async updateDataset(datasetKey: string, formData: DatasetFormData): Promise<{ success: boolean; message?: string; status?: number }> {
     try {
       const dto = this.mapFormDataToDto(formData);
       const response = await this.put<DatasetResponse>(`/datasets/${datasetKey}`, dto);
 
       if (response?.status === 'SUCCESS') {
         return { success: true };
+      } else if (response?.status === 'CONFLICT') {
+        // Name conflict during rename
+        console.warn('Dataset name conflict during update:', response.message);
+        return {
+          success: false,
+          status: 409,
+          message: response?.message || 'A dataset with this name already exists'
+        };
       } else {
         return {
           success: false,
@@ -191,8 +218,19 @@ class DatasetApi extends BaseApi {
       }
     } catch (error: any) {
       console.error(`Failed to update dataset ${datasetKey}:`, error);
+
+      // Check for 409 Conflict status
+      if (error.response?.status === 409) {
+        return {
+          success: false,
+          status: 409,
+          message: error.response?.data?.message || 'A dataset with this name already exists'
+        };
+      }
+
       return {
         success: false,
+        status: error.response?.status,
         message: error.response?.data?.message || error.message || 'Network error occurred while updating dataset'
       };
     }

@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  PlusIcon, 
+import {
+  PlusIcon,
   ArrowPathIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
+  FunnelIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { Connection, ConnectionListFilters } from '../../types/Connection';
 import ConnectionCard from './ConnectionCard';
 import ConnectionFilters from './ConnectionFilters';
 import BulkActions from './BulkActions';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import ImportDialog from '../common/ImportDialog';
+import { exportToJson, generateExportFilename, maskPasswords } from '../../utils/importExport';
 
 const ConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +32,7 @@ const ConnectionsPage: React.FC = () => {
     isOpen: boolean;
     connection: Connection | null;
   }>({ isOpen: false, connection: null });
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     loadConnections();
@@ -177,6 +181,59 @@ const ConnectionsPage: React.FC = () => {
     }
   };
 
+  const handleExport = (connection: Connection) => {
+    // Mask passwords before exporting for security
+    const maskedConnection = maskPasswords(connection);
+    const filename = generateExportFilename(connection.name, 'connection');
+    exportToJson(maskedConnection, filename);
+  };
+
+  const handleImport = async (data: Connection, newName?: string): Promise<{ success: boolean; message?: string; status?: number }> => {
+    try {
+      // If a new name was provided (due to conflict), update both name and key
+      if (newName) {
+        data = { ...data, name: newName, key: newName };
+      }
+
+      const response = await fetch('/hms-mirror/api/v1/connections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      // Check for name conflict
+      if (response.status === 409) {
+        return {
+          success: false,
+          status: 409,
+          message: result.message || `A connection with the name "${data.name}" already exists.`
+        };
+      }
+
+      if (response.ok) {
+        // Success - reload connections list
+        await loadConnections();
+        return { success: true };
+      }
+
+      // Other error
+      return {
+        success: false,
+        message: result.message || 'Failed to import connection'
+      };
+    } catch (error: any) {
+      console.error('Error importing connection:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred while importing connection'
+      };
+    }
+  };
+
   const filteredConnections = connections.filter(connection => {
     if (filters.search && !connection.name.toLowerCase().includes(filters.search.toLowerCase())) {
       return false;
@@ -228,6 +285,13 @@ const ConnectionsPage: React.FC = () => {
             >
               <ArrowPathIcon className="h-4 w-4 mr-2" />
               Refresh
+            </button>
+            <button
+              onClick={() => setShowImportDialog(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+              Import
             </button>
             <button
               onClick={handleCreateNew}
@@ -361,6 +425,7 @@ const ConnectionsPage: React.FC = () => {
                 onTest={() => testConnection(connection.key)}
                 onDuplicate={() => handleDuplicateClick(connection)}
                 onDelete={() => handleDeleteClick(connection)}
+                onExport={() => handleExport(connection)}
               />
             ))}
           </div>
@@ -377,6 +442,17 @@ const ConnectionsPage: React.FC = () => {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog<Connection>
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImport}
+        title="Import Connection"
+        itemType="Connection"
+        getNameFromData={(data) => data.name}
+        setNameInData={(data, newName) => ({ ...data, name: newName, key: newName })}
       />
     </div>
   );

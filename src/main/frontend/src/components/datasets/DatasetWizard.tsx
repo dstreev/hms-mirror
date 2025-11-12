@@ -135,11 +135,30 @@ const DatasetWizard: React.FC = () => {
         }, 2000);
       } else {
         const action = (isEditMode && !isCopyMode) ? 'update' : isCopyMode ? 'copy' : 'save';
-        setErrors({ save: result.message || `Failed to ${action} dataset` });
+
+        // Check if it's a 409 CONFLICT error (name already exists)
+        if (result.status === 409 || result.message?.includes('already exists')) {
+          // Navigate back to Basic Info step (step 0) so user can change the name
+          setCurrentStep(0);
+          setErrors({
+            name: result.message || `A dataset with the name "${formData.name}" already exists. Please use a different name.`
+          });
+        } else {
+          setErrors({ save: result.message || `Failed to ${action} dataset` });
+        }
       }
     } catch (error: any) {
       const action = (isEditMode && !isCopyMode) ? 'updating' : isCopyMode ? 'copying' : 'saving';
-      setErrors({ save: error.message || `Network error occurred while ${action} dataset` });
+
+      // Check if error response indicates name conflict
+      if (error.status === 409 || error.message?.includes('already exists')) {
+        setCurrentStep(0);
+        setErrors({
+          name: error.message || `A dataset with the name "${formData.name}" already exists. Please use a different name.`
+        });
+      } else {
+        setErrors({ save: error.message || `Network error occurred while ${action} dataset` });
+      }
     } finally {
       setSaving(false);
     }

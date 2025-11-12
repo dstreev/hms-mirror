@@ -38,6 +38,7 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/reports")
 @Slf4j

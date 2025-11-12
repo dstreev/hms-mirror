@@ -42,6 +42,7 @@ import java.util.Map;
  * Provides standardized CRUD operations for configuration storage and retrieval.
  * Follows the same patterns as ConnectionController for consistency.
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/config")
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
@@ -119,21 +120,21 @@ public class ConfigurationController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @Operation(summary = "Create or update configuration", 
-               description = "Creates a new HMS Mirror configuration or updates an existing one")
+    @Operation(summary = "Create new configuration",
+               description = "Creates a new HMS Mirror configuration. Use PUT to update existing configurations.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Configuration saved successfully"),
         @ApiResponse(responseCode = "201", description = "Configuration created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid configuration data"),
+        @ApiResponse(responseCode = "409", description = "Configuration already exists"),
         @ApiResponse(responseCode = "500", description = "Failed to save configuration")
     })
     public ResponseEntity<Map<String, Object>> saveConfiguration(
             @Parameter(description = "Configuration data", required = true)
             @RequestBody ConfigLiteDto configDto) {
-        
+
         log.info("ConfigurationController.saveConfiguration() called - name: {}}",
                 configDto.getName());
-        
+
         try {
             // Validate required fields
             if (configDto.getName() == null || configDto.getName().trim().isEmpty()) {
@@ -142,29 +143,29 @@ public class ConfigurationController {
                 errorResponse.put("message", "Configuration name is required");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Validate configuration first
             Map<String, Object> validationResult = configurationManagementService.validate(configDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
-            
-            // Check if configuration already exists
-            boolean isUpdate = configurationManagementService.exists(configDto.getName());
-            
-            // Save the configuration using the DTO version to preserve lite structure
-            Map<String, Object> result = configurationManagementService.save(configDto);
-            
+
+            // Create the configuration (will fail if already exists)
+            Map<String, Object> result = configurationManagementService.create(configDto);
+
             if ("SUCCESS".equals(result.get("status"))) {
-                HttpStatus status = isUpdate ? HttpStatus.OK : HttpStatus.CREATED;
-                result.put("operation", isUpdate ? "updated" : "created");
-                return ResponseEntity.status(status).body(result);
+                result.put("operation", "created");
+                return ResponseEntity.status(HttpStatus.CREATED).body(result);
+            } else if ("CONFLICT".equals(result.get("status"))) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", result.get("message"));
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
             } else {
                 log.error("Failed to save configuration {}: {}",
                         configDto.getName(), result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
             log.error("Error saving configuration {}", configDto.getName(), e);
             Map<String, Object> errorResponse = new HashMap<>();

@@ -21,6 +21,10 @@ import DatasetWizard from './components/datasets/DatasetWizard';
 import ListDatasetsPage from './components/datasets/ListDatasetsPage';
 import JobsBuildPage from './components/jobs/JobsBuildPage';
 import JobBuildWizard from './components/jobs/JobBuildWizard';
+import RuntimeJobsPage from './components/runtime/RuntimeJobsPage';
+import RuntimeReportsPage from './components/runtime/RuntimeReportsPage';
+import RuntimeReportDetailsPage from './components/runtime/RuntimeReportDetailsPage';
+import CliReportsPage from './components/utilities/CliReportsPage';
 
 const App: React.FC = () => {
   return (
@@ -45,7 +49,10 @@ const App: React.FC = () => {
         
         {/* RocksDB management routes - always accessible */}
         <Route path="/rocksdb" element={<RocksDBPage />} />
-        
+
+        {/* Utilities routes - always accessible */}
+        <Route path="/utilities/cli-reports" element={<CliReportsPage />} />
+
         {/* Dataset management routes - always accessible */}
         <Route path="/datasets" element={<ListDatasetsPage />} />
         <Route path="/datasets/new" element={<DatasetWizard />} />
@@ -55,10 +62,16 @@ const App: React.FC = () => {
         {/* Jobs management routes - always accessible */}
         <Route path="/jobs/build" element={<JobsBuildPage />} />
         <Route path="/jobs/list" element={<JobsBuildPage />} />
-        <Route path="/jobs/execute" element={<div>Execute page placeholder</div>} />
+        <Route path="/jobs/execute" element={<RuntimeJobsPage />} />
         <Route path="/jobs/build/wizard" element={<JobBuildWizard />} />
-        
-        
+
+        {/* Runtime Jobs routes - always accessible */}
+        <Route path="/runtime/jobs" element={<RuntimeJobsPage />} />
+
+        {/* Runtime Reports routes - always accessible */}
+        <Route path="/runtime/reports" element={<RuntimeReportsPage />} />
+        <Route path="/runtime/reports/:key" element={<RuntimeReportDetailsPage />} />
+
         {/* Protected feature routes */}
         <Route path="/encryption" element={<RequireConfiguration><PasswordEncryptionPage /></RequireConfiguration>} />
         <Route path="/execution" element={<RequireConfiguration><RequirePasswordKey><ExecutionPage /></RequirePasswordKey></RequireConfiguration>} />

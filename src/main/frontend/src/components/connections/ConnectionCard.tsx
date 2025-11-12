@@ -1,9 +1,10 @@
 import React from 'react';
-import { 
-  PencilIcon, 
-  BeakerIcon, 
-  DocumentDuplicateIcon, 
-  TrashIcon
+import {
+  PencilIcon,
+  BeakerIcon,
+  DocumentDuplicateIcon,
+  TrashIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { Connection, getConnectionStatusColor, getConnectionStatusIcon } from '../../types/Connection';
 
@@ -15,6 +16,7 @@ interface ConnectionCardProps {
   onTest: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onExport: () => void;
 }
 
 const ConnectionCard: React.FC<ConnectionCardProps> = ({
@@ -24,7 +26,8 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
   onEdit,
   onTest,
   onDuplicate,
-  onDelete
+  onDelete,
+  onExport
 }) => {
   const statusColor = getConnectionStatusColor(connection);
   const statusIcon = getConnectionStatusIcon(connection);
@@ -170,7 +173,16 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
                 <BeakerIcon className="h-3 w-3 mr-1" />
                 Test
               </button>
-              
+
+              <button
+                onClick={onExport}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                title="Export connection to JSON"
+              >
+                <ArrowDownTrayIcon className="h-3 w-3 mr-1" />
+                Export
+              </button>
+
               <button
                 onClick={onDuplicate}
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -179,7 +191,7 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
                 <DocumentDuplicateIcon className="h-3 w-3 mr-1" />
                 Copy
               </button>
-              
+
               <button
                 onClick={onDelete}
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"

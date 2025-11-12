@@ -75,8 +75,6 @@ const JobBuildWizard: React.FC = () => {
   
   // Dataset search functionality
   const [datasetSearchQuery, setDatasetSearchQuery] = useState('');
-  const [useDatasetRegex, setUseDatasetRegex] = useState(false);
-  const [datasetKeys, setDatasetKeys] = useState<string[]>([]);
 
   // Configuration search functionality
   const [configSearchQuery, setConfigSearchQuery] = useState('');
@@ -203,22 +201,6 @@ const JobBuildWizard: React.FC = () => {
   // Dataset search functionality - use the already loaded datasets
   const getDatasetKeys = () => {
     return datasets.map(dataset => dataset.name);
-  };
-
-  const datasetKeyMatchesSearch = (key: string, query: string): boolean => {
-    if (query === '') return true;
-    
-    if (useDatasetRegex) {
-      try {
-        const regex = new RegExp(query, 'i');
-        return regex.test(key);
-      } catch (e) {
-        console.warn(`Invalid regex pattern: ${query}, falling back to string matching`);
-        return key.toLowerCase().includes(query.toLowerCase());
-      }
-    } else {
-      return key.toLowerCase().includes(query.toLowerCase());
-    }
   };
 
   // Filtered dataset keys for SearchableInput component
@@ -504,27 +486,6 @@ const JobBuildWizard: React.FC = () => {
               placeholder="Type to search for datasets..."
               error={errors.datasetReference}
             />
-            
-            {/* Regex Toggle */}
-            <div className="mt-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={useDatasetRegex}
-                  onChange={(e) => setUseDatasetRegex(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-600">Use regex pattern matching</span>
-              </label>
-            </div>
-            
-            {/* No datasets warning */}
-            {datasetKeys.length === 0 && (
-              <p className="mt-1 text-sm text-amber-600">
-                <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" />
-                No dataset keys found. Please create a dataset first.
-              </p>
-            )}
           </div>
         );
 

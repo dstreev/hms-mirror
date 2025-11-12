@@ -20,6 +20,7 @@ package com.cloudera.utils.hms.mirror.domain.support;
 import com.cloudera.utils.hms.mirror.MessageCode;
 import com.cloudera.utils.hms.mirror.domain.core.Messages;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -34,6 +35,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,8 +49,10 @@ import static java.util.Objects.nonNull;
 public class RunStatus implements Comparable<RunStatus>, Cloneable {
     private String key;
 
-    private Date start = null;
-    private Date end = null;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime start = null;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime end = null;
 
     private String comment;
 
@@ -106,15 +111,6 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
     }
 
     @JsonIgnore
-    public long getRuntimeMS() {
-        if (nonNull(start) && nonNull(end)) {
-            return end.getTime() - start.getTime();
-        } else {
-            return 0;
-        }
-    }
-
-    @JsonIgnore
     public long getReturnCode() {
         if (errors == null) {
             return 0;
@@ -144,11 +140,11 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
 
     @JsonIgnore
     public long getDuration() {
-        long rtn = 0;
         if (nonNull(start) && nonNull(end)) {
-            rtn = end.getTime() - start.getTime();
+            Duration duration = Duration.between(start, end);
+            return duration.toMillis();
         }
-        return rtn;
+        return 0;
     }
 
     @Override

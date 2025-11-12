@@ -177,7 +177,7 @@ public class ConnectionManagementService {
             // Check if a connection with this key already exists
             if (connectionRepository.existsById(connectionDto.getKey())) {
                 Map<String, Object> result = new HashMap<>();
-                result.put("status", "ERROR");
+                result.put("status", "CONFLICT");
                 result.put("message", "Connection with key '" + connectionDto.getKey() + "' already exists");
                 return result;
             }

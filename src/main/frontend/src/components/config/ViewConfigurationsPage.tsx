@@ -9,11 +9,16 @@ import {
   FolderIcon,
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { configApi } from '../../services/api/configApi';
+import { HmsMirrorConfig } from '../../types/api';
 import ConfigurationFilters, { ConfigurationListFilters } from './ConfigurationFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import ImportDialog from '../common/ImportDialog';
+import { exportToJson, generateExportFilename } from '../../utils/importExport';
 
 interface Configuration {
   name: string;
@@ -40,6 +45,7 @@ const ViewConfigurationsPage: React.FC = () => {
     isOpen: boolean;
     configuration: Configuration | null;
   }>({ isOpen: false, configuration: null });
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     // Reset state and fetch configurations whenever we navigate to this page
@@ -167,6 +173,66 @@ const ViewConfigurationsPage: React.FC = () => {
     navigate('/config/new');
   };
 
+  const handleExport = async (config: Configuration, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    try {
+      // Load the full configuration data from the backend
+      const response = await configApi.getConfiguration(config.name);
+
+      if (response && response.status === 'SUCCESS' && response.configuration) {
+        const filename = generateExportFilename(config.name, 'config');
+        exportToJson(response.configuration, filename);
+      } else {
+        setError(`Failed to load configuration: ${config.name}`);
+      }
+    } catch (error) {
+      console.error(`Failed to export configuration ${config.name}:`, error);
+      setError(`Failed to export configuration: ${config.name}`);
+    }
+  };
+
+  const handleImportClick = () => {
+    setShowImportDialog(true);
+  };
+
+  const handleImport = async (data: HmsMirrorConfig, newName?: string): Promise<{ success: boolean; message?: string; status?: number }> => {
+    try {
+      // If a new name was provided (due to conflict), update both name and key
+      if (newName) {
+        data = { ...data, name: newName, key: newName };
+      }
+
+      const result = await configApi.saveConfiguration(data as any);
+
+      if (result.success) {
+        // Success - reload configurations list
+        await fetchConfigurations();
+        return { success: true };
+      } else if (result.status === 409) {
+        // Conflict - configuration already exists
+        return {
+          success: false,
+          status: 409,
+          message: result.message || `A configuration with the name "${data.name}" already exists.`
+        };
+      } else {
+        // Other error
+        return {
+          success: false,
+          message: result.message || 'Failed to import configuration'
+        };
+      }
+    } catch (error: any) {
+      console.error('Error importing configuration:', error);
+
+      return {
+        success: false,
+        message: error.message || 'Network error occurred while importing configuration'
+      };
+    }
+  };
+
   const handleDeleteClick = (config: Configuration, event: React.MouseEvent) => {
     event.stopPropagation();
     setDeleteDialog({ isOpen: true, configuration: config });
@@ -266,6 +332,13 @@ const ViewConfigurationsPage: React.FC = () => {
             >
               <ArrowPathIcon className="h-4 w-4 mr-2" />
               Refresh
+            </button>
+            <button
+              onClick={handleImportClick}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+              Import
             </button>
             <button
               onClick={handleCreateNew}
@@ -398,6 +471,15 @@ const ViewConfigurationsPage: React.FC = () => {
                       </button>
 
                       <button
+                        onClick={(e) => handleExport(config, e)}
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        title="Export configuration to JSON"
+                      >
+                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                        Export
+                      </button>
+
+                      <button
                         onClick={(e) => handleCopyConfiguration(config, e)}
                         className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                         title="Copy configuration"
@@ -433,6 +515,17 @@ const ViewConfigurationsPage: React.FC = () => {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog<HmsMirrorConfig>
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImport}
+        title="Import Configuration"
+        itemType="Configuration"
+        getNameFromData={(data) => data.name || ''}
+        setNameInData={(data, newName) => ({ ...data, name: newName, key: newName })}
       />
     </div>
   );

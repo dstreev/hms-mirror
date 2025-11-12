@@ -41,6 +41,7 @@ import java.util.Map;
  * Provides standardized CRUD operations for dataset storage and retrieval.
  * Follows the same patterns as ConfigurationController for consistency.
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/datasets")
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
@@ -118,56 +119,63 @@ public class DatasetController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @Operation(summary = "Create or update dataset", 
-               description = "Creates a new HMS Mirror dataset or updates an existing one")
+    @Operation(summary = "Create new dataset",
+               description = "Creates a new HMS Mirror dataset. Returns 409 if a dataset with this name already exists.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Dataset saved successfully"),
         @ApiResponse(responseCode = "201", description = "Dataset created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid dataset data"),
+        @ApiResponse(responseCode = "409", description = "Dataset with this name already exists"),
         @ApiResponse(responseCode = "500", description = "Failed to save dataset")
     })
     public ResponseEntity<Map<String, Object>> saveDataset(
             @Parameter(description = "Dataset data", required = true)
             @RequestBody DatasetDto datasetDto) {
-        
+
         log.info("DatasetController.saveDataset() called - name: {}",
                 datasetDto.getName());
-        
+
         try {
             // Validate required fields
             if (datasetDto.getName() == null || datasetDto.getName().trim().isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("status", "error");
+                errorResponse.put("status", "ERROR");
                 errorResponse.put("message", "Dataset name is required");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
-            // Validate dataset first
+
+            // Check if dataset with this name already exists
+            boolean exists = datasetManagementService.exists(datasetDto.getKey());
+            if (exists) {
+                log.warn("Dataset with name '{}' already exists", datasetDto.getName());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "CONFLICT");
+                errorResponse.put("message", "A dataset with the name '" + datasetDto.getName() + "' already exists. Please use a different name.");
+                errorResponse.put("existingName", datasetDto.getName());
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+            }
+
+            // Validate dataset
             Map<String, Object> validationResult = datasetManagementService.validate(datasetDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
 
-            // Check if dataset already exists
-            boolean isUpdate = datasetManagementService.exists(datasetDto.getKey());
-            
-            // Save the dataset
+            // Save the new dataset
             Map<String, Object> result = datasetManagementService.save(datasetDto);
-            
+
             if ("SUCCESS".equals(result.get("status"))) {
-                HttpStatus status = isUpdate ? HttpStatus.OK : HttpStatus.CREATED;
-                result.put("operation", isUpdate ? "updated" : "created");
-                return ResponseEntity.status(status).body(result);
+                result.put("operation", "created");
+                return ResponseEntity.status(HttpStatus.CREATED).body(result);
             } else {
                 log.error("Failed to save dataset {}: {}",
                         datasetDto.getName(), result.get("message"));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
             }
-            
+
         } catch (Exception e) {
             log.error("Error saving dataset {}", datasetDto.getName(), e);
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
+            errorResponse.put("status", "ERROR");
             errorResponse.put("message", "Failed to save dataset: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
@@ -175,36 +183,80 @@ public class DatasetController {
 
     @PutMapping(value = "/{key}", consumes = "application/json", produces = "application/json")
     @Operation(summary = "Update existing dataset",
-               description = "Updates an existing HMS Mirror dataset")
+               description = "Updates an existing HMS Mirror dataset. Can rename dataset if name is changed.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dataset updated successfully"),
         @ApiResponse(responseCode = "404", description = "Dataset not found"),
         @ApiResponse(responseCode = "400", description = "Invalid dataset data"),
+        @ApiResponse(responseCode = "409", description = "New name conflicts with existing dataset"),
         @ApiResponse(responseCode = "500", description = "Failed to update dataset")
     })
     public ResponseEntity<Map<String, Object>> updateDataset(
-            @Parameter(description = "Dataset key", required = true)
+            @Parameter(description = "Dataset key (original name)", required = true)
             @PathVariable String key,
             @Parameter(description = "Updated dataset data", required = true)
             @RequestBody DatasetDto datasetDto) {
 
-        log.info("DatasetController.updateDataset() called - key: {}", key);
+        log.info("DatasetController.updateDataset() called - key: {}, new name: {}", key, datasetDto.getName());
 
         try {
-            // Validate dataset first
+            // Validate required fields
+            if (datasetDto.getName() == null || datasetDto.getName().trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "ERROR");
+                errorResponse.put("message", "Dataset name is required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Check if original dataset exists
+            if (!datasetManagementService.exists(key)) {
+                log.warn("Dataset with key '{}' not found", key);
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "NOT_FOUND");
+                errorResponse.put("message", "Dataset '" + key + "' not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+
+            // Check if name is being changed
+            String newName = datasetDto.getName();
+            boolean isRename = !key.equals(newName);
+
+            if (isRename) {
+                // Check if new name already exists
+                if (datasetManagementService.exists(newName)) {
+                    log.warn("Cannot rename dataset '{}' to '{}' - name already exists", key, newName);
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("status", "CONFLICT");
+                    errorResponse.put("message", "A dataset with the name '" + newName + "' already exists. Please use a different name.");
+                    errorResponse.put("existingName", newName);
+                    errorResponse.put("originalName", key);
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+                }
+                log.info("Renaming dataset from '{}' to '{}'", key, newName);
+            }
+
+            // Validate dataset
             Map<String, Object> validationResult = datasetManagementService.validate(datasetDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
 
-            // Ensure the DTO has the correct key from the path
-//            datasetDto.setKey(key);
-
-            // Update the dataset
-            Map<String, Object> result = datasetManagementService.update(datasetDto);
+            // Update the dataset (handles rename internally if needed)
+            Map<String, Object> result;
+            if (isRename) {
+                // For rename: delete old key, save with new key
+                result = datasetManagementService.rename(key, datasetDto);
+            } else {
+                // For update: just save with same key
+                result = datasetManagementService.update(datasetDto);
+            }
 
             if ("SUCCESS".equals(result.get("status"))) {
-                result.put("operation", "updated");
+                result.put("operation", isRename ? "renamed" : "updated");
+                if (isRename) {
+                    result.put("oldName", key);
+                    result.put("newName", newName);
+                }
                 return ResponseEntity.ok(result);
             } else if ("NOT_FOUND".equals(result.get("status"))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
@@ -216,7 +268,7 @@ public class DatasetController {
         } catch (Exception e) {
             log.error("Error updating dataset {}", key, e);
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
+            errorResponse.put("status", "ERROR");
             errorResponse.put("message", "Failed to update dataset: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }

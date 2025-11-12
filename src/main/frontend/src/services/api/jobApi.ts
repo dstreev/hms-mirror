@@ -48,7 +48,7 @@ export interface JobResponse {
 
 class JobApi extends BaseApi {
   constructor() {
-    super();
+    super('/hms-mirror/api/v1');
   }
 
   /**
@@ -56,7 +56,7 @@ class JobApi extends BaseApi {
    */
   async getJobs(): Promise<JobListResponse | null> {
     try {
-      const response = await this.get<JobListResponse>('/v1/jobs');
+      const response = await this.get<JobListResponse>('/jobs');
       return response;
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
@@ -69,7 +69,7 @@ class JobApi extends BaseApi {
    */
   async getJob(jobKey: string): Promise<{ job: JobDto; jobKey: string } | null> {
     try {
-      const response = await this.get<JobResponse>(`/v1/jobs/${jobKey}`);
+      const response = await this.get<JobResponse>(`/jobs/${jobKey}`);
       if (response?.status === 'SUCCESS' && response.job && response.jobKey) {
         return { job: response.job, jobKey: response.jobKey };
       }
@@ -85,7 +85,7 @@ class JobApi extends BaseApi {
    */
   async saveJob(jobKey: string, jobDto: JobDto): Promise<{ success: boolean; message?: string; operation?: string }> {
     try {
-      const response = await this.post<JobResponse>(`/v1/jobs/${jobKey}`, jobDto);
+      const response = await this.post<JobResponse>(`/jobs/${jobKey}`, jobDto);
 
       if (response?.status === 'SUCCESS' || response?.status === 'success') {
         return {
@@ -112,7 +112,7 @@ class JobApi extends BaseApi {
    */
   async updateJob(jobKey: string, jobDto: JobDto): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await this.put<JobResponse>(`/v1/jobs/${jobKey}`, jobDto);
+      const response = await this.put<JobResponse>(`/jobs/${jobKey}`, jobDto);
 
       if (response?.status === 'SUCCESS' || response?.status === 'success') {
         return {
@@ -136,9 +136,9 @@ class JobApi extends BaseApi {
   /**
    * Delete a job
    */
-  async deleteJob(jobName: string): Promise<{ success: boolean; message?: string }> {
+  async deleteJob(jobKey: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await this.delete<{ status: string; message?: string }>(`/v1/jobs/${jobName}`);
+      const response = await this.delete<{ status: string; message?: string }>(`/jobs/${jobKey}`);
 
       if (response?.status === 'SUCCESS' || response?.status === 'success') {
         return {
@@ -164,7 +164,7 @@ class JobApi extends BaseApi {
    */
   async copyJob(sourceJobName: string, targetJobName: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await this.post<JobResponse>(`/v1/jobs/copy/${sourceJobName}`, {
+      const response = await this.post<JobResponse>(`/jobs/copy/${sourceJobName}`, {
         targetJobName
       });
 
@@ -204,7 +204,7 @@ class JobApi extends BaseApi {
         message?: string;
         errors?: string[];
         warnings?: string[];
-      }>(`/v1/jobs/${jobKey}/validate`, {});
+      }>(`/jobs/${jobKey}/validate`, {});
 
       if (response?.status === 'SUCCESS' || response?.status === 'success') {
         return {

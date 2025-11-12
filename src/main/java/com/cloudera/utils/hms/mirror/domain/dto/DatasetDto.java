@@ -51,7 +51,7 @@ public class DatasetDto implements Cloneable {
     // This would be the top level Key for the RocksDB columnFamily.
 //    private String key = null;
 
-    private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
+    private String key = null; //LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
 
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
     private String name;
@@ -67,6 +67,17 @@ public class DatasetDto implements Cloneable {
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
+
+    public String getKey() {
+        if (key == null) {
+            if (name == null) {
+                throw new IllegalStateException("name is required");
+            } else {
+                key = name;
+            }
+        }
+        return key;
+    }
 
     public DatabaseSpec getDatabase(String databaseName) {
         if (databaseName != null && databases != null) {

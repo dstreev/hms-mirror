@@ -27,16 +27,25 @@ public class ReactResourceConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve React static files from /react directory but at root paths
-        // This maps /static/** requests to /static/react/static/**
-        registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static/react/static/");
-        
-        // Map /manifest.json to /react/manifest.json
+        // IMPORTANT: context-path is /hms-mirror, so these paths are relative to that
+        // When user requests /hms-mirror/index.html, Spring sees /index.html
+
+        // Serve React app root files (index.html, manifest.json, favicon.ico)
+        registry.addResourceHandler("/index.html")
+                .addResourceLocations("classpath:/static/react/")
+                .resourceChain(false);
+
         registry.addResourceHandler("/manifest.json")
                 .addResourceLocations("classpath:/static/react/");
-        
-        // Map /react/** to serve the actual files from /static/react/**
+
+        registry.addResourceHandler("/favicon.ico")
+                .addResourceLocations("classpath:/static/react/");
+
+        // Serve React static assets (JS, CSS, images)
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/react/static/");
+
+        // Legacy /react/** path for backward compatibility
         registry.addResourceHandler("/react/**")
                 .addResourceLocations("classpath:/static/react/");
     }

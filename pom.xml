@@ -495,4 +495,250 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- Build Profiles for GraalVM Native Image and Jib -->
+    <profiles>
+        <!-- GraalVM Native Image Profile -->
+        <profile>
+            <id>native</id>
+            <properties>
+                <native.image.name>hms-mirror-native</native.image.name>
+            </properties>
+            <dependencies>
+                <!-- GraalVM Native Image Dependencies -->
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-actuator</artifactId>
+                    <version>${springboot.version}</version>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!-- Spring Boot Maven Plugin with Native Image support -->
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <version>${springboot.version}</version>
+                        <configuration>
+                            <mainClass>com.cloudera.utils.hms.mirror.web.Mirror</mainClass>
+                            <image>
+                                <builder>paketobuildpacks/builder:tiny</builder>
+                                <env>
+                                    <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                                    <BP_JVM_VERSION>17</BP_JVM_VERSION>
+                                    <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                                        --no-fallback
+                                        --initialize-at-build-time=org.slf4j
+                                        -H:+ReportExceptionStackTraces
+                                        -H:+AddAllCharsets
+                                        --enable-url-protocols=http,https
+                                    </BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                                </env>
+                            </image>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-image</id>
+                                <goals>
+                                    <goal>build-image</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Native Build Tools Plugin for metadata generation -->
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.10.3</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                            <execution>
+                                <id>test-native</id>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <phase>test</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <imageName>${native.image.name}</imageName>
+                            <mainClass>com.cloudera.utils.hms.mirror.web.Mirror</mainClass>
+                            <buildArgs>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>--initialize-at-build-time=org.slf4j,ch.qos.logback</buildArg>
+                                <buildArg>--initialize-at-run-time=io.netty,org.apache.hadoop</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                <buildArg>-H:+AddAllCharsets</buildArg>
+                                <buildArg>--enable-url-protocols=http,https</buildArg>
+                                <buildArg>--enable-all-security-services</buildArg>
+                                <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/META-INF/native-image/resource-config.json</buildArg>
+                                <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/src/main/resources/META-INF/native-image/reflect-config.json</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Jib Container Build Profile -->
+        <profile>
+            <id>jib</id>
+            <properties>
+                <jib.container.appRoot>/opt/hms-mirror</jib.container.appRoot>
+                <jib.container.user>1001</jib.container.user>
+                <jib.container.ports>8080,8443</jib.container.ports>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- Jib Maven Plugin for containerization -->
+                    <plugin>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <version>3.4.4</version>
+                        <configuration>
+                            <!-- Base image -->
+                            <from>
+                                <image>eclipse-temurin:17-jre-jammy</image>
+                                <platforms>
+                                    <platform>
+                                        <architecture>amd64</architecture>
+                                        <os>linux</os>
+                                    </platform>
+                                    <platform>
+                                        <architecture>arm64</architecture>
+                                        <os>linux</os>
+                                    </platform>
+                                </platforms>
+                            </from>
+
+                            <!-- Target image configuration -->
+                            <to>
+                                <image>hms-mirror:${project.version}</image>
+                                <tags>
+                                    <tag>latest</tag>
+                                    <tag>${project.version}</tag>
+                                </tags>
+                            </to>
+
+                            <!-- Container configuration -->
+                            <container>
+                                <appRoot>${jib.container.appRoot}</appRoot>
+                                <workingDirectory>${jib.container.appRoot}</workingDirectory>
+                                <user>${jib.container.user}</user>
+                                <format>OCI</format>
+
+                                <!-- Ports to expose -->
+                                <ports>
+                                    <port>8080</port>
+                                    <port>8443</port>
+                                </ports>
+
+                                <!-- Environment variables -->
+                                <environment>
+                                    <JAVA_TOOL_OPTIONS>-Xms4096m -Xmx8192m -XX:+UseG1GC</JAVA_TOOL_OPTIONS>
+                                    <HMS_MIRROR_HOME>${jib.container.appRoot}</HMS_MIRROR_HOME>
+                                    <HMS_MIRROR_ROCKSDB_ENABLED>true</HMS_MIRROR_ROCKSDB_ENABLED>
+                                </environment>
+
+                                <!-- JVM flags -->
+                                <jvmFlags>
+                                    <jvmFlag>-Xms4096m</jvmFlag>
+                                    <jvmFlag>-Xmx8192m</jvmFlag>
+                                    <jvmFlag>-XX:+UseG1GC</jvmFlag>
+                                    <jvmFlag>-XX:MaxGCPauseMillis=200</jvmFlag>
+                                    <jvmFlag>-XX:InitiatingHeapOccupancyPercent=45</jvmFlag>
+                                    <jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
+                                </jvmFlags>
+
+                                <!-- Main class -->
+                                <mainClass>com.cloudera.utils.hms.mirror.web.Mirror</mainClass>
+
+                                <!-- Creation timestamp -->
+                                <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+
+                                <!-- Labels -->
+                                <labels>
+                                    <org.opencontainers.image.title>HMS Mirror</org.opencontainers.image.title>
+                                    <org.opencontainers.image.description>Hive Metastore Migration Tool</org.opencontainers.image.description>
+                                    <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
+                                    <org.opencontainers.image.vendor>Cloudera</org.opencontainers.image.vendor>
+                                    <org.opencontainers.image.url>https://github.com/cloudera-labs/hms_mirror</org.opencontainers.image.url>
+                                </labels>
+                            </container>
+
+                            <!-- Extra directories to include in the image -->
+                            <extraDirectories>
+                                <paths>
+                                    <path>
+                                        <from>target/drivers</from>
+                                        <into>${jib.container.appRoot}/drivers</into>
+                                    </path>
+                                </paths>
+                                <permissions>
+                                    <permission>
+                                        <file>${jib.container.appRoot}/drivers/**</file>
+                                        <mode>755</mode>
+                                    </permission>
+                                </permissions>
+                            </extraDirectories>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Jib Docker Daemon Profile (for local testing) -->
+        <profile>
+            <id>jib-docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <version>3.4.4</version>
+                        <configuration>
+                            <!-- Inherit config from jib profile but build to Docker daemon -->
+                            <from>
+                                <image>eclipse-temurin:17-jre-jammy</image>
+                            </from>
+                            <to>
+                                <image>hms-mirror:${project.version}</image>
+                            </to>
+                            <container>
+                                <mainClass>com.cloudera.utils.hms.mirror.web.Mirror</mainClass>
+                                <ports>
+                                    <port>8080</port>
+                                    <port>8443</port>
+                                </ports>
+                            </container>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>dockerBuild</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

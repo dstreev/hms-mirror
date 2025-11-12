@@ -86,13 +86,25 @@ class ConfigApi extends BaseApi {
     }
   }
 
-  async saveConfiguration(configDto: ConfigurationDto): Promise<boolean> {
+  async saveConfiguration(configDto: ConfigurationDto): Promise<{ success: boolean; status?: number; message?: string }> {
     try {
       const response = await this.post<ConfigurationResponse>('/config', configDto);
-      return response?.status === 'SUCCESS';
-    } catch (error) {
+      return {
+        success: response?.status === 'SUCCESS',
+        message: response?.message
+      };
+    } catch (error: any) {
       console.error('Failed to save configuration:', error);
-      return false;
+
+      // Extract status code and message from axios error
+      const status = error.response?.status;
+      const message = error.response?.data?.message || error.message || 'Failed to save configuration';
+
+      return {
+        success: false,
+        status: status,
+        message: message
+      };
     }
   }
 

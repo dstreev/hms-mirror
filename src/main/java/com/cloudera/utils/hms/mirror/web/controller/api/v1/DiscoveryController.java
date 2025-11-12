@@ -41,6 +41,7 @@ import java.util.Map;
  * REST Controller for discovering databases and tables from HiveServer2 connections.
  * Provides endpoints to query metadata without requiring a full migration session.
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/connections")
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)

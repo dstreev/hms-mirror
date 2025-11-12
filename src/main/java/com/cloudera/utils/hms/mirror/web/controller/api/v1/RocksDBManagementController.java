@@ -46,6 +46,7 @@ import java.util.Map;
  * REST controller for RocksDB management operations.
  * Provides endpoints for monitoring health, statistics, compaction, and other management tasks.
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/rocksdb")
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
@@ -60,6 +61,8 @@ public class RocksDBManagementController {
     private final ColumnFamilyHandle connectionsColumnFamily;
     private final ColumnFamilyHandle datasetsColumnFamily;
     private final ColumnFamilyHandle jobsColumnFamily;
+    private final ColumnFamilyHandle conversionResultColumnFamily;
+    private final ColumnFamilyHandle runStatusColumnFamily;
 
     @Autowired
     public RocksDBManagementController(RocksDBManagementService managementService,
@@ -68,7 +71,9 @@ public class RocksDBManagementController {
                                      @Qualifier("sessionsColumnFamily") ColumnFamilyHandle sessionsColumnFamily,
                                      @Qualifier("connectionsColumnFamily") ColumnFamilyHandle connectionsColumnFamily,
                                      @Qualifier("datasetsColumnFamily") ColumnFamilyHandle datasetsColumnFamily,
-                                     @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily) {
+                                     @Qualifier("jobsColumnFamily") ColumnFamilyHandle jobsColumnFamily,
+                                     @Qualifier("conversionResultColumnFamily") ColumnFamilyHandle conversionResultColumnFamily,
+                                     @Qualifier("runStatusColumnFamily") ColumnFamilyHandle runStatusColumnFamily) {
         this.managementService = managementService;
         this.configurationManagementService = configurationManagementService;
         this.configurationsColumnFamily = configurationsColumnFamily;
@@ -76,6 +81,8 @@ public class RocksDBManagementController {
         this.connectionsColumnFamily = connectionsColumnFamily;
         this.datasetsColumnFamily = datasetsColumnFamily;
         this.jobsColumnFamily = jobsColumnFamily;
+        this.conversionResultColumnFamily = conversionResultColumnFamily;
+        this.runStatusColumnFamily = runStatusColumnFamily;
     }
 
     @GetMapping("/health")
@@ -576,6 +583,10 @@ public class RocksDBManagementController {
                 return datasetsColumnFamily;
             case "jobs":
                 return jobsColumnFamily;
+            case "conversionresult":
+                return conversionResultColumnFamily;
+            case "runstatus":
+                return runStatusColumnFamily;
             default:
                 return null;
         }

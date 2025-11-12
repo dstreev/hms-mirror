@@ -422,18 +422,26 @@ public class JobManagementService {
      * @return ConversionResult instance constructed from the JobDto's references, or null if not found
      */
     public ConversionResult buildConversionResultFromJobId(String jobId) {
-        log.debug("Building ConversionResult from jobId: {}", jobId);
+        log.info("=== Building ConversionResult from jobId: {} ===", jobId);
 
         try {
             // First, look up the JobDto by ID
+            log.info("Looking up job with key: {}", jobId);
             Optional<JobDto> jobOpt = jobRepository.findByKey(jobId);
             if (!jobOpt.isPresent()) {
-                log.error("Job not found: {}", jobId);
+                log.error("Job not found with key: {}", jobId);
+                // List all jobs to see what keys exist
+                try {
+                    Map<String, JobDto> allJobs = jobRepository.findAll();
+                    log.error("Available job keys in RocksDB: {}", allJobs.keySet());
+                } catch (Exception e) {
+                    log.error("Could not list jobs", e);
+                }
                 return null;
             }
 
             JobDto jobDto = jobOpt.get();
-            log.debug("Found job: {}", jobDto.getName());
+            log.info("Found job: {} with key: {}", jobDto.getName(), jobDto.getKey());
 
             // Fetch referenced DTOs
             Map<String, Object> leftConnResult = connectionManagementService.load(jobDto.getLeftConnectionReference());

@@ -46,6 +46,7 @@ import java.util.Map;
  * REST Controller for HMS Mirror Job Management.
  * Provides job creation and management operations.
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/jobs")
 @ConditionalOnProperty(name = "hms-mirror.rocksdb.enabled", havingValue = "true", matchIfMissing = false)
@@ -228,7 +229,9 @@ public class JobsController {
 
         try {
             // Build ConversionResult from job
+            log.info("About to call jobManagementService.buildConversionResultFromJobId with key: {}", jobKey);
             ConversionResult conversionResult = jobManagementService.buildConversionResultFromJobId(jobKey);
+            log.info("buildConversionResultFromJobId returned: {}", conversionResult != null ? "non-null" : "null");
 
             if (conversionResult == null) {
                 Map<String, Object> errorResponse = new HashMap<>();

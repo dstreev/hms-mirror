@@ -187,7 +187,7 @@ const JobsBuildPage: React.FC = () => {
 
     try {
       setError(null);
-      const result = await jobApi.deleteJob(deleteDialog.job.name);
+      const result = await jobApi.deleteJob(deleteDialog.job.jobKey || deleteDialog.job.name);
 
       if (result.success) {
         setDeleteDialog({ isOpen: false, job: null });

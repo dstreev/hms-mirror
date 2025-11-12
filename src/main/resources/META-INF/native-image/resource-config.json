@@ -1,0 +1,65 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "application\\.yaml"
+      },
+      {
+        "pattern": "application.*\\.yaml"
+      },
+      {
+        "pattern": "application\\.properties"
+      },
+      {
+        "pattern": "application.*\\.properties"
+      },
+      {
+        "pattern": "META-INF/spring\\.factories"
+      },
+      {
+        "pattern": "META-INF/spring-configuration-metadata\\.json"
+      },
+      {
+        "pattern": "META-INF/additional-spring-configuration-metadata\\.json"
+      },
+      {
+        "pattern": "static/.*"
+      },
+      {
+        "pattern": "templates/.*"
+      },
+      {
+        "pattern": ".*\\.html"
+      },
+      {
+        "pattern": ".*\\.js"
+      },
+      {
+        "pattern": ".*\\.css"
+      },
+      {
+        "pattern": ".*\\.json"
+      },
+      {
+        "pattern": ".*\\.xml"
+      },
+      {
+        "pattern": "org/springframework/.*"
+      },
+      {
+        "pattern": "org/rocksdb/.*\\.so"
+      },
+      {
+        "pattern": "org/rocksdb/.*\\.dll"
+      },
+      {
+        "pattern": "org/rocksdb/.*\\.dylib"
+      }
+    ]
+  },
+  "bundles": [
+    {
+      "name": "messages"
+    }
+  ]
+}

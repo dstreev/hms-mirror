@@ -92,7 +92,10 @@
       "Bash(do)",
       "Bash(for file in /Users/dstreev/projects/hms-mirror/src/main/java/com/cloudera/utils/hms/mirror/repository/rocksDbImpl/*RepositoryImpl.java)",
       "Bash(if ! grep -q \"import com.cloudera.utils.hms.mirror.exceptions.RepositoryException\" \"$file\")",
-      "Bash(then)"
+      "Bash(then)",
+      "Bash(http://localhost:8090/hms-mirror/api/v1/jobs/20251111_124154255_ab6a/validate)",
+      "Bash(open http://localhost:8090/hms-mirror/)",
+      "Bash(/dev/null sleep 3 echo 'Killed existing server')"
     ],
     "deny": [],
     "ask": [],

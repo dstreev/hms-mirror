@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/connections")
 @Getter
@@ -387,6 +388,10 @@ public class ConnectionController {
             response.put("message", result.get("message"));
             response.put("key", result.get("key"));
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else if ("CONFLICT".equals(status)) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", result.get("message"));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
         } else {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", result.get("message"));

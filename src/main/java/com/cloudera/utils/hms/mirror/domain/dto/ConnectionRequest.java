@@ -18,11 +18,13 @@
 package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.Map;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ConnectionRequest {
     private String name;
     private String description;
@@ -30,12 +32,12 @@ public class ConnectionRequest {
     private ConfigRequest config;
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ConfigRequest {
         private PlatformType platformType;
         private String hcfsNamespace;
         private HiveServer2Request hiveServer2;
         private MetastoreDirectRequest metastoreDirect;
-        private String connectionPoolLib;
         private PartitionDiscoveryRequest partitionDiscovery;
         private boolean createIfNotExists;
         private boolean enableAutoTableStats;
@@ -43,15 +45,14 @@ public class ConnectionRequest {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class HiveServer2Request {
         private String uri;
         private Map<String, String> connectionProperties;
-        private String driverClassName;
-        private String jarFile;
-        private boolean disconnected;
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MetastoreDirectRequest {
         private String uri;
         private String type;
@@ -60,12 +61,14 @@ public class ConnectionRequest {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ConnectionPoolRequest {
         private int min;
         private int max;
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PartitionDiscoveryRequest {
         private boolean auto;
         private boolean initMSCK;
