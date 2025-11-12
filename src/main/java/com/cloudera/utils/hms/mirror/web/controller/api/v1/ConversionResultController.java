@@ -17,9 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.PhaseState;
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.cloudera.utils.hms.mirror.service.RocksDBReportGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -50,6 +58,9 @@ import java.util.stream.Collectors;
 public class ConversionResultController {
 
     private final ConversionResultRepository conversionResultRepository;
+    private final DBMirrorRepository dbMirrorRepository;
+    private final TableMirrorRepository tableMirrorRepository;
+    private final RunStatusRepository runStatusRepository;
     private final RocksDBReportGeneratorService reportGeneratorService;
 
     @GetMapping(produces = "application/json")
@@ -283,6 +294,221 @@ public class ConversionResultController {
         } catch (Exception e) {
             log.error("Error downloading report file {} for {}", filename, key, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping(value = "/details", produces = "application/json", params = "key")
+    @Operation(summary = "Get detailed report information",
+               description = "Returns comprehensive report details including databases, tables, and statistics")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Report details retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Report not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to retrieve report details")
+    })
+    public ResponseEntity<Map<String, Object>> getReportDetails(
+            @Parameter(description = "Conversion result key", required = true)
+            @RequestParam String key) {
+
+        log.info("ConversionResultController.getReportDetails() called - key: {}", key);
+
+        try {
+            // Get the conversion result
+            Optional<ConversionResult> conversionOpt = conversionResultRepository.findByKey(key);
+            if (conversionOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "NOT_FOUND",
+                    "message", "Report not found: " + key
+                ));
+            }
+
+            ConversionResult conversion = conversionOpt.get();
+
+            // Get all databases for this conversion
+            Map<String, DBMirror> databases = dbMirrorRepository.findByConversionKey(key);
+
+            // Get run status
+            Optional<RunStatus> runStatusOpt = runStatusRepository.findByKey(key);
+
+            // Build table list with aggregated data
+            List<Map<String, Object>> tables = new ArrayList<>();
+            int totalTables = 0;
+            int successfulTables = 0;
+            int failedTables = 0;
+
+            for (Map.Entry<String, DBMirror> dbEntry : databases.entrySet()) {
+                String dbName = dbEntry.getValue().getName();
+
+                // Get all tables for this database
+                Map<String, TableMirror> dbTables = tableMirrorRepository.findByDatabase(key, dbName);
+
+                for (Map.Entry<String, TableMirror> tableEntry : dbTables.entrySet()) {
+                    TableMirror table = tableEntry.getValue();
+                    totalTables++;
+
+                    // Determine status based on phase state
+                    String status;
+                    if (table.getPhaseState() == PhaseState.SUCCESS) {
+                        status = "completed";
+                        successfulTables++;
+                    } else if (table.getPhaseState() == PhaseState.ERROR) {
+                        status = "failed";
+                        failedTables++;
+                    } else {
+                        status = "partial";
+                    }
+
+                    // Build table info
+                    Map<String, Object> tableInfo = new HashMap<>();
+                    tableInfo.put("name", table.getName());
+                    tableInfo.put("database", dbName);
+                    tableInfo.put("status", status);
+                    tableInfo.put("strategy", table.getStrategy() != null ? table.getStrategy().toString() : "N/A");
+                    tableInfo.put("phaseState", table.getPhaseState() != null ? table.getPhaseState().toString() : "UNKNOWN");
+
+                    // Get issues and errors from LEFT environment
+                    List<String> issues = table.getIssues(Environment.LEFT);
+                    List<String> errors = table.getErrors(Environment.LEFT);
+                    tableInfo.put("issues", issues != null ? issues : new ArrayList<String>());
+                    tableInfo.put("errors", errors != null ? errors : new ArrayList<String>());
+
+                    // Check if table has LEFT and RIGHT environments
+                    tableInfo.put("hasLeft", table.getEnvironments().containsKey(Environment.LEFT));
+                    tableInfo.put("hasRight", table.getEnvironments().containsKey(Environment.RIGHT));
+
+                    tables.add(tableInfo);
+                }
+            }
+
+            // Build summary
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalTables", totalTables);
+            summary.put("successfulTables", successfulTables);
+            summary.put("failedTables", failedTables);
+            summary.put("databaseCount", databases.size());
+
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("key", key);
+            response.put("name", conversion.getConfig() != null ? conversion.getConfig().getName() : "Migration Report");
+            response.put("timestamp", conversion.getCreated() != null ? conversion.getCreated().toString() : null);
+            response.put("config", conversion.getConfig());
+            response.put("dataset", conversion.getDataset());
+            response.put("summary", summary);
+            response.put("tables", tables);
+            response.put("databases", databases.values().stream().map(db -> {
+                Map<String, Object> dbInfo = new HashMap<>();
+                dbInfo.put("name", db.getName());
+                return dbInfo;
+            }).collect(Collectors.toList()));
+
+            // Add strategy from job if available
+            if (conversion.getJob() != null && conversion.getJob().getStrategy() != null) {
+                response.put("strategy", conversion.getJob().getStrategy().toString());
+            }
+
+            // Add run status if available
+            if (runStatusOpt.isPresent()) {
+                RunStatus runStatus = runStatusOpt.get();
+                Map<String, Object> runStatusMap = new HashMap<>();
+                runStatusMap.put("start", runStatus.getStart());
+                runStatusMap.put("end", runStatus.getEnd());
+                runStatusMap.put("comment", runStatus.getComment());
+                runStatusMap.put("progress", runStatus.getProgress());
+                runStatusMap.put("errorMessages", runStatus.getErrorMessages());
+                runStatusMap.put("warningMessages", runStatus.getWarningMessages());
+                runStatusMap.put("configMessages", runStatus.getConfigMessages());
+                runStatusMap.put("operationStatistics", runStatus.getOperationStatistics());
+                runStatusMap.put("stages", runStatus.getStages());
+
+                // Calculate duration
+                if (runStatus.getStart() != null && runStatus.getEnd() != null) {
+                    runStatusMap.put("duration", runStatus.getDuration());
+                }
+
+                response.put("runStatus", runStatusMap);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (RepositoryException e) {
+            log.error("Error retrieving report details for {}", key, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "ERROR",
+                "message", "Failed to retrieve report details: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping(value = "/table-details", produces = "application/json")
+    @Operation(summary = "Get detailed table information",
+               description = "Returns comprehensive details for a specific table")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Table details retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Table not found"),
+        @ApiResponse(responseCode = "500", description = "Failed to retrieve table details")
+    })
+    public ResponseEntity<Map<String, Object>> getTableDetails(
+            @Parameter(description = "Conversion result key", required = true)
+            @RequestParam String key,
+            @Parameter(description = "Database name", required = true)
+            @RequestParam String database,
+            @Parameter(description = "Table name", required = true)
+            @RequestParam String table,
+            @Parameter(description = "Environment (LEFT or RIGHT)", required = true)
+            @RequestParam String environment) {
+
+        log.info("ConversionResultController.getTableDetails() called - key: {}, database: {}, table: {}, environment: {}",
+                key, database, table, environment);
+
+        try {
+            // Get the table
+            Optional<TableMirror> tableOpt = tableMirrorRepository.findByName(key, database, table);
+
+            if (tableOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "NOT_FOUND",
+                    "message", "Table not found: " + database + "." + table
+                ));
+            }
+
+            TableMirror tableMirror = tableOpt.get();
+            Environment env = Environment.valueOf(environment);
+
+            // Build table details response
+            Map<String, Object> details = new HashMap<>();
+            details.put("tableName", tableMirror.getName());
+            details.put("environment", environment);
+            details.put("name", tableMirror.getName(env));
+            details.put("exists", tableMirror.getEnvironmentTable(env) != null);
+            details.put("owner", "N/A"); // TODO: Add owner field if available
+            details.put("strategy", tableMirror.getStrategy() != null ? tableMirror.getStrategy().toString() : "N/A");
+            details.put("phaseState", tableMirror.getPhaseState() != null ? tableMirror.getPhaseState().toString() : "UNKNOWN");
+
+            // Get issues, errors, SQL, and definition from the environment
+            details.put("issues", tableMirror.getIssues(env));
+            details.put("errors", tableMirror.getErrors(env));
+            details.put("definition", tableMirror.getTableDefinition(env));
+            details.put("sql", tableMirror.getSql(env));
+            details.put("addProperties", tableMirror.getPropAdd(env));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("data", details);
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "ERROR",
+                "message", "Invalid environment: " + environment
+            ));
+        } catch (RepositoryException e) {
+            log.error("Error retrieving table details", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "ERROR",
+                "message", "Failed to retrieve table details: " + e.getMessage()
+            ));
         }
     }
 }

@@ -17,11 +17,17 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hms.mirror.domain.core.DBMirror;
+import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
+import com.cloudera.utils.hms.mirror.domain.core.Translator;
 import com.cloudera.utils.hms.mirror.domain.support.ConversionResult;
 import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.domain.testdata.LegacyDBMirror;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
+import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.NonNull;
@@ -37,6 +43,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -55,6 +63,10 @@ public class ReportImportService {
     @NonNull
     private final RunStatusRepository runStatusRepository;
     @NonNull
+    private final DBMirrorRepository dbMirrorRepository;
+    @NonNull
+    private final TableMirrorRepository tableMirrorRepository;
+    @NonNull
     private final ObjectMapper yamlMapper;
     @NonNull
     private final ExecuteSessionService executeSessionService;
@@ -62,10 +74,14 @@ public class ReportImportService {
     public ReportImportService(
             @NonNull ConversionResultRepository conversionResultRepository,
             @NonNull RunStatusRepository runStatusRepository,
+            @NonNull DBMirrorRepository dbMirrorRepository,
+            @NonNull TableMirrorRepository tableMirrorRepository,
             @NonNull @Qualifier("yamlMapper") ObjectMapper yamlMapper,
             @NonNull ExecuteSessionService executeSessionService) {
         this.conversionResultRepository = conversionResultRepository;
         this.runStatusRepository = runStatusRepository;
+        this.dbMirrorRepository = dbMirrorRepository;
+        this.tableMirrorRepository = tableMirrorRepository;
         this.yamlMapper = yamlMapper;
         this.executeSessionService = executeSessionService;
     }
@@ -200,18 +216,35 @@ public class ReportImportService {
             // Set the key from the relative path
             conversionResult.setKey(key);
 
+            // Import session-translator.yaml if it exists
+            Path translatorPath = sessionConfigPath.getParent().resolve("session-translator.yaml");
+            if (Files.exists(translatorPath)) {
+                log.debug("Found session-translator.yaml, importing...");
+                try {
+                    Translator translator = yamlMapper.readValue(
+                            translatorPath.toFile(),
+                            Translator.class
+                    );
+                    conversionResult.setTranslator(translator);
+                    log.debug("Successfully imported translator");
+                } catch (Exception e) {
+                    log.warn("Error reading session-translator.yaml: {}", e.getMessage());
+                }
+            }
+
             // Read and deserialize run-status.yaml
             RunStatus runStatus = yamlMapper.readValue(
                     runStatusPath.toFile(),
                     RunStatus.class
             );
 
-            // Set the key to match
-            runStatus.setKey(key);
-
-            // Save to RocksDB
+            // Save ConversionResult and RunStatus to RocksDB
+            // Note: RunStatusRepository.save(key, runStatus) automatically handles the key mapping
             conversionResultRepository.save(conversionResult);
-            runStatusRepository.save(runStatus);
+            runStatusRepository.save(key, runStatus);
+
+            // Import database report files (*_hms-mirror.yaml)
+            importDatabaseReports(key, sessionConfigPath.getParent());
 
             log.info("Successfully imported report: {}", key);
             result.incrementImported(key);
@@ -225,6 +258,80 @@ public class ReportImportService {
         } catch (Exception e) {
             log.error("Unexpected error importing report: {}", key, e);
             result.incrementFailed(key, "Unexpected error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import database report files (*_hms-mirror.yaml)
+     *
+     * @param conversionKey The conversion result key
+     * @param reportDir     The report directory containing database YAML files
+     */
+    private void importDatabaseReports(String conversionKey, Path reportDir) throws IOException, RepositoryException {
+        // Find all *_hms-mirror.yaml files
+        List<Path> databaseReportFiles;
+        try (Stream<Path> paths = Files.list(reportDir)) {
+            databaseReportFiles = paths
+                    .filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().endsWith("_hms-mirror.yaml"))
+                    .collect(Collectors.toList());
+        }
+
+        if (databaseReportFiles.isEmpty()) {
+            log.debug("No database report files found in: {}", reportDir);
+            return;
+        }
+
+        log.info("Found {} database report files to import", databaseReportFiles.size());
+
+        for (Path dbReportFile : databaseReportFiles) {
+            try {
+                importDatabaseReport(conversionKey, dbReportFile);
+            } catch (Exception e) {
+                log.error("Error importing database report: {}", dbReportFile, e);
+                // Continue with next file
+            }
+        }
+    }
+
+    /**
+     * Import a single database report file
+     *
+     * @param conversionKey  The conversion result key
+     * @param dbReportFile   Path to the database YAML file
+     */
+    private void importDatabaseReport(String conversionKey, Path dbReportFile) throws IOException, RepositoryException {
+        String filename = dbReportFile.getFileName().toString();
+        log.debug("Importing database report: {}", filename);
+
+        // Read the legacy DBMirror format
+        LegacyDBMirror legacyDBMirror = yamlMapper.readValue(
+                dbReportFile.toFile(),
+                LegacyDBMirror.class
+        );
+
+        // Create a new DBMirror from the legacy data
+        DBMirror dbMirror = new DBMirror();
+        dbMirror.setName(legacyDBMirror.getName());
+
+        // Copy properties from legacy format
+        if (legacyDBMirror.getProperties() != null) {
+            dbMirror.setProperties(legacyDBMirror.getProperties());
+        }
+
+        // Save DBMirror (repository will build the composite key using conversionKey + database name)
+        dbMirrorRepository.save(conversionKey, dbMirror);
+        log.debug("Saved DBMirror: {}", dbMirror.getName());
+
+        // Extract and save TableMirror objects
+        Map<String, TableMirror> tableMirrors = legacyDBMirror.getTableMirrors();
+        if (tableMirrors != null && !tableMirrors.isEmpty()) {
+            for (Map.Entry<String, TableMirror> entry : tableMirrors.entrySet()) {
+                TableMirror tableMirror = entry.getValue();
+                // Save the table (repository will build the composite key using conversionKey + database name + table name)
+                tableMirrorRepository.save(conversionKey, dbMirror.getName(), tableMirror);
+            }
+            log.debug("Saved {} tables for database: {}", tableMirrors.size(), dbMirror.getName());
         }
     }
 

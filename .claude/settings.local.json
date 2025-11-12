@@ -96,7 +96,9 @@
       "Bash(http://localhost:8090/hms-mirror/api/v1/jobs/20251111_124154255_ab6a/validate)",
       "Bash(open http://localhost:8090/hms-mirror/)",
       "Bash(/dev/null sleep 3 echo 'Killed existing server')",
-      "Bash(open http://localhost:8090/hms-mirror/reports)"
+      "Bash(open http://localhost:8090/hms-mirror/reports)",
+      "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports\")",
+      "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports/details?key=test-output/e2e/legacy_cdp/sql_mao_ewd_da_dc\")"
     ],
     "deny": [],
     "ask": [],
