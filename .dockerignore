@@ -1,0 +1,57 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts
+target/
+!target/hms-mirror-*.jar
+!target/drivers/
+build/
+dist/
+*.class
+
+# Node/Frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+.yarn
+
+# Test files
+test-output/
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (keep only essential)
+*.md
+!README.md
+!BUILD_OPTIONS.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Local config
+.env
+.env.local
+*.local
+
+# Temporary files
+*.pid
+*.seed
+*.pid.lock

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMA Timeline - HMS Metadata Bridge Strategy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 50px;
+            font-size: 1.2em;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .phase {
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .phase-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .phase-title {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .events {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .event {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        .event-left {
+            flex-direction: row;
+        }
+        
+        .event-right {
+            flex-direction: row-reverse;
+        }
+        
+        .event-content {
+            flex: 0 0 45%;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .event-left .event-content {
+            margin-right: auto;
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+        }
+        
+        .event-right .event-content {
+            margin-left: auto;
+            background: linear-gradient(135deg, #e0e7ff 0%, #cfd9ff 100%);
+        }
+        
+        .event-marker {
+            flex: 0 0 10%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .marker-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+        
+        .marker-milestone {
+            width: 30px;
+            height: 30px;
+            background: #fbbf24;
+            border: 4px solid #f59e0b;
+            transform: rotate(45deg);
+            box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2);
+        }
+        
+        .event-date {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+        }
+        
+        .event-title {
+            font-weight: bold;
+            color: #2d3748;
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+        
+        .event-description {
+            color: #4a5568;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        .bridge-indicator {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 30px auto;
+            max-width: 600px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .key-benefits {
+            margin-top: 50px;
+            padding: 30px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 12px;
+            border-left: 6px solid #f59e0b;
+        }
+        
+        .key-benefits h2 {
+            color: #92400e;
+            margin-bottom: 15px;
+        }
+        
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #78350f;
+            font-weight: 500;
+        }
+        
+        .benefit-icon {
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CMA Timeline</h1>
+        <p class="subtitle">HMS Mirror Bridge Strategy → Replication Manager</p>
+        
+        <div class="timeline">
+            <!-- Q4 2025: Preparation -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Q4 2025 - Preparation</div>
+                </div>
+                <div class="events">
+                    <div class="event event-left">
+                        <div class="event-content">
+                            <div class="event-date">October 2025</div>
+                            <div class="event-title">HMS Mirror Refactoring Begins</div>
+                            <div class="event-description">Focus on Hive metadata component optimization</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-dot"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="event event-right">
+                        <div class="event-content">
+                            <div class="event-date">December 2025</div>
+                            <div class="event-title">✓ HMS Mirror Ready</div>
+                            <div class="event-description">Refactoring complete - tested and waiting for integration</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-milestone"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Q1 2026: Launch -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Q1 2026 - Launch & Bridge Deployment</div>
+                </div>
+                <div class="events">
+                    <div class="event event-left">
+                        <div class="event-content">
+                            <div class="event-date">January 2026</div>
+                            <div class="event-title">CMA 4.0 Launch w/ CDP 7.3.2</div>
+                            <div class="event-description">Basic HDFS-to-Ozone migration (no metadata yet, keeping it simple).  Using Replication Manager Policy Engine</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-milestone"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="event event-right">
+                        <div class="event-content">
+                            <div class="event-date">March-April 2026</div>
+                            <div class="event-title">Metadata Integration via HMS Mirror Available</div>
+                            <div class="event-description">Using HMS-Mirror Logic for interim Metadata Migration Version w/ HDFS -> Ozone Support</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-milestone"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bridge Period -->
+            <div class="bridge-indicator">
+                🌉 BRIDGE PHASE: Feb - Sept 2026<br>
+                <span style="font-size: 0.9em; font-weight: normal;">CMA operational using HMS Mirror • No dead time • Zero risk</span>
+            </div>
+            
+            <!-- Q3 2026: Transition -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Q3 2026 - Permanent Solution</div>
+                </div>
+                <div class="events">
+                    <div class="event event-left">
+                        <div class="event-content">
+                            <div class="event-date">July - September 2026</div>
+                            <div class="event-title">Replication Manager Upgraded Release</div>
+                            <div class="event-description">Same feature set as HMS Mirror, natively integrated into pipeline</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-dot"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="event event-right">
+                        <div class="event-content">
+                            <div class="event-date">September 2026</div>
+                            <div class="event-title">🎯 Switch Complete</div>
+                            <div class="event-description">CMA pointer flipped: HMS Mirror → Replication Manager. Seamless transition.</div>
+                        </div>
+                        <div class="event-marker">
+                            <div class="marker-milestone"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="key-benefits">
+            <h2>Strategy Benefits</h2>
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <span class="benefit-icon">⚡</span>
+                    <span>Live by February (not Q3)</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon">🛡️</span>
+                    <span>Battle-tested HMS Mirror</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon">⏱️</span>
+                    <span>Months of dev time saved</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon">🔄</span>
+                    <span>No dead time during transition</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon">🎯</span>
+                    <span>Simple pointer switch</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon">🏗️</span>
+                    <span>No reinventing wheels</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

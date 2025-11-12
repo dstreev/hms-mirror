@@ -1,0 +1,81 @@
+# Reference Dockerfile
+# This Dockerfile is provided as a reference.
+# The Jib Maven plugin builds containers without requiring this file.
+# Use this for custom Docker builds if needed.
+
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+WORKDIR /build
+
+# Copy source
+COPY pom.xml .
+COPY src ./src
+
+# Build application (with frontend)
+RUN mvn clean package -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-jammy
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    tini && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r hms-mirror -g 1001 && \
+    useradd -r -g hms-mirror -u 1001 -m -d /opt/hms-mirror hms-mirror
+
+# Set working directory
+WORKDIR /opt/hms-mirror
+
+# Copy application from builder
+COPY --from=builder --chown=hms-mirror:hms-mirror \
+    /build/target/hms-mirror-*.jar app.jar
+
+# Copy drivers
+COPY --from=builder --chown=hms-mirror:hms-mirror \
+    /build/target/drivers ./drivers
+
+# Create necessary directories
+RUN mkdir -p /opt/hms-mirror/configs \
+             /opt/hms-mirror/data \
+             /opt/hms-mirror/logs && \
+    chown -R hms-mirror:hms-mirror /opt/hms-mirror
+
+# Switch to non-root user
+USER hms-mirror
+
+# Environment variables
+ENV JAVA_TOOL_OPTIONS="-Xms4096m -Xmx8192m -XX:+UseG1GC" \
+    HMS_MIRROR_HOME=/opt/hms-mirror \
+    HMS_MIRROR_ROCKSDB_ENABLED=true
+
+# Expose ports
+EXPOSE 8080 8443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Use tini as init system
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Run application
+CMD ["java", \
+     "-Djava.security.egd=file:/dev/./urandom", \
+     "-jar", "app.jar"]
+
+# Labels
+LABEL org.opencontainers.image.title="HMS Mirror" \
+      org.opencontainers.image.description="Hive Metastore Migration Tool" \
+      org.opencontainers.image.vendor="Cloudera" \
+      org.opencontainers.image.url="https://github.com/cloudera-labs/hms_mirror" \
+      org.opencontainers.image.documentation="https://github.com/cloudera-labs/hms_mirror/blob/main/BUILD_OPTIONS.md"
+
+# Usage:
+# Build: docker build -t hms-mirror:4.0.0.0 .
+# Run:   docker run -p 8080:8080 -v ./configs:/opt/hms-mirror/configs hms-mirror:4.0.0.0

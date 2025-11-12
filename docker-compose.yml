@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  hms-mirror:
+    image: hms-mirror:4.0.0.0
+    container_name: hms-mirror
+    build:
+      context: .
+      dockerfile: Dockerfile.reference
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      # JVM Options
+      - JAVA_TOOL_OPTIONS=-Xms4096m -Xmx8192m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+
+      # Application Settings
+      - HMS_MIRROR_HOME=/opt/hms-mirror
+      - HMS_MIRROR_ROCKSDB_ENABLED=true
+      - SERVER_PORT=8080
+
+      # Spring Boot Settings
+      - SPRING_PROFILES_ACTIVE=default
+      - LOGGING_LEVEL_ROOT=INFO
+      - LOGGING_LEVEL_COM_CLOUDERA=DEBUG
+
+    volumes:
+      # Configuration files
+      - ./configs:/opt/hms-mirror/configs:ro
+
+      # Data directory for RocksDB and reports
+      - hms-mirror-data:/opt/hms-mirror/data
+
+      # Logs
+      - hms-mirror-logs:/opt/hms-mirror/logs
+
+      # Optional: Mount local drivers
+      # - ./target/drivers:/opt/hms-mirror/drivers:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+    # Network
+    networks:
+      - hms-mirror-network
+
+  # Optional: Nginx reverse proxy for HTTPS
+  nginx:
+    image: nginx:alpine
+    container_name: hms-mirror-nginx
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - hms-mirror
+    networks:
+      - hms-mirror-network
+    profiles:
+      - with-nginx
+
+volumes:
+  hms-mirror-data:
+    driver: local
+  hms-mirror-logs:
+    driver: local
+
+networks:
+  hms-mirror-network:
+    driver: bridge
+
+# Usage:
+# 1. Build: docker-compose build
+# 2. Start: docker-compose up -d
+# 3. View logs: docker-compose logs -f
+# 4. Stop: docker-compose down
+# 5. With nginx: docker-compose --profile with-nginx up -d

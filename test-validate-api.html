@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Validate API</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        input { padding: 8px; width: 400px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>HMS-Mirror Validate API Tester</h1>
+
+    <div class="section info">
+        <h2>Instructions</h2>
+        <p>This page tests the validate endpoint independently of the React app.</p>
+        <p>Server must be running at: <strong>http://localhost:8090</strong></p>
+    </div>
+
+    <div class="section">
+        <h2>Step 1: Get Job List</h2>
+        <button onclick="getJobs()">Fetch Jobs</button>
+        <div id="jobs-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Validate a Job</h2>
+        <label>Job Key:</label><br>
+        <input type="text" id="jobKey" placeholder="Enter job key (e.g., 20251111_124154255_ab6a)">
+        <br>
+        <button onclick="validateJob()">Validate Job</button>
+        <div id="validate-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Console Log</h2>
+        <pre id="console"></pre>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8090/hms-mirror/api/v1';
+
+        function log(message, data) {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.textContent += `[${timestamp}] ${message}\n`;
+            if (data) {
+                console.textContent += JSON.stringify(data, null, 2) + '\n\n';
+            }
+        }
+
+        async function getJobs() {
+            const resultDiv = document.getElementById('jobs-result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+            log('Fetching jobs...');
+
+            try {
+                const response = await fetch(`${BASE_URL}/jobs`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                log(`Response status: ${response.status}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log('Jobs fetched successfully', data);
+
+                if (data.jobs && data.jobs.length > 0) {
+                    resultDiv.className = 'section success';
+                    resultDiv.innerHTML = `
+                        <h3>✓ Success - Found ${data.jobs.length} jobs</h3>
+                        <p>Click on a job key to copy it:</p>
+                        <ul>
+                            ${data.jobs.map(job => `
+                                <li>
+                                    <strong>${job.name}</strong><br>
+                                    Key: <code onclick="copyJobKey('${job.jobKey}')" style="cursor: pointer; background: yellow;">${job.jobKey}</code>
+                                    (click to copy)
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                } else {
+                    resultDiv.className = 'section info';
+                    resultDiv.innerHTML = '<p>No jobs found. Create a job first.</p>';
+                }
+            } catch (error) {
+                log('Error fetching jobs', { error: error.message });
+                resultDiv.className = 'section error';
+                resultDiv.innerHTML = `<h3>✗ Error</h3><p>${error.message}</p>`;
+            }
+        }
+
+        function copyJobKey(jobKey) {
+            document.getElementById('jobKey').value = jobKey;
+            alert(`Job key copied: ${jobKey}\nClick "Validate Job" to test it.`);
+        }
+
+        async function validateJob() {
+            const jobKey = document.getElementById('jobKey').value.trim();
+            const resultDiv = document.getElementById('validate-result');
+
+            if (!jobKey) {
+                alert('Please enter a job key');
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Validating...</p>';
+            log(`Validating job: ${jobKey}`);
+
+            try {
+                const url = `${BASE_URL}/jobs/${jobKey}/validate`;
+                log(`POST ${url}`);
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                log(`Response status: ${response.status}`);
+
+                const data = await response.json();
+                log('Response received', data);
+
+                if (response.ok) {
+                    resultDiv.className = 'section success';
+                    resultDiv.innerHTML = `
+                        <h3>✓ API Call Successful</h3>
+                        <p><strong>Status:</strong> ${data.status}</p>
+                        <p><strong>Valid:</strong> ${data.valid ? 'Yes' : 'No'}</p>
+                        <p><strong>Message:</strong> ${data.message || 'N/A'}</p>
+                        ${data.errors && data.errors.length > 0 ? `
+                            <p><strong>Errors:</strong></p>
+                            <ul>${data.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+                        ` : ''}
+                        ${data.warnings && data.warnings.length > 0 ? `
+                            <p><strong>Warnings:</strong></p>
+                            <ul>${data.warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+                        ` : ''}
+                        <hr>
+                        <p><strong>Full Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'section error';
+                    resultDiv.innerHTML = `
+                        <h3>✗ API Error (HTTP ${response.status})</h3>
+                        <p><strong>Status:</strong> ${data.status || 'Unknown'}</p>
+                        <p><strong>Message:</strong> ${data.message || 'No message'}</p>
+                        <hr>
+                        <p><strong>Full Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                log('Error validating job', { error: error.message });
+                resultDiv.className = 'section error';
+                resultDiv.innerHTML = `
+                    <h3>✗ Network Error</h3>
+                    <p>${error.message}</p>
+                    <p>Check that the server is running and accessible.</p>
+                `;
+            }
+        }
+
+        // Auto-load jobs on page load
+        window.addEventListener('load', () => {
+            log('Page loaded');
+            log(`Testing API at: ${BASE_URL}`);
+        });
+    </script>
+</body>
+</html>
