@@ -26,6 +26,8 @@ import com.cloudera.utils.hms.mirror.domain.testdata.LegacyDBMirror;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.DBMirrorRepository;
 import com.cloudera.utils.hms.mirror.repository.TableMirrorRepository;
+import com.cloudera.utils.hms.mirror.repository.ConversionResultRepository;
+import com.cloudera.utils.hms.mirror.repository.RunStatusRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.NonNull;
@@ -39,14 +41,14 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -74,6 +76,10 @@ public class ReportWriterService {
     private final DBMirrorRepository dbMirrorRepository;
     @NonNull
     private final TableMirrorRepository tableMirrorRepository;
+    @NonNull
+    private final ConversionResultRepository conversionResultRepository;
+    @NonNull
+    private final RunStatusRepository runStatusRepository;
 
     public ReportWriterService(
             DistCpService distCpService,
@@ -84,7 +90,9 @@ public class ReportWriterService {
             DatabaseService databaseService,
             ConversionResultService conversionResultService,
             DBMirrorRepository dbMirrorRepository,
-            TableMirrorRepository tableMirrorRepository) {
+            TableMirrorRepository tableMirrorRepository,
+            ConversionResultRepository conversionResultRepository,
+            RunStatusRepository runStatusRepository) {
         this.distCpService = distCpService;
         this.yamlMapper = yamlMapper;
         this.configService = configService;
@@ -94,6 +102,8 @@ public class ReportWriterService {
         this.conversionResultService = conversionResultService;
         this.dbMirrorRepository = dbMirrorRepository;
         this.tableMirrorRepository = tableMirrorRepository;
+        this.conversionResultRepository = conversionResultRepository;
+        this.runStatusRepository = runStatusRepository;
     }
 
     public void wrapup() {
@@ -232,7 +242,8 @@ public class ReportWriterService {
 
             String resolvedDatabaseName = getConversionResultService().getResolvedDB(database);
             String originalDatabase = database;
-            Map<String, Number> leftSummaryStats = databaseService.getEnvironmentSummaryStatistics(repoDbMirror, Environment.LEFT);
+            Map<String, Number> leftSummaryStats = databaseService.getEnvironmentSummaryStatistics(
+                    conversionResult, repoDbMirror, Environment.LEFT);
             repoDbMirror.getEnvironmentStatistics().put(Environment.LEFT, leftSummaryStats);
             String dbReportOutputFile = finalReportOutputDir + File.separator + originalDatabase + "_hms-mirror";
             String dbLeftExecuteFile = finalReportOutputDir + File.separator + originalDatabase + "_LEFT_execute.sql";
@@ -270,7 +281,7 @@ public class ReportWriterService {
                 }
                 int step = 1;
                 FileWriter reportFile = new FileWriter(dbReportOutputFile + ".md");
-                String mdReportStr = conversionResultService.toReport(legacyDBMirror);
+                String mdReportStr = conversionResultService.toReport(conversionResult, runStatus, legacyDBMirror);
 
                 File dbYamlFile = new File(dbReportOutputFile + ".yaml");
                 FileWriter dbYamlFileWriter = new FileWriter(dbYamlFile);
@@ -381,5 +392,200 @@ public class ReportWriterService {
                 log.error("Issue writing report for: {}", originalDatabase, ioe);
             }
         });
+    }
+
+    /**
+     * Generate report artifacts as a zip file for a specific ConversionResult
+     * @param conversionResultKey The key of the ConversionResult to generate reports for
+     * @return byte array containing the zip file
+     * @throws IOException if there are issues creating the zip file
+     */
+    public byte[] generateReportZip(String conversionResultKey) throws IOException {
+        ConversionResult conversionResult;
+        RunStatus runStatus;
+
+        try {
+            conversionResult = conversionResultRepository.findByKey(conversionResultKey)
+                    .orElseThrow(() -> new IllegalArgumentException("ConversionResult not found for key: " + conversionResultKey));
+            runStatus = runStatusRepository.findByKey(conversionResultKey)
+                    .orElse(new RunStatus());
+        } catch (RepositoryException e) {
+            throw new IOException("Failed to retrieve ConversionResult or RunStatus", e);
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            writeReportToZip(conversionResult, runStatus, zos);
+        }
+
+        return baos.toByteArray();
+    }
+
+    /**
+     * Write all report artifacts to a ZipOutputStream
+     */
+    private void writeReportToZip(ConversionResult conversionResult, RunStatus runStatus, ZipOutputStream zos) throws IOException {
+        JobDto job = conversionResult.getJob();
+        JobExecution jobExecution = conversionResult.getJobExecution();
+
+        // Remove the abstract environments from config before reporting output.
+        conversionResult.getConnections().remove(Environment.TRANSFER);
+        conversionResult.getConnections().remove(Environment.SHADOW);
+
+        // Write session-config.yaml
+        String yamlStr = yamlMapper.writeValueAsString(conversionResult);
+        yamlStr = yamlStr.replaceAll("user:\\s\".*\"", "user: \"*****\"");
+        yamlStr = yamlStr.replaceAll("password:\\s\".*\"", "password: \"*****\"");
+        writeZipEntry(zos, "session-config.yaml", yamlStr);
+
+        // Write session-translator.yaml
+        String translatorYaml = yamlMapper.writeValueAsString(conversionResult.getTranslator());
+        translatorYaml = translatorYaml.replaceAll("user:\\s\".*\"", "user: \"*****\"");
+        translatorYaml = translatorYaml.replaceAll("password:\\s\".*\"", "password: \"*****\"");
+        writeZipEntry(zos, "session-translator.yaml", translatorYaml);
+
+        // Write run-status.yaml
+        String runStatusYaml = yamlMapper.writeValueAsString(runStatus);
+        writeZipEntry(zos, "run-status.yaml", runStatusYaml);
+
+        // Get databases
+        Map<String, DBMirror> databases;
+        try {
+            databases = getDbMirrorRepository().findByConversionKey(conversionResult.getKey());
+        } catch (RepositoryException e) {
+            throw new IOException("Failed to retrieve databases", e);
+        }
+
+        // Process each database
+        databases.forEach((database, repoDbMirror) -> {
+            try {
+                LegacyDBMirror legacyDBMirror = LegacyDBMirror.fromDBMirror(repoDbMirror);
+
+                // Load the Repo Table Mirrors into the LegacyDBMirror Object
+                Map<String, TableMirror> repoTableMirrors = getTableMirrorRepository().findByDatabase(
+                        conversionResult.getKey(), database);
+                legacyDBMirror.setTableMirrors(repoTableMirrors);
+
+                String originalDatabase = database;
+                Map<String, Number> leftSummaryStats = databaseService.getEnvironmentSummaryStatistics(
+                        conversionResult, repoDbMirror, Environment.LEFT);
+                repoDbMirror.getEnvironmentStatistics().put(Environment.LEFT, leftSummaryStats);
+
+                // Build distcp reports if applicable
+                if (configService.canDeriveDistcpPlan(conversionResult)) {
+                    // Write distcp reports to zip - we'll need to capture the output
+                    // For now, we'll skip this as it writes to filesystem directly
+                    // TODO: Refactor distCpService to support zip output
+                }
+
+                // Write runbook
+                StringBuilder runbookContent = new StringBuilder();
+                runbookContent.append("# Runbook for database: ").append(originalDatabase);
+                runbookContent.append("\n\nYou'll find the **run report** in the file:\n\n`")
+                        .append(originalDatabase).append("_hms-mirror.md|html`")
+                        .append("\n\nThis file includes details about the configuration at the time this was run and the ")
+                        .append("output/actions on each table in the database that was included.\n\n");
+                runbookContent.append("## Steps\n\n");
+
+                if (jobExecution.isExecute()) {
+                    runbookContent.append("Execute was **ON**, so many of the scripts have been run already.  Verify status ")
+                            .append("in the above report.  `distcp` actions (if requested/applicable) need to be run manually. ")
+                            .append("Some cleanup scripts may have been run if no `distcp` actions were requested.\n\n");
+                    if (nonNull(conversionResult.getConnection(Environment.RIGHT))
+                            && !isBlank(conversionResult.getConnection(Environment.RIGHT).getHs2Uri())) {
+                        if (!conversionResult.getConnection(Environment.RIGHT).isHs2Connected()) {
+                            runbookContent.append("Process ran with RIGHT environment 'disconnected'.  All RIGHT scripts will need to be run manually.\n\n");
+                        }
+                    }
+                } else {
+                    runbookContent.append("Execute was **OFF**.  All actions will need to be run manually. See below steps.\n\n");
+                }
+
+                int step = 1;
+
+                // Generate markdown report
+                String mdReportStr = conversionResultService.toReport(conversionResult, runStatus, legacyDBMirror);
+
+                // Write database YAML
+                String dbYamlStr = yamlMapper.writeValueAsString(legacyDBMirror);
+                writeZipEntry(zos, originalDatabase + "_hms-mirror.yaml", dbYamlStr);
+
+                // Write markdown report
+                writeZipEntry(zos, originalDatabase + "_hms-mirror.md", mdReportStr);
+
+                // Convert to HTML and write
+                List<Extension> extensions = Arrays.asList(TablesExtension.create(), YamlFrontMatterExtension.create());
+                org.commonmark.parser.Parser parser = org.commonmark.parser.Parser.builder().extensions(extensions).build();
+                Node document = parser.parse(mdReportStr);
+                HtmlRenderer renderer = HtmlRenderer.builder().extensions(extensions).build();
+                String htmlReportStr = renderer.render(document);
+                writeZipEntry(zos, originalDatabase + "_hms-mirror.html", htmlReportStr);
+
+                // Write LEFT execute script
+                String les = conversionResultService.executeSql(conversionResult, Environment.LEFT, originalDatabase);
+                if (les != null) {
+                    writeZipEntry(zos, originalDatabase + "_LEFT_execute.sql", les);
+                    runbookContent.append(step++).append(". **LEFT** clusters SQL script. ");
+                    if (jobExecution.isExecute()) {
+                        runbookContent.append(" (Has been executed already, check report file details)");
+                    } else {
+                        runbookContent.append("(Has NOT been executed yet)");
+                    }
+                    runbookContent.append("\n");
+                }
+
+                // Write RIGHT execute script
+                String res = conversionResultService.executeSql(conversionResult, Environment.RIGHT, originalDatabase);
+                if (res != null) {
+                    writeZipEntry(zos, originalDatabase + "_RIGHT_execute.sql", res);
+                    runbookContent.append(step++).append(". **RIGHT** clusters SQL script. ");
+                    if (jobExecution.isExecute()) {
+                        if (conversionResult.getConnection(Environment.RIGHT).isHs2Connected()) {
+                            runbookContent.append(" (Has been executed already, check report file details)");
+                        } else {
+                            runbookContent.append(" (Has NOT been executed because the environment is NOT connected.  Review and run scripts manually.)");
+                        }
+                    } else {
+                        runbookContent.append("(Has NOT been executed yet)");
+                    }
+                    runbookContent.append("\n");
+                }
+
+                // Write LEFT cleanup script
+                String lcu = conversionResultService.executeCleanUpSql(conversionResult, Environment.LEFT, originalDatabase);
+                if (lcu != null) {
+                    writeZipEntry(zos, originalDatabase + "_LEFT_CleanUp_execute.sql", lcu);
+                    runbookContent.append(step++).append(". **LEFT** clusters CLEANUP SQL script. ");
+                    runbookContent.append("(Has NOT been executed yet)");
+                    runbookContent.append("\n");
+                }
+
+                // Write RIGHT cleanup script
+                String rcu = conversionResultService.executeCleanUpSql(conversionResult, Environment.RIGHT, originalDatabase);
+                if (rcu != null) {
+                    writeZipEntry(zos, originalDatabase + "_RIGHT_CleanUp_execute.sql", rcu);
+                    runbookContent.append(step++).append(". **RIGHT** clusters CLEANUP SQL script. ");
+                    runbookContent.append("(Has NOT been executed yet)");
+                    runbookContent.append("\n");
+                }
+
+                // Write runbook
+                writeZipEntry(zos, originalDatabase + "_runbook.md", runbookContent.toString());
+
+            } catch (IOException | RepositoryException e) {
+                log.error("Error processing database {} for zip", database, e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Helper method to write a string to a zip entry
+     */
+    private void writeZipEntry(ZipOutputStream zos, String entryName, String content) throws IOException {
+        ZipEntry entry = new ZipEntry(entryName);
+        zos.putNextEntry(entry);
+        zos.write(content.getBytes("UTF-8"));
+        zos.closeEntry();
     }
 }

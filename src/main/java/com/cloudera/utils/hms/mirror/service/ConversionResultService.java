@@ -542,19 +542,33 @@ public class ConversionResultService {
 
     /**
      * Generates a detailed report for a specific database.
+     * Uses ConversionResult and RunStatus from ExecutionContext.
      *
      * @return Markdown report as a string
      * @throws JsonProcessingException if there's an error processing JSON/YAML
      * @LegacyDBMirror
      */
     public String toReport(LegacyDBMirror dbMirror) throws JsonProcessingException {
-//        HmsMirrorConfig hmsMirrorConfig = executeSessionService.getSession().getConfig();
-//        RunStatus runStatus = executeSessionService.getSession().getRunStatus();
-        // TODO: Should we build this from ConversionResult?
         ConversionResult config = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult not set."));
         RunStatus runStatus = getExecutionContextService().getRunStatus().orElseThrow(() ->
                 new IllegalStateException("RunStatus not set."));
+        return toReport(config, runStatus, dbMirror);
+    }
+
+    /**
+     * Generates a detailed report for a specific database.
+     * Accepts ConversionResult and RunStatus as parameters for use outside execution context.
+     *
+     * @param conversionResult The conversion result
+     * @param runStatus The run status
+     * @param dbMirror The database mirroring object
+     * @return Markdown report as a string
+     * @throws JsonProcessingException if there's an error processing JSON/YAML
+     * @LegacyDBMirror
+     */
+    public String toReport(ConversionResult conversionResult, RunStatus runStatus, LegacyDBMirror dbMirror) throws JsonProcessingException {
+        ConversionResult config = conversionResult;
 
         StringBuilder sb = new StringBuilder();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

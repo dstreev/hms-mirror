@@ -98,6 +98,7 @@ const RuntimeReportDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filesLoading, setFilesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'databases' | 'config-detail' | 'dataset-detail' | 'connections-detail' | 'job-detail' | 'config' | 'status'>('overview');
   const [expandedDatabases, setExpandedDatabases] = useState<Set<string>>(new Set());
   const [databaseTables, setDatabaseTables] = useState<Record<string, TableInfo[]>>({});
@@ -263,6 +264,41 @@ const RuntimeReportDetailsPage: React.FC = () => {
     navigate('/reports');
   };
 
+  const handleDownloadReportZip = async () => {
+    if (!key) return;
+
+    try {
+      setIsDownloading(true);
+
+      // Create a download URL for the zip endpoint
+      const downloadUrl = `/hms-mirror/api/v1/reports/download-by-key?key=${encodeURIComponent(key)}`;
+
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download: ${response.statusText}`);
+      }
+
+      // Create a blob from the response
+      const blob = await response.blob();
+
+      // Create a temporary anchor element and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${key}_report.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Failed to download report artifacts:', error);
+      alert('Failed to download report artifacts. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const formatDuration = (milliseconds?: number): string => {
     if (!milliseconds) return 'N/A';
 
@@ -389,11 +425,33 @@ const RuntimeReportDetailsPage: React.FC = () => {
               Conversion result: {report.key}
             </p>
           </div>
-          {report.strategy && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {report.strategy}
-            </span>
-          )}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleDownloadReportZip}
+              disabled={isDownloading}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                  Download Report
+                </>
+              )}
+            </button>
+            {report.strategy && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                {report.strategy}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

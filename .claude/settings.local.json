@@ -100,7 +100,8 @@
       "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports\")",
       "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports/details?key=test-output/e2e/legacy_cdp/sql_mao_ewd_da_dc\")",
       "Bash(open http://localhost:8090/hms-mirror/runtime/reports)",
-      "Bash(open http://localhost:8090/hms-mirror/rocksdb)"
+      "Bash(open http://localhost:8090/hms-mirror/rocksdb)",
+      "Bash(unzip:*)"
     ],
     "deny": [],
     "ask": [],

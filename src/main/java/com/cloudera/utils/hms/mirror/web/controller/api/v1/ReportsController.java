@@ -17,9 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.service.ReportWriterService;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -46,8 +48,11 @@ public class ReportsController {
 
     @Value("${hms.mirror.reports.dir:${user.home}/.hms-mirror/reports}")
     private String reportsBaseDir;
-    
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired(required = false)
+    private ReportWriterService reportWriterService;
 
     @GetMapping(value = "/browse")
     public ResponseEntity<String> browseReports(@RequestParam(value = "path", required = false) String path) {
@@ -320,6 +325,48 @@ public class ReportsController {
         }
     }
     
+    /**
+     * Download report artifacts as a zip file for a specific ConversionResult key (from RocksDB)
+     */
+    @GetMapping("/download-by-key")
+    public ResponseEntity<byte[]> downloadReportByKey(@RequestParam(value = "key") String conversionResultKey) {
+        try {
+            if (reportWriterService == null) {
+                log.error("ReportWriterService is not available (RocksDB may be disabled)");
+                return ResponseEntity.status(503)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\":\"Report download service is not available\"}".getBytes());
+            }
+
+            log.info("Generating report zip for ConversionResult key: {}", conversionResultKey);
+
+            // Generate the zip file from the ConversionResult
+            byte[] zipContent = reportWriterService.generateReportZip(conversionResultKey);
+
+            // Generate filename from conversion result key
+            String zipFileName = conversionResultKey + "_report.zip";
+
+            log.info("Created zip file for ConversionResult key: {}, size: {} bytes", conversionResultKey, zipContent.length);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + zipFileName + "\"")
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(zipContent.length))
+                    .body(zipContent);
+
+        } catch (IllegalArgumentException e) {
+            log.error("ConversionResult not found for key: {}", conversionResultKey, e);
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            log.error("Failed to generate zip file for ConversionResult key: {}", conversionResultKey, e);
+            return ResponseEntity.internalServerError().build();
+        } catch (Exception e) {
+            log.error("Unexpected error generating zip file for ConversionResult key: {}", conversionResultKey, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/download-all")
     public ResponseEntity<byte[]> downloadAllArtifacts(@RequestParam(value = "path") String path) {
         try {

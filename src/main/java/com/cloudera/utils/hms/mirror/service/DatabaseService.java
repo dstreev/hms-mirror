@@ -1255,10 +1255,24 @@ public class DatabaseService {
         return rtn;
     }
 
+    /**
+     * Get environment summary statistics for a database.
+     * Uses ConversionResult from ExecutionContext.
+     */
     public Map<String, Number> getEnvironmentSummaryStatistics(DBMirror dbMirror, Environment environment) {
-        Map<String, Number> stats = new TreeMap<>();
         ConversionResult conversionResult = getExecutionContextService().getConversionResult().orElseThrow(() ->
                 new IllegalStateException("ConversionResult is not set."));
+        return getEnvironmentSummaryStatistics(conversionResult, dbMirror, environment);
+    }
+
+    /**
+     * Get environment summary statistics for a database.
+     * Accepts ConversionResult as parameter for use outside execution context.
+     */
+    public Map<String, Number> getEnvironmentSummaryStatistics(ConversionResult conversionResult,
+                                                                DBMirror dbMirror,
+                                                                Environment environment) {
+        Map<String, Number> stats = new TreeMap<>();
 
         Map<String, TableMirror> tableMirrors = null;
         try {
