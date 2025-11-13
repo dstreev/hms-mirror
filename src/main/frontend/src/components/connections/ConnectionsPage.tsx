@@ -7,12 +7,13 @@ import {
   FunnelIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
-import { Connection, ConnectionListFilters } from '../../types/Connection';
+import { Connection, ConnectionListFilters, ConnectionTestResults } from '../../types/Connection';
 import ConnectionCard from './ConnectionCard';
 import ConnectionFilters from './ConnectionFilters';
 import BulkActions from './BulkActions';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import ImportDialog from '../common/ImportDialog';
+import TestProgressDialog from './TestProgressDialog';
 import { exportToJson, generateExportFilename, maskPasswords } from '../../utils/importExport';
 
 const ConnectionsPage: React.FC = () => {
@@ -33,6 +34,22 @@ const ConnectionsPage: React.FC = () => {
     connection: Connection | null;
   }>({ isOpen: false, connection: null });
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [testDialog, setTestDialog] = useState<{
+    isOpen: boolean;
+    testing: boolean;
+    connectionName: string;
+    connectionKey: string;
+    hcfsTestResults?: ConnectionTestResults;
+    hs2TestResults?: ConnectionTestResults;
+    metastoreDirectTestResults?: ConnectionTestResults;
+    testError?: string | null;
+  }>({
+    isOpen: false,
+    testing: false,
+    connectionName: '',
+    connectionKey: '',
+    testError: null
+  });
 
   useEffect(() => {
     loadConnections();
@@ -97,16 +114,46 @@ const ConnectionsPage: React.FC = () => {
   };
 
   const testConnection = async (connectionId: string) => {
+    // Find the connection to get its name
+    const connection = connections.find(c => c.key === connectionId);
+    if (!connection) return;
+
+    // Open dialog and show testing state
+    setTestDialog({
+      isOpen: true,
+      testing: true,
+      connectionName: connection.name,
+      connectionKey: connectionId,
+      testError: null
+    });
+
     try {
       const response = await fetch(`/hms-mirror/api/v1/connections/${connectionId}/test`, {
         method: 'POST'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to test connection');
+        throw new Error(`Failed to test connection: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
+      console.log('Test API response:', result);
+
+      // Check if tests failed - either explicitly or by checking individual results
+      const hasFailed = !result.testPassed ||
+        result.connection?.hcfsTestResults?.status === 'FAILED' ||
+        result.connection?.hs2TestResults?.status === 'FAILED' ||
+        result.connection?.metastoreDirectTestResults?.status === 'FAILED';
+
+      // Update dialog with test results
+      setTestDialog(prev => ({
+        ...prev,
+        testing: false,
+        hcfsTestResults: result.connection?.hcfsTestResults,
+        hs2TestResults: result.connection?.hs2TestResults,
+        metastoreDirectTestResults: result.connection?.metastoreDirectTestResults,
+        testError: (result.testPassed === false || result.error) ? (result.message || result.error || 'Test failed') : null
+      }));
 
       // Update the specific connection with the test results from the response
       if (result.connection) {
@@ -121,8 +168,37 @@ const ConnectionsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Error testing connection:', err);
-      setError(err instanceof Error ? err.message : 'Failed to test connection');
+      let errorMessage = 'Failed to test connection';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object') {
+        try {
+          errorMessage = JSON.stringify(err, null, 2);
+        } catch {
+          errorMessage = String(err);
+        }
+      }
+
+      // Update dialog with error - ensure testing is stopped
+      setTestDialog(prev => ({
+        ...prev,
+        testing: false,
+        testError: errorMessage
+      }));
     }
+  };
+
+  const handleCloseTestDialog = () => {
+    setTestDialog({
+      isOpen: false,
+      testing: false,
+      connectionName: '',
+      connectionKey: '',
+      testError: null
+    });
   };
 
   const handleDeleteClick = (connection: Connection) => {
@@ -453,6 +529,18 @@ const ConnectionsPage: React.FC = () => {
         itemType="Connection"
         getNameFromData={(data) => data.name}
         setNameInData={(data, newName) => ({ ...data, name: newName, key: newName })}
+      />
+
+      {/* Test Progress Dialog */}
+      <TestProgressDialog
+        isOpen={testDialog.isOpen}
+        onClose={handleCloseTestDialog}
+        testing={testDialog.testing}
+        connectionName={testDialog.connectionName}
+        hcfsTestResults={testDialog.hcfsTestResults}
+        hs2TestResults={testDialog.hs2TestResults}
+        metastoreDirectTestResults={testDialog.metastoreDirectTestResults}
+        testError={testDialog.testError}
       />
     </div>
   );

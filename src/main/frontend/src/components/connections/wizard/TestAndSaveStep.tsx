@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BeakerIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ConnectionFormData, ConnectionTestResults, Connection } from '../../../types/Connection';
+import TestProgressDialog from '../TestProgressDialog';
 
 interface TestAndSaveStepProps {
   formData: ConnectionFormData;
@@ -31,6 +32,8 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
   const [originalConfig, setOriginalConfig] = useState<Partial<ConnectionFormData> | null>(null);
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
+  const [savedDuringTest, setSavedDuringTest] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
 
   // Load current connection test results when editing
   useEffect(() => {
@@ -104,6 +107,7 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
   const handleTestConnection = async () => {
     setTesting(true);
     setTestError(null);
+    setShowTestDialog(true); // Open the dialog when testing starts
 
     try {
       // Step 1: Save the connection with current formData values
@@ -188,15 +192,46 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
         setCurrentConnection(testResult.connection);
       }
 
+      // Check if tests failed and set appropriate error
+      const testFailed = testResult.testPassed === false || testResult.error ||
+        testResult.connection?.hcfsTestResults?.status === 'FAILED' ||
+        testResult.connection?.hs2TestResults?.status === 'FAILED' ||
+        testResult.connection?.metastoreDirectTestResults?.status === 'FAILED';
+
+      if (testFailed) {
+        setTestError(testResult.message || testResult.error || 'One or more connection tests failed');
+      } else {
+        setTestError(null);
+      }
+
       // Update formData with key if it was a new connection
       if (!formData.key && savedKey) {
         onChange({ key: savedKey });
       }
+
+      // Mark that the connection was saved during test (only for new connections)
+      if (!isEditMode) {
+        setSavedDuringTest(true);
+      }
     } catch (error) {
       console.error('Error testing connection:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      let errorMessage = 'Unknown error occurred';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object') {
+        try {
+          errorMessage = JSON.stringify(error, null, 2);
+        } catch {
+          errorMessage = String(error);
+        }
+      }
+
       setTestError(errorMessage);
     } finally {
+      // Always ensure testing is stopped
       setTesting(false);
     }
   };
@@ -311,7 +346,8 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
         {/* Info message about auto-save before test */}
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
           <p className="text-sm text-blue-700">
-            💡 <strong>Note:</strong> Testing will automatically save your current configuration before running the connection tests.
+            💡 <strong>Note:</strong> Testing will automatically save your configuration before running the connection tests.
+            {!isEditMode && ' After a successful test, click OK to complete the setup.'}
           </p>
         </div>
 
@@ -364,38 +400,42 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
         >
           ← Back
         </button>
-        
-        <div className="flex space-x-3">
-          <button
-            onClick={onSave}
-            disabled={saving || saveSuccess}
-            className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${
-              saveSuccess
-                ? 'bg-emerald-600 text-white'
-                : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50'
-            }`}
-          >
-            {saving ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Saving Connection...
-              </div>
-            ) : saveSuccess ? (
-              <div className="flex items-center">
-                <CheckCircleIcon className="h-4 w-4 mr-2" />
-                Connection Saved!
-              </div>
-            ) : (
-              '💾 Save Connection'
-            )}
-          </button>
 
-          {saveSuccess && (
+        <div className="flex space-x-3">
+          {/* Show Save button only if not saved during test (for new connections) or in edit mode or explicitly saved */}
+          {(!savedDuringTest || isEditMode) && (
+            <button
+              onClick={onSave}
+              disabled={saving || saveSuccess}
+              className={`px-6 py-2 font-medium rounded-lg focus:outline-none focus:ring-2 disabled:cursor-not-allowed ${
+                saveSuccess
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50'
+              }`}
+            >
+              {saving ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving Connection...
+                </div>
+              ) : saveSuccess ? (
+                <div className="flex items-center">
+                  <CheckCircleIcon className="h-4 w-4 mr-2" />
+                  Connection Saved!
+                </div>
+              ) : (
+                '💾 Save Connection'
+              )}
+            </button>
+          )}
+
+          {/* Show Done button when saved (either through test or explicit save) */}
+          {(saveSuccess || savedDuringTest) && (
             <button
               onClick={() => navigate('/connections')}
               className="px-6 py-2 font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              ✓ Done
+              ✓ OK
             </button>
           )}
         </div>
@@ -405,6 +445,18 @@ const TestAndSaveStep: React.FC<TestAndSaveStepProps> = ({
       <div className="text-xs text-gray-500 text-center">
         The connection will be saved and available for use in migration configurations
       </div>
+
+      {/* Test Progress Dialog */}
+      <TestProgressDialog
+        isOpen={showTestDialog}
+        onClose={() => setShowTestDialog(false)}
+        testing={testing}
+        connectionName={formData.name}
+        hcfsTestResults={currentConnection?.hcfsTestResults}
+        hs2TestResults={currentConnection?.hs2TestResults}
+        metastoreDirectTestResults={currentConnection?.metastoreDirectTestResults}
+        testError={testError}
+      />
     </div>
   );
 };
