@@ -39,6 +39,7 @@
                 <include>hms-mirror</include>
                 <include>hms-mirror-cli</include>
                 <include>setup.sh</include>
+                <include>download-hive-drivers.sh</include>
                 <include>DO_NOT_RUN_APP_FROM_HERE.txt</include>
             </includes>
             <outputDirectory>hms-mirror-install-${project.version}</outputDirectory>

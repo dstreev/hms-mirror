@@ -104,6 +104,7 @@ rm -f $BASE_DIR/bin/*
 
 cp -f hms-mirror $BASE_DIR/bin
 cp -f hms-mirror-cli $BASE_DIR/bin
+cp -f download-hive-drivers.sh $BASE_DIR/bin
 
 for jar in `ls lib/*.jar`; do
     cp -f $jar $BASE_DIR/lib
@@ -118,6 +119,7 @@ cp -r drivers/* $BASE_DIR/drivers
 chmod -R +r $BASE_DIR
 chmod +x $BASE_DIR/bin/hms-mirror
 chmod +x $BASE_DIR/bin/hms-mirror-cli
+chmod +x $BASE_DIR/bin/download-hive-drivers.sh
 
 if (( $EUID == 0 )); then
   echo "Setting up global links"
@@ -129,3 +131,44 @@ else
   ln -sf $BASE_DIR/bin/hms-mirror-cli $HOME/bin/hms-mirror-cli
   echo "Executable in $HOME/bin .  Add this to the environment path."
 fi
+
+echo ""
+echo "=========================================================================="
+echo "HMS-Mirror Setup Complete!"
+echo "=========================================================================="
+echo ""
+echo "IMPORTANT: Hive JDBC Driver Download"
+echo ""
+echo "HMS-Mirror requires Hive JDBC drivers to connect to your Hive clusters."
+echo "These drivers need to be downloaded for the user running hms-mirror."
+echo ""
+echo "The download-hive-drivers.sh script will download JDBC drivers for all"
+echo "supported Hive platform types (Apache Hive 1.x, 2.x, 3.x, 4.x, CDP, HDP, etc.)"
+echo "and place them in: $HOME/.hms-mirror/drivers"
+echo ""
+echo "WARNING: If you skip this step, you may experience connection issues when"
+echo "         trying to connect to Hive clusters."
+echo ""
+read -p "Would you like to download Hive JDBC drivers now? (y/n): " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    echo "Downloading Hive JDBC drivers..."
+    if [ -x "./download-hive-drivers.sh" ]; then
+        ./download-hive-drivers.sh
+    elif [ -x "$BASE_DIR/bin/download-hive-drivers.sh" ]; then
+        $BASE_DIR/bin/download-hive-drivers.sh
+    else
+        echo "Error: download-hive-drivers.sh not found or not executable"
+        echo "You can run it manually later from: $BASE_DIR/bin/download-hive-drivers.sh"
+    fi
+else
+    echo ""
+    echo "Skipping JDBC driver download."
+    echo "You can download the drivers later by running:"
+    echo "  $BASE_DIR/bin/download-hive-drivers.sh"
+    echo ""
+fi
+
+echo ""
+echo "Setup complete!"
