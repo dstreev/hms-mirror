@@ -550,160 +550,170 @@ const ConfigWizard: React.FC = () => {
 
   const renderStep1 = () => (
     <div className="space-y-6">
+      {/* Page Header */}
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Migration Behavior</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Migration Behavior</h3>
         <p className="text-sm text-gray-600 mb-6">Configure basic migration behavior and table type handling.</p>
-
-        <div className="space-y-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="migrateVIEW"
-              checked={config.migrateVIEW.on}
-              onChange={(e) => updateConfig('migrateVIEW.on', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="migrateVIEW" className="ml-2 block text-sm text-gray-900">
-              Migrate Views
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Include view migration</p>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="migrateNonNative"
-              checked={config.migrateNonNative}
-              onChange={(e) => updateConfig('migrateNonNative', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="migrateNonNative" className="ml-2 block text-sm text-gray-900">
-              Migrate Non-Native Tables
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Handle non-Hive tables (e.g., JDBC)</p>
-        </div>
       </div>
 
-      <div>
-        <h4 className="text-md font-medium text-gray-900 mb-4">Table Behavior</h4>
-        <p className="text-sm text-gray-600 mb-4">Configure how tables are created and managed during migration.</p>
+      {/* Two-column layout for all sections */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Migration Behavior Section */}
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-4">Basic Migration</h4>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="migrateVIEW"
+                  checked={config.migrateVIEW.on}
+                  onChange={(e) => updateConfig('migrateVIEW.on', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="migrateVIEW" className="ml-2 block text-sm text-gray-900">
+                  Migrate Views
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Include view migration</p>
 
-        <div className="space-y-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="createIfNotExists"
-              checked={config.createIfNotExists}
-              onChange={(e) => updateConfig('createIfNotExists', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="createIfNotExists" className="ml-2 block text-sm text-gray-900">
-              Create If Not Exists
-            </label>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="migrateNonNative"
+                  checked={config.migrateNonNative}
+                  onChange={(e) => updateConfig('migrateNonNative', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="migrateNonNative" className="ml-2 block text-sm text-gray-900">
+                  Migrate Non-Native Tables
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Handle non-Hive tables (e.g., JDBC)</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 ml-6">Use CREATE IF NOT EXISTS when creating tables</p>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="enableAutoTableStats"
-              checked={config.enableAutoTableStats}
-              onChange={(e) => updateConfig('enableAutoTableStats', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="enableAutoTableStats" className="ml-2 block text-sm text-gray-900">
-              Enable Auto Table Stats
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Automatically compute table statistics after migration</p>
+          {/* Table Behavior Section */}
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-4">Table Behavior</h4>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="createIfNotExists"
+                  checked={config.createIfNotExists}
+                  onChange={(e) => updateConfig('createIfNotExists', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="createIfNotExists" className="ml-2 block text-sm text-gray-900">
+                  Create If Not Exists
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Use CREATE IF NOT EXISTS when creating tables</p>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="enableAutoColumnStats"
-              checked={config.enableAutoColumnStats}
-              onChange={(e) => updateConfig('enableAutoColumnStats', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="enableAutoColumnStats" className="ml-2 block text-sm text-gray-900">
-              Enable Auto Column Stats
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Automatically compute column statistics after migration</p>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="enableAutoTableStats"
+                  checked={config.enableAutoTableStats}
+                  onChange={(e) => updateConfig('enableAutoTableStats', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="enableAutoTableStats" className="ml-2 block text-sm text-gray-900">
+                  Enable Auto Table Stats
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Automatically compute table statistics after migration</p>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="saveWorkingTables"
-              checked={config.saveWorkingTables}
-              onChange={(e) => updateConfig('saveWorkingTables', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="saveWorkingTables" className="ml-2 block text-sm text-gray-900">
-              Save Working Tables
-            </label>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="enableAutoColumnStats"
+                  checked={config.enableAutoColumnStats}
+                  onChange={(e) => updateConfig('enableAutoColumnStats', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="enableAutoColumnStats" className="ml-2 block text-sm text-gray-900">
+                  Enable Auto Column Stats
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Automatically compute column statistics after migration</p>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="saveWorkingTables"
+                  checked={config.saveWorkingTables}
+                  onChange={(e) => updateConfig('saveWorkingTables', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="saveWorkingTables" className="ml-2 block text-sm text-gray-900">
+                  Save Working Tables
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Keep intermediate working tables created during migration</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 ml-6">Keep intermediate working tables created during migration</p>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* File and Data Handling Section */}
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-4">File and Data Handling</h4>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="copyAvroSchemaUrls"
+                  checked={config.copyAvroSchemaUrls}
+                  onChange={(e) => updateConfig('copyAvroSchemaUrls', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="copyAvroSchemaUrls" className="ml-2 block text-sm text-gray-900">
+                  Copy Avro Schema URLs
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Copy Avro schema URLs during migration</p>
+            </div>
+          </div>
+
+          {/* Ownership Transfer Section */}
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-4">Ownership Transfer</h4>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="ownershipTransferDatabase"
+                  checked={config.ownershipTransfer.database}
+                  onChange={(e) => updateConfig('ownershipTransfer.database', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="ownershipTransferDatabase" className="ml-2 block text-sm text-gray-900">
+                  Transfer Database Ownership
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Transfer database ownership during migration</p>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="ownershipTransferTable"
+                  checked={config.ownershipTransfer.table}
+                  onChange={(e) => updateConfig('ownershipTransfer.table', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="ownershipTransferTable" className="ml-2 block text-sm text-gray-900">
+                  Transfer Table Ownership
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-6">Transfer table ownership during migration</p>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div>
-        <h4 className="text-md font-medium text-gray-900 mb-4">File and Data Handling</h4>
-        <p className="text-sm text-gray-600 mb-4">Configure file and schema handling options.</p>
-
-        <div className="space-y-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="copyAvroSchemaUrls"
-              checked={config.copyAvroSchemaUrls}
-              onChange={(e) => updateConfig('copyAvroSchemaUrls', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="copyAvroSchemaUrls" className="ml-2 block text-sm text-gray-900">
-              Copy Avro Schema URLs
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Copy Avro schema URLs during migration</p>
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-md font-medium text-gray-900 mb-4">Ownership Transfer</h4>
-        <p className="text-sm text-gray-600 mb-4">Configure ownership transfer settings for databases and tables.</p>
-
-        <div className="space-y-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="ownershipTransferDatabase"
-              checked={config.ownershipTransfer.database}
-              onChange={(e) => updateConfig('ownershipTransfer.database', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="ownershipTransferDatabase" className="ml-2 block text-sm text-gray-900">
-              Transfer Database Ownership
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Transfer database ownership during migration</p>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="ownershipTransferTable"
-              checked={config.ownershipTransfer.table}
-              onChange={(e) => updateConfig('ownershipTransfer.table', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="ownershipTransferTable" className="ml-2 block text-sm text-gray-900">
-              Transfer Table Ownership
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-6">Transfer table ownership during migration</p>
-        </div>
-      </div>
-
     </div>
   );
 
