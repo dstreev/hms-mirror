@@ -204,26 +204,6 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
           {/* Tab Content */}
           {currentDatabase && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              {/* Database Name (read-only, shown at top) */}
-              <div className="mb-6 pb-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Database Name
-                      {currentDatabase.entryMode === 'connection' && (
-                        <span className="ml-2 text-xs font-normal text-blue-600">(from connection)</span>
-                      )}
-                    </label>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {currentDatabase.databaseName || '(not set)'}
-                    </div>
-                  </div>
-                  {errors[`database_${activeTabIndex}_name`] && (
-                    <p className="mt-1 text-sm text-red-600">{errors[`database_${activeTabIndex}_name`]}</p>
-                  )}
-                </div>
-              </div>
-
               {/* Configuration Error */}
               {errors[`database_${activeTabIndex}_config`] && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
