@@ -74,9 +74,11 @@ public class ConversionResultController {
             @Parameter(description = "Page number (0-based)", required = false)
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", required = false)
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "Search term to filter results by key (regex pattern)", required = false)
+            @RequestParam(required = false) String search) {
 
-        log.info("ConversionResultController.listConversionResults() called - page: {}, pageSize: {}", page, pageSize);
+        log.info("ConversionResultController.listConversionResults() called - page: {}, pageSize: {}, search: {}", page, pageSize, search);
 
         try {
             // Validate pagination parameters
@@ -95,8 +97,26 @@ public class ConversionResultController {
 
             List<ConversionResult> allResults = conversionResultRepository.findAllAsList();
 
+            // Filter by search term if provided (case-insensitive regex)
+            List<ConversionResult> filteredResults = allResults;
+            if (search != null && !search.trim().isEmpty()) {
+                try {
+                    String searchPattern = search.trim();
+                    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(searchPattern, java.util.regex.Pattern.CASE_INSENSITIVE);
+                    filteredResults = allResults.stream()
+                            .filter(result -> result.getKey() != null && pattern.matcher(result.getKey()).find())
+                            .collect(Collectors.toList());
+                } catch (java.util.regex.PatternSyntaxException e) {
+                    log.warn("Invalid regex pattern: {}", search, e);
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "status", "error",
+                        "message", "Invalid regex pattern: " + e.getMessage()
+                    ));
+                }
+            }
+
             // Sort by created date (most recent first)
-            List<ConversionResult> sortedResults = allResults.stream()
+            List<ConversionResult> sortedResults = filteredResults.stream()
                     .sorted((a, b) -> {
                         if (a.getCreated() == null && b.getCreated() == null) return 0;
                         if (a.getCreated() == null) return 1;
@@ -365,6 +385,10 @@ public class ConversionResultController {
                     tableInfo.put("strategy", table.getStrategy() != null ? table.getStrategy().toString() : "N/A");
                     tableInfo.put("phaseState", table.getPhaseState() != null ? table.getPhaseState().toString() : "UNKNOWN");
 
+                    // Add start and steps
+                    tableInfo.put("start", table.getStart());
+                    tableInfo.put("steps", table.getSteps());
+
                     // Get issues and errors from LEFT environment
                     List<String> issues = table.getIssues(Environment.LEFT);
                     List<String> errors = table.getErrors(Environment.LEFT);
@@ -394,11 +418,15 @@ public class ConversionResultController {
             response.put("timestamp", conversion.getCreated() != null ? conversion.getCreated().toString() : null);
             response.put("config", conversion.getConfig());
             response.put("dataset", conversion.getDataset());
+            response.put("connections", conversion.getConnections());
+            response.put("job", conversion.getJob());
+            response.put("jobExecution", conversion.getJobExecution());
             response.put("summary", summary);
             response.put("tables", tables);
             response.put("databases", databases.values().stream().map(db -> {
                 Map<String, Object> dbInfo = new HashMap<>();
                 dbInfo.put("name", db.getName());
+                dbInfo.put("filteredOut", db.getFilteredOut());
                 return dbInfo;
             }).collect(Collectors.toList()));
 
@@ -491,6 +519,15 @@ public class ConversionResultController {
             details.put("definition", tableMirror.getTableDefinition(env));
             details.put("sql", tableMirror.getSql(env));
             details.put("addProperties", tableMirror.getPropAdd(env));
+
+            // Add statistics and partitions
+            if (tableMirror.getEnvironmentTable(env) != null) {
+                details.put("statistics", tableMirror.getEnvironmentTable(env).getStatistics());
+                details.put("partitions", tableMirror.getPartitionDefinition(env));
+            } else {
+                details.put("statistics", new HashMap<>());
+                details.put("partitions", new HashMap<>());
+            }
 
             Map<String, Object> response = new HashMap<>();
             response.put("status", "SUCCESS");

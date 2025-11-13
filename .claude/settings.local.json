@@ -98,7 +98,9 @@
       "Bash(/dev/null sleep 3 echo 'Killed existing server')",
       "Bash(open http://localhost:8090/hms-mirror/reports)",
       "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports\")",
-      "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports/details?key=test-output/e2e/legacy_cdp/sql_mao_ewd_da_dc\")"
+      "Bash(open \"http://localhost:8090/hms-mirror/runtime/reports/details?key=test-output/e2e/legacy_cdp/sql_mao_ewd_da_dc\")",
+      "Bash(open http://localhost:8090/hms-mirror/runtime/reports)",
+      "Bash(open http://localhost:8090/hms-mirror/rocksdb)"
     ],
     "deny": [],
     "ask": [],

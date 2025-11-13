@@ -43,6 +43,7 @@ interface BackupInfo {
 }
 
 const RocksDBPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'browser' | 'maintenance'>('browser');
   const [health, setHealth] = useState<RocksDBHealth | null>(null);
   const [columnFamilies, setColumnFamilies] = useState<ColumnFamily[]>([]);
   const [selectedColumnFamily, setSelectedColumnFamily] = useState<string>('default');
@@ -466,15 +467,140 @@ const RocksDBPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Maintenance Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <WrenchScrewdriverIcon className="h-5 w-5 mr-2" />
-            Maintenance Operations
-          </h2>
-          
-          <div className="space-y-4">
+      {/* Tabbed Card */}
+      <div className="bg-white rounded-lg shadow">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('browser')}
+              className={`${
+                activeTab === 'browser'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } flex-1 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center justify-center`}
+            >
+              <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
+              Data Browser
+            </button>
+            <button
+              onClick={() => setActiveTab('maintenance')}
+              className={`${
+                activeTab === 'maintenance'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } flex-1 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center justify-center`}
+            >
+              <WrenchScrewdriverIcon className="h-5 w-5 mr-2" />
+              Maintenance Operations
+            </button>
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6">
+          {/* Data Browser Tab */}
+          {activeTab === 'browser' && (
+            <div className="space-y-4">
+              {/* Column Family Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Column Family
+                </label>
+                <select
+                  value={selectedColumnFamily}
+                  onChange={(e) => setSelectedColumnFamily(e.target.value)}
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                >
+                  {columnFamilies.map(cf => (
+                    <option key={cf.name} value={cf.name}>{cf.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search */}
+              <div>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search keys..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="mt-2 flex items-center">
+                  <input
+                    type="checkbox"
+                    id="useRegex"
+                    checked={useRegex}
+                    onChange={(e) => setUseRegex(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="useRegex" className="ml-2 block text-sm text-gray-700">
+                    Use regular expressions (e.g., .*, ^session, connection$)
+                  </label>
+                </div>
+              </div>
+
+              {/* Keys Tree */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-96">
+                <div className="border border-gray-300 rounded-md p-3 overflow-y-auto">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Keys</h3>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">Loading...</span>
+                    </div>
+                  ) : error ? (
+                    <div className="text-red-600 text-sm">{error}</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {renderKeyTree(keys)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border border-gray-300 rounded-md p-3 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Value</h3>
+                    {selectedKey && selectedValue && !selectedValue.startsWith('Loading') && !selectedValue.startsWith('Error') && (
+                      <div className="flex items-center space-x-2">
+                        {copyStatus && (
+                          <span className={`text-xs ${copyStatus === 'Copied!' ? 'text-green-600' : 'text-red-600'}`}>
+                            {copyStatus}
+                          </span>
+                        )}
+                        <button
+                          onClick={copyToClipboard}
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          title="Copy value to clipboard"
+                        >
+                          <ClipboardDocumentIcon className="h-3 w-3 mr-1" />
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {selectedKey ? (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-2">Key: {selectedKey}</div>
+                      <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                        {selectedValue}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 text-sm">Select a key to view its value</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Maintenance Operations Tab */}
+          {activeTab === 'maintenance' && (
+            <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-2">Database Operations</h3>
               <div className="space-y-2">
@@ -589,108 +715,7 @@ const RocksDBPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Data Browser Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
-            Data Browser
-          </h2>
-
-          {/* Column Family Selector */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Column Family
-            </label>
-            <select
-              value={selectedColumnFamily}
-              onChange={(e) => setSelectedColumnFamily(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              {columnFamilies.map(cf => (
-                <option key={cf.name} value={cf.name}>{cf.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Search */}
-          <div className="mb-4">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search keys..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="mt-2 flex items-center">
-              <input
-                type="checkbox"
-                id="useRegex"
-                checked={useRegex}
-                onChange={(e) => setUseRegex(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="useRegex" className="ml-2 block text-sm text-gray-700">
-                Use regular expressions (e.g., .*, ^session, connection$)
-              </label>
-            </div>
-          </div>
-
-          {/* Keys Tree */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-96">
-            <div className="border border-gray-300 rounded-md p-3 overflow-y-auto">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Keys</h3>
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-sm text-gray-600">Loading...</span>
-                </div>
-              ) : error ? (
-                <div className="text-red-600 text-sm">{error}</div>
-              ) : (
-                <div className="space-y-1">
-                  {renderKeyTree(keys)}
-                </div>
-              )}
-            </div>
-
-            <div className="border border-gray-300 rounded-md p-3 overflow-y-auto">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-700">Value</h3>
-                {selectedKey && selectedValue && !selectedValue.startsWith('Loading') && !selectedValue.startsWith('Error') && (
-                  <div className="flex items-center space-x-2">
-                    {copyStatus && (
-                      <span className={`text-xs ${copyStatus === 'Copied!' ? 'text-green-600' : 'text-red-600'}`}>
-                        {copyStatus}
-                      </span>
-                    )}
-                    <button
-                      onClick={copyToClipboard}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      title="Copy value to clipboard"
-                    >
-                      <ClipboardDocumentIcon className="h-3 w-3 mr-1" />
-                      Copy
-                    </button>
-                  </div>
-                )}
-              </div>
-              {selectedKey ? (
-                <div>
-                  <div className="text-xs text-gray-500 mb-2">Key: {selectedKey}</div>
-                  <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap">
-                    {selectedValue}
-                  </pre>
-                </div>
-              ) : (
-                <div className="text-gray-500 text-sm">Select a key to view its value</div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

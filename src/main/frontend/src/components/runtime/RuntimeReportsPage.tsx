@@ -52,8 +52,8 @@ const RuntimeReportsPage: React.FC = () => {
         setTotalCount(0);
       }
     } catch (err: any) {
-      console.error('Failed to load runtime reports:', err);
-      setError(err.message || 'Failed to load runtime reports');
+      console.error('Failed to load migration reports:', err);
+      setError(err.message || 'Failed to load migration reports');
       setReports([]);
     } finally {
       setLoading(false);
@@ -101,8 +101,7 @@ const RuntimeReportsPage: React.FC = () => {
   };
 
   const handleViewDetails = (report: ConversionResult) => {
-    // Navigate to details page - to be implemented
-    navigate(`/runtime/reports/${report.key}`);
+    navigate(`/runtime/reports/details?key=${encodeURIComponent(report.key)}`);
   };
 
   return (
@@ -111,9 +110,9 @@ const RuntimeReportsPage: React.FC = () => {
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Runtime Reports</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Migration Reports</h1>
             <p className="mt-1 text-sm text-gray-600">
-              View conversion results and migration reports
+              View and manage completed migration execution reports
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -156,7 +155,7 @@ const RuntimeReportsPage: React.FC = () => {
       {loading && page === 0 && (
         <div className="text-center py-12">
           <ArrowPathIcon className="h-12 w-12 text-gray-400 animate-spin mx-auto" />
-          <p className="mt-2 text-sm text-gray-600">Loading runtime reports...</p>
+          <p className="mt-2 text-sm text-gray-600">Loading migration reports...</p>
         </div>
       )}
 
@@ -164,9 +163,9 @@ const RuntimeReportsPage: React.FC = () => {
       {!loading && reports.length === 0 && (
         <div className="text-center py-12">
           <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No reports found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No migration reports found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Conversion results will appear here after jobs are executed.
+            Migration reports will appear here after jobs are executed successfully.
           </p>
         </div>
       )}

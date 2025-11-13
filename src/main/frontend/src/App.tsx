@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/common/Layout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RequireConfiguration from './components/common/RequireConfiguration';
@@ -22,7 +22,6 @@ import ListDatasetsPage from './components/datasets/ListDatasetsPage';
 import JobsBuildPage from './components/jobs/JobsBuildPage';
 import JobBuildWizard from './components/jobs/JobBuildWizard';
 import RuntimeJobsPage from './components/runtime/RuntimeJobsPage';
-import RuntimeReportsPage from './components/runtime/RuntimeReportsPage';
 import RuntimeReportDetailsPage from './components/runtime/RuntimeReportDetailsPage';
 import CliReportsPage from './components/utilities/CliReportsPage';
 
@@ -68,8 +67,8 @@ const App: React.FC = () => {
         {/* Runtime Jobs routes - always accessible */}
         <Route path="/runtime/jobs" element={<RuntimeJobsPage />} />
 
-        {/* Runtime Reports routes - always accessible */}
-        <Route path="/runtime/reports" element={<RuntimeReportsPage />} />
+        {/* Runtime Reports routes - redirect to main reports page */}
+        <Route path="/runtime/reports" element={<Navigate to="/reports" replace />} />
         <Route path="/runtime/reports/details" element={<RuntimeReportDetailsPage />} />
 
         {/* Protected feature routes */}

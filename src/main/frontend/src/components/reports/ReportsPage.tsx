@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
+import {
   DocumentTextIcon,
   CalendarIcon,
   ClockIcon,
@@ -10,7 +10,13 @@ import {
   FolderIcon,
   EyeIcon,
   ArrowLeftIcon,
-  HomeIcon
+  HomeIcon,
+  CommandLineIcon,
+  GlobeAltIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 interface MigrationReport {
@@ -61,6 +67,7 @@ const ReportsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPath = searchParams.get('path') || '';
+  const [activeTab, setActiveTab] = useState<'cli' | 'web'>('web');
 
   const [browseData, setBrowseData] = useState<ReportsBrowseResponse>({
     currentPath: '',
@@ -71,10 +78,19 @@ const ReportsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state for Web Reports
+  const [webReportsPage, setWebReportsPage] = useState(0);
+  const [webReportsTotalCount, setWebReportsTotalCount] = useState(0);
+  const WEB_REPORTS_PAGE_SIZE = 10;
+
+  // Search state for Web Reports
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Separate state for input field
+
   useEffect(() => {
     console.log('ReportsPage mounted, currentPath:', currentPath);
     loadAllReports();
-  }, [currentPath]);
+  }, [currentPath, webReportsPage, searchTerm]); // searchTerm triggers API call, not searchInput
 
   const loadAllReports = async () => {
     try {
@@ -109,7 +125,8 @@ const ReportsPage: React.FC = () => {
       // Load RocksDB conversion results (only at root level)
       if (!currentPath) {
         try {
-          const rocksUrl = '/hms-mirror/api/v1/runtime/reports';
+          const searchParam = searchTerm.trim() ? `&search=${encodeURIComponent(searchTerm.trim())}` : '';
+          const rocksUrl = `/hms-mirror/api/v1/runtime/reports?page=${webReportsPage}&pageSize=${WEB_REPORTS_PAGE_SIZE}${searchParam}`;
           console.log('RocksDB reports URL:', rocksUrl);
           const rocksResponse = await fetch(rocksUrl);
           console.log('RocksDB reports response status:', rocksResponse.status);
@@ -119,6 +136,7 @@ const ReportsPage: React.FC = () => {
             console.log('RocksDB reports data:', rocksData);
             if (rocksData.status === 'success' && rocksData.data) {
               setRocksDBResults(rocksData.data);
+              setWebReportsTotalCount(rocksData.totalCount || 0);
             }
           }
         } catch (rocksError) {
@@ -127,6 +145,7 @@ const ReportsPage: React.FC = () => {
         }
       } else {
         setRocksDBResults([]);
+        setWebReportsTotalCount(0);
       }
 
     } catch (error) {
@@ -202,6 +221,36 @@ const ReportsPage: React.FC = () => {
     return currentPath.split('/').filter(Boolean);
   };
 
+  const handlePreviousPage = () => {
+    if (webReportsPage > 0) {
+      setWebReportsPage(webReportsPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    const totalPages = Math.ceil(webReportsTotalCount / WEB_REPORTS_PAGE_SIZE);
+    if (webReportsPage < totalPages - 1) {
+      setWebReportsPage(webReportsPage + 1);
+    }
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setSearchTerm(searchInput);
+      setWebReportsPage(0); // Reset to first page when search executes
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setWebReportsPage(0);
+  };
+
   if (isLoading) {
     return (
       <div className="p-8">
@@ -242,145 +291,383 @@ const ReportsPage: React.FC = () => {
           <p className="text-gray-600 mt-2">Browse and analyze migration execution results</p>
         </div>
 
-        {/* Breadcrumbs */}
-        {currentPath && (
-          <div className="mb-6">
-            <nav className="flex items-center space-x-2 text-sm">
-              <button
-                onClick={handleBackToRoot}
-                className="flex items-center text-blue-600 hover:text-blue-700"
-              >
-                <HomeIcon className="h-4 w-4 mr-1" />
-                Reports
-              </button>
-              {getBreadcrumbs().map((segment, index, array) => (
-                <React.Fragment key={index}>
-                  <span className="text-gray-400">/</span>
-                  <span className="text-gray-600">{segment}</span>
-                </React.Fragment>
-              ))}
-              {currentPath && (
+        {/* Tabbed Reports Section */}
+        {(browseData.reports.length > 0 || browseData.directories.length > 0 || rocksDBResults.length > 0) && (
+          <div className="bg-white rounded-lg shadow">
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex" aria-label="Tabs">
                 <button
-                  onClick={handleBackToParent}
-                  className="ml-4 flex items-center text-blue-600 hover:text-blue-700 text-sm"
+                  onClick={() => setActiveTab('web')}
+                  className={`${
+                    activeTab === 'web'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex-1 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center justify-center`}
                 >
-                  <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                  Back
+                  <GlobeAltIcon className="h-5 w-5 mr-2" />
+                  Web Reports ({rocksDBResults.length})
                 </button>
-              )}
-            </nav>
-          </div>
-        )}
-
-        {/* Directories */}
-        {browseData.directories.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Directories</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {browseData.directories.map((directory) => (
-                <div
-                  key={directory.path}
-                  onClick={() => handleDirectoryClick(directory)}
-                  className="bg-white rounded-lg shadow border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                <button
+                  onClick={() => setActiveTab('cli')}
+                  className={`${
+                    activeTab === 'cli'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex-1 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center justify-center`}
                 >
-                  <div className="flex items-center">
-                    <FolderIcon className="h-8 w-8 text-blue-500 mr-3" />
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">{directory.name}</h3>
-                      <p className="text-xs text-gray-500">Click to browse</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  <CommandLineIcon className="h-5 w-5 mr-2" />
+                  CLI Reports ({browseData.reports.length})
+                </button>
+              </nav>
             </div>
-          </div>
-        )}
 
-        {/* RocksDB Conversion Results */}
-        {!currentPath && rocksDBResults.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              RocksDB Conversion Results ({rocksDBResults.length})
-            </h2>
-            <div className="grid grid-cols-1 gap-6">
-              {rocksDBResults.map((result) => (
-                <div
-                  key={result.key}
-                  className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
-                >
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 mt-1">
-                          <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{result.key}</h3>
-                          <p className="text-sm text-gray-600">RocksDB Conversion Result</p>
-                        </div>
+            {/* Tab Content */}
+            <div className="p-6">
+              {/* Web Reports Tab */}
+              {activeTab === 'web' && !currentPath && (
+                <>
+                  {/* Search Field */}
+                  <div className="mb-4">
+                    <div className="relative max-w-md">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        RocksDB
-                      </span>
+                      <input
+                        type="text"
+                        value={searchInput}
+                        onChange={handleSearchInputChange}
+                        onKeyPress={handleSearchKeyPress}
+                        placeholder="Search reports (regex)..."
+                        className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                      {searchInput && (
+                        <button
+                          onClick={handleClearSearch}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                          <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        </button>
+                      )}
                     </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Supports regex patterns. Press Enter to search. Examples: <code className="bg-gray-100 px-1 rounded">prod.*</code>, <code className="bg-gray-100 px-1 rounded">test_\d+</code>
+                    </p>
+                  </div>
 
-                    {/* Metadata */}
-                    <div className="mb-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        {formatRocksDBDate(result.created)}
+                  {/* Pagination Controls */}
+                  {rocksDBResults.length > 0 && (
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="text-sm text-gray-600">
+                        Showing {rocksDBResults.length} report{rocksDBResults.length !== 1 ? 's' : ''}
+                        {searchTerm && ` matching "${searchTerm}"`}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={handlePreviousPage}
+                          disabled={webReportsPage === 0}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                          Previous
+                        </button>
+                        <span className="text-sm text-gray-600">
+                          Page {webReportsPage + 1} of {Math.ceil(webReportsTotalCount / WEB_REPORTS_PAGE_SIZE)}
+                        </span>
+                        <button
+                          onClick={handleNextPage}
+                          disabled={webReportsPage >= Math.ceil(webReportsTotalCount / WEB_REPORTS_PAGE_SIZE) - 1}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                          <ChevronRightIcon className="h-4 w-4 ml-1" />
+                        </button>
                       </div>
                     </div>
+                  )}
 
-                    {/* Summary */}
-                    {(result.config || result.dataset) && (
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Configuration Details</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          {result.config && (
-                            <>
-                              <div>
-                                <div className="text-gray-600">Configuration</div>
-                                <div className="font-medium text-blue-600">{result.config.name}</div>
-                              </div>
-                              {result.config.dataStrategy && (
-                                <div>
-                                  <div className="text-gray-600">Data Strategy</div>
-                                  <div className="font-medium">{result.config.dataStrategy}</div>
+                  {rocksDBResults.length === 0 ? (
+                    <div className="text-center py-12">
+                      <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <h2 className="text-xl font-medium text-gray-900 mb-2">
+                        {searchTerm ? 'No Matching Reports Found' : 'No Web Reports Found'}
+                      </h2>
+                      <p className="text-gray-600">
+                        {searchTerm
+                          ? `No reports found containing "${searchTerm}"`
+                          : 'No web-based migration reports found'
+                        }
+                      </p>
+                      {!searchTerm && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          Web reports are generated when executing migrations through the web interface
+                        </p>
+                      )}
+                      {searchTerm && (
+                        <button
+                          onClick={handleClearSearch}
+                          className="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          Clear Search
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {rocksDBResults.map((result) => (
+                        <div
+                          key={result.key}
+                          className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
+                        >
+                          <div className="p-6">
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  <CheckCircleIcon className="h-5 w-5 text-blue-500" />
                                 </div>
-                              )}
-                            </>
-                          )}
-                          {result.dataset && (
-                            <div>
-                              <div className="text-gray-600">Dataset</div>
-                              <div className="font-medium">{result.dataset.name}</div>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900">{result.key}</h3>
+                                  <p className="text-sm text-gray-600">RocksDB Conversion Result</p>
+                                </div>
+                              </div>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                RocksDB
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => handleViewRocksDBReport(result)}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      >
-                        <EyeIcon className="h-4 w-4 mr-2" />
-                        View Details
-                      </button>
+                            {/* Metadata */}
+                            <div className="mb-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <CalendarIcon className="h-4 w-4 mr-2" />
+                                {formatRocksDBDate(result.created)}
+                              </div>
+                            </div>
+
+                            {/* Summary */}
+                            {(result.config || result.dataset) && (
+                              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Configuration Details</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                  {result.config && (
+                                    <>
+                                      <div>
+                                        <div className="text-gray-600">Configuration</div>
+                                        <div className="font-medium text-blue-600">{result.config.name}</div>
+                                      </div>
+                                      {result.config.dataStrategy && (
+                                        <div>
+                                          <div className="text-gray-600">Data Strategy</div>
+                                          <div className="font-medium">{result.config.dataStrategy}</div>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                  {result.dataset && (
+                                    <div>
+                                      <div className="text-gray-600">Dataset</div>
+                                      <div className="font-medium">{result.dataset.name}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => handleViewRocksDBReport(result)}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                              >
+                                <EyeIcon className="h-4 w-4 mr-2" />
+                                View Details
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
-              ))}
+                  )}
+                </>
+              )}
+
+              {/* CLI Reports Tab */}
+              {activeTab === 'cli' && (
+                <>
+                  {/* Breadcrumbs */}
+                  {currentPath && (
+                    <div className="mb-6">
+                      <nav className="flex items-center space-x-2 text-sm">
+                        <button
+                          onClick={handleBackToRoot}
+                          className="flex items-center text-blue-600 hover:text-blue-700"
+                        >
+                          <HomeIcon className="h-4 w-4 mr-1" />
+                          Reports
+                        </button>
+                        {getBreadcrumbs().map((segment, index, array) => (
+                          <React.Fragment key={index}>
+                            <span className="text-gray-400">/</span>
+                            <span className="text-gray-600">{segment}</span>
+                          </React.Fragment>
+                        ))}
+                        {currentPath && (
+                          <button
+                            onClick={handleBackToParent}
+                            className="ml-4 flex items-center text-blue-600 hover:text-blue-700 text-sm"
+                          >
+                            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+                            Back
+                          </button>
+                        )}
+                      </nav>
+                    </div>
+                  )}
+
+                  {/* Directories */}
+                  {browseData.directories.length > 0 && (
+                    <div className="mb-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {browseData.directories.map((directory) => (
+                          <div
+                            key={directory.path}
+                            onClick={() => handleDirectoryClick(directory)}
+                            className="bg-white rounded-lg shadow border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-center">
+                              <FolderIcon className="h-8 w-8 text-blue-500 mr-3" />
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-900">{directory.name}</h3>
+                                <p className="text-xs text-gray-500">Click to browse</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CLI Reports */}
+                  {browseData.reports.length === 0 ? (
+                    <div className="text-center py-12">
+                      <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <h2 className="text-xl font-medium text-gray-900 mb-2">No CLI Reports Found</h2>
+                      <p className="text-gray-600">
+                        {browseData.message || "No migration reports found"}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        CLI reports are generated when running hms-mirror from the command line
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {browseData.reports.map((report) => (
+                        <div
+                          key={report.id}
+                          className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
+                        >
+                          <div className="p-6">
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  {getStatusIcon(report.status)}
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900">{report.name}</h3>
+                                  <p className="text-sm text-gray-600">Path: {report.path}</p>
+                                </div>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(report.status)}`}>
+                                {report.status}
+                              </span>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="mb-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <CalendarIcon className="h-4 w-4 mr-2" />
+                                {report.timestamp}
+                              </div>
+                            </div>
+
+                            {/* Summary */}
+                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                              <h4 className="text-sm font-medium text-gray-900 mb-2">Migration Summary</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <div className="text-gray-600">Database</div>
+                                  <div className="font-medium text-blue-600">{report.database}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-600">Total Tables</div>
+                                  <div className="font-medium">{report.summary.totalTables}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-600">Successful</div>
+                                  <div className="font-medium text-green-600">{report.summary.successfulTables}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-600">Failed</div>
+                                  <div className="font-medium text-red-600">{report.summary.failedTables}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Artifacts */}
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-gray-900 mb-2">Available Artifacts</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {report.artifacts.migrationReport && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    <FolderIcon className="h-3 w-3 mr-1" />
+                                    Migration Report
+                                  </span>
+                                )}
+                                {report.artifacts.errorLog && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    <FolderIcon className="h-3 w-3 mr-1" />
+                                    Execution Log
+                                  </span>
+                                )}
+                                {report.artifacts.sqlScripts && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    <FolderIcon className="h-3 w-3 mr-1" />
+                                    SQL Scripts
+                                  </span>
+                                )}
+                                {report.artifacts.executionPlan && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                    <FolderIcon className="h-3 w-3 mr-1" />
+                                    Configuration
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => handleViewReport(report)}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                              >
+                                <EyeIcon className="h-4 w-4 mr-2" />
+                                View Details
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {/* Filesystem Reports */}
-        {browseData.reports.length === 0 && browseData.directories.length === 0 && rocksDBResults.length === 0 ? (
+        {/* Empty State - shown only when no reports at all */}
+        {browseData.reports.length === 0 && browseData.directories.length === 0 && rocksDBResults.length === 0 && (
           <div className="text-center py-12">
             <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-medium text-gray-900 mb-2">No Reports Found</h2>
@@ -391,112 +678,7 @@ const ReportsPage: React.FC = () => {
               Make sure to run some migrations first to generate reports
             </p>
           </div>
-        ) : browseData.reports.length > 0 ? (
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Filesystem Migration Reports ({browseData.reports.length})
-            </h2>
-            <div className="grid grid-cols-1 gap-6">
-              {browseData.reports.map((report) => (
-                <div
-                  key={report.id}
-                  className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
-                >
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 mt-1">
-                          {getStatusIcon(report.status)}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{report.name}</h3>
-                          <p className="text-sm text-gray-600">Path: {report.path}</p>
-                        </div>
-                      </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(report.status)}`}>
-                        {report.status}
-                      </span>
-                    </div>
-
-                    {/* Metadata */}
-                    <div className="mb-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        {report.timestamp}
-                      </div>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Migration Summary</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <div className="text-gray-600">Database</div>
-                          <div className="font-medium text-blue-600">{report.database}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">Total Tables</div>
-                          <div className="font-medium">{report.summary.totalTables}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">Successful</div>
-                          <div className="font-medium text-green-600">{report.summary.successfulTables}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">Failed</div>
-                          <div className="font-medium text-red-600">{report.summary.failedTables}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Artifacts */}
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Available Artifacts</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {report.artifacts.migrationReport && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                            <FolderIcon className="h-3 w-3 mr-1" />
-                            Migration Report
-                          </span>
-                        )}
-                        {report.artifacts.errorLog && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
-                            <FolderIcon className="h-3 w-3 mr-1" />
-                            Execution Log
-                          </span>
-                        )}
-                        {report.artifacts.sqlScripts && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                            <FolderIcon className="h-3 w-3 mr-1" />
-                            SQL Scripts
-                          </span>
-                        )}
-                        {report.artifacts.executionPlan && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                            <FolderIcon className="h-3 w-3 mr-1" />
-                            Configuration
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => handleViewReport(report)}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      >
-                        <EyeIcon className="h-4 w-4 mr-2" />
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
