@@ -22,6 +22,8 @@ import com.cloudera.utils.hms.mirror.domain.core.Messages;
 import com.cloudera.utils.hms.mirror.domain.core.TableMirror;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -46,6 +48,8 @@ import static java.util.Objects.nonNull;
 @Getter
 @Setter
 @Slf4j
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RunStatus implements Comparable<RunStatus>, Cloneable {
     private String key;
 
@@ -56,13 +60,14 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
 
     private String comment;
 
-    @JsonIgnore
-    private Messages errors = null;//new Messages(150);
-    @JsonIgnore
-    private Messages warnings = null;//new Messages(150);
+    private Messages errors = new Messages(150);
+    private Messages warnings = new Messages(150);
 
-    List<String> errorMessages = new ArrayList<>();
-    List<String> warningMessages = new ArrayList<>();
+//    @JsonIgnore
+//    List<String> errorMessages = new ArrayList<>();
+//    @JsonIgnore
+//    List<String> warningMessages = new ArrayList<>();
+
     Set<String> configMessages = new TreeSet<>();
 
     AtomicInteger unSuccessfulTableCount = new AtomicInteger(0);
@@ -246,7 +251,8 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
         if (nonNull(errors) && errors.getReturnCode() != 0) {
             return Boolean.TRUE;
         } else {
-            return errorMessages.isEmpty() ? Boolean.FALSE : Boolean.TRUE;
+            return Boolean.FALSE;
+//            return errorMessages.isEmpty() ? Boolean.FALSE : Boolean.TRUE;
         }
     }
 
@@ -254,22 +260,24 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
         if (nonNull(warnings) && warnings.getReturnCode() != 0) {
             return Boolean.TRUE;
         } else {
-            return warningMessages.isEmpty() ? Boolean.FALSE : Boolean.TRUE;
+            return Boolean.FALSE;
+//            return warningMessages.isEmpty() ? Boolean.FALSE : Boolean.TRUE;
         }
     }
 
+
     public List<String> getErrorMessages() {
-        if (errors != null) {
+//        if (errors != null) {
             return errors.getMessages();
-        }
-        return errorMessages;
+//        }
+//        return errorMessages;
     }
 
     public List<String> getWarningMessages() {
-        if (warnings != null) {
+//        if (warnings != null) {
             return warnings.getMessages();
-        }
-        return warningMessages;
+//        }
+//        return warningMessages;
     }
 
     @Override
@@ -338,8 +346,8 @@ public class RunStatus implements Comparable<RunStatus>, Cloneable {
         if (nonNull(warnings)) {
             clone.warnings = warnings.clone();
         }
-        clone.errorMessages = new ArrayList<>(errorMessages);
-        clone.warningMessages = new ArrayList<>(warningMessages);
+//        clone.errorMessages = new ArrayList<>(errorMessages);
+//        clone.warningMessages = new ArrayList<>(warningMessages);
         clone.configMessages = new TreeSet<>(configMessages);
         clone.stages = new LinkedHashMap<>(stages);
         clone.inProgressTables = new ArrayList<>(inProgressTables);

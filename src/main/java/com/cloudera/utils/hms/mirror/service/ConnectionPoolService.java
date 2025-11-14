@@ -364,7 +364,7 @@ public class ConnectionPoolService {
                         // Exercise the connections.
                         log.info("HS2 Connection Successful for {}", environment);
                         stmt = conn.createStatement();
-
+                        connection.setHs2Connected(Boolean.TRUE);
                         // Run these first to ensure we preset the queue, if being set.
                         // Property Overrides from 'config.optimization.overrides'
                         // TODO: Review these property overrides.  I think these are NOT for the

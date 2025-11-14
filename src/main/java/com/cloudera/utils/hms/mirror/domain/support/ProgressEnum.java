@@ -24,6 +24,7 @@ public enum ProgressEnum {
     IN_PROGRESS("In Progress"),
     COMPLETED("Completed"),
     FAILED("Failed"),
+    FAILED_VALIDATION("Failed Validation"),
     CANCELLED("Cancelled"),
     CANCEL_FAILED("Cancel Failed"),
     ABANDONED("Abandoned");

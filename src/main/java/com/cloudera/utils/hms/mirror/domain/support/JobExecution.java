@@ -1,6 +1,7 @@
 package com.cloudera.utils.hms.mirror.domain.support;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
@@ -21,6 +22,7 @@ Keep track of things realted to the jobs execution.
 public class JobExecution {
     private boolean dryRun = Boolean.TRUE;
 
+    @JsonIgnore
     public boolean isExecute() {
         return !dryRun;
     }

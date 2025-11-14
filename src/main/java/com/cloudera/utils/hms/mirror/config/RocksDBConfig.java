@@ -18,8 +18,11 @@
 package com.cloudera.utils.hms.mirror.config;
 
 import com.cloudera.utils.hms.mirror.domain.support.RocksDBColumnFamily;
+import com.cloudera.utils.hms.util.BitSetDeserializer;
+import com.cloudera.utils.hms.util.BitSetSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.rocksdb.*;
@@ -32,6 +35,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -482,7 +486,12 @@ public class RocksDBConfig {
     @Bean("rocksDBObjectMapper")
     public ObjectMapper rocksDBObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(BitSet.class, new BitSetSerializer());
+        module.addDeserializer(BitSet.class, new BitSetDeserializer());
+        mapper.registerModule(module);
         mapper.registerModule(new JavaTimeModule());
+
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return mapper;
     }

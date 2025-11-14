@@ -245,6 +245,8 @@ public class HMSMirrorAppService {
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.COMPLETED);
             return Boolean.TRUE;
         } else {
+            runStatus.setProgress(ProgressEnum.FAILED_VALIDATION);
+            runStatus.setEnd(LocalDateTime.now());
             runStatus.setStage(StageEnum.VALIDATING_CONFIG, CollectionEnum.ERRORED);
             try {
                 reportWriterService.wrapup();
@@ -1061,7 +1063,7 @@ public class HMSMirrorAppService {
 
         try {
             runStatus.setStage(StageEnum.SAVING_REPORTS, CollectionEnum.COMPLETED);
-            reportWriterService.wrapup();
+//            reportWriterService.wrapup();
         } catch (RuntimeException rte) {
             log.error("Issue saving reports", rte);
             runStatus.addError(MISC_ERROR, rte.getMessage());
@@ -1192,6 +1194,7 @@ public class HMSMirrorAppService {
             // Check point
             saveConversionResult(conversionResult);
             saveRunStatus(conversionResult, runStatus);
+            getConnectionPoolService().close();
             return Boolean.FALSE;
         } else {
             // Check point
@@ -1207,6 +1210,7 @@ public class HMSMirrorAppService {
             // Check point
             saveConversionResult(conversionResult);
             saveRunStatus(conversionResult, runStatus);
+            getConnectionPoolService().close();
             return Boolean.FALSE;
         }
 
@@ -1220,6 +1224,7 @@ public class HMSMirrorAppService {
             // Check point
             saveConversionResult(conversionResult);
             saveRunStatus(conversionResult, runStatus);
+            getConnectionPoolService().close();
             return Boolean.FALSE;
         }
 
@@ -1233,6 +1238,7 @@ public class HMSMirrorAppService {
             // Check point
             saveConversionResult(conversionResult);
             saveRunStatus(conversionResult, runStatus);
+            getConnectionPoolService().close();
             return Boolean.FALSE;
         }
 
@@ -1261,6 +1267,7 @@ public class HMSMirrorAppService {
             // Check point
             saveConversionResult(conversionResult);
             saveRunStatus(conversionResult, runStatus);
+            getConnectionPoolService().close();
             return Boolean.FALSE;
         }
 
@@ -1294,6 +1301,9 @@ public class HMSMirrorAppService {
         // Check point
         saveConversionResult(conversionResult);
         saveRunStatus(conversionResult, runStatus);
+
+        // Shutdown the connections
+        getConnectionPoolService().close();
 
         return rtn;
     }

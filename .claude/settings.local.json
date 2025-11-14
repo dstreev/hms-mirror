@@ -106,7 +106,8 @@
       "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror/reports\")",
       "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror/rocksdb\")",
       "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror\")",
-      "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror/jobs/build\")"
+      "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror/jobs/build\")",
+      "Bash(open -na \"Google Chrome\" --args --incognito \"http://localhost:8090/hms-mirror/runtime/jobs\")"
     ],
     "deny": [],
     "ask": [],

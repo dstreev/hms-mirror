@@ -19,8 +19,6 @@ package com.cloudera.utils.hms.mirror.domain.dto;
 
 import com.cloudera.utils.hive.config.DBStore;
 import com.cloudera.utils.hms.mirror.domain.core.Warehouse;
-import com.cloudera.utils.hms.mirror.domain.support.ConnectionStatus;
-import com.cloudera.utils.hms.mirror.domain.support.DriverType;
 import com.cloudera.utils.hms.mirror.domain.support.PlatformType;
 import com.cloudera.utils.hms.mirror.domain.support.WarehouseSource;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -165,12 +163,8 @@ public class ConnectionDto implements Cloneable {
 
     @JsonIgnore
     public boolean isHs2KerberosConnection() {
-        if (isHs2Connected()) {
-            if (!isBlank(getHs2Uri()) && getHs2Uri().contains("principal")) {
-                return Boolean.TRUE;
-            } else {
-                return Boolean.FALSE;
-            }
+        if (!isBlank(getHs2Uri()) && getHs2Uri().contains("principal")) {
+            return Boolean.TRUE;
         } else {
             return Boolean.FALSE;
         }

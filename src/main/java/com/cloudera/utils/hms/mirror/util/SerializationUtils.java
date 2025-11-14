@@ -17,8 +17,11 @@
 
 package com.cloudera.utils.hms.mirror.util;
 
+import com.cloudera.utils.hms.util.BitSetDeserializer;
+import com.cloudera.utils.hms.util.BitSetSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +29,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.yaml.snakeyaml.LoaderOptions;
+
+import java.util.BitSet;
 
 @Configuration
 public class SerializationUtils {
@@ -45,6 +50,12 @@ public class SerializationUtils {
         loaderOptions.setCodePointLimit(codePointLimit);
         YAMLFactory yamlFactory = YAMLFactory.builder().loaderOptions(loaderOptions).build();
         ObjectMapper yamlMapper = new ObjectMapper(yamlFactory);
+
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(BitSet.class, new BitSetSerializer());
+        module.addDeserializer(BitSet.class, new BitSetDeserializer());
+        yamlMapper.registerModule(module);
+
         // Integration with jsr310 to help with serializing LocalDateTime objects.
         yamlMapper.registerModule(new JavaTimeModule());
         yamlMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

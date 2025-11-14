@@ -13,10 +13,28 @@ export interface RunStatus {
   appVersion?: string;
   progress?: string;
   stages?: Record<string, string>;
+  inProgressTables?: any[]; // TableMirror objects
   operationStatistics?: {
-    tableMirrors?: number;
-    successfulMirrors?: number;
-    failedMirrors?: number;
+    counts?: {
+      databases?: number;
+      tables?: number;
+    };
+    skipped?: {
+      databases?: number;
+      tables?: number;
+    };
+    issues?: {
+      databases?: number;
+      tables?: number;
+    };
+    failures?: {
+      databases?: number;
+      tables?: number;
+    };
+    successes?: {
+      databases?: number;
+      tables?: number;
+    };
   };
 }
 
@@ -58,9 +76,9 @@ class RuntimeJobsApi extends BaseApi {
   /**
    * Get a specific runtime job status by key
    */
-  async get(key: string): Promise<RunStatus | null> {
+  async getByKey(key: string): Promise<RunStatus | null> {
     try {
-      const response = await this.get<RuntimeJobResponse>(`/runtime/jobs/${key}`);
+      const response = await super.get<RuntimeJobResponse>(`/runtime/jobs/${key}`);
       if (response?.status === 'SUCCESS' && response.runStatus) {
         return response.runStatus;
       }

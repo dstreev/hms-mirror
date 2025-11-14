@@ -75,7 +75,7 @@ public class RunStatusRepositoryImpl extends AbstractRocksDBRepository<RunStatus
      * @return The composite key for RunStatus storage
      */
     private String buildCompositeKey(String conversionResultKey) {
-        return conversionResultKey + KEY_SEPARATOR + RUN_STATUS_SUFFIX;
+        return conversionResultKey;
     }
 
     @Override

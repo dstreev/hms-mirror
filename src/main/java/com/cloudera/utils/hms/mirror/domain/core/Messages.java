@@ -18,7 +18,11 @@
 package com.cloudera.utils.hms.mirror.domain.core;
 
 import com.cloudera.utils.hms.mirror.MessageCode;
+import com.cloudera.utils.hms.util.BitSetDeserializer;
+import com.cloudera.utils.hms.util.BitSetSerializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,9 +33,10 @@ import java.util.*;
 @Setter
 public class Messages implements Cloneable {
 
-//    @JsonIgnore
+    @JsonSerialize(using = BitSetSerializer.class)
+    @JsonDeserialize(using = BitSetDeserializer.class)
     private BitSet bitSet;
-//    @JsonIgnore
+
     private Map<Integer, Object[]> argMap = new TreeMap<Integer, Object[]>();
 
     public Messages() {
