@@ -20,6 +20,7 @@ import JobFilters, { JobListFilters } from './JobFilters';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import JobSummaryDialog from './JobSummaryDialog';
 import JobValidationDialog from './JobValidationDialog';
+import JobRunDialog from './JobRunDialog';
 
 const JobsBuildPage: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +61,16 @@ const JobsBuildPage: React.FC = () => {
     warnings: []
   });
   const [validating, setValidating] = useState<string | null>(null);
+  const [runDialog, setRunDialog] = useState<{
+    isOpen: boolean;
+    jobKey: string;
+    jobName: string;
+  }>({
+    isOpen: false,
+    jobKey: '',
+    jobName: ''
+  });
+  const [running, setRunning] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -293,9 +304,81 @@ const JobsBuildPage: React.FC = () => {
 
   const handleRunClick = async (job: Job, event: React.MouseEvent) => {
     event.stopPropagation();
-    // TODO: Implement run functionality
     console.log('Run job:', job.name);
-    setError('Run functionality not yet implemented');
+
+    // First, validate the job
+    setValidating(job.jobKey);
+    try {
+      const result = await jobApi.validateJob(job.jobKey);
+
+      if (result.success) {
+        // Check if validation passed
+        if (result.valid) {
+          // Job is valid, show run dialog
+          setRunDialog({
+            isOpen: true,
+            jobKey: job.jobKey,
+            jobName: job.name
+          });
+        } else {
+          // Job validation failed, show validation errors
+          setValidationDialog({
+            isOpen: true,
+            jobName: job.name,
+            isValid: false,
+            message: result.message || 'Job validation failed',
+            errors: result.errors || [],
+            warnings: result.warnings || []
+          });
+        }
+      } else {
+        setError(result.message || 'Failed to validate job');
+      }
+    } catch (error) {
+      console.error('Error validating job:', error);
+      setError('Failed to validate job');
+    } finally {
+      setValidating(null);
+    }
+  };
+
+  const handleRunDialogClose = () => {
+    setRunDialog({
+      isOpen: false,
+      jobKey: '',
+      jobName: ''
+    });
+  };
+
+  const handleRunJob = async (dryRun: boolean) => {
+    const { jobKey, jobName } = runDialog;
+    console.log(`Starting job ${jobName} (${jobKey}) with dryRun: ${dryRun}`);
+
+    // Close the run dialog
+    handleRunDialogClose();
+
+    // Set running state
+    setRunning(jobKey);
+
+    try {
+      const result = await jobApi.runJob(jobKey, dryRun);
+
+      if (result.success) {
+        // Job started successfully
+        console.log('Job started successfully:', result);
+        // TODO: Navigate to job status page or show success message
+        setError(null);
+        // For now, just show a success message
+        alert(`Job "${jobName}" started successfully in ${dryRun ? 'dry-run' : 'production'} mode!`);
+      } else {
+        setError(result.message || 'Failed to start job');
+      }
+    } catch (error) {
+      console.error('Error starting job:', error);
+      setError('Failed to start job');
+    } finally {
+      setRunning(null);
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -664,6 +747,14 @@ const JobsBuildPage: React.FC = () => {
         errors={validationDialog.errors}
         warnings={validationDialog.warnings}
         onClose={handleValidationDialogClose}
+      />
+
+      {/* Job Run Dialog */}
+      <JobRunDialog
+        isOpen={runDialog.isOpen}
+        jobName={runDialog.jobName}
+        onClose={handleRunDialogClose}
+        onRun={handleRunJob}
       />
     </div>
   );

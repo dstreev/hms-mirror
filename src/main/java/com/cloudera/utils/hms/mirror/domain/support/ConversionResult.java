@@ -142,6 +142,13 @@ public class ConversionResult {
         }
     }
 
+    public JobExecution getJobExecution() {
+        if (jobExecution == null) {
+            jobExecution = new JobExecution();
+        }
+        return jobExecution;
+    }
+
     /**
      * The Target Namespace should be the hcfsNamespace on the Target Cluster.  When the Data Strategy is STORAGE_MIGRATION
      * then pull it from the JobDto.

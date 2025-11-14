@@ -234,6 +234,44 @@ class JobApi extends BaseApi {
     }
   }
 
+  /**
+   * Run a job with the specified options
+   */
+  async runJob(jobKey: string, dryRun: boolean): Promise<{
+    success: boolean;
+    message?: string;
+    runStatus?: any;
+  }> {
+    try {
+      const response = await this.post<{
+        status: string;
+        message?: string;
+        runStatus?: any;
+      }>('/runtime/jobs/start', {
+        jobKey,
+        dryRun
+      });
+
+      if (response?.status === 'SUCCESS' || response?.status === 'success') {
+        return {
+          success: true,
+          message: response.message,
+          runStatus: response.runStatus
+        };
+      }
+
+      return {
+        success: false,
+        message: response?.message || 'Failed to start job'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
 }
 
 export const jobApi = new JobApi();

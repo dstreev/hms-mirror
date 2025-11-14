@@ -185,7 +185,9 @@ public abstract class ConnectionPoolsBase implements ConnectionPools {
             if (nonNull(connection) && !isBlank(connection.getMetastoreDirectUri())) {
                 // Make a copy.
                 Properties connProperties = new Properties();
-                connProperties.putAll(connection.getMetastoreDirectConnectionProperties());
+                if (connection.getMetastoreDirectConnectionProperties() != null) {
+                    connProperties.putAll(connection.getMetastoreDirectConnectionProperties());
+                }
                 // Add Username and Password to Properties.
                 connProperties.put("user", connection.getMetastoreDirectUsername());
                 connProperties.put("password", connection.getMetastoreDirectPassword());

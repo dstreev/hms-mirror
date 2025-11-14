@@ -25,7 +25,8 @@ public enum ProgressEnum {
     COMPLETED("Completed"),
     FAILED("Failed"),
     CANCELLED("Cancelled"),
-    CANCEL_FAILED("Cancel Failed");
+    CANCEL_FAILED("Cancel Failed"),
+    ABANDONED("Abandoned");
 
     private final String value;
 

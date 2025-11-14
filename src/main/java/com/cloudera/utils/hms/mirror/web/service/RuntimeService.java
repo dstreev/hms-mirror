@@ -44,7 +44,10 @@ public class RuntimeService {
     private final ConfigService configService;
     @NonNull
     private final ConversionResultService conversionResultService;
-
+    @NonNull
+    private final JobManagementService jobManagementService;
+    @NonNull
+    private final ExecutionContextService executionContextService;
     @NonNull
     private final HMSMirrorAppService hmsMirrorAppService;
 
@@ -53,17 +56,18 @@ public class RuntimeService {
 
     public RunStatus start(String jobKey, boolean dryrun) throws RequiredConfigurationException, MismatchException, SessionException, EncryptionException {
 
-        ConversionResult conversionResult = getConversionResultService().fromJob(jobKey);
+        ConversionResult conversionResult = getJobManagementService().buildConversionResultFromJobId(jobKey);
         conversionResult.getJobExecution().setDryRun(dryrun);
-
+        getExecutionContextService().setConversionResult(conversionResult);
+        getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
 
         log.debug("Starting the HMS Mirror Application");
-        RunStatus runStatus = conversionResult.getRunStatus();
+//        RunStatus runStatus = conversionResult.getRunStatus();
         // TODO: We need to add this to the web session we are currently using so we can track progress.
 
-        // TODO: What to do with the 'result'?
+        // TODO: What
         CompletableFuture<Boolean> result = getHmsMirrorAppService().run(conversionResult);
 
-        return runStatus;
+        return conversionResult.getRunStatus();
     }
 }

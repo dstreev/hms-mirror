@@ -438,8 +438,9 @@ public class TableService {
         return CompletableFuture.supplyAsync(() -> {
             ReturnStatus rtn = new ReturnStatus();
             try {
-                // ...logic...
-//                ConversionResult conversionResult = getExecutionContextService().getConversionResult();
+                getExecutionContextService().setConversionResult(conversionResult);
+                getExecutionContextService().setRunStatus(conversionResult.getRunStatus());
+
                 ConfigLiteDto config = conversionResult.getConfig();
                 JobDto job = conversionResult.getJob();
                 RunStatus runStatus = conversionResult.getRunStatus();

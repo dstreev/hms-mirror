@@ -17,7 +17,13 @@
 
 package com.cloudera.utils.hms.mirror.web.controller.api.v1;
 
+import com.cloudera.utils.hms.mirror.domain.support.RunStatus;
+import com.cloudera.utils.hms.mirror.exceptions.EncryptionException;
+import com.cloudera.utils.hms.mirror.exceptions.MismatchException;
+import com.cloudera.utils.hms.mirror.exceptions.RequiredConfigurationException;
+import com.cloudera.utils.hms.mirror.exceptions.SessionException;
 import com.cloudera.utils.hms.mirror.service.RunStatusService;
+import com.cloudera.utils.hms.mirror.web.service.RuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,6 +36,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -46,6 +53,7 @@ import java.util.Map;
 public class RunStatusController {
 
     private final RunStatusService runStatusService;
+    private final RuntimeService runtimeService;
 
     @GetMapping(produces = "application/json")
     @Operation(summary = "List runtime job statuses",
@@ -162,6 +170,63 @@ public class RunStatusController {
                 "status", "error",
                 "message", "Failed to delete job status: " + e.getMessage()
             ));
+        }
+    }
+
+    @PostMapping(value = "/start", consumes = "application/json", produces = "application/json")
+    @Operation(summary = "Start a job execution",
+               description = "Starts a job execution with the specified job key and dry-run option")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Job started successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "500", description = "Failed to start job")
+    })
+    public ResponseEntity<Map<String, Object>> startJob(
+            @Parameter(description = "Start job request containing jobKey and dryRun flag", required = true)
+            @RequestBody Map<String, Object> request) {
+
+        log.info("RunStatusController.startJob() called - request: {}", request);
+
+        try {
+            // Extract parameters from request body
+            String jobKey = (String) request.get("jobKey");
+            Boolean dryRun = request.get("dryRun") != null ? (Boolean) request.get("dryRun") : true;
+
+            if (jobKey == null || jobKey.trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "error");
+                errorResponse.put("message", "jobKey is required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            log.info("Starting job: {} with dryRun: {}", jobKey, dryRun);
+
+            // Call RuntimeService to start the job
+            try {
+                RunStatus runStatus = runtimeService.start(jobKey, dryRun);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "SUCCESS");
+                response.put("message", "Job started successfully");
+                response.put("jobKey", jobKey);
+                response.put("dryRun", dryRun);
+                response.put("runStatus", runStatus);
+
+                return ResponseEntity.ok(response);
+            } catch (RequiredConfigurationException | MismatchException | SessionException | EncryptionException e) {
+                log.error("Error starting job {}: {}", jobKey, e.getMessage(), e);
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "error");
+                errorResponse.put("message", "Failed to start job: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            }
+
+        } catch (Exception e) {
+            log.error("Error processing job start request", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Failed to process request: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }

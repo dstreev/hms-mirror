@@ -89,7 +89,7 @@ public class ConnectionPoolService {
     }
 
     public void close() {
-        getConversionResult().getConnectionPools().close();
+        getConnectionPools().close();
     }
 
     public ConnectionPools getConnectionPools() {
