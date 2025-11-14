@@ -573,59 +573,48 @@ const JobsBuildPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleEditJob(job)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                       title="Edit job"
                     >
-                      <PencilIcon className="h-4 w-4 mr-1" />
-                      Edit
+                      <PencilIcon className="h-5 w-5" />
                     </button>
-
                     <button
                       onClick={(e) => handleCopyJob(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                       title="Copy job"
                     >
-                      <DocumentDuplicateIcon className="h-4 w-4 mr-1" />
-                      Copy
+                      <DocumentDuplicateIcon className="h-5 w-5" />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => handleSummaryClick(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
+                      className="p-2 text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
                       title="View job summary"
                     >
-                      <DocumentTextIcon className="h-4 w-4 mr-1" />
-                      Summary
+                      <DocumentTextIcon className="h-5 w-5" />
                     </button>
 
                     <button
                       onClick={(e) => handleValidateClick(job, e)}
                       disabled={validating === job.jobKey}
-                      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 text-green-700 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Validate job configuration"
                     >
                       {validating === job.jobKey ? (
-                        <>
-                          <ArrowPathIcon className="h-4 w-4 mr-1 animate-spin" />
-                          Validating...
-                        </>
+                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
                       ) : (
-                        <>
-                          <CheckCircleIcon className="h-4 w-4 mr-1" />
-                          Validate
-                        </>
+                        <CheckCircleIcon className="h-5 w-5" />
                       )}
                     </button>
 
                     <button
                       onClick={(e) => handleRunClick(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-indigo-300 rounded-md text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50"
+                      className="p-2 text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
                       title="Run job"
                     >
-                      <PlayIcon className="h-4 w-4 mr-1" />
-                      Run
+                      <PlayIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>

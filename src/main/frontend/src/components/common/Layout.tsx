@@ -70,10 +70,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { name: 'CLI Reports', href: '/utilities/cli-reports', icon: FolderArrowDownIcon, requiresConfig: false, requiresPasswordKey: false },
       ]
     },
-    { name: 'Configuration', href: '/config/current', icon: CogIcon, requiresConfig: true, requiresPasswordKey: false },
-    { name: 'Password Encryption', href: '/encryption', icon: KeyIcon, requiresConfig: true, requiresPasswordKey: false },
-    { name: 'Execution', href: '/execution', icon: PlayIcon, requiresConfig: true, requiresPasswordKey: true },
-    { name: 'Summary View', href: '/summary', icon: CodeBracketIcon, requiresConfig: true, requiresPasswordKey: false },
   ];
 
   return (

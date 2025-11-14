@@ -253,39 +253,71 @@ export const DEFAULT_CONNECTION_FORM: ConnectionFormData = {
 
 // Utility functions
 export const getConnectionStatusColor = (connection: Connection): string => {
-  if (!connection.testResults || connection.testResults.status === 'NEVER_TESTED') {
-    return 'text-yellow-600';
-  }
-  
-  const daysSinceTest = connection.testResults.lastTested 
-    ? Math.floor((Date.now() - new Date(connection.testResults.lastTested).getTime()) / (1000 * 60 * 60 * 24))
-    : Infinity;
-    
-  if (connection.testResults.status === 'SUCCESS' && daysSinceTest <= 7) {
-    return 'text-green-600';
-  } else if (connection.testResults.status === 'FAILED') {
+  // Check all three test results
+  const hcfsStatus = connection.hcfsTestResults?.status;
+  const hs2Status = connection.hs2TestResults?.status;
+  const metastoreStatus = connection.metastoreDirectTestResults?.status;
+
+  // If any test failed, show red
+  if (hcfsStatus === 'FAILED' || hs2Status === 'FAILED' || metastoreStatus === 'FAILED') {
     return 'text-red-600';
-  } else {
-    return 'text-yellow-600';
   }
+
+  // If all required tests (HCFS and HS2) passed, check how recent
+  if (hcfsStatus === 'SUCCESS' && hs2Status === 'SUCCESS') {
+    const hcfsLastTested = connection.hcfsTestResults?.lastTested;
+    const hs2LastTested = connection.hs2TestResults?.lastTested;
+
+    // Get most recent test date
+    const mostRecentTest = [hcfsLastTested, hs2LastTested]
+      .filter(date => date)
+      .map(date => new Date(date!).getTime())
+      .sort((a, b) => b - a)[0];
+
+    if (mostRecentTest) {
+      const daysSinceTest = Math.floor((Date.now() - mostRecentTest) / (1000 * 60 * 60 * 24));
+      if (daysSinceTest <= 7) {
+        return 'text-green-600';
+      }
+    }
+  }
+
+  // Default to yellow (never tested or tests are old)
+  return 'text-yellow-600';
 };
 
 export const getConnectionStatusIcon = (connection: Connection): string => {
-  if (!connection.testResults || connection.testResults.status === 'NEVER_TESTED') {
-    return '🟡';
-  }
-  
-  const daysSinceTest = connection.testResults.lastTested 
-    ? Math.floor((Date.now() - new Date(connection.testResults.lastTested).getTime()) / (1000 * 60 * 60 * 24))
-    : Infinity;
-    
-  if (connection.testResults.status === 'SUCCESS' && daysSinceTest <= 7) {
-    return '🟢';
-  } else if (connection.testResults.status === 'FAILED') {
+  // Check all three test results
+  const hcfsStatus = connection.hcfsTestResults?.status;
+  const hs2Status = connection.hs2TestResults?.status;
+  const metastoreStatus = connection.metastoreDirectTestResults?.status;
+
+  // If any test failed, show red
+  if (hcfsStatus === 'FAILED' || hs2Status === 'FAILED' || metastoreStatus === 'FAILED') {
     return '🔴';
-  } else {
-    return '🟡';
   }
+
+  // If all required tests (HCFS and HS2) passed, check how recent
+  if (hcfsStatus === 'SUCCESS' && hs2Status === 'SUCCESS') {
+    const hcfsLastTested = connection.hcfsTestResults?.lastTested;
+    const hs2LastTested = connection.hs2TestResults?.lastTested;
+
+    // Get most recent test date
+    const mostRecentTest = [hcfsLastTested, hs2LastTested]
+      .filter(date => date)
+      .map(date => new Date(date!).getTime())
+      .sort((a, b) => b - a)[0];
+
+    if (mostRecentTest) {
+      const daysSinceTest = Math.floor((Date.now() - mostRecentTest) / (1000 * 60 * 60 * 24));
+      if (daysSinceTest <= 7) {
+        return '🟢';
+      }
+    }
+  }
+
+  // Default to yellow (never tested or tests are old)
+  return '🟡';
 };
 
 export const validateConnectionForm = (data: Partial<ConnectionFormData>): ValidationResult => {

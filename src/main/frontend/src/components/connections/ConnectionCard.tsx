@@ -170,40 +170,34 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onEdit}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             title="Edit connection"
           >
-            <PencilIcon className="h-3 w-3 mr-1" />
-            Edit
+            <PencilIcon className="h-5 w-5" />
           </button>
-
           <button
             onClick={onDuplicate}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            title="Duplicate connection"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            title="Copy connection"
           >
-            <DocumentDuplicateIcon className="h-3 w-3 mr-1" />
-            Copy
+            <DocumentDuplicateIcon className="h-5 w-5" />
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={onTest}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             title="Test connection"
           >
-            <BeakerIcon className="h-3 w-3 mr-1" />
-            Test
+            <BeakerIcon className="h-5 w-5" />
           </button>
-
           <button
             onClick={onExport}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             title="Export connection to JSON"
           >
-            <ArrowDownTrayIcon className="h-3 w-3 mr-1" />
-            Export
+            <ArrowDownTrayIcon className="h-5 w-5" />
           </button>
         </div>
       </div>

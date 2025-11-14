@@ -63,7 +63,6 @@ const SessionInfo: React.FC<SessionInfoProps> = ({
 
   return (
     <div className={`text-xs text-gray-500 ${className}`}>
-      <div className="font-semibold">Session:</div>
       <div className="font-mono text-gray-600 break-all">
         {sessionInfo.sessionId === 'unknown' ? 'unknown (check console)' : sessionInfo.sessionId}
       </div>
@@ -81,9 +80,6 @@ const SessionInfo: React.FC<SessionInfoProps> = ({
               Connected
             </div>
           )}
-          <div className="text-gray-500">
-            Concurrency: {sessionInfo.concurrency}
-          </div>
         </div>
       )}
     </div>
