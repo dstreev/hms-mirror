@@ -443,22 +443,39 @@ public class RocksDBManagementService {
     /**
      * Clear all data in the database.
      */
-    public void clearAllData(ColumnFamilyHandle defaultCF, 
+    public void clearAllData(ColumnFamilyHandle defaultCF,
                             ColumnFamilyHandle configurationsCF,
                             ColumnFamilyHandle sessionsCF,
                             ColumnFamilyHandle connectionsCF) throws RocksDBException {
         log.warn("Clearing all RocksDB data");
-        
+
         // Delete all ranges for each column family
         rocksDB.deleteRange(defaultCF, new byte[0], new byte[]{(byte)0xFF});
         rocksDB.deleteRange(configurationsCF, new byte[0], new byte[]{(byte)0xFF});
         rocksDB.deleteRange(sessionsCF, new byte[0], new byte[]{(byte)0xFF});
         rocksDB.deleteRange(connectionsCF, new byte[0], new byte[]{(byte)0xFF});
-        
+
         // Flush to ensure data is cleared
         flushMemTables();
-        
+
         log.warn("All RocksDB data cleared");
+    }
+
+    /**
+     * Clear all data in a specific column family.
+     * @param columnFamily The column family to clear
+     * @throws RocksDBException if the operation fails
+     */
+    public void clearColumnFamilyData(ColumnFamilyHandle columnFamily) throws RocksDBException {
+        log.warn("Clearing data for column family");
+
+        // Delete all keys in the column family by deleting the entire range
+        rocksDB.deleteRange(columnFamily, new byte[0], new byte[]{(byte)0xFF});
+
+        // Flush to ensure data is cleared
+        flushMemTables();
+
+        log.warn("Column family data cleared");
     }
     
     private long getEstimatedKeyCount(ColumnFamilyHandle columnFamily) {

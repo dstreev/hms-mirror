@@ -175,6 +175,11 @@ const RuntimeReportsPage: React.FC = () => {
         <div className="space-y-4">
           {reports.map((report) => {
             const summary = runtimeReportsApi.getSummary(report);
+            const leftConnection = report.connections?.LEFT;
+            const rightConnection = report.connections?.RIGHT;
+            const hasErrors = report.runStatus?.errorMessages && report.runStatus.errorMessages.length > 0;
+            const hasWarnings = report.runStatus?.warningMessages && report.runStatus.warningMessages.length > 0;
+
             return (
               <div
                 key={report.key}
@@ -183,72 +188,125 @@ const RuntimeReportsPage: React.FC = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <DocumentTextIcon className="h-5 w-5 text-blue-500" />
-                        <h3 className="text-lg font-medium text-gray-900 truncate">
-                          {report.key}
-                        </h3>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
+                      {/* Header with created time and strategy */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <DocumentTextIcon className="h-5 w-5 text-blue-500" />
                           <div>
-                            <span className="text-gray-500">Created:</span>
-                            <span className="ml-2 text-gray-900">
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {report.job?.name || report.key}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-0.5">
                               {runtimeReportsApi.formatDate(report.created)}
-                            </span>
+                            </p>
                           </div>
                         </div>
+                        {report.job?.strategy && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {report.job.strategy}
+                          </span>
+                        )}
+                      </div>
 
-                        {report.config && (
-                          <div className="flex items-center">
-                            <FolderIcon className="h-4 w-4 text-gray-400 mr-2" />
+                      {/* Dataset and Connections */}
+                      <div className="mt-3 space-y-2 text-sm">
+                        {report.dataset && (
+                          <div className="flex items-start">
+                            <TableCellsIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
                             <div>
-                              <span className="text-gray-500">Configuration:</span>
-                              <span className="ml-2 text-gray-900">{summary.configName}</span>
+                              <span className="font-medium text-gray-700">Dataset:</span>
+                              <span className="ml-2 text-gray-900">{report.dataset.name}</span>
+                              {report.dataset.description && (
+                                <span className="ml-2 text-gray-500">({report.dataset.description})</span>
+                              )}
                             </div>
                           </div>
                         )}
 
-                        {report.dataset && (
-                          <>
-                            <div className="flex items-center">
-                              <TableCellsIcon className="h-4 w-4 text-gray-400 mr-2" />
-                              <div>
-                                <span className="text-gray-500">Dataset:</span>
-                                <span className="ml-2 text-gray-900">{summary.datasetName}</span>
-                              </div>
+                        {leftConnection && (
+                          <div className="flex items-start">
+                            <FolderIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
+                            <div>
+                              <span className="font-medium text-gray-700">Left Connection:</span>
+                              <span className="ml-2 text-gray-900">{leftConnection.name}</span>
+                              {leftConnection.description && (
+                                <span className="ml-2 text-gray-500">({leftConnection.description})</span>
+                              )}
                             </div>
+                          </div>
+                        )}
 
-                            <div className="flex items-center">
-                              <TableCellsIcon className="h-4 w-4 text-gray-400 mr-2" />
-                              <div>
-                                <span className="text-gray-500">Databases:</span>
-                                <span className="ml-2 font-medium text-gray-900">
-                                  {summary.databaseCount}
-                                </span>
-                                <span className="ml-3 text-gray-500">Tables:</span>
-                                <span className="ml-2 font-medium text-gray-900">
-                                  {summary.tableCount}
-                                </span>
-                              </div>
+                        {rightConnection && (
+                          <div className="flex items-start">
+                            <FolderIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
+                            <div>
+                              <span className="font-medium text-gray-700">Right Connection:</span>
+                              <span className="ml-2 text-gray-900">{rightConnection.name}</span>
+                              {rightConnection.description && (
+                                <span className="ml-2 text-gray-500">({rightConnection.description})</span>
+                              )}
                             </div>
-                          </>
+                          </div>
+                        )}
+
+                        {/* Database and Table counts */}
+                        {report.dataset && (
+                          <div className="flex items-center text-xs text-gray-600">
+                            <span className="font-medium">Databases:</span>
+                            <span className="ml-1">{summary.databaseCount}</span>
+                            <span className="mx-2">•</span>
+                            <span className="font-medium">Tables:</span>
+                            <span className="ml-1">{summary.tableCount}</span>
+                          </div>
                         )}
                       </div>
 
-                      {report.config?.description && (
-                        <p className="mt-3 text-sm text-gray-600">
-                          {report.config.description}
-                        </p>
+                      {/* Progress */}
+                      {report.runStatus?.progress && (
+                        <div className="mt-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            report.runStatus.progress === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                            report.runStatus.progress === 'RUNNING' ? 'bg-blue-100 text-blue-800' :
+                            report.runStatus.progress === 'FAILED' ? 'bg-red-100 text-red-800' :
+                            report.runStatus.progress === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {report.runStatus.progress}
+                          </span>
+                        </div>
                       )}
 
-                      {report.config?.dataStrategy && (
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {report.config.dataStrategy}
-                          </span>
+                      {/* Errors */}
+                      {hasErrors && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <div className="flex items-start">
+                            <span className="text-red-600 font-medium text-sm">Errors ({report.runStatus!.errorMessages!.length}):</span>
+                          </div>
+                          <ul className="mt-2 space-y-1 text-xs text-red-700">
+                            {report.runStatus!.errorMessages!.slice(0, 3).map((error, idx) => (
+                              <li key={idx} className="truncate">{error}</li>
+                            ))}
+                            {report.runStatus!.errorMessages!.length > 3 && (
+                              <li className="text-red-600 font-medium">... and {report.runStatus!.errorMessages!.length - 3} more</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Warnings */}
+                      {hasWarnings && (
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                          <div className="flex items-start">
+                            <span className="text-yellow-700 font-medium text-sm">Warnings ({report.runStatus!.warningMessages!.length}):</span>
+                          </div>
+                          <ul className="mt-2 space-y-1 text-xs text-yellow-700">
+                            {report.runStatus!.warningMessages!.slice(0, 3).map((warning, idx) => (
+                              <li key={idx} className="truncate">{warning}</li>
+                            ))}
+                            {report.runStatus!.warningMessages!.length > 3 && (
+                              <li className="text-yellow-700 font-medium">... and {report.runStatus!.warningMessages!.length - 3} more</li>
+                            )}
+                          </ul>
                         </div>
                       )}
                     </div>

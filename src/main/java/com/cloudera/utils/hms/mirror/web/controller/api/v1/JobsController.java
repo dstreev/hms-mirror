@@ -82,19 +82,24 @@ public class JobsController {
             @Parameter(description = "Job data", required = true)
             @RequestBody JobDto jobDto) {
         
-        log.info("JobsController.saveJob() called - key: {}, name: {}", 
+        log.info("JobsController.saveJob() called - key: {}, name: {}",
                 jobKey, jobDto.getName());
-        
+
         try {
+            // Ensure the key from the path matches the DTO key (prevents duplicates on update)
+            jobDto.setKey(jobKey);
+            log.debug("Set jobDto key to path parameter: {}", jobKey);
+
             // Validate job data first
             Map<String, Object> validationResult = jobManagementService.validate(jobDto);
             if (!"success".equals(validationResult.get("status"))) {
                 return ResponseEntity.badRequest().body(validationResult);
             }
-            
+
             // Check if job already exists
             boolean isUpdate = jobManagementService.exists(jobKey);
-            
+            log.debug("Job exists: {}, operation will be: {}", isUpdate, isUpdate ? "UPDATE" : "CREATE");
+
             // Save the job
             Map<String, Object> result = jobManagementService.save(jobDto);
             
@@ -219,6 +224,7 @@ public class JobsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Job validation completed"),
         @ApiResponse(responseCode = "404", description = "Job not found"),
+        @ApiResponse(responseCode = "400", description = "Job has missing dependencies"),
         @ApiResponse(responseCode = "500", description = "Failed to validate job")
     })
     public ResponseEntity<Map<String, Object>> validateJob(
@@ -228,16 +234,59 @@ public class JobsController {
         log.info("JobsController.validateJob() called - key: {}", jobKey);
 
         try {
-            // Build ConversionResult from job
-            log.info("About to call jobManagementService.buildConversionResultFromJobId with key: {}", jobKey);
+            // First, validate job dependencies
+            log.info("Validating job dependencies for key: {}", jobKey);
+            Map<String, Object> dependencyCheck = jobManagementService.validateJobDependencies(jobKey);
+            String depStatus = (String) dependencyCheck.get("status");
+
+            if ("JOB_NOT_FOUND".equals(depStatus)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "NOT_FOUND");
+                errorResponse.put("message", dependencyCheck.get("message"));
+                errorResponse.put("valid", false);
+                log.warn("Job not found with key: {}", jobKey);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+
+            if ("MISSING_DEPENDENCIES".equals(depStatus)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "SUCCESS");
+                errorResponse.put("valid", false);
+                errorResponse.put("jobKey", jobKey);
+
+                List<String> missingDeps = (List<String>) dependencyCheck.get("missingDependencies");
+                List<String> errors = new ArrayList<>();
+                errors.add("Job has missing dependencies that must be created before validation can proceed:");
+                errors.addAll(missingDeps);
+
+                errorResponse.put("errors", errors);
+                errorResponse.put("warnings", new ArrayList<String>());
+                errorResponse.put("message", "Cannot validate job: " + missingDeps.size() + " missing dependencies");
+
+                log.warn("Cannot validate job {} due to missing dependencies: {}", jobKey, missingDeps);
+                return ResponseEntity.ok(errorResponse);
+            }
+
+            if ("ERROR".equals(depStatus)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "ERROR");
+                errorResponse.put("valid", false);
+                errorResponse.put("message", dependencyCheck.get("message"));
+                log.error("Error checking dependencies for job {}: {}", jobKey, dependencyCheck.get("message"));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            }
+
+            // All dependencies exist, build ConversionResult for validation
+            log.info("All dependencies valid, building ConversionResult for job: {}", jobKey);
             ConversionResult conversionResult = jobManagementService.buildConversionResultFromJobId(jobKey);
-            log.info("buildConversionResultFromJobId returned: {}", conversionResult != null ? "non-null" : "null");
 
             if (conversionResult == null) {
                 Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("status", "NOT_FOUND");
-                errorResponse.put("message", "Job not found or failed to build conversion result");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+                errorResponse.put("status", "ERROR");
+                errorResponse.put("valid", false);
+                errorResponse.put("message", "Failed to build validation context despite all dependencies existing");
+                log.error("Unexpected error: ConversionResult is null despite valid dependencies for job {}", jobKey);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
             }
 
             // Get or initialize RunStatus

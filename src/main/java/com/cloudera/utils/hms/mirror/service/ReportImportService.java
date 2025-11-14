@@ -215,6 +215,8 @@ public class ReportImportService {
 
             // Set the key from the relative path
             conversionResult.setKey(key);
+            conversionResult.getJob().setKey(key);
+            conversionResult.getJob().setName(key);
 
             // Import session-translator.yaml if it exists
             Path translatorPath = sessionConfigPath.getParent().resolve("session-translator.yaml");

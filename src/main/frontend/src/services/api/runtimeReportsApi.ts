@@ -21,9 +21,20 @@ export interface ConversionResult {
   };
   connections?: Record<string, {
     name: string;
+    description?: string;
     environment?: string;
     platformType?: string;
   }>;
+  job?: {
+    name: string;
+    strategy?: string;
+    key?: string;
+  };
+  runStatus?: {
+    progress?: string;
+    errorMessages?: string[];
+    warningMessages?: string[];
+  };
 }
 
 export interface RuntimeReportsListResponse {

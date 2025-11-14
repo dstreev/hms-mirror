@@ -208,12 +208,40 @@ public class RocksDBManagementController {
             }
 
             managementService.triggerCompaction(handle);
-            return ResponseEntity.ok(Map.of("message", 
+            return ResponseEntity.ok(Map.of("message",
                 "Manual compaction triggered successfully for column family: " + columnFamily));
         } catch (RocksDBException e) {
             log.error("Error triggering compaction for column family: {}", columnFamily, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to trigger compaction: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/data/{columnFamily}/all")
+    @Operation(summary = "Clear all data in a column family",
+               description = "Deletes all data in the specified column family. This operation cannot be undone.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Column family data cleared successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid column family name"),
+        @ApiResponse(responseCode = "500", description = "Failed to clear column family data")
+    })
+    public ResponseEntity<Map<String, String>> clearColumnFamilyData(
+            @Parameter(description = "Column family name (configurations, sessions, connections, datasets, jobs, conversionresult, runstatus)")
+            @PathVariable String columnFamily) {
+        try {
+            ColumnFamilyHandle handle = getColumnFamilyHandle(columnFamily);
+            if (handle == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid column family: " + columnFamily));
+            }
+
+            managementService.clearColumnFamilyData(handle);
+            return ResponseEntity.ok(Map.of("message",
+                "All data cleared successfully for column family: " + columnFamily));
+        } catch (RocksDBException e) {
+            log.error("Error clearing data for column family: {}", columnFamily, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to clear column family data: " + e.getMessage()));
         }
     }
 

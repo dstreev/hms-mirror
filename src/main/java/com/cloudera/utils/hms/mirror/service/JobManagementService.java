@@ -415,6 +415,71 @@ public class JobManagementService {
     }
 
     /**
+     * Validates that all dependencies for a job exist.
+     *
+     * @param jobId The job ID to validate
+     * @return Map containing validation status and any missing dependencies
+     */
+    public Map<String, Object> validateJobDependencies(String jobId) {
+        log.info("Validating job dependencies for jobId: {}", jobId);
+        Map<String, Object> result = new HashMap<>();
+        List<String> missingDependencies = new ArrayList<>();
+
+        try {
+            // Check if job exists
+            Optional<JobDto> jobOpt = jobRepository.findByKey(jobId);
+            if (!jobOpt.isPresent()) {
+                result.put("status", "JOB_NOT_FOUND");
+                result.put("message", "Job not found: " + jobId);
+                return result;
+            }
+
+            JobDto jobDto = jobOpt.get();
+
+            // Check left connection
+            Map<String, Object> leftConnResult = connectionManagementService.load(jobDto.getLeftConnectionReference());
+            if (!"SUCCESS".equals(leftConnResult.get("status"))) {
+                missingDependencies.add("Left connection: " + jobDto.getLeftConnectionReference());
+            }
+
+            // Check right connection
+            Map<String, Object> rightConnResult = connectionManagementService.load(jobDto.getRightConnectionReference());
+            if (!"SUCCESS".equals(rightConnResult.get("status"))) {
+                missingDependencies.add("Right connection: " + jobDto.getRightConnectionReference());
+            }
+
+            // Check dataset
+            Map<String, Object> datasetResult = datasetManagementService.load(jobDto.getDatasetReference());
+            if (!"SUCCESS".equals(datasetResult.get("status"))) {
+                missingDependencies.add("Dataset: " + jobDto.getDatasetReference());
+            }
+
+            // Check configuration
+            Map<String, Object> configResult = configurationManagementService.load(jobDto.getConfigReference());
+            if (!"SUCCESS".equals(configResult.get("status"))) {
+                missingDependencies.add("Configuration: " + jobDto.getConfigReference());
+            }
+
+            if (missingDependencies.isEmpty()) {
+                result.put("status", "VALID");
+                result.put("message", "All job dependencies exist");
+            } else {
+                result.put("status", "MISSING_DEPENDENCIES");
+                result.put("message", "Job has missing dependencies");
+                result.put("missingDependencies", missingDependencies);
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error validating job dependencies for jobId {}", jobId, e);
+            result.put("status", "ERROR");
+            result.put("message", "Error validating job dependencies: " + e.getMessage());
+            return result;
+        }
+    }
+
+    /**
      * Builds a ConversionResult from a JobDto by looking up the job by ID
      * and assembling all referenced DTOs (connections, dataset, configuration).
      *

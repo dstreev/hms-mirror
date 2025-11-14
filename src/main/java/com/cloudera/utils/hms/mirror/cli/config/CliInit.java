@@ -225,7 +225,7 @@ public class CliInit {
             DateFormat dtf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS");
             String cliSessionId = "cli-" + dtf.format(new Date());
 
-        ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, "cliSessionId");
+        ConversionResult conversionResult = HmsMirrorConfigConverter.convert(config, cliSessionId);
             getExecutionContextService().setConversionResult(conversionResult);
             getExecutionContextService().setHmsMirrorConfig(config);
             RunStatus runStatus = conversionResult.getRunStatus();

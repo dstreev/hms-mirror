@@ -53,6 +53,23 @@ interface ConversionResult {
   };
   dataset?: {
     name: string;
+    description?: string;
+  };
+  connections?: Record<string, {
+    name: string;
+    description?: string;
+    environment?: string;
+    platformType?: string;
+  }>;
+  job?: {
+    name: string;
+    strategy?: string;
+    key?: string;
+  };
+  runStatus?: {
+    progress?: string;
+    errorMessages?: string[];
+    warningMessages?: string[];
   };
 }
 
@@ -414,78 +431,143 @@ const ReportsPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-6">
-                      {rocksDBResults.map((result) => (
-                        <div
-                          key={result.key}
-                          className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
-                        >
-                          <div className="p-6">
-                            {/* Header */}
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex items-start space-x-3">
-                                <div className="flex-shrink-0 mt-1">
+                      {rocksDBResults.map((result) => {
+                        const leftConnection = result.connections?.LEFT;
+                        const rightConnection = result.connections?.RIGHT;
+                        const hasErrors = result.runStatus?.errorMessages && result.runStatus.errorMessages.length > 0;
+                        const hasWarnings = result.runStatus?.warningMessages && result.runStatus.warningMessages.length > 0;
+
+                        return (
+                          <div
+                            key={result.key}
+                            className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
+                          >
+                            <div className="p-6">
+                              {/* Header with created time and strategy */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-3">
                                   <CheckCircleIcon className="h-5 w-5 text-blue-500" />
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                      {result.job?.name || result.key}
+                                    </h3>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {formatRocksDBDate(result.created)}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <h3 className="text-lg font-semibold text-gray-900">{result.key}</h3>
-                                  <p className="text-sm text-gray-600">RocksDB Conversion Result</p>
-                                </div>
+                                {result.job?.strategy && (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {result.job.strategy}
+                                  </span>
+                                )}
                               </div>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                RocksDB
-                              </span>
-                            </div>
 
-                            {/* Metadata */}
-                            <div className="mb-4">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <CalendarIcon className="h-4 w-4 mr-2" />
-                                {formatRocksDBDate(result.created)}
-                              </div>
-                            </div>
-
-                            {/* Summary */}
-                            {(result.config || result.dataset) && (
-                              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                <h4 className="text-sm font-medium text-gray-900 mb-2">Configuration Details</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                  {result.config && (
-                                    <>
-                                      <div>
-                                        <div className="text-gray-600">Configuration</div>
-                                        <div className="font-medium text-blue-600">{result.config.name}</div>
-                                      </div>
-                                      {result.config.dataStrategy && (
-                                        <div>
-                                          <div className="text-gray-600">Data Strategy</div>
-                                          <div className="font-medium">{result.config.dataStrategy}</div>
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                  {result.dataset && (
+                              {/* Dataset and Connections */}
+                              <div className="mt-3 space-y-2 text-sm">
+                                {result.dataset && (
+                                  <div className="flex items-start">
+                                    <FolderIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
                                     <div>
-                                      <div className="text-gray-600">Dataset</div>
-                                      <div className="font-medium">{result.dataset.name}</div>
+                                      <span className="font-medium text-gray-700">Dataset:</span>
+                                      <span className="ml-2 text-gray-900">{result.dataset.name}</span>
+                                      {result.dataset.description && (
+                                        <span className="ml-2 text-gray-500">({result.dataset.description})</span>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                                  </div>
+                                )}
 
-                            {/* Actions */}
-                            <div className="flex justify-end">
-                              <button
-                                onClick={() => handleViewRocksDBReport(result)}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                              >
-                                <EyeIcon className="h-4 w-4 mr-2" />
-                                View Details
-                              </button>
+                                {leftConnection && (
+                                  <div className="flex items-start">
+                                    <GlobeAltIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
+                                    <div>
+                                      <span className="font-medium text-gray-700">Left Connection:</span>
+                                      <span className="ml-2 text-gray-900">{leftConnection.name}</span>
+                                      {leftConnection.description && (
+                                        <span className="ml-2 text-gray-500">({leftConnection.description})</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {rightConnection && (
+                                  <div className="flex items-start">
+                                    <GlobeAltIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
+                                    <div>
+                                      <span className="font-medium text-gray-700">Right Connection:</span>
+                                      <span className="ml-2 text-gray-900">{rightConnection.name}</span>
+                                      {rightConnection.description && (
+                                        <span className="ml-2 text-gray-500">({rightConnection.description})</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Progress */}
+                              {result.runStatus?.progress && (
+                                <div className="mt-3">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    result.runStatus.progress === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                    result.runStatus.progress === 'RUNNING' ? 'bg-blue-100 text-blue-800' :
+                                    result.runStatus.progress === 'FAILED' ? 'bg-red-100 text-red-800' :
+                                    result.runStatus.progress === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {result.runStatus.progress}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Errors */}
+                              {hasErrors && (
+                                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                                  <div className="flex items-start">
+                                    <span className="text-red-600 font-medium text-sm">Errors ({result.runStatus!.errorMessages!.length}):</span>
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-xs text-red-700">
+                                    {result.runStatus!.errorMessages!.slice(0, 3).map((error, idx) => (
+                                      <li key={idx} className="truncate">{error}</li>
+                                    ))}
+                                    {result.runStatus!.errorMessages!.length > 3 && (
+                                      <li className="text-red-600 font-medium">... and {result.runStatus!.errorMessages!.length - 3} more</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Warnings */}
+                              {hasWarnings && (
+                                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                  <div className="flex items-start">
+                                    <span className="text-yellow-700 font-medium text-sm">Warnings ({result.runStatus!.warningMessages!.length}):</span>
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-xs text-yellow-700">
+                                    {result.runStatus!.warningMessages!.slice(0, 3).map((warning, idx) => (
+                                      <li key={idx} className="truncate">{warning}</li>
+                                    ))}
+                                    {result.runStatus!.warningMessages!.length > 3 && (
+                                      <li className="text-yellow-700 font-medium">... and {result.runStatus!.warningMessages!.length - 3} more</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Actions */}
+                              <div className="flex justify-end mt-4">
+                                <button
+                                  onClick={() => handleViewRocksDBReport(result)}
+                                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                >
+                                  <EyeIcon className="h-4 w-4 mr-2" />
+                                  View Details
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </>

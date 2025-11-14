@@ -10,7 +10,9 @@ import {
   FunnelIcon,
   PlayIcon,
   DocumentTextIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { jobApi, JobListResponse } from '../../services/api/jobApi';
 import { Job } from '../../types/Job';
@@ -59,12 +61,22 @@ const JobsBuildPage: React.FC = () => {
   });
   const [validating, setValidating] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const ITEMS_PER_PAGE = 10;
+
   useEffect(() => {
     console.log('JobsBuildPage: Loading jobs, location.key:', location.key);
     setLoading(true);
     setError(null);
+    setCurrentPage(0); // Reset to first page when jobs are reloaded
     fetchJobs();
   }, [location.key]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filters]);
 
   const fetchJobs = async () => {
     try {
@@ -115,7 +127,12 @@ const JobsBuildPage: React.FC = () => {
       });
     }
 
-    return allJobs.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort by modifiedDate in descending order (most recent first)
+    return allJobs.sort((a, b) => {
+      const dateA = new Date(a.modifiedDate || a.createdDate || 0);
+      const dateB = new Date(b.modifiedDate || b.createdDate || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
   };
 
   const handleRefresh = () => {
@@ -261,6 +278,19 @@ const JobsBuildPage: React.FC = () => {
     });
   };
 
+  const handlePreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
   const handleRunClick = async (job: Job, event: React.MouseEvent) => {
     event.stopPropagation();
     // TODO: Implement run functionality
@@ -320,6 +350,12 @@ const JobsBuildPage: React.FC = () => {
 
     return true;
   });
+
+  // Paginate the filtered jobs
+  const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
+  const startIndex = currentPage * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -450,21 +486,45 @@ const JobsBuildPage: React.FC = () => {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center">
               <span className="text-sm text-gray-700">
-                🚀 Showing {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
-                {jobs.length !== filteredJobs.length && ` of ${jobs.length} total`}
+                🚀 Showing {paginatedJobs.length} job{paginatedJobs.length !== 1 ? 's' : ''} of {filteredJobs.length}
+                {jobs.length !== filteredJobs.length && ` (filtered from ${jobs.length} total)`}
               </span>
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 0}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages - 1}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRightIcon className="h-4 w-4 ml-1" />
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-4">
-            {filteredJobs.map((job) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {paginatedJobs.map((job) => (
               <div
                 key={job.name}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow flex flex-col"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3">
+                {/* Job Information */}
+                <div className="flex-1 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <h3 className="text-lg font-medium text-gray-900 truncate">
                         {job.name}
                       </h3>
@@ -474,33 +534,72 @@ const JobsBuildPage: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    {job.description && (
-                      <p className="text-sm text-gray-500 mt-1">{job.description}</p>
+                    <button
+                      onClick={(e) => handleDeleteClick(job, e)}
+                      className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete job"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                  {job.description && (
+                    <p className="text-sm text-gray-500 mt-1">{job.description}</p>
+                  )}
+                  <div className="flex items-center mt-2 text-xs text-gray-400 space-x-4 flex-wrap">
+                    {job.datasetName && (
+                      <span>📊 Dataset: {job.datasetName}</span>
                     )}
-                    <div className="flex items-center mt-2 text-xs text-gray-400 space-x-4 flex-wrap">
-                      {job.datasetName && (
-                        <span>📊 Dataset: {job.datasetName}</span>
-                      )}
-                      {job.configurationName && (
-                        <span>⚙️ Config: {job.configurationName}</span>
-                      )}
-                      {job.leftConnectionName && (
-                        <span>🔗 Left: {job.leftConnectionName}</span>
-                      )}
-                      {job.rightConnectionName && (
-                        <span>🔗 Right: {job.rightConnectionName}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center mt-2 text-xs text-gray-400 space-x-4">
-                      <span>📅 Created: {formatDate(job.createdDate)}</span>
-                      <span>🕒 Modified: {formatDate(job.modifiedDate)}</span>
-                      {job.lastRunDate && (
-                        <span>▶️ Last Run: {formatDate(job.lastRunDate)}</span>
-                      )}
-                    </div>
+                    {job.configurationName && (
+                      <span>⚙️ Config: {job.configurationName}</span>
+                    )}
+                    {job.leftConnectionName && (
+                      <span>🔗 Left: {job.leftConnectionName}</span>
+                    )}
+                    {job.rightConnectionName && (
+                      <span>🔗 Right: {job.rightConnectionName}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center mt-2 text-xs text-gray-400 space-x-4">
+                    <span>📅 Created: {formatDate(job.createdDate)}</span>
+                    <span>🕒 Modified: {formatDate(job.modifiedDate)}</span>
+                    {job.lastRunDate && (
+                      <span>▶️ Last Run: {formatDate(job.lastRunDate)}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditJob(job)}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      title="Edit job"
+                    >
+                      <PencilIcon className="h-4 w-4 mr-1" />
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={(e) => handleCopyJob(job, e)}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      title="Copy job"
+                    >
+                      <DocumentDuplicateIcon className="h-4 w-4 mr-1" />
+                      Copy
+                    </button>
                   </div>
 
-                  <div className="flex items-center space-x-2 ml-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleSummaryClick(job, e)}
+                      className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
+                      title="View job summary"
+                    >
+                      <DocumentTextIcon className="h-4 w-4 mr-1" />
+                      Summary
+                    </button>
+
                     <button
                       onClick={(e) => handleValidateClick(job, e)}
                       disabled={validating === job.jobKey}
@@ -527,42 +626,6 @@ const JobsBuildPage: React.FC = () => {
                     >
                       <PlayIcon className="h-4 w-4 mr-1" />
                       Run
-                    </button>
-
-                    <button
-                      onClick={(e) => handleSummaryClick(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
-                      title="View job summary"
-                    >
-                      <DocumentTextIcon className="h-4 w-4 mr-1" />
-                      Summary
-                    </button>
-
-                    <button
-                      onClick={() => handleEditJob(job)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      title="Edit job"
-                    >
-                      <PencilIcon className="h-4 w-4 mr-1" />
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={(e) => handleCopyJob(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      title="Copy job"
-                    >
-                      <DocumentDuplicateIcon className="h-4 w-4 mr-1" />
-                      Copy
-                    </button>
-
-                    <button
-                      onClick={(e) => handleDeleteClick(job, e)}
-                      className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50"
-                      title="Delete job"
-                    >
-                      <TrashIcon className="h-4 w-4 mr-1" />
-                      Delete
                     </button>
                   </div>
                 </div>

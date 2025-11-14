@@ -135,10 +135,43 @@ public class ConversionResultController {
                     ? sortedResults.subList(startIndex, endIndex)
                     : Collections.emptyList();
 
+            // Enrich results with RunStatus data
+            List<Map<String, Object>> enrichedResults = new ArrayList<>();
+            for (ConversionResult result : pageResults) {
+                Map<String, Object> enriched = new HashMap<>();
+                enriched.put("key", result.getKey());
+                enriched.put("created", result.getCreated());
+                enriched.put("modified", result.getModified());
+                enriched.put("mockTestDataset", result.isMockTestDataset());
+                enriched.put("outputDirectory", result.getOutputDirectory());
+                enriched.put("config", result.getConfig());
+                enriched.put("dataset", result.getDataset());
+                enriched.put("connections", result.getConnections());
+                enriched.put("job", result.getJob());
+                enriched.put("jobExecution", result.getJobExecution());
+
+                // Add RunStatus data
+                try {
+                    Optional<RunStatus> runStatusOpt = runStatusRepository.findByKey(result.getKey());
+                    if (runStatusOpt.isPresent()) {
+                        RunStatus runStatus = runStatusOpt.get();
+                        Map<String, Object> runStatusMap = new HashMap<>();
+                        runStatusMap.put("progress", runStatus.getProgress());
+                        runStatusMap.put("errorMessages", runStatus.getErrorMessages());
+                        runStatusMap.put("warningMessages", runStatus.getWarningMessages());
+                        enriched.put("runStatus", runStatusMap);
+                    }
+                } catch (RepositoryException e) {
+                    log.warn("Failed to load RunStatus for {}", result.getKey(), e);
+                }
+
+                enrichedResults.add(enriched);
+            }
+
             // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
-            response.put("data", pageResults);
+            response.put("data", enrichedResults);
             response.put("page", page);
             response.put("pageSize", pageSize);
             response.put("totalCount", totalCount);

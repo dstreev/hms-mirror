@@ -17,11 +17,15 @@
 
 package com.cloudera.utils.hms.mirror.service;
 
+import com.cloudera.utils.hadoop.cli.CliEnvironment;
+import com.cloudera.utils.hadoop.cli.DisabledException;
+import com.cloudera.utils.hadoop.shell.command.CommandReturn;
 import com.cloudera.utils.hms.mirror.domain.dto.ConnectionDto;
 import com.cloudera.utils.hms.mirror.domain.support.DriverType;
 import com.cloudera.utils.hms.mirror.domain.support.Environment;
 import com.cloudera.utils.hms.mirror.exceptions.RepositoryException;
 import com.cloudera.utils.hms.mirror.repository.ConnectionRepository;
+import com.cloudera.utils.hms.util.NamespaceUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,13 +59,16 @@ public class ConnectionManagementService {
     private final ConnectionRepository connectionRepository;
     private final DriverUtilsService driverUtilsService;
     private final PasswordService passwordService;
+    private final CliEnvironment cliEnvironment;
 
     public ConnectionManagementService(ConnectionRepository connectionRepository,
                                       @Autowired(required = false) DriverUtilsService driverUtilsService,
-                                      @Autowired(required = false) PasswordService passwordService) {
+                                      @Autowired(required = false) PasswordService passwordService,
+                                       @Autowired(required = false) CliEnvironment cliEnvironment) {
         this.connectionRepository = connectionRepository;
         this.driverUtilsService = driverUtilsService;
         this.passwordService = passwordService;
+        this.cliEnvironment = cliEnvironment;
     }
 
     /**
@@ -327,10 +334,48 @@ public class ConnectionManagementService {
             long startMillis = System.currentTimeMillis();
 
             StringBuilder detailsBuilder = new StringBuilder();
+            boolean hcfsSuccess = false;
             boolean hs2Success = false;
             boolean metastoreSuccess = false;
             boolean overallSuccess = false;
             String errorMessage = null;
+
+            // Test HCFS Namespace if configured
+            if (!isBlank(connectionDto.getHcfsNamespace())) {
+                log.info("Testing HCFS namespace for: {}", key);
+                try {
+                    String namespace = connectionDto.getHcfsNamespace();
+                    String namespaceTestLine = namespace.endsWith("/") ? namespace : namespace + "/";
+
+                    CommandReturn lcr = cliEnvironment.processInput("ls " + namespaceTestLine);
+                    if (lcr.isError()) {
+                        hcfsSuccess = false;
+                        String errorMsg = lcr.getError() != null ? lcr.getError() : "Unknown error accessing namespace";
+                        detailsBuilder.append("HCFS namespace test: FAILED - ").append(errorMsg).append("\n");
+                        errorMessage = "HCFS namespace test failed: " + errorMsg;
+                        log.error("Error checking namespace: {}:{}", namespace, errorMsg);
+                    } else {
+                        hcfsSuccess = true;
+                        detailsBuilder.append("HCFS namespace test: SUCCESS - Namespace accessible: ").append(namespace).append("\n");
+                        log.info("HCFS namespace test passed for: {}", key);
+                    }
+                } catch (DisabledException e) {
+                    hcfsSuccess = false;
+                    detailsBuilder.append("HCFS namespace test: FAILED - CLI environment is disabled\n");
+                    errorMessage = "HCFS namespace test failed: CLI environment is disabled";
+                    log.error("HCFS namespace test error for: {} - CLI disabled", key, e);
+                } catch (Exception e) {
+                    hcfsSuccess = false;
+                    detailsBuilder.append("HCFS namespace test: FAILED - ").append(e.getMessage()).append("\n");
+                    errorMessage = "HCFS namespace test failed: " + e.getMessage();
+                    log.error("HCFS namespace test error for: {}", key, e);
+                }
+            } else {
+                detailsBuilder.append("HCFS namespace test: NOT CONFIGURED\n");
+                log.debug("HCFS namespace not configured for: {}", key);
+                // If HCFS namespace is not configured, consider it success for overall test
+                hcfsSuccess = false;
+            }
 
             // Test HiveServer2 connection if configured
             if (!isBlank(connectionDto.getHs2Uri())) {
@@ -388,11 +433,44 @@ public class ConnectionManagementService {
             }
 
             // Overall test is successful if all configured connections succeed
-            overallSuccess = hs2Success && metastoreSuccess;
+            // Note: Only count configured tests towards overall success
+            boolean hasAnyTest = !isBlank(connectionDto.getHcfsNamespace()) ||
+                                 !isBlank(connectionDto.getHs2Uri()) ||
+                                 (connectionDto.isMetastoreDirectEnabled() && !isBlank(connectionDto.getMetastoreDirectUri()));
+
+            if (!hasAnyTest) {
+                overallSuccess = false;
+            } else {
+                // Check success of each configured test
+                boolean hcfsOk = isBlank(connectionDto.getHcfsNamespace()) || hcfsSuccess;
+                boolean hs2Ok = isBlank(connectionDto.getHs2Uri()) || hs2Success;
+                boolean metastoreOk = !(connectionDto.isMetastoreDirectEnabled() && !isBlank(connectionDto.getMetastoreDirectUri())) || metastoreSuccess;
+
+                overallSuccess = hcfsOk && hs2Ok && metastoreOk;
+            }
 
             // Calculate duration
             long endMillis = System.currentTimeMillis();
             double durationSeconds = (endMillis - startMillis) / 1000.0;
+
+            // Update individual test results for HCFS Namespace
+            if (!isBlank(connectionDto.getHcfsNamespace())) {
+                String hcfsDetails = detailsBuilder.toString().lines()
+                        .filter(line -> line.contains("HCFS namespace test"))
+                        .findFirst()
+                        .orElse("HCFS namespace test: NOT TESTED");
+
+                ConnectionDto.ConnectionTestResults hcfsTestResults = ConnectionDto.ConnectionTestResults.builder()
+                        .status(hcfsSuccess ? ConnectionDto.ConnectionTestResults.TestStatus.SUCCESS :
+                                ConnectionDto.ConnectionTestResults.TestStatus.FAILED)
+                        .lastTested(testStartTime)
+                        .duration(durationSeconds)
+                        .errorMessage(hcfsSuccess ? null : (errorMessage != null && errorMessage.contains("HCFS") ? errorMessage : "HCFS namespace test failed"))
+                        .details(hcfsDetails)
+                        .build();
+
+                connectionDto.setHcfsTestResults(hcfsTestResults);
+            }
 
             // Update individual test results for HiveServer2
             if (!isBlank(connectionDto.getHs2Uri())) {
