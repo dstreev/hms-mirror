@@ -18,13 +18,18 @@
 
 package com.cloudera.utils.hms.mirror.domain.core;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Schema(description = "Configuration for transferring ownership of databases and tables during migration")
 public class TransferOwnership implements Cloneable {
+    @Schema(description = "Transfer database ownership from source to target cluster")
     private boolean database = Boolean.FALSE;
+
+    @Schema(description = "Transfer table ownership from source to target cluster")
     private boolean table = Boolean.FALSE;
 
     @Override

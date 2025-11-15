@@ -1,6 +1,12 @@
 import BaseApi from './baseApi';
 import { HmsMirrorConfig, ConfigValidationResult } from '../../types/api';
+import { ConfigLiteDto } from '../../types/ConfigLite';
 
+// Re-export ConfigLiteDto for convenience
+export type { ConfigLiteDto } from '../../types/ConfigLite';
+
+// Legacy ConfigurationDto - kept for backward compatibility
+// TODO: Migrate all usages to ConfigLiteDto
 export interface ConfigurationDto {
   name: string;
   dataStrategy: string;
@@ -86,7 +92,7 @@ class ConfigApi extends BaseApi {
     }
   }
 
-  async saveConfiguration(configDto: ConfigurationDto): Promise<{ success: boolean; status?: number; message?: string }> {
+  async saveConfiguration(configDto: ConfigLiteDto): Promise<{ success: boolean; status?: number; message?: string }> {
     try {
       const response = await this.post<ConfigurationResponse>('/config', configDto);
       return {
@@ -108,13 +114,24 @@ class ConfigApi extends BaseApi {
     }
   }
 
-  async updateConfiguration(dataStrategy: string, configName: string, configDto: ConfigurationDto): Promise<boolean> {
+  async updateConfiguration(configName: string, configDto: ConfigLiteDto): Promise<{ success: boolean; status?: number; message?: string }> {
     try {
-      const response = await this.put<ConfigurationResponse>(`/config/${dataStrategy}/${configName}`, configDto);
-      return response?.status === 'SUCCESS';
-    } catch (error) {
-      console.error(`Failed to update configuration ${dataStrategy}/${configName}:`, error);
-      return false;
+      const response = await this.put<ConfigurationResponse>(`/config/${configName}`, configDto);
+      return {
+        success: response?.status === 'SUCCESS',
+        message: response?.message
+      };
+    } catch (error: any) {
+      console.error(`Failed to update configuration ${configName}:`, error);
+
+      const status = error.response?.status;
+      const message = error.response?.data?.message || error.message || 'Failed to update configuration';
+
+      return {
+        success: false,
+        status: status,
+        message: message
+      };
     }
   }
 

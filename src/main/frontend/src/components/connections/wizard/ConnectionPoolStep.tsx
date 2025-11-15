@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { ConnectionFormData, POOL_TYPE_OPTIONS } from '../../../types/Connection';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 interface ConnectionPoolStepProps {
   formData: ConnectionFormData;
@@ -18,14 +20,27 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
   onBack
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('ConnectionDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
 
   return (
     <div className="space-y-6">
       {/* Pool Type */}
       <div>
-        <label htmlFor="connectionPoolLib" className="block text-sm font-medium text-gray-700 mb-2">
-          Pool Type
-        </label>
+        <FieldWithTooltip
+          label="Pool Type"
+          tooltip={schemaDescriptions.get('connectionPoolLib')}
+          htmlFor="connectionPoolLib"
+          className="mb-2"
+        />
         <select
           id="connectionPoolLib"
           value={formData.connectionPoolLib}
@@ -45,9 +60,13 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
 
       {/* Driver Class Name */}
       <div>
-        <label htmlFor="jarFile" className="block text-sm font-medium text-gray-700 mb-2">
-          Driver Class Name *
-        </label>
+        <FieldWithTooltip
+          label="Driver Class Name"
+          tooltip={schemaDescriptions.get('jarFile')}
+          htmlFor="jarFile"
+          required
+          className="mb-2"
+        />
         <input
           type="text"
           id="jarFile"
@@ -66,9 +85,13 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
 
       {/* Maximum Pool Size */}
       <div>
-        <label htmlFor="maxConnections" className="block text-sm font-medium text-gray-700 mb-2">
-          Maximum Pool Size *
-        </label>
+        <FieldWithTooltip
+          label="Maximum Pool Size"
+          tooltip={schemaDescriptions.get('maxConnections')}
+          htmlFor="maxConnections"
+          required
+          className="mb-2"
+        />
         <div className="flex items-center space-x-2">
           <input
             type="number"
@@ -111,9 +134,12 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
           <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-4">
             {/* Initial Pool Size */}
             <div>
-              <label htmlFor="initialConnections" className="block text-sm font-medium text-gray-700 mb-2">
-                Initial Pool Size
-              </label>
+              <FieldWithTooltip
+                label="Initial Pool Size"
+                tooltip={schemaDescriptions.get('initialConnections')}
+                htmlFor="initialConnections"
+                className="mb-2"
+              />
               <div className="flex items-center space-x-2">
                 <input
                   type="number"
@@ -130,9 +156,12 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
 
             {/* Min Idle */}
             <div>
-              <label htmlFor="minIdle" className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Idle
-              </label>
+              <FieldWithTooltip
+                label="Minimum Idle"
+                tooltip={schemaDescriptions.get('minIdle')}
+                htmlFor="minIdle"
+                className="mb-2"
+              />
               <div className="flex items-center space-x-2">
                 <input
                   type="number"
@@ -149,9 +178,12 @@ const ConnectionPoolStep: React.FC<ConnectionPoolStepProps> = ({
 
             {/* Max Idle */}
             <div>
-              <label htmlFor="maxIdle" className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Idle
-              </label>
+              <FieldWithTooltip
+                label="Maximum Idle"
+                tooltip={schemaDescriptions.get('maxIdle')}
+                htmlFor="maxIdle"
+                className="mb-2"
+              />
               <div className="flex items-center space-x-2">
                 <input
                   type="number"

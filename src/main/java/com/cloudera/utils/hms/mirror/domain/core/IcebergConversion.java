@@ -43,7 +43,11 @@ public class IcebergConversion implements Cloneable {
     @Schema(description = "The version of the Iceberg table to convert to.  The default is 2.")
     private int version = 2;
 
+    @Schema(description = "Additional table properties to set on the Iceberg table during conversion. " +
+            "These properties will be applied to the table metadata",
+            example = "{\"write.format.default\": \"parquet\", \"write.metadata.compression-codec\": \"gzip\"}")
     private Map<String, String> tableProperties = new HashMap<String, String>();
+
     @Schema(description = "Where possible, migrate the table in place. The migration will be done in the catalog and not " +
             "through a transfer.")
     private boolean inplace = Boolean.FALSE;

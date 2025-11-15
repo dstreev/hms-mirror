@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { DatasetWizardStepProps, createDefaultDatabaseSpec, DEFAULT_TABLE_FILTER, DatabaseSpec } from '../../../types/Dataset';
 import ConnectionSelector from './ConnectionSelector';
 import DatabaseSelector from './DatabaseSelector';
 import TableMultiSelector from './TableMultiSelector';
 import AddDatabaseDialog from './AddDatabaseDialog';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, updateFormData }) => {
   const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
@@ -16,6 +18,16 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
     locationMappings: false,
     rename: false
   });
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('DatasetDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
 
   const addDatabase = (databaseName: string, sourceConnectionKey?: string) => {
     const newDatabase = createDefaultDatabaseSpec();
@@ -376,9 +388,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                   <div className="space-y-4 bg-gray-50 p-4 rounded-md">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Include Pattern
-                        </label>
+                        <FieldWithTooltip
+                          label="Include Pattern"
+                          tooltip={schemaDescriptions.get('databases.filter.tblRegEx')}
+                          htmlFor="tblRegEx"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.filter.tblRegEx || ''}
@@ -390,9 +405,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Exclude Pattern
-                        </label>
+                        <FieldWithTooltip
+                          label="Exclude Pattern"
+                          tooltip={schemaDescriptions.get('databases.filter.tblExcludeRegEx')}
+                          htmlFor="tblExcludeRegEx"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.filter.tblExcludeRegEx || ''}
@@ -404,9 +422,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Max Size (MB)
-                        </label>
+                        <FieldWithTooltip
+                          label="Max Size (MB)"
+                          tooltip={schemaDescriptions.get('databases.filter.maxSizeMb')}
+                          htmlFor="maxSizeMb"
+                          className="mb-1"
+                        />
                         <input
                           type="number"
                           value={currentDatabase.filter?.maxSizeMb || ''}
@@ -419,9 +440,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Max Partitions
-                        </label>
+                        <FieldWithTooltip
+                          label="Max Partitions"
+                          tooltip={schemaDescriptions.get('databases.filter.maxPartitions')}
+                          htmlFor="maxPartitions"
+                          className="mb-1"
+                        />
                         <input
                           type="number"
                           value={currentDatabase.filter?.maxPartitions || ''}
@@ -462,9 +486,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Managed Directory
-                        </label>
+                        <FieldWithTooltip
+                          label="Managed Directory"
+                          tooltip={schemaDescriptions.get('databases.warehouse.managedDirectory')}
+                          htmlFor="managedDirectory"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.warehouse.managedDirectory || ''}
@@ -476,9 +503,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          External Directory
-                        </label>
+                        <FieldWithTooltip
+                          label="External Directory"
+                          tooltip={schemaDescriptions.get('databases.warehouse.externalDirectory')}
+                          htmlFor="externalDirectory"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.warehouse.externalDirectory || ''}
@@ -519,9 +549,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Database Prefix
-                        </label>
+                        <FieldWithTooltip
+                          label="Database Prefix"
+                          tooltip={schemaDescriptions.get('databases.dbPrefix')}
+                          htmlFor="dbPrefix"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.dbPrefix || ''}
@@ -538,9 +571,12 @@ const DatabaseConfigStep: React.FC<DatasetWizardStepProps> = ({ formData, errors
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Database Rename
-                        </label>
+                        <FieldWithTooltip
+                          label="Database Rename"
+                          tooltip={schemaDescriptions.get('databases.dbRename')}
+                          htmlFor="dbRename"
+                          className="mb-1"
+                        />
                         <input
                           type="text"
                           value={currentDatabase.dbRename || ''}

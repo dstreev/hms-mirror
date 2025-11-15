@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ConnectionFormData, ENVIRONMENT_OPTIONS } from '../../../types/Connection';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 interface BasicInfoStepProps {
   formData: ConnectionFormData;
@@ -20,6 +22,7 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 }) => {
   const [platformTypes, setPlatformTypes] = useState<string[]>([]);
   const [loadingPlatformTypes, setLoadingPlatformTypes] = useState(true);
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     console.log('🎨 [BasicInfoStep] Component mounted/updated');
@@ -52,13 +55,26 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 
     fetchPlatformTypes();
   }, []);
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('ConnectionDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
   return (
     <div className="space-y-6">
       {/* Connection Name */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-          Connection Name *
-        </label>
+        <FieldWithTooltip
+          label="Connection Name"
+          tooltip={schemaDescriptions.get('name')}
+          htmlFor="name"
+          required
+          className="mb-2"
+        />
         <input
           type="text"
           id="name"
@@ -82,9 +98,12 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 
       {/* Description */}
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-          Description
-        </label>
+        <FieldWithTooltip
+          label="Description"
+          tooltip={schemaDescriptions.get('description')}
+          htmlFor="description"
+          className="mb-2"
+        />
         <textarea
           id="description"
           rows={3}
@@ -97,9 +116,13 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 
       {/* Platform Type */}
       <div>
-        <label htmlFor="platformType" className="block text-sm font-medium text-gray-700 mb-2">
-          Platform Type *
-        </label>
+        <FieldWithTooltip
+          label="Platform Type"
+          tooltip={schemaDescriptions.get('platformType')}
+          htmlFor="platformType"
+          required
+          className="mb-2"
+        />
         <select
           id="platformType"
           value={formData.platformType}
@@ -129,9 +152,12 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
 
       {/* Environment Type */}
       <div>
-        <label htmlFor="environment" className="block text-sm font-medium text-gray-700 mb-2">
-          Environment Type
-        </label>
+        <FieldWithTooltip
+          label="Environment Type"
+          tooltip={schemaDescriptions.get('environment')}
+          htmlFor="environment"
+          className="mb-2"
+        />
         <select
           id="environment"
           value={formData.environment}

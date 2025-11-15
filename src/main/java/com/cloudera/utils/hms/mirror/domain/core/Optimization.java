@@ -17,30 +17,42 @@
 
 package com.cloudera.utils.hms.mirror.domain.core;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Schema(description = "Query and data transfer optimization settings for migration operations")
 public class Optimization implements Cloneable {
 
-    /*
-    Control whether we'll set the 'hive.optimize.sort.dynamic.partition` conf to 'true' or not.  If this is not set,
-    we'll use a PRESCRIPTIVE approach with the transfer SQL on partitioned tables by adding a DISTRIBUTE BY clause.
-     */
+    @Schema(description = "Control whether to set 'hive.optimize.sort.dynamic.partition' to true. " +
+            "If false, uses a PRESCRIPTIVE approach with DISTRIBUTE BY clause for partitioned tables",
+            defaultValue = "false")
     private boolean sortDynamicPartitionInserts = Boolean.FALSE;
-    /*
-    Skip all optimizations by setting:
-    - hive.optimize.sort.dynamic.partition=false
-    - Not using DISTRIBUTE BY.
-    - But do include additional settings specified by user in 'overrides'.
-     */
+
+    @Schema(description = "Skip all optimizations by disabling 'hive.optimize.sort.dynamic.partition' " +
+            "and not using DISTRIBUTE BY. User-specified overrides will still be applied",
+            defaultValue = "false")
     private boolean skip = Boolean.FALSE;
+
+    @Schema(description = "Automatically tune query parameters based on cluster resources and table characteristics",
+            defaultValue = "false")
     private boolean autoTune = Boolean.FALSE;
+
+    @Schema(description = "Compress text output during data transfer operations",
+            defaultValue = "false")
     private boolean compressTextOutput = Boolean.FALSE;
+
+    @Schema(description = "Skip statistics collection after table creation and data loading",
+            defaultValue = "false")
     private boolean skipStatsCollection = Boolean.FALSE;
 
+    @Schema(description = "Custom Hive configuration property overrides to apply during migration")
     private Overrides overrides = new Overrides();
+
+    @Schema(description = "Build statistics for shadow/transfer tables used during migration",
+            defaultValue = "false")
     private boolean buildShadowStatistics = Boolean.FALSE;
 
     @Override

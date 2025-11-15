@@ -284,7 +284,7 @@ class DatasetApi extends BaseApi {
     try {
       const dto = this.mapFormDataToDto(formData);
       const response = await this.post<DatasetValidationResponse>('/datasets/validate', dto);
-      
+
       if (response?.status === 'success') {
         return { success: true };
       } else {
@@ -298,7 +298,8 @@ class DatasetApi extends BaseApi {
       console.error('Failed to validate dataset:', error);
       return {
         success: false,
-        message: error.response?.data?.message || error.message || 'Network error occurred while validating dataset'
+        message: error.response?.data?.message || error.message || 'Network error occurred while validating dataset',
+        errors: error.response?.data?.errors || []
       };
     }
   }

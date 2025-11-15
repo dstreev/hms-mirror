@@ -1,43 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { configApi, ConfigurationDto } from '../../services/api/configApi';
+import { configApi, ConfigLiteDto } from '../../services/api/configApi';
+import { DEFAULT_CONFIG_LITE } from '../../types/ConfigLite';
 
 interface ConfigFormData {
-  dataStrategy: string;
   configName: string;
 }
 
 const NewConfigurationPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<ConfigFormData>({
-    dataStrategy: 'HYBRID',
     configName: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dataStrategies, setDataStrategies] = useState<Array<{value: string, label: string}>>([]);
-
-  useEffect(() => {
-    const loadDataStrategies = async () => {
-      try {
-        const response = await configApi.getDataStrategies();
-        if (response && response.status === 'success') {
-          setDataStrategies(response.strategies);
-        }
-      } catch (error) {
-        console.error('Failed to load data strategies:', error);
-        // Fallback to default strategies
-        setDataStrategies([
-          {value: 'HYBRID', label: 'HYBRID - Recommended for most migrations'},
-          {value: 'SQL', label: 'SQL - SQL-based migration'},
-          {value: 'EXPORT_IMPORT', label: 'EXPORT_IMPORT - Export/Import approach'},
-          {value: 'SCHEMA_ONLY', label: 'SCHEMA_ONLY - Schema migration only'}
-        ]);
-      }
-    };
-
-    loadDataStrategies();
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -49,7 +25,7 @@ const NewConfigurationPage: React.FC = () => {
 
   const handleCreateConfiguration = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.configName.trim()) {
       setError('Configuration name is required');
       return;
@@ -59,44 +35,24 @@ const NewConfigurationPage: React.FC = () => {
     setError(null);
 
     try {
-      // Create configuration using the new standardized API
-      const configDto: ConfigurationDto = {
+      // Create configuration using ConfigLiteDto with proper structure
+      const configDto: ConfigLiteDto = {
+        ...DEFAULT_CONFIG_LITE,
         name: formData.configName.trim(),
-        dataStrategy: formData.dataStrategy,
-        comment: `Configuration created on ${new Date().toLocaleDateString()}`,
-        beta: false,
-        execute: false,
-        databaseOnly: false,
-        migrateNonNative: false,
-        readOnly: false,
-        noPurge: false,
-        replace: false,
-        resetRight: false,
-        sync: false,
-        quiet: false,
-        skipFeatures: false,
-        skipLegacyTranslation: false,
-        skipLinkCheck: false,
-        suppressCliWarnings: false,
-        saveWorkingTables: false,
-        copyAvroSchemaUrls: false,
-        dumpTestData: false,
-        encryptedPasswords: false,
-        databases: [],
-        dumpSource: 'LEFT'
+        description: `Configuration created on ${new Date().toLocaleDateString()}`
       };
 
       console.log('Creating configuration:', configDto);
-      
-      const success = await configApi.saveConfiguration(configDto);
-      
-      if (success) {
+
+      const result = await configApi.saveConfiguration(configDto);
+
+      if (result.success) {
         setIsLoading(false);
         alert(`Configuration "${formData.configName}" created successfully!`);
         // Navigate to the view configurations page to see the new config
         navigate('/config/view');
       } else {
-        throw new Error('Failed to save configuration');
+        throw new Error(result.message || 'Failed to save configuration');
       }
 
     } catch (error) {

@@ -53,15 +53,26 @@ public class ConversionResult {
     private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
     // This would be the top level Key for the RocksDB columnFamily.
+    @Schema(description = "Primary key used for RocksDB storage. Automatically generated with timestamp and UUID suffix. " +
+            "This serves as the unique identifier in the RocksDB column family for conversion result persistence",
+            accessMode = Schema.AccessMode.READ_ONLY,
+            example = "20250115_143045123_a7f9")
     private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
     // This would the value of the key about.  This can't be null.
 
+    @Schema(description = "Timestamp when this conversion result was first created",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime created;
 
+    @Schema(description = "Timestamp when this conversion result was last modified",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 
+    @Schema(description = "List of supported Hadoop-compatible file systems for the migration. " +
+            "These represent the supported URI schemes (e.g., hdfs://, s3a://, wasb://) that can be processed",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private final List<String> supportedFileSystems = new ArrayList<String>(Arrays.asList(
             "hdfs", "ofs", "s3", "s3a", "s3n", "wasb", "adls", "gf", "viewfs", "maprfs", "gs"
     ));
@@ -70,11 +81,19 @@ public class ConversionResult {
     private boolean mockTestDataset = Boolean.FALSE;
 
 //    @JsonIgnore
+    @Schema(description = "Base output directory for migration reports and artifacts. " +
+            "Defaults to user home directory under .hms-mirror/reports/",
+            example = "/Users/username/.hms-mirror/reports/")
     private String outputDirectory = System.getProperty("user.home") + FileSystems.getDefault().getSeparator()
             + ".hms-mirror/reports/";
 //    @JsonIgnore
+    @Schema(description = "Flag indicating whether the output directory was explicitly set by the user",
+            defaultValue = "false")
     private boolean userSetOutputDirectory = Boolean.FALSE;
 //    @JsonIgnore
+    @Schema(description = "Final resolved output directory path after all processing. " +
+            "This is the actual directory where reports will be written",
+            example = "/Users/username/.hms-mirror/reports/20250115_143045123")
     private String finalOutputDirectory = null;
 
     @JsonIgnore
@@ -84,15 +103,24 @@ public class ConversionResult {
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/config', with the value being the yaml string.
      */
+    @Schema(description = "Configuration settings for this conversion. " +
+            "Contains migration policies, optimization settings, and feature flags used during the conversion process",
+            implementation = ConfigLiteDto.class)
     private ConfigLiteDto config;
     /*
     This should be saved as a yaml in RocksDB.  The key for this should build on the above key plus
       '/config', with the value being the yaml string.
      */
+    @Schema(description = "Dataset specification for this conversion. " +
+            "Defines which databases and tables are included in the migration scope",
+            implementation = DatasetDto.class)
     private DatasetDto dataset;
     /*
     Resolved Map of connections by Environment (LEFT/RIGHT).
      */
+    @Schema(description = "Map of cluster connections by environment (LEFT for source cluster, RIGHT for target cluster). " +
+            "Each connection contains HCFS namespace, HiveServer2 settings, and metastore direct configuration",
+            example = "{\"LEFT\": {...}, \"RIGHT\": {...}}")
     private Map<Environment, ConnectionDto> connections = new HashMap<>();
 
     @JsonIgnore
@@ -107,6 +135,9 @@ public class ConversionResult {
     /*
     This is a copy of the JobDto for this conversion.
      */
+    @Schema(description = "Job definition for this conversion. " +
+            "Contains strategy, references to dataset and config, connection references, and disaster recovery settings",
+            implementation = JobDto.class)
     private JobDto job;
     /*
     RunStatus tracks the progress and status of the conversion process.
@@ -116,6 +147,9 @@ public class ConversionResult {
     @JsonIgnore
     private RunStatus runStatus;
 
+    @Schema(description = "Job execution settings controlling whether this is a dry run or actual execution. " +
+            "When dryRun is true, no changes are made to the target cluster",
+            implementation = JobExecution.class)
     private JobExecution jobExecution;
 
     /*

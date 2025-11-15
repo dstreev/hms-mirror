@@ -51,6 +51,10 @@ public class DatasetDto implements Cloneable {
     // This would be the top level Key for the RocksDB columnFamily.
 //    private String key = null;
 
+    @Schema(description = "Primary key used for RocksDB storage. If not explicitly set, defaults to the dataset name. " +
+            "This serves as the unique identifier in the RocksDB column family for dataset persistence",
+            accessMode = Schema.AccessMode.READ_WRITE,
+            example = "production-analytics")
     private String key = null; //LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
 
     @Schema(description = "Unique name for the dataset", required = true, example = "production-analytics")
@@ -62,9 +66,13 @@ public class DatasetDto implements Cloneable {
     @Schema(description = "List of databases included in this dataset")
     private List<DatabaseSpec> databases = new ArrayList<>();
 
+    @Schema(description = "Timestamp when this dataset was first created",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime created;
 
+    @Schema(description = "Timestamp when this dataset was last modified",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 

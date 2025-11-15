@@ -17,16 +17,16 @@
 
 package com.cloudera.utils.hms.mirror.domain.core;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Schema(description = "View migration configuration")
 public class MigrateVIEW implements Cloneable {
 
-    /*
-    Whether or not we'll be migrating VIEWs.
-    */
+    @Schema(description = "Whether or not we'll be migrating VIEWs")
     private boolean on = Boolean.FALSE;
 
     @Override

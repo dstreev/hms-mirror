@@ -144,7 +144,15 @@ const DatasetWizard: React.FC = () => {
             name: result.message || `A dataset with the name "${formData.name}" already exists. Please use a different name.`
           });
         } else {
-          setErrors({ save: result.message || `Failed to ${action} dataset` });
+          // Build detailed error message including validation errors
+          let errorMessage = result.message || `Failed to ${action} dataset`;
+
+          // If there are specific validation errors, append them
+          if (result.errors && result.errors.length > 0) {
+            errorMessage = `${errorMessage}\n\nValidation errors:\n${result.errors.map((err: string) => `• ${err}`).join('\n')}`;
+          }
+
+          setErrors({ save: errorMessage });
         }
       }
     } catch (error: any) {
@@ -157,7 +165,15 @@ const DatasetWizard: React.FC = () => {
           name: error.message || `A dataset with the name "${formData.name}" already exists. Please use a different name.`
         });
       } else {
-        setErrors({ save: error.message || `Network error occurred while ${action} dataset` });
+        // Build detailed error message including validation errors
+        let errorMessage = error.message || `Network error occurred while ${action} dataset`;
+
+        // If there are specific validation errors, append them
+        if (error.errors && error.errors.length > 0) {
+          errorMessage = `${errorMessage}\n\nValidation errors:\n${error.errors.map((err: string) => `• ${err}`).join('\n')}`;
+        }
+
+        setErrors({ save: errorMessage });
       }
     } finally {
       setSaving(false);
@@ -284,8 +300,8 @@ const DatasetWizard: React.FC = () => {
 
           {/* Error Display */}
           {errors.save && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{errors.save}</p>
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600 whitespace-pre-line">{errors.save}</p>
             </div>
           )}
         </div>

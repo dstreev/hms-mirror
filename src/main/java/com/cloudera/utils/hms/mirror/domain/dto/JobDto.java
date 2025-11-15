@@ -23,6 +23,10 @@ public class JobDto implements Cloneable {
     private static final DateTimeFormatter KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
 
     // This would be the top level Key for the RocksDB columnFamily.
+    @Schema(description = "Primary key used for RocksDB storage. Automatically generated with timestamp and UUID suffix. " +
+            "This serves as the unique identifier in the RocksDB column family for job persistence",
+            accessMode = Schema.AccessMode.READ_ONLY,
+            example = "20250115_143045123_a7f9")
     private String key = LocalDateTime.now().format(KEY_FORMATTER) + "_" + UUID.randomUUID().toString().substring(0, 4);
 
     @Schema(description = "Name for the job", example = "job-12345")
@@ -31,9 +35,13 @@ public class JobDto implements Cloneable {
     @Schema(description = "Description of the job", example = "Migration job for production tables")
     private String description;
 
+    @Schema(description = "Timestamp when this job was first created",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime created;
 
+    @Schema(description = "Timestamp when this job was last modified",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime modified;
 
@@ -56,6 +64,9 @@ public class JobDto implements Cloneable {
     @Schema(description = "Optional target namespace for the migration")
     private String targetNamespace;
 
+    @Schema(description = "Hybrid migration configuration combining SQL and EXPORT_IMPORT strategies. " +
+            "Used when strategy is set to HYBRID to control which approach is used for different table types",
+            implementation = HybridConfig.class)
     private HybridConfig hybrid = new HybridConfig();
 
     @Schema(description = "Flag to indicate if this job is for a database only migration")
@@ -64,7 +75,15 @@ public class JobDto implements Cloneable {
     @Schema(description = "Flag to indicate if this job should consolidate DB create statements")
     private boolean consolidateDBCreateStatements = Boolean.FALSE;
 
+    @Schema(description = "Path to test data file for loading test data instead of running actual migration. " +
+            "Used for testing and development purposes. When set, the job loads pre-recorded metadata instead of connecting to clusters",
+            example = "/path/to/test-data.yaml")
     private String loadTestDataFile = null;
+
+    @Schema(description = "Skip validation of HDFS/S3 links and locations. " +
+            "When true, location validation is bypassed which can speed up processing but may miss configuration issues",
+            defaultValue = "false",
+            example = "false")
     private boolean skipLinkCheck = Boolean.FALSE;
 
     /*

@@ -12,6 +12,8 @@ import {
 import WizardProgress from '../connections/wizard/WizardProgress';
 import SearchableInput from '../common/SearchableInput';
 import StrategySelectionWizard from './StrategySelectionWizard';
+import FieldWithTooltip from '../common/FieldWithTooltip';
+import schemaService from '../../services/schemaService';
 
 interface JobFormData {
   // Hidden field for updates
@@ -86,6 +88,9 @@ const JobBuildWizard: React.FC = () => {
   // Strategy selection mode
   const [useStrategyWizard, setUseStrategyWizard] = useState(!editMode && !copyMode);
 
+  // Schema descriptions for tooltips
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
   const [jobData, setJobData] = useState<JobFormData>({
     // Preserve key in edit mode, but not in copy mode
     key: (editMode && !copyMode) ? existingJobKey : undefined,
@@ -141,6 +146,15 @@ const JobBuildWizard: React.FC = () => {
   };
 
   // Load available datasets, configurations, and connectionDtos
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('JobDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoadingData(true);
@@ -658,9 +672,12 @@ const JobBuildWizard: React.FC = () => {
                 {/* Target Namespace - Only show for STORAGE_MIGRATION strategy */}
                 {jobData.strategy === 'STORAGE_MIGRATION' && (
                   <div>
-                    <label htmlFor="targetNamespace" className="block text-sm font-medium text-gray-700 mb-2">
-                      Target Namespace
-                    </label>
+                    <FieldWithTooltip
+                      label="Target Namespace"
+                      tooltip={schemaDescriptions.get('targetNamespace')}
+                      htmlFor="targetNamespace"
+                      className="mb-2"
+                    />
                     <input
                       type="text"
                       id="targetNamespace"
@@ -676,9 +693,12 @@ const JobBuildWizard: React.FC = () => {
                 )}
 
                 <div>
-                  <label htmlFor="intermediateStorage" className="block text-sm font-medium text-gray-700 mb-2">
-                    Intermediate Storage
-                  </label>
+                  <FieldWithTooltip
+                    label="Intermediate Storage"
+                    tooltip={schemaDescriptions.get('intermediateStorage')}
+                    htmlFor="intermediateStorage"
+                    className="mb-2"
+                  />
                   <input
                     type="text"
                     id="intermediateStorage"
@@ -792,9 +812,12 @@ const JobBuildWizard: React.FC = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="exportImportPartitionLimit" className="block text-sm font-medium text-gray-700 mb-2">
-                      Export/Import Partition Limit
-                    </label>
+                    <FieldWithTooltip
+                      label="Export/Import Partition Limit"
+                      tooltip={schemaDescriptions.get('hybrid.exportImportPartitionLimit')}
+                      htmlFor="exportImportPartitionLimit"
+                      className="mb-2"
+                    />
                     <input
                       type="number"
                       id="exportImportPartitionLimit"
@@ -818,9 +841,12 @@ const JobBuildWizard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="sqlPartitionLimit" className="block text-sm font-medium text-gray-700 mb-2">
-                      SQL Partition Limit
-                    </label>
+                    <FieldWithTooltip
+                      label="SQL Partition Limit"
+                      tooltip={schemaDescriptions.get('hybrid.sqlPartitionLimit')}
+                      htmlFor="sqlPartitionLimit"
+                      className="mb-2"
+                    />
                     <input
                       type="number"
                       id="sqlPartitionLimit"
@@ -844,9 +870,12 @@ const JobBuildWizard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="sqlSizeLimit" className="block text-sm font-medium text-gray-700 mb-2">
-                      SQL Size Limit (bytes)
-                    </label>
+                    <FieldWithTooltip
+                      label="SQL Size Limit (bytes)"
+                      tooltip={schemaDescriptions.get('hybrid.sqlSizeLimit')}
+                      htmlFor="sqlSizeLimit"
+                      className="mb-2"
+                    />
                     <input
                       type="number"
                       id="sqlSizeLimit"

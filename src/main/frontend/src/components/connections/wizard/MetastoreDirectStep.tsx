@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ConnectionFormData,
   METASTORE_CONNECTION_EXAMPLES
 } from '../../../types/Connection';
 import { InformationCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 interface MetastoreDirectStepProps {
   formData: ConnectionFormData;
@@ -21,6 +23,16 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
   onBack
 }) => {
   const [showExamples, setShowExamples] = useState(false);
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('ConnectionDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -86,9 +98,12 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
           {/* Database URI */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="metastoreDirectUri" className="block text-sm font-medium text-gray-700">
-                Database URI *
-              </label>
+              <FieldWithTooltip
+                label="Database URI"
+                tooltip={schemaDescriptions.get('metastoreDirectUri')}
+                htmlFor="metastoreDirectUri"
+                required
+              />
               <button
                 type="button"
                 onClick={() => setShowExamples(!showExamples)}
@@ -150,9 +165,12 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
 
           {/* Database Type (Auto-detected, Read-only) */}
           <div>
-            <label htmlFor="metastoreDirectType" className="block text-sm font-medium text-gray-700 mb-2">
-              Database Type (Auto-detected)
-            </label>
+            <FieldWithTooltip
+              label="Database Type (Auto-detected)"
+              tooltip={schemaDescriptions.get('metastoreDirectType')}
+              htmlFor="metastoreDirectType"
+              className="mb-2"
+            />
             <input
               type="text"
               id="metastoreDirectType"
@@ -173,9 +191,13 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
           {/* Database Credentials */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="metastoreDirectUsername" className="block text-sm font-medium text-gray-700 mb-2">
-                Database Username *
-              </label>
+              <FieldWithTooltip
+                label="Database Username"
+                tooltip={schemaDescriptions.get('metastoreDirectUsername')}
+                htmlFor="metastoreDirectUsername"
+                required
+                className="mb-2"
+              />
               <input
                 type="text"
                 id="metastoreDirectUsername"
@@ -193,9 +215,13 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
             </div>
             
             <div>
-              <label htmlFor="metastoreDirectPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Database Password *
-              </label>
+              <FieldWithTooltip
+                label="Database Password"
+                tooltip={schemaDescriptions.get('metastoreDirectPassword')}
+                htmlFor="metastoreDirectPassword"
+                required
+                className="mb-2"
+              />
               <input
                 type="password"
                 id="metastoreDirectPassword"
@@ -219,9 +245,12 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="metastoreDirectMinConnections" className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Connections
-                </label>
+                <FieldWithTooltip
+                  label="Minimum Connections"
+                  tooltip={schemaDescriptions.get('metastoreDirectMinConnections')}
+                  htmlFor="metastoreDirectMinConnections"
+                  className="mb-2"
+                />
                 <input
                   type="number"
                   id="metastoreDirectMinConnections"
@@ -239,9 +268,12 @@ const MetastoreDirectStep: React.FC<MetastoreDirectStepProps> = ({
               </div>
               
               <div>
-                <label htmlFor="metastoreDirectMaxConnections" className="block text-sm font-medium text-gray-700 mb-2">
-                  Maximum Connections
-                </label>
+                <FieldWithTooltip
+                  label="Maximum Connections"
+                  tooltip={schemaDescriptions.get('metastoreDirectMaxConnections')}
+                  htmlFor="metastoreDirectMaxConnections"
+                  className="mb-2"
+                />
                 <input
                   type="number"
                   id="metastoreDirectMaxConnections"

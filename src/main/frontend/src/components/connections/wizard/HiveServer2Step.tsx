@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ConnectionFormData,
   HIVESERVER2_CONNECTION_EXAMPLES
 } from '../../../types/Connection';
 import { InformationCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 import ConnectionPropertiesEditor from './ConnectionPropertiesEditor';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 interface HiveServer2StepProps {
   formData: ConnectionFormData;
@@ -22,6 +24,7 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
   onBack
 }) => {
   const [showExamples, setShowExamples] = useState(false);
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
 
   // Check if HiveServer2 URI is kerberized (contains 'principal' in URI OR in connection properties)
   const isKerberized = React.useMemo(() => {
@@ -47,6 +50,15 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
     console.log('Is Kerberized:', isKerberized);
   }, [formData.hs2Uri, formData.hs2ConnectionProperties, isKerberized]);
 
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('ConnectionDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
@@ -59,9 +71,12 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
     <div className="space-y-6">
       {/* HCFS Namespace */}
       <div>
-        <label htmlFor="hcfsNamespace" className="block text-sm font-medium text-gray-700 mb-2">
-          HCFS Namespace
-        </label>
+        <FieldWithTooltip
+          label="HCFS Namespace"
+          tooltip={schemaDescriptions.get('hcfsNamespace')}
+          htmlFor="hcfsNamespace"
+          className="mb-2"
+        />
         <input
           type="text"
           id="hcfsNamespace"
@@ -83,9 +98,12 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
           {/* HiveServer2 URI */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="hs2Uri" className="block text-sm font-medium text-gray-700">
-                HiveServer2 URI *
-              </label>
+              <FieldWithTooltip
+                label="HiveServer2 URI"
+                tooltip={schemaDescriptions.get('hs2Uri')}
+                htmlFor="hs2Uri"
+                required
+              />
               <button
                 type="button"
                 onClick={() => setShowExamples(!showExamples)}
@@ -178,9 +196,12 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
               <h3 className="text-sm font-medium text-gray-900 mb-3">Authentication (Optional)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="hs2Username" className="block text-sm font-medium text-gray-700 mb-2">
-                    Username
-                  </label>
+                  <FieldWithTooltip
+                    label="Username"
+                    tooltip={schemaDescriptions.get('hs2Username')}
+                    htmlFor="hs2Username"
+                    className="mb-2"
+                  />
                   <input
                     type="text"
                     id="hs2Username"
@@ -195,9 +216,12 @@ const HiveServer2Step: React.FC<HiveServer2StepProps> = ({
                 </div>
 
                 <div>
-                  <label htmlFor="hs2Password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
+                  <FieldWithTooltip
+                    label="Password"
+                    tooltip={schemaDescriptions.get('hs2Password')}
+                    htmlFor="hs2Password"
+                    className="mb-2"
+                  />
                   <input
                     type="password"
                     id="hs2Password"

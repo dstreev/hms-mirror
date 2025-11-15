@@ -17,14 +17,31 @@
 
 package com.cloudera.utils.hms.mirror.domain.core;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Schema(description = "Hybrid migration configuration that combines EXPORT_IMPORT and SQL data movement strategies " +
+        "based on partition count and data size thresholds")
 public class HybridConfig implements Cloneable {
+    @Schema(description = "Maximum number of partitions for a table to use EXPORT_IMPORT strategy. " +
+            "Tables with more partitions will use SQL strategy instead",
+            defaultValue = "100",
+            example = "100")
     private int exportImportPartitionLimit = 100;
+
+    @Schema(description = "Maximum number of partitions for a table to use SQL strategy. " +
+            "Tables with more partitions will be skipped or use alternative strategy",
+            defaultValue = "500",
+            example = "500")
     private int sqlPartitionLimit = 500;
+
+    @Schema(description = "Maximum table size in bytes for SQL-based data movement. " +
+            "Larger tables will use EXPORT_IMPORT or alternative strategy",
+            defaultValue = "1073741824",
+            example = "1073741824")
     private long sqlSizeLimit = (1024 * 1024 * 1024); // 1Gb
 
     @Override

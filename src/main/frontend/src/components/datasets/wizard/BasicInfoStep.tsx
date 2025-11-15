@@ -1,14 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DatasetWizardStepProps } from '../../../types/Dataset';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 const BasicInfoStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, updateFormData, isEditMode = false }) => {
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('DatasetDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-            Dataset Name *
-          </label>
+          <FieldWithTooltip
+            label="Dataset Name"
+            tooltip={schemaDescriptions.get('name')}
+            htmlFor="name"
+            required
+            className="mb-2"
+          />
           <input
             type="text"
             id="name"
@@ -33,9 +50,13 @@ const BasicInfoStep: React.FC<DatasetWizardStepProps> = ({ formData, errors, upd
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-            Description *
-          </label>
+          <FieldWithTooltip
+            label="Description"
+            tooltip={schemaDescriptions.get('description')}
+            htmlFor="description"
+            required
+            className="mb-2"
+          />
           <textarea
             id="description"
             name="description"

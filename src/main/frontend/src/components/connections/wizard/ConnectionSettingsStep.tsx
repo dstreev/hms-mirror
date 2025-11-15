@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ConnectionFormData } from '../../../types/Connection';
+import FieldWithTooltip from '../../common/FieldWithTooltip';
+import schemaService from '../../../services/schemaService';
 
 interface ConnectionSettingsStepProps {
   formData: ConnectionFormData;
@@ -16,6 +18,17 @@ const ConnectionSettingsStep: React.FC<ConnectionSettingsStepProps> = ({
   onNext,
   onBack
 }) => {
+  const [schemaDescriptions, setSchemaDescriptions] = useState<Map<string, string>>(new Map());
+
+  // Fetch schema descriptions on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      const descriptions = await schemaService.getClassDescriptions('ConnectionDto');
+      setSchemaDescriptions(descriptions);
+    };
+    fetchDescriptions();
+  }, []);
+
   // Check if HiveServer2 URI is kerberized (contains 'principal' in URI OR in connection properties)
   const isKerberized = React.useMemo(() => {
     // Check if 'principal' is in the URI
@@ -88,9 +101,13 @@ const ConnectionSettingsStep: React.FC<ConnectionSettingsStepProps> = ({
 
       {/* HDFS Namespace */}
       <div>
-        <label htmlFor="hcfsNamespace" className="block text-sm font-medium text-gray-700 mb-2">
-          HDFS Namespace *
-        </label>
+        <FieldWithTooltip
+          label="HDFS Namespace"
+          tooltip={schemaDescriptions.get('hcfsNamespace')}
+          htmlFor="hcfsNamespace"
+          required
+          className="mb-2"
+        />
         <input
           type="text"
           id="hcfsNamespace"
@@ -112,14 +129,20 @@ const ConnectionSettingsStep: React.FC<ConnectionSettingsStepProps> = ({
 
       {/* HiveServer2 URI - Card with dynamic background */}
       <div style={cardStyle} className="p-4 rounded-lg border-solid transition-all duration-200">
-        <label htmlFor="hs2Uri" className="block text-sm font-medium text-gray-700 mb-2">
-          HiveServer2 URI *
+        <div className="flex items-center mb-2">
+          <FieldWithTooltip
+            label="HiveServer2 URI"
+            tooltip={schemaDescriptions.get('hs2Uri')}
+            htmlFor="hs2Uri"
+            required
+            className="mb-0"
+          />
           {hasUri && (
             <span className={`ml-2 text-xs font-bold ${isKerberized ? 'text-yellow-700' : 'text-green-700'}`}>
               {isKerberized ? '🔐 KERBERIZED' : '✓ NON-KERBERIZED'}
             </span>
           )}
-        </label>
+        </div>
         <input
           type="text"
           id="hs2Uri"
@@ -152,9 +175,12 @@ const ConnectionSettingsStep: React.FC<ConnectionSettingsStepProps> = ({
 
       {/* Metastore Direct URI */}
       <div>
-        <label htmlFor="metastoreUri" className="block text-sm font-medium text-gray-700 mb-2">
-          Metastore Direct URI
-        </label>
+        <FieldWithTooltip
+          label="Metastore Direct URI"
+          tooltip={schemaDescriptions.get('metastoreUri')}
+          htmlFor="metastoreUri"
+          className="mb-2"
+        />
         <input
           type="text"
           id="metastoreUri"

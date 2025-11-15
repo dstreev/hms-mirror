@@ -340,7 +340,20 @@ public class DatasetManagementService {
                     // Check that database has either tables OR filter, but not both
                     // NOTE: A database can have warehouse config or location mappings without tables/filters
                     boolean hasTables = dbSpec.getTables() != null && !dbSpec.getTables().isEmpty();
-                    boolean hasFilter = dbSpec.getFilter() != null;
+
+                    // Only consider filter present if it has actual criteria
+                    boolean hasFilter = false;
+                    if (dbSpec.getFilter() != null) {
+                        DatasetDto.TableFilter filter = dbSpec.getFilter();
+                        boolean hasIncludePattern = filter.getIncludeRegEx() != null && !filter.getIncludeRegEx().trim().isEmpty();
+                        boolean hasExcludePattern = filter.getExcludeRegEx() != null && !filter.getExcludeRegEx().trim().isEmpty();
+                        boolean hasTableTypes = filter.getTableTypes() != null && !filter.getTableTypes().isEmpty();
+                        boolean hasSizeConstraints = (filter.getMinSizeMb() > 0) || (filter.getMaxSizeMb() > 0);
+                        boolean hasPartitionConstraints = (filter.getMinPartitions() > 0) || (filter.getMaxPartitions() > 0);
+                        hasFilter = hasIncludePattern || hasExcludePattern || hasTableTypes ||
+                                   hasSizeConstraints || hasPartitionConstraints;
+                    }
+
                     boolean hasWarehouseConfig = dbSpec.getWarehouse() != null &&
                         (dbSpec.getWarehouse().getManagedDirectory() != null ||
                          dbSpec.getWarehouse().getExternalDirectory() != null);
@@ -359,21 +372,6 @@ public class DatasetManagementService {
                     if (dbSpec.getDbPrefix() != null && !dbSpec.getDbPrefix().trim().isEmpty() &&
                         dbSpec.getDbRename() != null && !dbSpec.getDbRename().trim().isEmpty()) {
                         errors.add(prefix + "Cannot specify both dbPrefix and dbRename (they are mutually exclusive)");
-                    }
-                    
-                    // Validate filter if present
-                    if (hasFilter) {
-                        DatasetDto.TableFilter filter = dbSpec.getFilter();
-                        boolean hasIncludePattern = filter.getIncludeRegEx() != null && !filter.getIncludeRegEx().trim().isEmpty();
-                        boolean hasExcludePattern = filter.getExcludeRegEx() != null && !filter.getExcludeRegEx().trim().isEmpty();
-                        boolean hasTableTypes = filter.getTableTypes() != null && !filter.getTableTypes().isEmpty();
-                        boolean hasSizeConstraints = (filter.getMinSizeMb() > 0) || (filter.getMaxSizeMb() > 0);
-                        boolean hasPartitionConstraints = (filter.getMinPartitions() > 0) || (filter.getMaxPartitions() > 0);
-
-                        if (!hasIncludePattern && !hasExcludePattern && !hasTableTypes &&
-                            !hasSizeConstraints && !hasPartitionConstraints) {
-                            errors.add(prefix + "Filter must specify at least one criteria (include/exclude pattern, table types, size constraints, or partition constraints)");
-                        }
                     }
                 }
             }
